@@ -85,7 +85,11 @@
         <form method="POST" style="display:flex; gap:10px; flex-grow:1;">
             {% csrf_token %}
             <input type="text" name="world_name" placeholder="Nombre del Nuevo Universo..." required autocomplete="off">
+            
             <input type="text" name="world_desc" placeholder="Idea base..." style="width: 30%;">
+            <label style="color:#aaa; font-size:0.9em; display:flex; align-items:center; gap:5px;">
+                <input type="checkbox" name="use_ai" checked> IA Texto
+            </label>
             <button type="submit">⚡ CREAR (Nivel 1)</button>
         </form>
     </div>

@@ -11,7 +11,6 @@
         .nav-btn { background: #333; color: #fff; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 0.9em; border: 1px solid #444; cursor: pointer; }
         .nav-btn:hover { background: #555; }
 
-        /* 4 COLUMNAS AHORA */
         .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; }
         .column { background: #161625; border-radius: 10px; padding: 15px; border-top: 4px solid #555; }
         
@@ -28,9 +27,17 @@
         .v-meta { display: flex; justify-content: space-between; font-size: 0.7em; color: #888; margin-bottom: 5px; }
         .v-author { font-size: 0.7em; color: #a0a0ff; text-align: right; margin-bottom: 5px; display: block; }
         .v-title { font-weight: bold; color: #fff; display: block; text-decoration: none; margin-bottom: 5px; font-size: 0.95em; }
-        .actions { display: flex; gap: 5px; margin-top: 8px; }
+        .actions { display: flex; gap: 5px; margin-top: 8px; flex-wrap: wrap; }
         .btn-small { border: none; padding: 4px; border-radius: 3px; cursor: pointer; font-size: 0.7em; text-decoration: none; color: #fff; flex-grow: 1; text-align: center; }
-        .btn-ok { background: #27ae60; } .btn-no { background: #c0392b; } .btn-pub { background: #3498db; font-weight: bold; }
+        
+        .btn-ok { background: #27ae60; } 
+        .btn-no { background: #c0392b; } 
+        .btn-pub { background: #3498db; font-weight: bold; width: 100%; margin-bottom: 5px; }
+        .btn-rev { background: #f39c12; }
+        
+        .btn-ok:hover { background: #2ecc71; }
+        .btn-no:hover { background: #e74c3c; }
+        .btn-pub:hover { background: #2980b9; }
     </style>
 </head>
 <body>
@@ -65,9 +72,12 @@
             <div class="v-card">
                 <div class="v-meta"><span>{{ v.nivel_label }}</span><span>{{ v.date|date:"d/m" }}</span></div>
                 <span class="v-author">👤 {{ v.author }}</span>
-                <div class="v-title">{{ v.proposed_name }} (v{{ v.version_num }})</div>
+                <a href="{% url 'revisar_version' v.id %}" class="v-title">{{ v.proposed_name }} (v{{ v.version_num }})</a>
+                
                 <div class="actions">
-                    <a href="{% url 'publicar_version' v.id %}" class="btn-small btn-pub">🚀 PUBLICAR</a>
+                    <a href="{% url 'publicar_version' v.id %}" class="btn-small btn-pub">🚀 PUBLICAR AL LIVE</a>
+                    <a href="{% url 'revisar_version' v.id %}" class="btn-small btn-rev" title="Ver ficha">👁️</a>
+                    <a href="{% url 'rechazar_version' v.id %}" class="btn-small btn-no" onclick="return confirm('¿Seguro que quieres DESCARTAR esta versión aprobada?')" title="Descartar">🗑️</a>
                 </div>
             </div>
             {% empty %}<div style="text-align:center; color:#555;">Nada listo.</div>{% endfor %}
@@ -89,7 +99,7 @@
             <div class="v-card">
                 <div class="v-meta"><span>v{{ v.version_num }}</span><span>{{ v.date|date:"d/m" }}</span></div>
                 <div class="v-title">{{ v.proposed_name }}</div>
-                <div style="font-size:0.7em; color:#666;">Reemplazada por superior</div>
+                <div style="font-size:0.7em; color:#666;">Obsolescencia programada</div>
             </div>
             {% endfor %}
         </div>

@@ -14,18 +14,25 @@ class PublishToLiveVersionUseCase:
         world = version.world
         world.name = version.proposed_name
         world.description = version.proposed_description
-        
-        # Actualizamos metadatos
         world.current_version_number = version.version_number
-        # Guardamos el nombre del autor (por si se borra el usuario, queda el texto)
         world.current_author_name = version.author.username if version.author else "Desconocido"
+        
+        # --- CORRECCIÓN: ACTUALIZAR ESTADO DEL MUNDO ---
+        world.status = "LIVE" 
+        # -----------------------------------------------
         
         world.save()
 
-        # 2. MARCAR ESTA COMO LIVE
+        # 2. MARCAR VERSIÓN COMO LIVE
         version.status = "LIVE"
         version.save()
         
-        # (Sin auto-archivado, las versiones viejas se quedan como historial visible)
+        # 3. LIMPIEZA (Archivar obsoletas)
+        obsoletas = CaosVersionORM.objects.filter(
+            world=world,
+            version_number__lt=version.version_number,
+            status__in=['PENDING', 'APPROVED']
+        )
+        obsoletas.update(status='ARCHIVED')
         
-        print(f" 🚀 Publicada v{version.version_number}. Autor: {world.current_author_name}")
+        print(f" 🚀 Publicada v{version.version_number}. Mundo '{world.name}' ahora está LIVE.")

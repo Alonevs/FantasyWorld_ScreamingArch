@@ -6,16 +6,18 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', home, name='home'),
     path('control/', centro_control, name='centro_control'),
-    
     path('mundo/<str:jid>/', ver_mundo, name='ver_mundo'),
-    
-    # NUEVA RUTA: Ver una versión específica (Vista Previa)
     path('revision/<int:version_id>/', revisar_version, name='revisar_version'),
     
+    # Gestión
     path('borrar/<str:jid>/', borrar_mundo, name='borrar_mundo'),
     path('editar/<str:jid>/', editar_mundo, name='editar_mundo'),
     path('aprobar/<int:version_id>/', aprobar_version, name='aprobar_version'),
     path('rechazar/<int:version_id>/', rechazar_version, name='rechazar_version'),
     path('publicar/<int:version_id>/', publicar_version, name='publicar_version'),
+    
+    # Acciones Manuales
     path('foto_extra/<str:jid>/', generar_foto_extra, name='generar_foto_extra'),
+    path('texto_extra/<str:jid>/', generar_texto_extra, name='generar_texto_extra'),
+    path('toggle_visible/<str:jid>/', toggle_visibilidad, name='toggle_visibilidad'),
 ]

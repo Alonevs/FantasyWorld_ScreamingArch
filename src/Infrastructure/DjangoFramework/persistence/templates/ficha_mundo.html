@@ -6,28 +6,46 @@
     <title>ECLAI v3.0 | {{ name }}</title>
     <style>
         body { background-color: #0a0a12; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; padding: 20px 40px; } .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 15px; background: #0e0e16; padding: 15px 20px; border-radius: 10px; } .logo { font-size: 1.5em; font-weight: bold; color: #fff; letter-spacing: 2px; } .nav-group { display: flex; gap: 10px; } .nav-btn { background: #333; color: #fff; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 0.9em; border: 1px solid #444; cursor: pointer; } .nav-btn:hover { background: #555; } .nav-btn.special { background: #d633ff; border-color: #d633ff; } .nav-btn.special:hover { background: #a569bd; }
-        .card { background: #161625; border: 1px solid #2a2a40; border-radius: 15px; max-width: 900px; margin: 0 auto; overflow: hidden; }
-        .card-header { background: linear-gradient(90deg, #2b1a45 0%, #1a1a2e 100%); padding: 20px; border-bottom: 2px solid #4a3b69; display: flex; justify-content: space-between; align-items: flex-start; }
-        .content { padding: 30px; }
+        
+        .card { background: #161625; border: 1px solid #2a2a40; border-radius: 15px; max-width: 1000px; margin: 0 auto; overflow: hidden; display: grid; grid-template-columns: 2fr 1fr; }
+        .card-header { grid-column: 1 / -1; background: linear-gradient(90deg, #2b1a45 0%, #1a1a2e 100%); padding: 20px; border-bottom: 2px solid #4a3b69; display: flex; justify-content: space-between; align-items: flex-start; }
+        .main-content { padding: 30px; border-right: 1px solid #2a2a40; }
+        .sidebar { padding: 30px; background: #13131f; }
         .actions { display: flex; gap: 10px; }
-        .btn { padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.8em; text-decoration: none; color:#fff; }
+        .btn { padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.8em; text-decoration: none; color:#fff; border:none; }
         .btn-edit { background: #3498db; } .btn-del { background: #e74c3c; }
         .gallery { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 15px; margin-bottom: 20px; }
         .gallery img { width: 150px; height: 200px; object-fit: cover; border-radius: 8px; border: 2px solid #333; }
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; background: #1f1f33; padding: 15px; border-radius: 10px; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; background: #1f1f33; padding: 15px; border-radius: 10px; font-size: 0.9em; }
         .stat-box { display: flex; flex-direction: column; }
         .label { font-size: 0.75em; color: #666; text-transform: uppercase; }
         .value { font-size: 1.1em; font-family: 'Courier New', monospace; color: #00ffcc; font-weight: bold; }
-        .children-section { margin-top: 40px; border-top: 1px solid #333; padding-top: 20px; }
-        .child-card { display: flex; align-items: center; background: #0e0e16; margin-bottom: 10px; padding: 10px; border-radius: 8px; text-decoration: none; color: #fff; border: 1px solid #333; }
-        .child-card:hover { border-color: #d633ff; transform: translateX(5px); transition:0.2s; }
+        .section-title { color: #a0a0ff; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px; margin-top: 25px; font-size: 1.1em; }
+        .lore-box { background: #111; padding: 20px; border-left: 4px solid #d633ff; font-style: italic; color: #ccc; white-space: pre-wrap; margin-bottom: 10px; }
+        .metadata-box { background: #0e0e16; color: #0f0; font-family: 'Consolas', monospace; padding: 15px; border-radius: 5px; font-size: 0.8em; overflow-x: auto; border: 1px solid #333; }
+        .children-list { display: grid; gap: 5px; }
+        .child-link { display: block; padding: 8px; background: #1f1f33; text-decoration: none; color: #eee; border-radius: 4px; border: 1px solid #333; }
+        .child-link:hover { border-color: #d633ff; }
+        .status-badge { padding: 4px 12px; border-radius: 4px; font-weight: bold; font-size: 0.8em; letter-spacing: 1px; text-transform: uppercase; display: inline-block; }
+        .st-live { background: #2ecc71; color: #000; border: 1px solid #27ae60; }
+        .st-draft { background: #f39c12; color: #000; border: 1px solid #d35400; }
+        .vis-toggle { text-decoration: none; font-weight: bold; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; transition:0.3s; border:1px solid transparent; cursor:pointer; display:inline-block; }
+        .vis-public { background: rgba(46, 204, 113, 0.1); color: #2ecc71; border-color: #2ecc71; }
+        .vis-private { background: rgba(231, 76, 60, 0.1); color: #e74c3c; border-color: #e74c3c; }
+        
+        .breadcrumbs { margin-bottom: 10px; font-size: 0.85em; color: #888; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+        .crumb-item { background: #333; padding: 2px 8px; border-radius: 10px; text-decoration: none; color: #ccc; border: 1px solid #444; transition:0.2s; }
+        .crumb-item:hover { background: #d633ff; color: #fff; border-color: #d633ff; }
+        .crumb-separator { color: #666; }
+        .crumb-active { color: #fff; font-weight: bold; border-color: #d633ff; background: rgba(214, 51, 255, 0.1); }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; justify-content: center; align-items: center; }
+        .modal:target { display: flex; }
+        .modal-content { background: #161625; padding: 30px; border-radius: 10px; width: 600px; border: 1px solid #d633ff; box-shadow: 0 0 50px rgba(0,0,0,0.8); }
+        .edit-form input, .edit-form textarea { width: 100%; background: #0a0a12; border: 1px solid #444; color: #fff; padding: 10px; margin-top: 5px; }
         .child-form { background: #1f1f33; padding: 15px; border-radius: 8px; margin-top: 20px; display: flex; gap: 10px; }
         .child-form input { background: #0a0a12; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 4px; flex-grow: 1; }
         .child-form button { background: #d633ff; color: #fff; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; justify-content: center; align-items: center; }
-        .modal:target { display: flex; }
-        .modal-content { background: #161625; padding: 30px; border-radius: 10px; width: 500px; border: 1px solid #d633ff; }
-        .edit-form input, .edit-form textarea { width: 100%; background: #0a0a12; border: 1px solid #444; color: #fff; padding: 10px; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -41,14 +59,13 @@
     </div>
 
     {% if is_preview %}
-    <div style="background:#f39c12; color:#fff; padding:15px; text-align:center; margin-bottom:20px; border-radius:8px; border:2px solid #e67e22; max-width:900px; margin-left:auto; margin-right:auto;">
-        <h2 style="margin:0; font-size:1.2em;">⚠️ MODO INSPECCIÓN</h2>
-        <p style="margin:5px 0;">Propuesto por: <strong>{{ author }}</strong></p>
-        <div style="background:rgba(0,0,0,0.2); display:inline-block; padding:5px 10px; border-radius:4px; margin-bottom:10px;">📝 Razón: "<em>{{ change_log }}</em>"</div>
-        <div style="margin-top:10px; display:flex; justify-content:center; gap:20px;">
-            <a href="{% url 'aprobar_version' version_id %}" class="btn" style="background:#27ae60; padding:10px 30px; font-size:1.1em;">✅ APROBAR</a>
-            <a href="{% url 'rechazar_version' version_id %}" class="btn" style="background:#c0392b; padding:10px 30px; font-size:1.1em;">❌ RECHAZAR</a>
-            <a href="{% url 'centro_control' %}" class="btn" style="background:#7f8c8d; padding:10px 30px;">Cancelar</a>
+    <div style="background:#f39c12; color:#fff; padding:15px; text-align:center; margin-bottom:20px; border-radius:8px; margin: 0 auto 20px auto; max-width: 1000px;">
+        <h2>⚠️ MODO INSPECCIÓN: VERSIÓN {{ version_live }} (Propuesta)</h2>
+        <p>Autor: <strong>{{ author }}</strong> | Razón: <em>{{ change_log }}</em></p>
+        <div style="margin-top:10px;">
+            <a href="{% url 'aprobar_version' version_id %}" class="btn" style="background:#27ae60;">✅ APROBAR</a>
+            <a href="{% url 'rechazar_version' version_id %}}" class="btn" style="background:#c0392b;">❌ RECHAZAR</a>
+            <a href="{% url 'centro_control' %}" class="btn" style="background:#7f8c8d;">Cancelar</a>
         </div>
     </div>
     {% endif %}
@@ -56,75 +73,113 @@
     <div class="card">
         <div class="card-header">
             <div>
-                <div style="color:#888; font-size:0.9em; margin-bottom:5px;">
-                    {% for b in breadcrumbs %} <span>/</span> <a href="{% url 'ver_mundo' b.id %}" style="color:#d633ff; text-decoration:none;">{{ b.id }}</a> {% endfor %}
+                <div class="breadcrumbs">
+                    <a href="{% url 'home' %}" class="crumb-item">🏠 Universo</a>
+                    {% for b in breadcrumbs %}
+                        <span class="crumb-separator">›</span>
+                        <a href="{% url 'ver_mundo' b.id %}" class="crumb-item {% if b.id == jid %}crumb-active{% endif %}">
+                            {{ b.label }} <span style="opacity:0.5; font-size:0.8em;">({{ b.short }})</span>
+                        </a>
+                    {% endfor %}
                 </div>
-                <h1 style="margin:0; font-size:2em;">{{ name }}</h1>
                 
-                <div style="font-size:0.8em; color:#a0a0ff; margin-top:5px; display:flex; gap:15px;">
-                    <span style="background:#333; padding:2px 6px; border-radius:4px;">STATUS: {{ status }}</span>
-                    <span style="background:#2c3e50; padding:2px 6px; border-radius:4px; border:1px solid #3498db;">
-                        📡 LIVE: <strong>v{{ version_live }}</strong>
-                    </span>
-                    <span style="color:#888;">✍️ Autor: {{ author_live }}</span>
+                <h1 style="margin:10px 0 5px 0;">{{ name }}</h1>
+                
+                <div style="margin-top:5px;">
+                    {% if status == 'LIVE' %}
+                        <span class="status-badge st-live">🟢 LIVE v{{ version_live }} (Autor: {{ author_live }})</span>
+                    {% else %}
+                        <span class="status-badge st-draft">⚠️ {{ status|default:"DRAFT" }}</span>
+                    {% endif %}
                 </div>
             </div>
+            
             {% if not is_preview %}
             <div class="actions">
                 <a href="#editModal" class="btn btn-edit">✏️ Editar</a>
-                <a href="{% url 'borrar_mundo' jid %}" class="btn btn-del" onclick="return confirm('¿Seguro?')">🗑️ Borrar</a>
+                <a href="{% url 'borrar_mundo' jid %}" class="btn btn-del" onclick="return confirm('¿Seguro? Se borrarán hijos también.')">🗑️ Borrar</a>
             </div>
             {% endif %}
         </div>
 
-        <div class="content">
+        <div class="main-content">
             {% if propuestas %}
-            <div style="background:#2c2c44; border:1px solid #f1c40f; padding:15px; border-radius:8px; margin-bottom:20px;">
-                <div style="color:#f1c40f; font-weight:bold; margin-bottom:10px;">⚠️ CAMBIOS PENDIENTES</div>
-                {% for p in propuestas %}
-                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #444; padding-bottom:5px; margin-bottom:5px;">
-                    <div><strong>v{{ p.version_number }}</strong>: {{ p.proposed_name }}</div>
-                    <div><a href="{% url 'revisar_version' p.id %}" style="color:#3498db; text-decoration:none; margin-right:10px;">👁️ Revisar</a></div>
+            <div style="background:rgba(241, 196, 15, 0.1); border:1px solid #f1c40f; padding:15px; border-radius:8px; margin-bottom:20px;">
+                <strong style="color:#f1c40f;">⚠️ Hay {{ propuestas|length }} revisión(es) pendiente(s)</strong>
+                <div style="margin-top:5px; font-size:0.9em;">
+                    <a href="{% url 'centro_control' %}" style="color:#d633ff;">Ir al Centro de Control</a> para aprobar.
                 </div>
-                {% endfor %}
             </div>
             {% endif %}
 
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <div class="label">Galería</div>
-                {% if not is_preview %}<a href="{% url 'generar_foto_extra' jid %}" class="btn" style="background:#9b59b6;">🎨 + Foto</a>{% endif %}
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                <div class="section-title" style="margin:0;">Arte Visual</div>
+                {% if not is_preview %}<a href="{% url 'generar_foto_extra' jid %}" class="btn" style="background:#9b59b6; font-size:0.7em;">🎨 + FOTO IA</a>{% endif %}
             </div>
             <div class="gallery">
-                {% for img in imagenes %} <img src="{% static 'persistence/img/'|add:img %}"> {% empty %} <div style="color:#555;">Sin fotos.</div> {% endfor %}
+                {% for img in imagenes %} <img src="{% static 'persistence/img/'|add:img %}"> {% empty %} <div style="color:#555; padding:20px; border:1px dashed #444; width:100%; text-align:center;">No hay arte generado.</div> {% endfor %}
             </div>
 
-            <div class="stats-grid">
-                <div class="stat-box"><span class="label">J-ID</span><span class="value">{{ jid }}</span></div>
-                <div class="stat-box"><span class="label">CODE</span><span class="value" style="color:#d633ff">{{ code_entity }}</span></div>
-                <div class="stat-box"><span class="label">Lore ID</span><span class="value">{{ nid_lore }}</span></div>
-                <div class="stat-box"><span class="label">CODE</span><span class="value" style="color:#d633ff">{{ code_lore }}</span></div>
+            <div class="section-title">Descripción Conceptual</div>
+            <div class="lore-box">{{ description|default:"Sin descripción definida." }}</div>
+            
+            <div class="section-title">Metadata (JSON)</div>
+            <pre class="metadata-box">{{ metadata }}</pre>
+        </div>
+
+        <div class="sidebar">
+            <div class="section-title" style="margin-top:0;">Identidad</div>
+            <div class="stats-grid" style="grid-template-columns: 1fr;">
+                <div class="stat-box"><span class="label">J-ID (Jerarquía)</span><span class="value">{{ jid }}</span></div>
+                <div class="stat-box"><span class="label">CODE (ECLAI)</span><span class="value" style="color:#d633ff">{{ code_entity }}</span></div>
+                <div class="stat-box"><span class="label">Creado el</span><span class="value" style="font-size:0.8em;">{{ created_at|date:"d/m/Y" }}</span></div>
+                
+                <div class="stat-box">
+                    <span class="label">Visibilidad</span>
+                    <div style="margin-top:5px;">
+                        {% if not is_preview %}
+                            <a href="{% url 'toggle_visibilidad' jid %}" class="vis-toggle {% if visible %}is-public{% else %}is-private{% endif %}">
+                                {% if visible %}🌎 PÚBLICA{% else %}🔒 PRIVADA{% endif %}
+                            </a>
+                        {% else %}
+                            <div class="visibility-toggle {% if visible %}is-public{% else %}is-private{% endif %}">
+                                {% if visible %}🌎 PÚBLICA{% else %}🔒 PRIVADA{% endif %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
 
-            <div class="label">Narrativa</div>
-            <div style="background:#111; padding:20px; border-left:4px solid #d633ff; font-style:italic; color:#ccc; white-space:pre-wrap;">{{ description }}</div>
+            <div class="section-title">Lore Link</div>
+            <div style="font-size:0.8em; color:#888; background:#0e0e16; padding:10px; border-radius:5px;">
+                ID: <strong style="color:#fff;">{{ nid_lore }}</strong> <span style="color:#d633ff;">[{{ code_lore }}]</span>
+                <br><em style="color:#555;">(Enlace a Tabla Narrativa)</em>
+            </div>
 
-            <div class="children-section">
-                <div class="label" style="margin-bottom:15px; color:#a0a0ff;">▼ SUB-ENTIDADES ({{ hijos|length }})</div>
+            <div class="section-title">Entidades Hijas</div>
+            <div class="children-list">
                 {% for h in hijos %}
-                <a href="{% url 'ver_mundo' h.id %}" class="child-card">
-                    <img src="{% static 'persistence/img/'|add:h.img %}" style="width:50px; height:50px; object-fit:cover; margin-right:15px; border-radius:4px;" onerror="this.style.display='none'">
-                    <div><div style="font-family:'Courier New'; color:#d633ff; font-size:0.8em;">{{ h.id }}</div><div style="font-weight:bold;">{{ h.name }}</div></div>
+                <a href="{% url 'ver_mundo' h.id %}" class="child-link">
+                    <span style="color:#d633ff; font-family:monospace;">{{ h.id }}</span> <strong>{{ h.name }}</strong>
                 </a>
-                {% endfor %}
-                {% if not is_preview %}
-                <form method="POST" class="child-form">
-                    {% csrf_token %}
-                    <input type="text" name="child_name" placeholder="Crear hijo..." required>
-                    <input type="text" name="child_desc" placeholder="Desc..." style="width:30%;">
-                    <button type="submit">➕ CREAR</button>
-                </form>
-                {% endif %}
+                {% empty %} <div style="color:#555; font-style:italic;">Sin hijos.</div> {% endfor %}
             </div>
+            
+            {% if not is_preview %}
+            <form method="POST" class="child-form">
+                {% csrf_token %}
+                <input type="text" name="child_name" placeholder="Nuevo hijo..." style="width:100%; background:#000; border:1px solid #444; color:#fff; padding:5px;" required autocomplete="off">
+                <input type="text" name="child_desc" placeholder="Desc..." style="display:none;">
+                <button type="submit">➕</button>
+            </form>
+            {% endif %}
+            
+            <div class="section-title">Historial</div>
+            <ul style="padding-left:20px; font-size:0.8em; color:#aaa;">
+                {% for h in historial %}
+                <li>v{{ h.version_number }}: {{ h.proposed_name }}</li>
+                {% endfor %}
+            </ul>
         </div>
     </div>
 
@@ -135,8 +190,17 @@
             <form method="POST" action="{% url 'editar_mundo' jid %}" class="edit-form">
                 {% csrf_token %}
                 <label>Nombre:</label><input type="text" name="name" value="{{ name }}">
-                <label>Descripción:</label><textarea name="description" style="height:150px;">{{ description }}</textarea>
-                <label style="color:#f1c40f;">Razón:</label><input type="text" name="reason" required>
+                
+                <label>Descripción Conceptual:</label>
+                <div style="margin-bottom:5px; padding:5px; background:#2c2c44; border-radius:4px; display:flex; align-items:center; justify-content:space-between;">
+                    <span style="font-size:0.8em; color:#aaa;">Escribe tu idea (prompt) o el texto final:</span>
+                    <label style="color:#d633ff; font-size:0.9em; cursor:pointer;">
+                        <input type="checkbox" name="use_ai_edit"> ✨ Usar IA
+                    </label>
+                </div>
+                <textarea name="description" style="height:150px;">{{ description }}</textarea>
+                
+                <label style="color:#f1c40f;">Razón del cambio:</label><input type="text" name="reason" required>
                 <div style="margin-top:20px; text-align:right;">
                     <a href="{% url 'ver_mundo' jid %}" class="btn" style="background:#555;">Cancelar</a>
                     <button type="submit" class="btn" style="background:#d633ff;">🚀 Enviar Propuesta</button>

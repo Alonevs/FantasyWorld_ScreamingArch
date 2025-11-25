@@ -7,11 +7,12 @@ class RejectVersionUseCase:
         except CaosVersionORM.DoesNotExist:
             raise Exception("Versión no encontrada")
 
-        if version.status != "PENDING":
+        # CAMBIO: Ahora permitimos rechazar PENDING y APPROVED
+        if version.status not in ["PENDING", "APPROVED"]:
             raise Exception(f"No se puede rechazar una versión en estado {version.status}")
 
-        # Simplemente cambiamos el estado a REJECTED
+        # Cambiamos el estado a REJECTED (Papelera)
         version.status = "REJECTED"
         version.save()
         
-        print(f" ❌ Rechazada propuesta v{version.version_number} para '{version.world.name}'.")
+        print(f" ❌ Rechazada/Descartada propuesta v{version.version_number} para '{version.world.name}'.")

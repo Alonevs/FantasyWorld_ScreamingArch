@@ -4,42 +4,41 @@ from src.FantasyWorld.AI_Generation.Domain.interfaces import LoreGenerator
 
 class Llama3Service(LoreGenerator):
     def __init__(self):
-        # ⚠️ CONFIGURACIÓN OOBABOOGA ⚠️
-        # Si usas start_api.bat, normalmente abre el puerto 5000.
-        # Endpoint 'v1/completions' es el estándar compatible con OpenAI.
-        self.api_url = "http://127.0.0.1:5000/v1/completions" 
-        
-        # Parámetros para controlar la creatividad de Llama 3
+        # URL Oobabooga
+        self.api_url = "http://127.0.0.1:5000/v1/completions"
         self.headers = {"Content-Type": "application/json"}
 
     def generate_description(self, prompt: str) -> str:
-        print(f" 🧠 [OOBABOOGA] Enviando prompt: {prompt}...")
+        print(f" 🧠 [IA] Procesando solicitud: {prompt[:50]}...")
         
-        # Preparamos el prompt estilo 'chat' o 'instrucción'
-        full_prompt = f"### Instruction:\nGenera una descripción breve (max 3 líneas) y oscura para un mundo de fantasía llamado: {prompt}\n\n### Response:\n"
+        # --- LIMPIEZA DE PROMPT ---
+        # Antes decíamos: "Genera una historia oscura sobre {prompt}"
+        # AHORA: Le pasamos tu instrucción directa, pero con formato de Chat para que Llama entienda.
+        
+        # Formato Alpaca/Chat estándar que funciona bien con Llama 3
+        full_prompt = f"### Instruction:\n{prompt}\n\n### Response:\n"
 
         payload = {
             "prompt": full_prompt,
-            "max_tokens": 200,       # Longitud de la respuesta
-            "temperature": 0.7,      # Creatividad (0.1 aburrido, 1.0 loco)
+            "max_tokens": 300,       # Un poco más de espacio
+            "temperature": 0.7,      # Creatividad equilibrada
             "top_p": 0.9,
             "seed": -1,
-            "stream": False
+            "stream": False,
+            "stop": ["###"]          # Que pare si intenta hablar por el usuario
         }
 
         try:
-            response = requests.post(self.api_url, headers=self.headers, json=payload, timeout=30)
+            response = requests.post(self.api_url, headers=self.headers, json=payload, timeout=60)
             
             if response.status_code == 200:
                 data = response.json()
-                # Oobabooga devuelve: {'choices': [{'text': '...'}]}
-                texto_generado = data['choices'][0]['text']
-                return texto_generado.strip()
+                texto = data['choices'][0]['text']
+                return texto.strip()
             else:
                 print(f"❌ Error API: {response.text}")
-                return f"[Error] Oobabooga respondió: {response.status_code}"
+                return "Error: La IA no respondió correctamente."
 
-        except requests.exceptions.ConnectionError:
-            print(" ⚠️ No pude conectar a http://127.0.0.1:5000")
-            print("    ¿Ejecutaste 'start_api.bat' y esperaste a que cargara el modelo?")
-            return "[Error de Conexión] Enciende Oobabooga primero."
+        except Exception as e:
+            print(f" ⚠️ Error conexión IA: {e}")
+            return "Error: No se pudo conectar con Oobabooga."
