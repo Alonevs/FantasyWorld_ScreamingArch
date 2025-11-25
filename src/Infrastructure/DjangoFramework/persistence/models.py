@@ -9,8 +9,9 @@ class CaosWorldORM(models.Model):
     status = models.CharField(max_length=50, default="DRAFT")
     created_at = models.DateTimeField(auto_now_add=True)
     
-    # NUEVO: Saber qué versión está viva ahora mismo
+    # METADATOS LIVE
     current_version_number = models.IntegerField(default=1)
+    current_author_name = models.CharField(max_length=150, default="Sistema", blank=True)
 
     class Meta:
         db_table = 'caos_worlds'
@@ -23,8 +24,6 @@ class CaosVersionORM(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=20, default="PENDING")
     change_log = models.CharField(max_length=255, blank=True)
-    
-    # NUEVO: El autor (Puede ser null si el usuario fue borrado)
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 
     class Meta:

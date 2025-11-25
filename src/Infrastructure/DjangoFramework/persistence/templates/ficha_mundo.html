@@ -5,40 +5,25 @@
     <meta charset="UTF-8">
     <title>ECLAI v3.0 | {{ name }}</title>
     <style>
-        body { background-color: #0a0a12; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; padding: 20px 40px; }
-        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 15px; background: #0e0e16; padding: 15px 20px; border-radius: 10px; }
-        .logo { font-size: 1.5em; font-weight: bold; color: #fff; letter-spacing: 2px; }
-        .nav-group { display: flex; gap: 10px; }
-        .nav-btn { background: #333; color: #fff; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 0.9em; border: 1px solid #444; cursor: pointer; }
-        .nav-btn:hover { background: #555; }
-        .nav-btn.special { background: #d633ff; border-color: #d633ff; }
-        .nav-btn.special:hover { background: #a569bd; }
-
+        body { background-color: #0a0a12; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; padding: 20px 40px; } .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 15px; background: #0e0e16; padding: 15px 20px; border-radius: 10px; } .logo { font-size: 1.5em; font-weight: bold; color: #fff; letter-spacing: 2px; } .nav-group { display: flex; gap: 10px; } .nav-btn { background: #333; color: #fff; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 0.9em; border: 1px solid #444; cursor: pointer; } .nav-btn:hover { background: #555; } .nav-btn.special { background: #d633ff; border-color: #d633ff; } .nav-btn.special:hover { background: #a569bd; }
         .card { background: #161625; border: 1px solid #2a2a40; border-radius: 15px; max-width: 900px; margin: 0 auto; overflow: hidden; }
-        .card-header { background: linear-gradient(90deg, #2b1a45 0%, #1a1a2e 100%); padding: 20px; border-bottom: 2px solid #4a3b69; display: flex; justify-content: space-between; align-items: center; }
+        .card-header { background: linear-gradient(90deg, #2b1a45 0%, #1a1a2e 100%); padding: 20px; border-bottom: 2px solid #4a3b69; display: flex; justify-content: space-between; align-items: flex-start; }
         .content { padding: 30px; }
-        
         .actions { display: flex; gap: 10px; }
         .btn { padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.8em; text-decoration: none; color:#fff; }
-        .btn-edit { background: #3498db; }
-        .btn-del { background: #e74c3c; }
-        
+        .btn-edit { background: #3498db; } .btn-del { background: #e74c3c; }
         .gallery { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 15px; margin-bottom: 20px; }
         .gallery img { width: 150px; height: 200px; object-fit: cover; border-radius: 8px; border: 2px solid #333; }
-        
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; background: #1f1f33; padding: 15px; border-radius: 10px; }
         .stat-box { display: flex; flex-direction: column; }
         .label { font-size: 0.75em; color: #666; text-transform: uppercase; }
         .value { font-size: 1.1em; font-family: 'Courier New', monospace; color: #00ffcc; font-weight: bold; }
-        
         .children-section { margin-top: 40px; border-top: 1px solid #333; padding-top: 20px; }
         .child-card { display: flex; align-items: center; background: #0e0e16; margin-bottom: 10px; padding: 10px; border-radius: 8px; text-decoration: none; color: #fff; border: 1px solid #333; }
         .child-card:hover { border-color: #d633ff; transform: translateX(5px); transition:0.2s; }
-        
         .child-form { background: #1f1f33; padding: 15px; border-radius: 8px; margin-top: 20px; display: flex; gap: 10px; }
         .child-form input { background: #0a0a12; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 4px; flex-grow: 1; }
         .child-form button { background: #d633ff; color: #fff; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; }
-        
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; justify-content: center; align-items: center; }
         .modal:target { display: flex; }
         .modal-content { background: #161625; padding: 30px; border-radius: 10px; width: 500px; border: 1px solid #d633ff; }
@@ -46,7 +31,6 @@
     </style>
 </head>
 <body>
-
     <div class="top-bar">
         <div class="logo">ECLAI v3.0 // SYSTEM</div>
         <div class="nav-group">
@@ -58,13 +42,11 @@
 
     {% if is_preview %}
     <div style="background:#f39c12; color:#fff; padding:15px; text-align:center; margin-bottom:20px; border-radius:8px; border:2px solid #e67e22; max-width:900px; margin-left:auto; margin-right:auto;">
-        <h2 style="margin:0; font-size:1.2em;">⚠️ MODO INSPECCIÓN: VERSIÓN CANDIDATA</h2>
-        <p style="margin:5px 0;">Estás viendo una <strong>simulación</strong> de los cambios propuestos por <u>{{ author }}</u>.</p>
-        <div style="background:rgba(0,0,0,0.2); display:inline-block; padding:5px 10px; border-radius:4px; margin-bottom:10px;">
-            📝 Razón: "<em>{{ change_log }}</em>"
-        </div>
+        <h2 style="margin:0; font-size:1.2em;">⚠️ MODO INSPECCIÓN</h2>
+        <p style="margin:5px 0;">Propuesto por: <strong>{{ author }}</strong></p>
+        <div style="background:rgba(0,0,0,0.2); display:inline-block; padding:5px 10px; border-radius:4px; margin-bottom:10px;">📝 Razón: "<em>{{ change_log }}</em>"</div>
         <div style="margin-top:10px; display:flex; justify-content:center; gap:20px;">
-            <a href="{% url 'aprobar_version' version_id %}" class="btn" style="background:#27ae60; padding:10px 30px; font-size:1.1em;">✅ APROBAR CAMBIOS</a>
+            <a href="{% url 'aprobar_version' version_id %}" class="btn" style="background:#27ae60; padding:10px 30px; font-size:1.1em;">✅ APROBAR</a>
             <a href="{% url 'rechazar_version' version_id %}" class="btn" style="background:#c0392b; padding:10px 30px; font-size:1.1em;">❌ RECHAZAR</a>
             <a href="{% url 'centro_control' %}" class="btn" style="background:#7f8c8d; padding:10px 30px;">Cancelar</a>
         </div>
@@ -78,9 +60,15 @@
                     {% for b in breadcrumbs %} <span>/</span> <a href="{% url 'ver_mundo' b.id %}" style="color:#d633ff; text-decoration:none;">{{ b.id }}</a> {% endfor %}
                 </div>
                 <h1 style="margin:0; font-size:2em;">{{ name }}</h1>
-                <div style="font-size:0.8em; color:#a0a0ff;">STATUS: {{ status }}</div>
+                
+                <div style="font-size:0.8em; color:#a0a0ff; margin-top:5px; display:flex; gap:15px;">
+                    <span style="background:#333; padding:2px 6px; border-radius:4px;">STATUS: {{ status }}</span>
+                    <span style="background:#2c3e50; padding:2px 6px; border-radius:4px; border:1px solid #3498db;">
+                        📡 LIVE: <strong>v{{ version_live }}</strong>
+                    </span>
+                    <span style="color:#888;">✍️ Autor: {{ author_live }}</span>
+                </div>
             </div>
-            
             {% if not is_preview %}
             <div class="actions">
                 <a href="#editModal" class="btn btn-edit">✏️ Editar</a>
@@ -92,7 +80,7 @@
         <div class="content">
             {% if propuestas %}
             <div style="background:#2c2c44; border:1px solid #f1c40f; padding:15px; border-radius:8px; margin-bottom:20px;">
-                <div style="color:#f1c40f; font-weight:bold; margin-bottom:10px;">⚠️ CAMBIOS PENDIENTES DE APROBACIÓN</div>
+                <div style="color:#f1c40f; font-weight:bold; margin-bottom:10px;">⚠️ CAMBIOS PENDIENTES</div>
                 {% for p in propuestas %}
                 <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #444; padding-bottom:5px; margin-bottom:5px;">
                     <div><strong>v{{ p.version_number }}</strong>: {{ p.proposed_name }}</div>
@@ -104,9 +92,7 @@
 
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                 <div class="label">Galería</div>
-                {% if not is_preview %}
-                <a href="{% url 'generar_foto_extra' jid %}" class="btn" style="background:#9b59b6;">🎨 + Foto</a>
-                {% endif %}
+                {% if not is_preview %}<a href="{% url 'generar_foto_extra' jid %}" class="btn" style="background:#9b59b6;">🎨 + Foto</a>{% endif %}
             </div>
             <div class="gallery">
                 {% for img in imagenes %} <img src="{% static 'persistence/img/'|add:img %}"> {% empty %} <div style="color:#555;">Sin fotos.</div> {% endfor %}
@@ -130,7 +116,6 @@
                     <div><div style="font-family:'Courier New'; color:#d633ff; font-size:0.8em;">{{ h.id }}</div><div style="font-weight:bold;">{{ h.name }}</div></div>
                 </a>
                 {% endfor %}
-                
                 {% if not is_preview %}
                 <form method="POST" class="child-form">
                     {% csrf_token %}
