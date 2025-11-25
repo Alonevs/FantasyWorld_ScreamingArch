@@ -1,34 +1,16 @@
 import sys
-# Importamos la interfaz y la entidad pura
+from django.db.models import Max
+from django.db.models.functions import Length
 from src.WorldManagement.Caos.Domain.repositories import CaosRepository
 from src.WorldManagement.Caos.Domain.entities import CaosWorld, VersionStatus
 from src.Shared.Domain.value_objects import WorldID
-
-# OJO: Los modelos de Django se importan DENTRO de los métodos o después del setup en main
-# para evitar errores de "App not ready".
 from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM
+from src.Shared.Domain import eclai_core
 
 class DjangoCaosRepository(CaosRepository):
-    """
-    Implementación del Repositorio de Caos usando Django ORM.
-    
-    Esta clase actúa como un adaptador entre el Dominio (Entities) y la Infraestructura (Django Models).
-    Se encarga de:
-    1. Mapear Entidades de Dominio -> Modelos de Django (al guardar).
-    2. Mapear Modelos de Django -> Entidades de Dominio (al leer).
-    """
     
     def save(self, world: CaosWorld):
-        """
-        Guarda o actualiza un mundo en la base de datos SQL.
-        
-        Args:
-            world (CaosWorld): La entidad de dominio a persistir.
-        """
-        # Convertimos Enum a string para guardarlo
         status_str = world.status.value if hasattr(world.status, 'value') else world.status
-
-        # Guardamos en la DB real usando el ORM
         CaosWorldORM.objects.update_or_create(
             id=world.id.value,
             defaults={
@@ -37,22 +19,11 @@ class DjangoCaosRepository(CaosRepository):
                 'status': status_str
             }
         )
-        print(f" 💾 [DJANGO SQL] Guardado en db.sqlite3: {world.name}")
+        print(f" 💾 [DB] Guardado: {world.name} ({world.id.value})")
 
     def find_by_id(self, world_id: WorldID):
-        """
-        Busca un mundo por su ID.
-        
-        Args:
-            world_id (WorldID): Value Object con el ID a buscar.
-            
-        Returns:
-            CaosWorld | None: La entidad reconstituida o None si no existe.
-        """
         try:
             orm_obj = CaosWorldORM.objects.get(id=world_id.value)
-            # Reconstruimos la entidad pura
-            # (Aquí tendrías que mapear el string 'DRAFT' de vuelta al Enum, lo simplifico por ahora)
             return CaosWorld(
                 id=WorldID(str(orm_obj.id)),
                 name=orm_obj.name,
@@ -61,3 +32,44 @@ class DjangoCaosRepository(CaosRepository):
             )
         except CaosWorldORM.DoesNotExist:
             return None
+
+    def get_next_child_id(self, parent_id_str: str) -> str:
+        # 1. Determinar nivel del padre y del hijo
+        # Si parent="01" (len 2, Nivel 1) -> Hijo será Nivel 2
+        len_parent = len(parent_id_str)
+        nivel_padre = eclai_core.get_level_from_jid_length(len_parent)
+        nivel_hijo = nivel_padre + 1
+        
+        # Calcular longitud esperada del hijo
+        # Nivel 2 (Abismos) son 4 dígitos (Padre 2 + Hijo 2)
+        # Nivel 17 (Entidad) son 36 dígitos
+        if nivel_hijo == 17:
+            len_hijo = len_parent + 4
+        else:
+            len_hijo = len_parent + 2
+
+        # 2. Buscar en DB el último hijo existente
+        # Filtramos por: Empieza con el ID del padre Y tiene la longitud correcta
+        ultimo_hijo = CaosWorldORM.objects.filter(
+            id__startswith=parent_id_str
+        ).annotate(id_len=Length('id')).filter(
+            id_len=len_hijo
+        ).aggregate(Max('id'))['id__max']
+
+        # 3. Calcular el siguiente secuencial
+        if not ultimo_hijo:
+            siguiente_seq = 1
+        else:
+            # Extraemos el segmento final (los últimos 2 o 4 dígitos)
+            segmento = ultimo_hijo[len_parent:]
+            siguiente_seq = int(segmento) + 1
+
+        # 4. Formatear el nuevo segmento (rellenar con ceros)
+        if nivel_hijo == 17:
+            nuevo_segmento = f"{siguiente_seq:04d}"
+        else:
+            nuevo_segmento = f"{siguiente_seq:02d}"
+
+        # 5. Construir ID completo usando tu motor ECLAI
+        # Nota: eclai_core.construir_jid usa 'ruta_base' que es el ID del padre
+        return eclai_core.construir_jid(parent_id_str, nivel_hijo, nuevo_segmento)

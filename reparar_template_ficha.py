@@ -1,3 +1,14 @@
+import os
+from pathlib import Path
+
+def reparar_template_ficha_error():
+    print("🚑 REPARANDO ERROR DE SINTAXIS EN FICHA_MUNDO.HTML...")
+
+    base_templates = Path("src/Infrastructure/DjangoFramework/persistence/templates")
+    path_ficha = base_templates / "ficha_mundo.html"
+
+    # CÓDIGO HTML CORREGIDO Y LIMPIO
+    html_content = """
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">
@@ -162,3 +173,11 @@
     {% endif %}
 </body>
 </html>
+"""
+    with open(path_ficha, "w", encoding="utf-8") as f:
+        f.write(html_content.strip())
+
+    print("✅ Ficha HTML reparada. Error de sintaxis 'Unclosed tag if' resuelto.")
+
+if __name__ == "__main__":
+    reparar_template_ficha_error()

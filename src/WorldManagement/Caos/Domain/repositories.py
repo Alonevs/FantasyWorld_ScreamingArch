@@ -11,3 +11,7 @@ class CaosRepository(ABC):
     @abstractmethod
     def find_by_id(self, world_id: WorldID) -> Optional[CaosWorld]:
         pass
+        
+    # Nuevo método necesario
+    def get_next_child_id(self, parent_id_str: str) -> str:
+        pass
