@@ -1,0 +1,64 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>ECLAI v3.0 | {{ name }}</title>
+    <style>
+        body { background-color: #0a0a12; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; display: flex; justify_content: center; padding-top: 30px; }
+        .card { background: #161625; border: 1px solid #2a2a40; border-radius: 15px; width: 800px; box-shadow: 0 0 30px rgba(0,0,0,0.9); overflow: hidden; }
+        .header { background: linear-gradient(90deg, #2b1a45 0%, #1a1a2e 100%); padding: 20px; border-bottom: 2px solid #4a3b69; display: flex; justify_content: space-between; align-items: center; }
+        .header h1 { margin: 0; font-size: 2em; letter-spacing: 2px; color: #fff; }
+        .content { padding: 30px; }
+        
+        /* GALERÍA */
+        .gallery { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 15px; margin-bottom: 20px; }
+        .gallery img { 
+            width: 180px; height: 240px; object-fit: cover; border-radius: 8px; border: 2px solid #333; transition: 0.3s; cursor: pointer; 
+        }
+        .gallery img:hover { border-color: #d633ff; transform: scale(1.05); }
+        
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; background: #1f1f33; padding: 15px; border-radius: 10px; }
+        .stat-box { display: flex; flex-direction: column; }
+        .label { font-size: 0.75em; color: #666; text-transform: uppercase; }
+        .value { font-size: 1.1em; font-family: 'Courier New', monospace; color: #00ffcc; font-weight: bold;}
+        .lore-box { background: #111; padding: 20px; border-left: 4px solid #d633ff; font-style: italic; line-height: 1.6; color: #ccc; }
+        .back-btn { color: #a0a0ff; text-decoration: none; font-size: 0.9em; display: block; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="header">
+        <div>
+            <a href="{% url 'home' %}" class="back-btn">← Volver al Dashboard</a>
+            <div style="font-size: 0.8em; color: #a0a0ff;">ECLAI v3.0 // VISOR</div>
+            <h1>{{ name }}</h1>
+        </div>
+        <div style="background:#2ecc71; color:#000; padding:5px 10px; border-radius:4px; font-weight:bold;">{{ status }}</div>
+    </div>
+
+    <div class="content">
+        <div class="label">Variaciones Visuales (Generadas por IA)</div>
+        <div class="gallery">
+            {% for img in imagenes %}
+                <img src="{% static 'persistence/img/'|add:img %}" alt="Variación">
+            {% empty %}
+                <div style="padding: 20px; color: #666;">Sin imágenes generadas.</div>
+            {% endfor %}
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-box"><span class="label">J-ID</span><span class="value">{{ jid }}</span></div>
+            <div class="stat-box"><span class="label">CODE</span><span class="value" style="color:#d633ff">{{ code_entity }}</span></div>
+            <div class="stat-box"><span class="label">Lore ID</span><span class="value">{{ nid_lore }}</span></div>
+            <div class="stat-box"><span class="label">CODE</span><span class="value" style="color:#d633ff">{{ code_lore }}</span></div>
+        </div>
+
+        <div class="label">Narrativa</div>
+        <div class="lore-box">"{{ description }}"</div>
+    </div>
+</div>
+
+</body>
+</html>

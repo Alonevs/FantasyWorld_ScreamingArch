@@ -1,0 +1,84 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>ECLAI v3.0 | Dashboard</title>
+    <style>
+        body { background-color: #0a0a12; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; padding: 40px; }
+        
+        /* --- BARRA DE CREACIÓN (El Botón que faltaba) --- */
+        .creation-bar {
+            background: #161625; border: 1px solid #d633ff; padding: 20px; border-radius: 10px;
+            margin-bottom: 40px; display: flex; gap: 15px; align-items: center;
+            box-shadow: 0 0 15px rgba(214, 51, 255, 0.1);
+        }
+        input[type="text"] {
+            background: #0a0a12; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 5px; flex-grow: 1; font-size: 1em;
+        }
+        button {
+            background: #d633ff; color: #fff; border: none; padding: 10px 25px; border-radius: 5px;
+            cursor: pointer; font-weight: bold; transition: 0.3s; font-size: 1em;
+        }
+        button:hover { background: #fff; color: #d633ff; box-shadow: 0 0 10px #d633ff; }
+
+        /* --- GRID DE MUNDOS --- */
+        h1 { color: #fff; letter-spacing: 2px; border-bottom: 2px solid #4a3b69; padding-bottom: 10px; margin-bottom: 30px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 25px; }
+        .card { 
+            background: #161625; border: 1px solid #2a2a40; border-radius: 10px; overflow: hidden; 
+            transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; text-decoration: none; color: inherit;
+        }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(214, 51, 255, 0.2); border-color: #d633ff; }
+        
+        .thumb { height: 150px; background: #000; overflow: hidden; position: relative; }
+        .thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .thumb-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #444; background: #0e0e16; }
+        
+        .info { padding: 15px; }
+        .code { font-family: 'Courier New', monospace; color: #d633ff; font-size: 0.8em; }
+        .title { font-size: 1.2em; font-weight: bold; margin: 5px 0; color: #fff; }
+        .status { font-size: 0.75em; padding: 2px 6px; border-radius: 4px; background: #333; display: inline-block; }
+        .status.LIVE { background: #2ecc71; color: #000; }
+        .status.DRAFT { background: #f1c40f; color: #000; }
+    </style>
+</head>
+<body>
+
+    <div class="creation-bar">
+        <div style="font-weight:bold; color:#d633ff; white-space: nowrap;">NUEVO MUNDO:</div>
+        <form method="POST" style="display:flex; gap:10px; flex-grow:1;">
+            {% csrf_token %}
+            <input type="text" name="world_name" placeholder="Ej: Imperio de Jade..." required autocomplete="off">
+            <input type="text" name="world_desc" placeholder="Breve descripción para la IA..." style="width: 30%;">
+            <button type="submit">⚡ GENERAR</button>
+        </form>
+    </div>
+
+    <h1>UNIVERSO CONOCIDO ({{ mundos|length }})</h1>
+
+    <div class="grid">
+        {% for m in mundos %}
+        <a href="{% url 'ver_mundo' m.id %}" class="card">
+            <div class="thumb">
+                {% if m.has_img %}
+                    <img src="{% static 'persistence/img/'|add:m.img_file %}" alt="{{ m.name }}">
+                {% else %}
+                    <div class="thumb-placeholder">NO SIGNAL</div>
+                {% endif %}
+            </div>
+            <div class="info">
+                <div class="code">J-ID: {{ m.id }} [{{ m.code }}]</div>
+                <div class="title">{{ m.name }}</div>
+                <div class="status {{ m.status }}">{{ m.status }}</div>
+            </div>
+        </a>
+        {% empty %}
+        <div style="grid-column: 1/-1; text-align: center; color: #666; padding: 50px;">
+            El universo está vacío. ¡Usa la barra de arriba para crear el Big Bang!
+        </div>
+        {% endfor %}
+    </div>
+
+</body>
+</html>

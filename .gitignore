@@ -1,0 +1,44 @@
+# --- Python y Compilados (Basura del sistema) ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# --- Entorno Virtual (¡MUY IMPORTANTE NO SUBIR ESTO!) ---
+venv/
+env/
+.venv/
+/bin
+/include
+/lib
+
+# --- Base de Datos Local ---
+# No queremos subir tus mundos de prueba a GitHub/GitLab
+db.sqlite3
+db.sqlite3-journal
+
+# --- Archivos de Configuración y Secretos ---
+.env
+.env.local
+config.py
+
+# --- Django Media y Estáticos Generados ---
+# Ignoramos las imágenes generadas por Stable Diffusion (pesan mucho)
+# Pero mantenemos la estructura de carpetas
+src/Infrastructure/DjangoFramework/persistence/static/persistence/img/*.png
+media/
+staticfiles/
+
+# --- Logs y Errores ---
+*.log
+celerybeat-schedule
+
+# --- IDEs y Editores (Configuración personal) ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Sistema Operativo ---
+Thumbs.db
+.DS_Store

@@ -1,0 +1,13 @@
+# --- FRAMEWORK & BASE DE DATOS ---
+Django==5.0.1
+djangorestframework==3.14.0
+django-environ==0.11.2  # Para leer .env
+
+# --- IA & IMÁGENES ---
+requests==2.31.0        # Para llamar a APIs de Llama 3 / Stable Diffusion
+Pillow==10.2.0          # Para procesar las imágenes que genere la IA
+# openai==1.10.0        # (Opcional) Si usas Llama a través de API compatible
+# torch                 # (Opcional) Solo si vas a correr la IA en local (pesa mucho)
+
+# --- UTILIDADES ---
+black==23.12.1          # Formateador de código
