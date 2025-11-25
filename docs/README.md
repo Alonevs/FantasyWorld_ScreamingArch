@@ -50,7 +50,7 @@ Este proyecto es un gestor de mundos de fantasía avanzado que desacopla la lóg
 ## 🛠️ Tecnologías
 
 - **Core**: Python 3.11
-- **Web/DB**: Django 5.1
+- **Web/DB**: Django 5.0
 - **AI**: Llama 3, Stable Diffusion
 - **Utils**: Pillow, Requests
 
