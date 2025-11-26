@@ -1,10 +1,10 @@
-# 🏗️ Arquitectura del Sistema
+# 🏗️ Arquitectura del Sistema v4.5
 
 Este proyecto sigue los principios de **Screaming Architecture** (Arquitectura que "Grita") y **Domain-Driven Design (DDD)**.
 
 El objetivo es que la estructura del proyecto comunique claramente su propósito (*Gestión de Mundos de Fantasía*) en lugar de la herramienta que utiliza (*Django*).
 
-## 📐 Principios de Diseño
+## 📐 1. Principios de Diseño
 
 La arquitectura invierte la dependencia tradicional: **El Framework (Django) es un detalle de implementación**, no el núcleo de la aplicación.
 
@@ -12,32 +12,70 @@ La arquitectura invierte la dependencia tradicional: **El Framework (Django) es 
 
 1.  **Domain (Dominio)** 🧠
     * **Ubicación:** `src/FantasyWorld/*/Domain/`
-    * **Responsabilidad:** Contiene las reglas de negocio puras, entidades y lógica del universo (ej. reglas de ECLAI).
+    * **Responsabilidad:** Contiene las reglas de negocio puras, entidades y lógica del universo (ej. reglas de ECLAI, Value Objects).
     * **Dependencias:** Cero. No conoce ni la base de datos ni la web.
 
 2.  **Application (Aplicación)** ⚙️
     * **Ubicación:** `src/FantasyWorld/*/Application/`
-    * **Responsabilidad:** Orquesta los **Casos de Uso**. Es el "director de orquesta" que recibe una orden (ej. "Crear Mundo") y llama a las piezas necesarias (Repositorio, IA, Entidad).
-    * **Ejemplos:** `CreateWorldUseCase`, `ProposeChangeUseCase`.
+    * **Responsabilidad:** Orquesta los **Casos de Uso**. Es el "director de orquesta" que recibe una orden (ej. "Crear Mundo", "Proponer Cambio") y llama a las piezas necesarias.
+    * **Ejemplos:** `CreateWorldUseCase`, `ProposeChangeUseCase`, `PublishToLiveVersionUseCase`.
 
 3.  **Infrastructure (Infraestructura)** 🔌
     * **Ubicación:** `src/Infrastructure/` y `src/*/Infrastructure/`
     * **Responsabilidad:** Implementaciones concretas de herramientas externas.
     * **Componentes:**
-        * **DjangoFramework:** Se usa solo como motor web y ORM (Base de datos).
-        * **Servicios IA:** Adaptadores para hablar con Llama 3 y Stable Diffusion.
+        * **DjangoFramework:** Se usa solo como motor web, ORM (Base de datos) y gestión de usuarios.
+        * **Servicios IA:** Adaptadores (`sd_service.py`, `llama_service.py`) que hablan con las APIs locales.
 
 ---
 
-## 📂 Mapa del Código (`src/`)
+## 💾 2. Diseño de Datos (Schema & Versioning)
+
+El sistema implementa un patrón de **Gobierno de Datos** estricto para proteger la integridad del universo.
+
+### A. Entidad "Mundo" (`CaosWorldORM`) - La Verdad Única
+Representa el objeto en su estado **LIVE** (Público/Oficial). Es lo que ven los usuarios finales.
+* **ID Estructural:** J-ID (`01`, `0101`) inmutable.
+* **Metadata (JSON):** Campo flexible para almacenar datos técnicos (stats, biología, clima) sin alterar la tabla.
+* **Punteros:** `id_lore` (Narrativa externa), `current_author`.
+
+### B. Entidad "Versión" (`CaosVersionORM`) - El Historial
+Representa la auditoría y el flujo de trabajo. Ningún cambio va directo al Live.
+* **Estados:**
+    * `PENDING`: Borrador o propuesta esperando revisión.
+    * `APPROVED`: Revisado y listo, pero no publicado.
+    * `LIVE`: La versión vigente actual.
+    * `REJECTED`: Propuestas descartadas.
+    * `ARCHIVED`: Versiones antiguas superadas por una nueva.
+
+---
+
+## 🤖 3. Pipeline de Inteligencia Artificial (v4.5)
+
+El sistema utiliza un flujo avanzado de **IA Multimodal** en local.
+
+### Generación de Arte (Stable Diffusion)
+1.  **Input:** Descripción en Español + Nombre del Mundo.
+2.  **Traducción & Prompting (Llama 3):** El sistema intercepta el texto, lo envía a Llama 3 para traducirlo al inglés y enriquecerlo con términos técnicos de arte.
+3.  **Selección de Modelo (Hot-Swap):** El código decide qué modelo `.safetensors` cargar (ej. `revAnimated` para criaturas, `RPG_Maps` para terrenos) y ordena a la API cambiarlo en caliente.
+4.  **Renderizado:** Se genera la imagen con *Negative Prompts* de calidad inyectados.
+5.  **Almacenamiento:** Se guarda en `img/{ID}/{Nombre}_v{X}.png` para mantener un histórico limpio.
+
+### Generación de Texto (Llama 3)
+* **Modo Narrativo:** Escribe Lore basado en el nombre.
+* **Modo Estructurado:** Genera JSONs válidos para rellenar la `metadata` de criaturas (Peligro, Dieta, Tamaño).
+
+---
+
+## 📂 4. Mapa del Código (`src/`)
 
 ```text
 src/
-├── FantasyWorld/               # Contexto Principal (Bounded Context)
+├── FantasyWorld/               # Contexto Principal
 │   ├── WorldManagement/        # Módulo: Gestión de Mundos
 │   │   ├── Caos/               # Agregado Principal
-│   │   │   ├── Application/    # Casos de Uso (Verbos: Create, Publish...)
-│   │   │   ├── Domain/         # Entidades (Sustantivos: World, Version)
+│   │   │   ├── Application/    # Casos de Uso (Verbos: Create, Propose, Publish...)
+│   │   │   ├── Domain/         # Entidades (Sustantivos)
 │   │   │   └── Infrastructure/ # Adaptadores (DjangoRepository)
 │   │   └── ...
 │   └── AI_Generation/          # Módulo: Generación Procedural
@@ -46,90 +84,9 @@ src/
 │
 ├── Shared/                     # Núcleo Compartido (Kernel)
 │   ├── Domain/
-│   │   └── eclai_core.py       # Motor de IDs Jerárquicos v3.0
+│   │   └── eclai_core.py       # Motor matemático de IDs Jerárquicos v3.0
 │
 └── Infrastructure/             # Infraestructura Global
     └── DjangoFramework/        # El Framework Web (aislado aquí)
         ├── config/             # settings.py, urls.py
         └── persistence/        # App de Django (Models, Views, Templates)
-🔄 Flujo de Datos (Ejemplo: Crear Mundo)
-Cuando un usuario pulsa "GENERAR" en la web:
-
-Vista (Django): Recibe el POST HTTP.
-
-Caso de Uso: La vista instancia CreateWorldUseCase y le pasa los datos.
-
-Dominio: El caso de uso llama a eclai_core para calcular el ID 01.
-
-Infraestructura:
-
-Llama a Llama3Service para obtener el texto.
-
-Llama a StableDiffusionService para obtener la imagen.
-
-Llama a DjangoCaosRepository para guardar todo en db.sqlite3.
-
-🤖 Integración de IA
-El sistema utiliza un patrón de Puertos y Adaptadores para la IA. El Dominio solo conoce una interfaz (ImageGenerator), lo que nos permite cambiar Stable Diffusion por DALL-E o Midjourney en el futuro sin tocar la lógica de negocio, solo cambiando el archivo de infraestructura.
-
-
----
-
-### 2. Archivo: `README.md` (Actualizado y Limpio)
-*(Sobrescribe el que tienes en la raíz. Ahora es más ligero y apunta al de arquitectura).*
-
-```markdown
-# 📘 Fantasy World Generator v3.5
-
-> **Screaming Architecture + CMS de Mundos + IA Generativa Local**
-
-Plataforma avanzada para la creación, gestión y versionado de mundos de fantasía. Integra Inteligencia Artificial local para generar narrativa (Lore) y arte conceptual, todo bajo una arquitectura de software profesional y desacoplada.
-
----
-
-## 🚀 Inicio Rápido
-
-### 1. Requisitos Previos
-* **Python 3.11+**
-* **Oobabooga (Texto):** Puerto 5000.
-* **Stable Diffusion (Imagen):** Puerto 7861 (`--api --nowebui`).
-
-### 2. Instalación
-```powershell
-# Clonar repositorio
-git clone [https://github.com/Alonevs/FantasyWorld_ScreamingArch.git](https://github.com/Alonevs/FantasyWorld_ScreamingArch.git)
-
-# Activar entorno
-.\venv\Scripts\activate
-
-# Instalar dependencias
-pip install -r requirements.txt
-3. Ejecución
-Panel de Control (Web):
-
-PowerShell
-
-python src/Infrastructure/DjangoFramework/manage.py runserver
-📍 Acceder: http://127.0.0.1:8000/
-
-📚 Documentación Técnica
-Este proyecto no es un simple script de Django. Está diseñado para ser escalable y mantenible a largo plazo.
-
-👉 LEER ARQUITECTURA DEL SISTEMA
-
-Descubre por qué usamos Screaming Architecture.
-
-Entiende la separación entre Dominio e Infraestructura.
-
-Mapa de carpetas y flujo de datos.
-
-✨ Funcionalidades
-Gobierno de Datos: Sistema de aprobación de cambios (Draft -> Pending -> Approved -> Live).
-
-Jerarquía ECLAI: IDs inteligentes que organizan el universo (Mundo 01 -> Abismo 0101).
-
-Galería Dinámica: Generación de variaciones de arte y almacenamiento estructurado.
-
-CMS Completo: Panel de administración personalizado con dashboard, vista previa y herramientas de moderación.
-
-Desarrollado con Python 3.11.7 y Django 5.0.1

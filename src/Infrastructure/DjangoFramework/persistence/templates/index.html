@@ -5,30 +5,22 @@
     <meta charset="UTF-8">
     <title>ECLAI v3.0 | Dashboard</title>
     <style>
-        body { background-color: #0a0a12; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; padding: 20px 40px; }
         
-        /* HEADER Y NAVEGACIÓN */
-        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 15px; }
+        body { background-color: #0a0a12; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; padding: 20px 40px; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 15px; background: #0e0e16; padding: 15px 20px; border-radius: 10px; }
         .logo { font-size: 1.5em; font-weight: bold; color: #fff; letter-spacing: 2px; }
-        .nav-btn { background: #333; color: #fff; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 0.9em; margin-left: 10px; border: 1px solid #444; cursor: pointer; }
+        .nav-group { display: flex; gap: 10px; }
+        .nav-btn { background: #333; color: #fff; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 0.9em; border: 1px solid #444; cursor: pointer; }
         .nav-btn:hover { background: #555; }
-
-        /* CENTRO DE APROBACIONES (INBOX) */
-        .inbox-panel { background: #2c2c44; border: 1px solid #f1c40f; border-radius: 10px; padding: 20px; margin-bottom: 40px; box-shadow: 0 0 20px rgba(241, 196, 15, 0.1); }
-        .inbox-title { color: #f1c40f; font-weight: bold; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
-        .task-list { display: grid; gap: 10px; }
-        .task-item { background: #1f1f33; padding: 10px 15px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #f1c40f; }
-        .task-info { font-size: 0.9em; }
-        .task-actions a { text-decoration: none; font-weight: bold; font-size: 0.8em; margin-left: 10px; }
-        .link-go { color: #fff; background: #3498db; padding: 4px 8px; border-radius: 4px; }
-
-        /* BARRA CREACIÓN */
-        .creation-bar { background: #161625; border: 1px solid #d633ff; padding: 20px; border-radius: 10px; margin-bottom: 40px; display: flex; gap: 15px; align-items: center; }
+        .nav-btn.special { background: #d633ff; border-color: #d633ff; }
+        .nav-btn.special:hover { background: #a569bd; }
+        
+        /* ESTILOS DASHBOARD */
+        .creation-bar { background: #161625; border: 1px solid #d633ff; padding: 20px; border-radius: 10px; margin-bottom: 40px; display: flex; gap: 15px; align-items: center; box-shadow: 0 0 15px rgba(214, 51, 255, 0.1); }
         input[type="text"] { background: #0a0a12; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 5px; flex-grow: 1; }
         button { background: #d633ff; color: #fff; border: none; padding: 10px 25px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.3s; }
         button:hover { background: #fff; color: #d633ff; }
 
-        /* GRID DE MUNDOS */
         h2 { color: #fff; border-bottom: 2px solid #4a3b69; padding-bottom: 10px; margin-bottom: 20px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 25px; }
         .card { background: #161625; border: 1px solid #2a2a40; border-radius: 10px; overflow: hidden; transition: 0.2s; text-decoration: none; color: inherit; position: relative; display: block; }
@@ -36,47 +28,40 @@
         
         .thumb { height: 150px; background: #000; overflow: hidden; position: relative; }
         .thumb img { width: 100%; height: 100%; object-fit: cover; }
-        .thumb-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #444; background: #0e0e16; }
+        .thumb-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #444; background: #0e0e16; font-size:0.8em; }
         
         .info { padding: 15px; }
         .code { font-family: 'Courier New', monospace; color: #d633ff; font-size: 0.8em; }
         .title { font-size: 1.2em; font-weight: bold; margin: 5px 0; color: #fff; }
         
-        /* BOTÓN EDICIÓN RÁPIDA (En la tarjeta) */
         .quick-edit { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); color: #fff; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 14px; opacity: 0; transition: 0.2s; z-index: 10; }
         .card:hover .quick-edit { opacity: 1; }
         .quick-edit:hover { background: #3498db; transform: scale(1.1); }
+        
+        /* Inbox Alert */
+        .inbox-panel { background: #2c2c44; border: 1px solid #f1c40f; border-radius: 10px; padding: 15px; margin-bottom: 40px; }
+        .task-item { background: #1f1f33; padding: 10px; margin-top: 5px; border-radius: 5px; display:flex; justify-content:space-between; align-items:center; }
+    
     </style>
 </head>
 <body>
-
     <div class="top-bar">
         <div class="logo">ECLAI v3.0 // DASHBOARD</div>
-        <div>
+        <div class="nav-group">
             <button class="nav-btn" onclick="location.reload()">🔄 Recargar</button>
-            <a href="{% url 'centro_control' %}" class="nav-btn" style="background:#d633ff; border-color:#d633ff;">🎛️ GESTIÓN</a>
-            <button class="nav-btn" onclick="history.back()">⬅️ Atrás</button>
+            <a href="{% url 'centro_control' %}" class="nav-btn special">🎛️ Gestión</a>
         </div>
     </div>
 
     {% if pendientes %}
     <div class="inbox-panel">
-        <div class="inbox-title">⚠️ CENTRO DE APROBACIONES ({{ pendientes|length }})</div>
-        <div class="task-list">
-            {% for p in pendientes %}
-            <div class="task-item">
-                <div class="task-info">
-                    <span style="color:#aaa;">{{ p.created_at|date:"d/m H:i" }}</span> | 
-                    <strong>{{ p.world.name }}</strong> ({{ p.world.id }}) 
-                    <br>
-                    <span style="color:#f1c40f;">"{{ p.change_log }}"</span>
-                </div>
-                <div class="task-actions">
-                    <a href="{% url 'ver_mundo' p.world.id %}" class="link-go">👁️ REVISAR</a>
-                </div>
-            </div>
-            {% endfor %}
+        <strong style="color:#f1c40f;">⚠️ Tienes {{ pendientes|length }} tarea(s) pendiente(s)</strong>
+        {% for p in pendientes %}
+        <div class="task-item">
+            <span style="font-size:0.9em;"><strong>{{ p.world_name }}</strong>: v{{ p.version_num }}</span>
+            <a href="{% url 'revisar_version' p.id %}" style="color:#3498db; text-decoration:none; font-weight:bold;">REVISAR →</a>
         </div>
+        {% endfor %}
     </div>
     {% endif %}
 
@@ -85,12 +70,8 @@
         <form method="POST" style="display:flex; gap:10px; flex-grow:1;">
             {% csrf_token %}
             <input type="text" name="world_name" placeholder="Nombre del Nuevo Universo..." required autocomplete="off">
-            
             <input type="text" name="world_desc" placeholder="Idea base..." style="width: 30%;">
-            <label style="color:#aaa; font-size:0.9em; display:flex; align-items:center; gap:5px;">
-                <input type="checkbox" name="use_ai" checked> IA Texto
-            </label>
-            <button type="submit">⚡ CREAR (Nivel 1)</button>
+            <button type="submit">⚡ CREAR</button>
         </form>
     </div>
 
@@ -98,9 +79,6 @@
     <div class="grid">
         {% for m in mundos %}
         <a href="{% url 'ver_mundo' m.id %}" class="card">
-            <object> <a href="{% url 'ver_mundo' m.id %}#editModal" class="quick-edit" title="Editar Rápido">✏️</a>
-            </object>
-
             <div class="thumb">
                 {% if m.has_img %}
                     <img src="{% static 'persistence/img/'|add:m.img_file %}" alt="{{ m.name }}">
@@ -116,10 +94,9 @@
         </a>
         {% empty %}
         <div style="grid-column: 1/-1; text-align: center; color: #666; padding: 50px;">
-            El vacío reina en la existencia. Crea algo arriba.
+            El vacío reina en la existencia.
         </div>
         {% endfor %}
     </div>
-
 </body>
 </html>

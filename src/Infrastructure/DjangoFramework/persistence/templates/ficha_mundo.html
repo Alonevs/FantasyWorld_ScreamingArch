@@ -5,33 +5,20 @@
     <meta charset="UTF-8">
     <title>ECLAI v3.0 | {{ name }}</title>
     <style>
-        body { background-color: #0a0a12; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; padding: 20px 40px; } .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 15px; background: #0e0e16; padding: 15px 20px; border-radius: 10px; } .logo { font-size: 1.5em; font-weight: bold; color: #fff; letter-spacing: 2px; } .nav-group { display: flex; gap: 10px; } .nav-btn { background: #333; color: #fff; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 0.9em; border: 1px solid #444; cursor: pointer; } .nav-btn:hover { background: #555; } .nav-btn.special { background: #d633ff; border-color: #d633ff; } .nav-btn.special:hover { background: #a569bd; }
         
-        .card { background: #161625; border: 1px solid #2a2a40; border-radius: 15px; max-width: 1000px; margin: 0 auto; overflow: hidden; display: grid; grid-template-columns: 2fr 1fr; }
+        body { background-color: #0a0a12; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; padding: 20px 40px; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 15px; background: #0e0e16; padding: 15px 20px; border-radius: 10px; }
+        .logo { font-size: 1.5em; font-weight: bold; color: #fff; letter-spacing: 2px; }
+        .nav-group { display: flex; gap: 10px; }
+        .nav-btn { background: #333; color: #fff; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 0.9em; border: 1px solid #444; cursor: pointer; }
+        .nav-btn:hover { background: #555; }
+        .nav-btn.special { background: #d633ff; border-color: #d633ff; }
+        .nav-btn.special:hover { background: #a569bd; }
+        
+        .card { background: #161625; border: 1px solid #2a2a40; border-radius: 15px; max-width: 1100px; margin: 0 auto; overflow: hidden; display: grid; grid-template-columns: 3fr 1fr; }
         .card-header { grid-column: 1 / -1; background: linear-gradient(90deg, #2b1a45 0%, #1a1a2e 100%); padding: 20px; border-bottom: 2px solid #4a3b69; display: flex; justify-content: space-between; align-items: flex-start; }
         .main-content { padding: 30px; border-right: 1px solid #2a2a40; }
-        .sidebar { padding: 30px; background: #13131f; }
-        .actions { display: flex; gap: 10px; }
-        .btn { padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.8em; text-decoration: none; color:#fff; border:none; }
-        .btn-edit { background: #3498db; } .btn-del { background: #e74c3c; }
-        .gallery { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 15px; margin-bottom: 20px; }
-        .gallery img { width: 150px; height: 200px; object-fit: cover; border-radius: 8px; border: 2px solid #333; }
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; background: #1f1f33; padding: 15px; border-radius: 10px; font-size: 0.9em; }
-        .stat-box { display: flex; flex-direction: column; }
-        .label { font-size: 0.75em; color: #666; text-transform: uppercase; }
-        .value { font-size: 1.1em; font-family: 'Courier New', monospace; color: #00ffcc; font-weight: bold; }
-        .section-title { color: #a0a0ff; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px; margin-top: 25px; font-size: 1.1em; }
-        .lore-box { background: #111; padding: 20px; border-left: 4px solid #d633ff; font-style: italic; color: #ccc; white-space: pre-wrap; margin-bottom: 10px; }
-        .metadata-box { background: #0e0e16; color: #0f0; font-family: 'Consolas', monospace; padding: 15px; border-radius: 5px; font-size: 0.8em; overflow-x: auto; border: 1px solid #333; }
-        .children-list { display: grid; gap: 5px; }
-        .child-link { display: block; padding: 8px; background: #1f1f33; text-decoration: none; color: #eee; border-radius: 4px; border: 1px solid #333; }
-        .child-link:hover { border-color: #d633ff; }
-        .status-badge { padding: 4px 12px; border-radius: 4px; font-weight: bold; font-size: 0.8em; letter-spacing: 1px; text-transform: uppercase; display: inline-block; }
-        .st-live { background: #2ecc71; color: #000; border: 1px solid #27ae60; }
-        .st-draft { background: #f39c12; color: #000; border: 1px solid #d35400; }
-        .vis-toggle { text-decoration: none; font-weight: bold; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; transition:0.3s; border:1px solid transparent; cursor:pointer; display:inline-block; }
-        .vis-public { background: rgba(46, 204, 113, 0.1); color: #2ecc71; border-color: #2ecc71; }
-        .vis-private { background: rgba(231, 76, 60, 0.1); color: #e74c3c; border-color: #e74c3c; }
+        .sidebar { padding: 30px; background: #13131f; font-size: 0.9em; }
         
         .breadcrumbs { margin-bottom: 10px; font-size: 0.85em; color: #888; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
         .crumb-item { background: #333; padding: 2px 8px; border-radius: 10px; text-decoration: none; color: #ccc; border: 1px solid #444; transition:0.2s; }
@@ -39,13 +26,46 @@
         .crumb-separator { color: #666; }
         .crumb-active { color: #fff; font-weight: bold; border-color: #d633ff; background: rgba(214, 51, 255, 0.1); }
 
+        .status-badge { padding: 4px 12px; border-radius: 4px; font-weight: bold; font-size: 0.8em; letter-spacing: 1px; text-transform: uppercase; display: inline-block; }
+        .st-live { background: #2ecc71; color: #000; border: 1px solid #27ae60; }
+        .st-draft { background: #f39c12; color: #000; border: 1px solid #d35400; }
+
+        .actions { display: flex; gap: 10px; }
+        .btn { padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.8em; text-decoration: none; color:#fff; border:none; }
+        .btn-edit { background: #3498db; } .btn-del { background: #e74c3c; }
+        
+        .gallery { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 15px; margin-bottom: 20px; }
+        .gallery-item { position: relative; display: inline-block; margin-right: 10px; min-width: 150px; }
+        .gallery-item img { width: 150px; height: 200px; object-fit: cover; border-radius: 8px; border: 2px solid #333; }
+        .btn-delete-img { position: absolute; top: 5px; right: 5px; background: rgba(231, 76, 60, 0.9); color: white; width: 20px; height: 20px; border-radius: 50%; text-align: center; line-height: 20px; font-size: 12px; text-decoration: none; cursor: pointer; }
+        
+        .stats-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 20px; }
+        .stat-row { display:flex; justify-content:space-between; border-bottom:1px solid #333; padding:5px 0; font-size:0.9em; }
+        .label { color: #888; text-transform: uppercase; font-size:0.8em; }
+        .value { font-family: 'Courier New', monospace; color: #fff; font-weight: bold; text-align:right; }
+        
+        .section-title { color: #a0a0ff; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px; margin-top: 25px; font-size: 1.1em; display: flex; justify-content: space-between; align-items: center; }
+        .lore-box { background: #111; padding: 20px; border-left: 4px solid #d633ff; font-style: italic; color: #ccc; white-space: pre-wrap; margin-bottom: 10px; }
+        .metadata-box { background: #0e0e16; color: #0f0; font-family: 'Consolas', monospace; padding: 15px; border-radius: 5px; font-size: 0.8em; overflow-x: auto; border: 1px solid #333; }
+        
+        .children-list { display: grid; gap: 5px; }
+        .child-link { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #1f1f33; text-decoration: none; color: #eee; border-radius: 6px; border: 1px solid #333; transition:0.2s; }
+        .child-link:hover { border-color: #d633ff; transform: translateX(5px); }
+        .child-index { font-family: 'Courier New', monospace; color: #d633ff; background: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.8em; }
+
+        .vis-toggle { text-decoration: none; font-weight: bold; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; transition:0.3s; border:1px solid transparent; cursor:pointer; display:inline-block; }
+        .vis-public { background: rgba(46, 204, 113, 0.1); color: #2ecc71; border-color: #2ecc71; }
+        .vis-private { background: rgba(231, 76, 60, 0.1); color: #e74c3c; border-color: #e74c3c; }
+
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; justify-content: center; align-items: center; }
         .modal:target { display: flex; }
         .modal-content { background: #161625; padding: 30px; border-radius: 10px; width: 600px; border: 1px solid #d633ff; box-shadow: 0 0 50px rgba(0,0,0,0.8); }
-        .edit-form input, .edit-form textarea { width: 100%; background: #0a0a12; border: 1px solid #444; color: #fff; padding: 10px; margin-top: 5px; }
+        .edit-form input, .edit-form textarea { width: 100%; background: #0a0a12; border: 1px solid #444; color: #fff; padding: 10px; margin-top: 5px; margin-bottom:15px; box-sizing:border-box; }
+        
         .child-form { background: #1f1f33; padding: 15px; border-radius: 8px; margin-top: 20px; display: flex; gap: 10px; }
         .child-form input { background: #0a0a12; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 4px; flex-grow: 1; }
         .child-form button { background: #d633ff; color: #fff; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; }
+    
     </style>
 </head>
 <body>
@@ -78,7 +98,7 @@
                     {% for b in breadcrumbs %}
                         <span class="crumb-separator">›</span>
                         <a href="{% url 'ver_mundo' b.id %}" class="crumb-item {% if b.id == jid %}crumb-active{% endif %}">
-                            {{ b.label }} <span style="opacity:0.5; font-size:0.8em;">({{ b.short }})</span>
+                            {{ b.label }}
                         </a>
                     {% endfor %}
                 </div>
@@ -117,7 +137,16 @@
                 {% if not is_preview %}<a href="{% url 'generar_foto_extra' jid %}" class="btn" style="background:#9b59b6; font-size:0.7em;">🎨 + FOTO IA</a>{% endif %}
             </div>
             <div class="gallery">
-                {% for img in imagenes %} <img src="{% static 'persistence/img/'|add:img %}"> {% empty %} <div style="color:#555; padding:20px; border:1px dashed #444; width:100%; text-align:center;">No hay arte generado.</div> {% endfor %}
+                {% for img in imagenes %} 
+                <div class="gallery-item">
+                    <img src="{% static 'persistence/img/'|add:img.url %}">
+                    {% if not is_preview %}
+                    <a href="{% url 'borrar_foto' jid img.filename %}" class="btn-delete-img" onclick="return confirm('¿Borrar imagen?')" title="Borrar">✕</a>
+                    {% endif %}
+                </div>
+                {% empty %} 
+                <div style="color:#555; padding:20px; border:1px dashed #444; width:100%; text-align:center;">No hay arte generado.</div> 
+                {% endfor %}
             </div>
 
             <div class="section-title">Descripción Conceptual</div>
@@ -128,25 +157,24 @@
         </div>
 
         <div class="sidebar">
-            <div class="section-title" style="margin-top:0;">Identidad</div>
-            <div class="stats-grid" style="grid-template-columns: 1fr;">
-                <div class="stat-box"><span class="label">J-ID (Jerarquía)</span><span class="value">{{ jid }}</span></div>
-                <div class="stat-box"><span class="label">CODE (ECLAI)</span><span class="value" style="color:#d633ff">{{ code_entity }}</span></div>
-                <div class="stat-box"><span class="label">Creado el</span><span class="value" style="font-size:0.8em;">{{ created_at|date:"d/m/Y" }}</span></div>
-                
-                <div class="stat-box">
+            <div class="section-title" style="margin-top:0;">Ficha Técnica</div>
+            
+            <div class="stats-grid">
+                <div class="stat-row"><span class="label">J-ID</span><span class="value">{{ jid }}</span></div>
+                <div class="stat-row"><span class="label">CODE</span><span class="value" style="color:#d633ff">{{ code_entity }}</span></div>
+                <div class="stat-row"><span class="label">Creado</span><span class="value" style="font-size:0.9em;">{{ created_at|date:"d/m/Y" }}</span></div>
+                <div class="stat-row"><span class="label">Actualizado</span><span class="value" style="font-size:0.9em;">{{ updated_at|date:"d/m/Y" }}</span></div>
+                <div class="stat-row" style="align-items:center;">
                     <span class="label">Visibilidad</span>
-                    <div style="margin-top:5px;">
-                        {% if not is_preview %}
-                            <a href="{% url 'toggle_visibilidad' jid %}" class="vis-toggle {% if visible %}is-public{% else %}is-private{% endif %}">
-                                {% if visible %}🌎 PÚBLICA{% else %}🔒 PRIVADA{% endif %}
-                            </a>
-                        {% else %}
-                            <div class="visibility-toggle {% if visible %}is-public{% else %}is-private{% endif %}">
-                                {% if visible %}🌎 PÚBLICA{% else %}🔒 PRIVADA{% endif %}
-                            </div>
-                        {% endif %}
-                    </div>
+                    {% if not is_preview %}
+                        <a href="{% url 'toggle_visibilidad' jid %}" class="vis-toggle {% if visible %}is-public{% else %}is-private{% endif %}">
+                            {% if visible %}🌎 PÚBLICA{% else %}🔒 PRIVADA{% endif %}
+                        </a>
+                    {% else %}
+                        <span class="vis-toggle {% if visible %}is-public{% else %}is-private{% endif %}">
+                            {% if visible %}🌎 PÚBLICA{% else %}🔒 PRIVADA{% endif %}
+                        </span>
+                    {% endif %}
                 </div>
             </div>
 
@@ -160,7 +188,8 @@
             <div class="children-list">
                 {% for h in hijos %}
                 <a href="{% url 'ver_mundo' h.id %}" class="child-link">
-                    <span style="color:#d633ff; font-family:monospace;">{{ h.id }}</span> <strong>{{ h.name }}</strong>
+                    <span><strong>{{ h.name }}</strong></span>
+                    <span class="child-index">#{{ h.short }}</span>
                 </a>
                 {% empty %} <div style="color:#555; font-style:italic;">Sin hijos.</div> {% endfor %}
             </div>
@@ -168,9 +197,17 @@
             {% if not is_preview %}
             <form method="POST" class="child-form">
                 {% csrf_token %}
-                <input type="text" name="child_name" placeholder="Nuevo hijo..." style="width:100%; background:#000; border:1px solid #444; color:#fff; padding:5px;" required autocomplete="off">
-                <input type="text" name="child_desc" placeholder="Desc..." style="display:none;">
-                <button type="submit">➕</button>
+                <div style="display:flex; gap:10px; width:100%; flex-direction:column;">
+                    <input type="text" name="child_name" placeholder="Nuevo hijo..." style="width:100%; background:#000; border:1px solid #444; color:#fff; padding:5px;" required autocomplete="off">
+                    
+                    <div style="display:flex; gap:10px;">
+                        <select name="child_type" style="background:#000; color:#fff; border:1px solid #444; padding:5px; border-radius:4px; flex-grow:1;">
+                            <option value="">📍 Lugar / Región</option>
+                            <option value="ENTITY">🐉 Criatura / NPC</option>
+                        </select>
+                        <button type="submit" style="width:auto; padding:5px 15px;">➕</button>
+                    </div>
+                </div>
             </form>
             {% endif %}
             
@@ -193,14 +230,15 @@
                 
                 <label>Descripción Conceptual:</label>
                 <div style="margin-bottom:5px; padding:5px; background:#2c2c44; border-radius:4px; display:flex; align-items:center; justify-content:space-between;">
-                    <span style="font-size:0.8em; color:#aaa;">Escribe tu idea (prompt) o el texto final:</span>
+                    <span style="font-size:0.8em; color:#aaa;">¿Reescribir con IA?</span>
                     <label style="color:#d633ff; font-size:0.9em; cursor:pointer;">
-                        <input type="checkbox" name="use_ai_edit"> ✨ Usar IA
+                        <input type="checkbox" name="use_ai_edit"> ✨ SÍ
                     </label>
                 </div>
                 <textarea name="description" style="height:150px;">{{ description }}</textarea>
                 
                 <label style="color:#f1c40f;">Razón del cambio:</label><input type="text" name="reason" required>
+                
                 <div style="margin-top:20px; text-align:right;">
                     <a href="{% url 'ver_mundo' jid %}" class="btn" style="background:#555;">Cancelar</a>
                     <button type="submit" class="btn" style="background:#d633ff;">🚀 Enviar Propuesta</button>

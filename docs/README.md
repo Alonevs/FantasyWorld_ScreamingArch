@@ -1,83 +1,78 @@
-# 📘 Fantasy World Generator v3.5
+# 🪐 Fantasy World Generator v4.5 (CMS & AI-Powered)
 
-> **Screaming Architecture + CMS de Mundos + IA Generativa Local**
+> **Sistema de Gestión de Mundos Persistentes con Generación Procedural Asistida por IA**
 
-Este proyecto es un gestor de mundos de fantasía avanzado que desacopla la lógica de negocio del framework (Django), integrando un **CMS de gobierno de datos** (versiones, aprobación, publicación) y generación procedural de historias (Llama 3) y arte (Stable Diffusion).
+![Status](https://img.shields.io/badge/Status-Active_Development-green)
+![Python](https://img.shields.io/badge/Python-3.11.7-blue)
+![Django](https://img.shields.io/badge/Django-5.0.1-092E20)
+![Architecture](https://img.shields.io/badge/Architecture-Screaming_%2F_DDD-orange)
+![AI](https://img.shields.io/badge/AI-Llama3_%2B_StableDiffusion-purple)
+
+Este proyecto es una plataforma **CMS (Content Management System)** diseñada para arquitectos de mundos (Worldbuilders). A diferencia de wikis tradicionales, este sistema integra inteligencia artificial local para asistir en la creación de narrativa y arte conceptual, manteniendo un control estricto sobre la estructura de datos mediante IDs jerárquicos.
 
 ---
 
-## 🚀 Inicio Rápido
+## ✨ Características Principales
 
-### Prerrequisitos
-- **Python 3.11+** (Recomendado 3.11.7)
-- **Servidores de IA** (Deben estar corriendo antes de iniciar):
-  - **Texto**: Oobabooga Text-Generation-WebUI (Puerto 5000)
-  - **Imagen**: Stable Diffusion WebUI (Puerto 7861, args: `--api --nowebui --xformers --port 7861`)
+### 🧠 Núcleo Inteligente
+* **Arquitectura "Screaming":** El código está desacoplado del framework. La lógica de negocio vive en `src/FantasyWorld` y no sabe que Django existe.
+* **IDs Jerárquicos (ECLAI v4.0):** Sistema de identificación único que define la posición espacial de cada entidad (ej. `01` Caos -> `0101` Abismo -> `010101` Región).
+* **Metadatos Flexibles:** Almacenamiento de fichas técnicas (stats, biología, clima) en formato JSONB no relacional para máxima adaptabilidad.
 
-### Instalación y Ejecución
+### ⚖️ Gobierno de Datos (Workflow)
+* **Sistema de Aprobación Estricto:** Los cambios nunca afectan al entorno "Live" directamente.
+    * `Draft` (Borrador) -> `Proposal` (Propuesta vX) -> `Approval` (Aprobado) -> `Live` (Publicado).
+* **Histórico Inmutable:** Cada cambio genera una versión. Al publicar, las versiones obsoletas se archivan automáticamente.
+* **Auditoría:** Registro de autor, fecha y razón del cambio para cada modificación.
 
-1.  **Activar Entorno Virtual**:
-    ```powershell
-    .\venv\Scripts\activate
-    ```
+### 🎨 Motor de Generación IA (Local-First)
+* **Pipeline de Arte Automatizado:**
+    * Traducción automática de prompts (Español -> Inglés) usando Llama 3.
+    * Inyección de estilos y *Negative Prompts* profesionales.
+    * Gestión de Modelos en caliente (*Hot-Swap*): Carga modelos de criaturas o mapas según necesidad.
+* **Narrativa Asistida:** Generación de descripciones y lore bajo demanda.
 
-2.  **Ejecutar Aplicación**:
-    * **Modo Web (CMS Completo)**:
-        ```powershell
-        python src/Infrastructure/DjangoFramework/manage.py runserver
+---
+
+## 🛠️ Requisitos del Sistema
+
+Este proyecto está diseñado para correr en local aprovechando hardware de gama alta (ej. RTX 4080 Super) para inferencia de IA.
+
+* **Python:** 3.11.7 (Estrictamente recomendado).
+* **Base de Datos:** SQLite (Default) / PostgreSQL (Compatible).
+* **Servidores de IA (Externos):**
+    * **Texto:** [Oobabooga Text-Generation-WebUI](https://github.com/oobabooga/text-generation-webui) con API activada.
+    * **Imagen:** [Stable Diffusion WebUI (Automatic1111)](https://github.com/AUTOMATIC1111/stable-diffusion-webui) con API activada.
+
+---
+
+## ⚙️ Instalación y Puesta en Marcha
+
+### 1. Configuración de IAs
+Antes de iniciar el CMS, los motores de IA deben estar escuchando.
+
+* **Llama 3 (Texto):**
+    * Ejecutar en puerto **5000**.
+    * Modelo recomendado: `Meta-Llama-3.1-8B-Instruct`.
+* **Stable Diffusion (Imagen):**
+    * Ejecutar en puerto **7861**.
+    * Argumentos obligatorios en `webui-user.bat`:
+        ```bat
+        set COMMANDLINE_ARGS=--api --xformers --port 7861
         ```
-        Accede a: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
 
-    * **Modo Consola (Test Rápido)**:
-        ```powershell
-        python main.py
-        ```
+### 2. Configuración del Proyecto
+```powershell
+# 1. Clonar el repositorio
+git clone [https://github.com/Alonevs/FantasyWorld_ScreamingArch.git](https://github.com/Alonevs/FantasyWorld_ScreamingArch.git)
+cd FantasyWorld_ScreamingArch
 
----
+# 2. Crear y activar entorno virtual (Python 3.11)
+py -3.11 -m venv venv
+.\venv\Scripts\activate
 
-## 🧩 Funcionalidades Clave (v3.5)
+# 3. Instalar dependencias
+pip install -r requirements.txt
 
-### 🌍 Gestión de Mundos & Jerarquía
-* **Creación Recursiva:** Soporte para entidades padres (Mundo) e hijos (Abismos, Regiones).
-* **IDs Inteligentes (ECLAI v3.0):** Cálculo automático de IDs jerárquicos (`01` -> `0101` -> `0102`).
-
-### ⚖️ Sistema de Gobierno (CMS)
-Flujo de trabajo profesional para proteger los datos "Live":
-1.  **Propuestas:** Los cambios generan borradores (`PENDING`).
-2.  **Centro de Control:** Panel Kanban para revisar, aprobar o rechazar cambios.
-3.  **Modo Inspección:** Vista previa de la ficha con los datos propuestos antes de aprobar.
-4.  **Publicación:** Despliegue controlado a producción (Live) con historial de autoría.
-
-### 🎨 Arte y Narrativa (IA Local)
-* **Lore Automático:** Llama 3 escribe descripciones temáticas.
-* **Galería Dinámica:**
-    * Generación de 4 variaciones iniciales.
-    * Botón **[+ Foto]** para generar bajo demanda.
-    * Organización de carpetas por ID (`img/01/`).
-
----
-
-## 🏗️ Arquitectura del Proyecto
-
-Este proyecto sigue los principios de **Screaming Architecture**. La estructura "grita" su propósito, no su framework.
-
-### Estructura de Carpetas (`src/`)
-
-* **`FantasyWorld/` (Dominio y Aplicación):**
-    * `WorldManagement/`: Contiene los Casos de Uso (`CreateWorld`, `ProposeChange`, `ApproveVersion`, `PublishToLive`).
-    * `AI_Generation/`: Interfaces agnósticas para conectar con IAs.
-* **`Shared/` (Núcleo Común):**
-    * `eclai_core.py`: Motor de IDs Jerárquicos ECLAI v3.0.
-* **`Infrastructure/` (Implementación):**
-    * `DjangoFramework/`: Implementación web y persistencia (ORM).
-    * `sd_service.py`: Conector para Stable Diffusion.
-
----
-
-## 📚 Documentación Adicional
-
-- **[Arquitectura Detallada](docs/ARCHITECTURE.md)**: Explicación profunda del diseño DDD y flujo de datos.
-- **[Manual de ECLAI](docs/ECLAI.md)**: Especificación técnica del sistema de identificación J-ID/N-ID.
-
----
-*Proyecto desarrollado con enfoque en mantenibilidad, escalabilidad y soberanía de datos (Local First).*
+# 4. Inicializar Base de Datos (Migraciones y Semilla)
+python src/Infrastructure/DjangoFramework/manage.py migrate
