@@ -13,30 +13,29 @@ class GenerateWorldMapUseCase:
         self.repository = repository
         self.image_service = image_service
         self.base_folder = os.path.abspath("src/Infrastructure/DjangoFramework/persistence/static/persistence/img")
-        self.ai_director = Llama3Service() # Instancia para traducir
+        self.translator = Llama3Service() # Instancia para traducir
 
     def _sanitize(self, name):
         s = re.sub(r'[^a-zA-Z0-9\-_]', '_', name)
         return re.sub(r'_+', '_', s)
 
-    def _get_smart_prompt(self, world):
-        # INTENTO DE TRADUCCIÓN / MEJORA DE PROMPT
-        nivel = eclai_core.get_level_from_jid_length(len(world.id.value))
-        try:
-            # Intentamos que Llama genere un prompt técnico en inglés
-            smart_prompt = self.ai_director.generate_sd_prompt(world.name, world.lore_description, nivel)
-            if smart_prompt and len(smart_prompt) > 10:
-                print(f" 🎨 Prompt Ingeniero: '{smart_prompt[:50]}...'")
-                return smart_prompt
-        except: pass
+    def _get_translated_prompt(self, world):
+        # 1. Cogemos la descripción del mundo (Español)
+        desc_es = world.lore_description
+        if not desc_es: 
+            desc_es = f"Un lugar de fantasía llamado {world.name}"
         
-        # FALLBACK: Traducción simple
+        # 2. La pasamos por Llama 3 para que la traduzca y optimice
         try:
-            print(" ⚠️ Usando traducción simple...")
-            desc_en = self.ai_director.translate_to_english(world.lore_description[:200])
-            return f"{world.name}, {desc_en}, fantasy concept art, best quality"
-        except:
-            return f"{world.name}, fantasy world, masterpiece"
+            prompt_en = self.translator.generate_sd_prompt(world.name, desc_es)
+            if prompt_en and len(prompt_en) > 5:
+                print(f" ✨ Prompt Traducido: {prompt_en[:60]}...")
+                return prompt_en
+        except Exception as e:
+            print(f" ⚠️ Fallo Traductor ({e}). Usando fallback.")
+        
+        # Fallback si Llama falla: Nombre + tags genéricos
+        return f"{world.name}, fantasy concept art, masterpiece, best quality"
 
     def _get_next_version(self, folder_path):
         max_v = 0
@@ -45,24 +44,25 @@ class GenerateWorldMapUseCase:
                 if f.lower().endswith(".png"):
                     match = re.search(r'_v(\d+)\.png$', f)
                     if match:
-                        num = int(match.group(1))
-                        if num > max_v: max_v = num
+                        if int(match.group(1)) > max_v: max_v = int(match.group(1))
         return max_v + 1
 
     def execute_single(self, world_id_str: str):
         w_id = WorldID(world_id_str)
         world = self.repository.find_by_id(w_id)
-        if not world: return
+        if not world: return None
 
         target_folder = os.path.join(self.base_folder, world_id_str)
         os.makedirs(target_folder, exist_ok=True)
 
-        core_prompt = self._get_smart_prompt(world)
-        estilos = ["cinematic lighting", "atmospheric fog", "highly detailed", "dramatic angle"]
-        final_prompt = f"{core_prompt}, {random.choice(estilos)}"
+        # --- PASO CLAVE: OBTENER PROMPT EN INGLÉS ---
+        final_prompt = self._get_translated_prompt(world)
         
-        print(f" 📸 Generando con prompt: {final_prompt[:60]}...")
+        # Añadimos estilo aleatorio para variedad
+        estilos = ["cinematic lighting", "atmospheric fog", "dramatic shadows", "golden hour"]
+        final_prompt = f"{final_prompt}, {random.choice(estilos)}"
         
+        # Llamada a SD
         img_base64 = self.image_service.generate_concept_art(final_prompt)
         
         if img_base64:

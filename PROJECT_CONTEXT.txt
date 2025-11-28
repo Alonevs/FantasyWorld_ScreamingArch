@@ -1,0 +1,3448 @@
+PROJECT SNAPSHOT: 2025-11-28 22:36:35
+============================================================
+
+📦 ESTRUCTURA DEL PROYECTO:
+./
+    main.py
+    requirements.txt
+    docs/
+        ARCHITECTURE.md
+        ECLAI.md
+        FUTURE_NANOID_STRATEGY.md
+        NEXT_STEPS_HEMISPHERES.md
+        NEXT_STEPS_WIZARD.md
+        README.md
+    src/
+        __init__.py
+        FantasyWorld/
+            AI_Generation/
+                __init__.py
+                Application/
+                    __init__.py
+                Domain/
+                    interfaces.py
+                    __init__.py
+                Infrastructure/
+                    llama_service.py
+                    sd_service.py
+                    __init__.py
+        Infrastructure/
+            __init__.py
+            DjangoFramework/
+                manage.py
+                __init__.py
+                config/
+                    asgi.py
+                    settings.py
+                    urls.py
+                    wsgi.py
+                    __init__.py
+                persistence/
+                    admin.py
+                    apps.py
+                    models.py
+                    tests.py
+                    views.py
+                    __init__.py
+                    templates/
+                        control_panel.html
+                        ficha_mundo.html
+                        index.html
+                        indice_narrativa.html
+                        visor_narrativa.html
+        Shared/
+            Domain/
+                eclai_core.py
+                value_objects.py
+                __init__.py
+        WorldManagement/
+            Caos/
+                Application/
+                    approve_version.py
+                    create_child.py
+                    create_entity_full.py
+                    create_world.py
+                    delete_narrative.py
+                    generate_creature_usecase.py
+                    generate_lore.py
+                    generate_map.py
+                    generate_planet_metadata.py
+                    propose_change.py
+                    publish_to_live_version.py
+                    publish_world.py
+                    reject_version.py
+                    restore_version.py
+                    update_narrative.py
+                    __init__.py
+                Domain/
+                    creature.py
+                    entities.py
+                    repositories.py
+                    __init__.py
+                Infrastructure/
+                    django_repository.py
+                    in_memory_repository.py
+                    __init__.py
+
+============================================================
+
+
+==================== FILE: .\main.py ====================
+import sys
+import os
+import django
+import time
+
+# --- 1. SETUP DE ARQUITECTURA (Para que Python encuentre tus carpetas) ---
+sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'src.Infrastructure.DjangoFramework.config.settings')
+django.setup()
+
+print("✅ Django inicializado correctamente. Conectando con db.sqlite3...\n")
+
+# --- 2. IMPORTS ---
+# Repositorios y Dominio
+from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
+from src.WorldManagement.Caos.Application.create_world import CreateWorldUseCase
+from src.WorldManagement.Caos.Application.publish_world import PublishWorldUseCase
+
+# Servicios de IA
+from src.FantasyWorld.AI_Generation.Infrastructure.llama_service import Llama3Service
+from src.FantasyWorld.AI_Generation.Infrastructure.sd_service import StableDiffusionService
+
+# Casos de Uso de IA
+from src.WorldManagement.Caos.Application.generate_lore import GenerateWorldLoreUseCase
+from src.WorldManagement.Caos.Application.generate_map import GenerateWorldMapUseCase
+
+def main():
+    print("=== FANTASY WORLD GENERATOR v3.0 (TEXT + IMAGE) ===\n")
+    
+    # 1. Instanciar Repositorio (Memoria de Django)
+    repo = DjangoCaosRepository()
+    
+    # 2. Conectar Cerebro (Llama 3 / Oobabooga)
+    try:
+        ia_texto = Llama3Service()
+        print(" 🧠 Servicio de Texto: ACTIVO")
+    except Exception as e:
+        print(f" ⚠️ Servicio de Texto: INACTIVO ({e})")
+        ia_texto = None
+    
+    # 3. Conectar Pintor (Stable Diffusion / Automatic1111)
+    try:
+        ia_arte = StableDiffusionService()
+        print(" 🎨 Servicio de Arte: ACTIVO")
+    except Exception as e:
+        print(f" ⚠️ Servicio de Arte: INACTIVO ({e})")
+        ia_arte = None
+
+    # 4. Preparar Casos de Uso (Las herramientas)
+    crear = CreateWorldUseCase(repo)
+    publicar = PublishWorldUseCase(repo)
+    gen_lore = GenerateWorldLoreUseCase(repo, ia_texto) if ia_texto else None
+    gen_mapa = GenerateWorldMapUseCase(repo, ia_arte) if ia_arte else None
+
+    print("\n------------------------------------------------")
+
+    try:
+        # --- PASO 1: CREAR MUNDO (Estructura Base) ---
+        print("🔹 1. Creando Entidad 'Azeroth'...")
+        # Esto nos devuelve el J-ID puro ("01")
+        world_jid = crear.execute("Azeroth", "Mundo base generado por CLI")
+        
+        # --- PASO 2: GENERAR LORE (Historia) ---
+        if gen_lore:
+            print("\n🔹 2. Escribiendo Historia (Llama 3)...")
+            gen_lore.execute(world_jid)
+        else:
+            print("\n🔸 Saltando historia (IA de texto no disponible)")
+        
+        # --- PASO 3: GENERAR ARTE (Imagen) ---
+        if gen_mapa:
+            print("\n🔹 3. Pintando Retrato (Stable Diffusion)...")
+            print("    (Esto puede tardar unos segundos...)")
+            # Pequeña pausa para no saturar si corres todo muy rápido
+            time.sleep(1)
+            gen_mapa.execute(world_jid)
+        else:
+            print("\n🔸 Saltando imagen (IA de arte no disponible)")
+
+        # --- PASO 4: PUBLICAR (Hacerlo oficial) ---
+        print("\n🔹 4. Publicando Mundo...")
+        publicar.execute(world_jid)
+
+    except Exception as e:
+        print(f"\n❌ Error Crítico en el proceso: {e}")
+
+    print("\n================================================")
+    print("🚀 PROCESO TERMINADO.")
+    print("👉 Para ver el resultado: python src/Infrastructure/DjangoFramework/manage.py runserver")
+
+if __name__ == "__main__":
+    main()
+
+==================== FILE: .\requirements.txt ====================
+# --- FRAMEWORK & BASE DE DATOS ---
+Django==5.0.1
+djangorestframework==3.14.0
+django-environ==0.11.2  # Para leer .env
+
+# --- IA & IMÁGENES ---
+requests==2.31.0        # Para llamar a APIs de Llama 3 / Stable Diffusion
+Pillow==10.2.0          # Para procesar las imágenes que genere la IA
+# openai==1.10.0        # (Opcional) Si usas Llama a través de API compatible
+# torch                 # (Opcional) Solo si vas a correr la IA en local (pesa mucho)
+
+# --- UTILIDADES ---
+black==23.12.1          # Formateador de código
+
+==================== FILE: .\docs\ARCHITECTURE.md ====================
+# 🏗️ Arquitectura del Sistema v4.5
+
+Este proyecto sigue los principios de **Screaming Architecture** (Arquitectura que "Grita") y **Domain-Driven Design (DDD)**.
+
+El objetivo es que la estructura del proyecto comunique claramente su propósito (*Gestión de Mundos de Fantasía*) en lugar de la herramienta que utiliza (*Django*).
+
+## 📐 1. Principios de Diseño
+
+La arquitectura invierte la dependencia tradicional: **El Framework (Django) es un detalle de implementación**, no el núcleo de la aplicación.
+
+### Las Capas (Layers)
+
+1.  **Domain (Dominio)** 🧠
+    * **Ubicación:** `src/FantasyWorld/*/Domain/`
+    * **Responsabilidad:** Contiene las reglas de negocio puras, entidades y lógica del universo (ej. reglas de ECLAI, Value Objects).
+    * **Dependencias:** Cero. No conoce ni la base de datos ni la web.
+
+2.  **Application (Aplicación)** ⚙️
+    * **Ubicación:** `src/FantasyWorld/*/Application/`
+    * **Responsabilidad:** Orquesta los **Casos de Uso**. Es el "director de orquesta" que recibe una orden (ej. "Crear Mundo", "Proponer Cambio") y llama a las piezas necesarias.
+    * **Ejemplos:** `CreateWorldUseCase`, `ProposeChangeUseCase`, `PublishToLiveVersionUseCase`.
+
+3.  **Infrastructure (Infraestructura)** 🔌
+    * **Ubicación:** `src/Infrastructure/` y `src/*/Infrastructure/`
+    * **Responsabilidad:** Implementaciones concretas de herramientas externas.
+    * **Componentes:**
+        * **DjangoFramework:** Se usa solo como motor web, ORM (Base de datos) y gestión de usuarios.
+        * **Servicios IA:** Adaptadores (`sd_service.py`, `llama_service.py`) que hablan con las APIs locales.
+
+---
+
+## 💾 2. Diseño de Datos (Schema & Versioning)
+
+El sistema implementa un patrón de **Gobierno de Datos** estricto para proteger la integridad del universo.
+
+### A. Entidad "Mundo" (`CaosWorldORM`) - La Verdad Única
+Representa el objeto en su estado **LIVE** (Público/Oficial). Es lo que ven los usuarios finales.
+* **ID Estructural:** J-ID (`01`, `0101`) inmutable.
+* **Metadata (JSON):** Campo flexible para almacenar datos técnicos (stats, biología, clima) sin alterar la tabla.
+* **Punteros:** `id_lore` (Narrativa externa), `current_author`.
+
+### B. Entidad "Versión" (`CaosVersionORM`) - El Historial
+Representa la auditoría y el flujo de trabajo. Ningún cambio va directo al Live.
+* **Estados:**
+    * `PENDING`: Borrador o propuesta esperando revisión.
+    * `APPROVED`: Revisado y listo, pero no publicado.
+    * `LIVE`: La versión vigente actual.
+    * `REJECTED`: Propuestas descartadas.
+    * `ARCHIVED`: Versiones antiguas superadas por una nueva.
+
+---
+
+## 🤖 3. Pipeline de Inteligencia Artificial (v4.5)
+
+El sistema utiliza un flujo avanzado de **IA Multimodal** en local.
+
+### Generación de Arte (Stable Diffusion)
+1.  **Input:** Descripción en Español + Nombre del Mundo.
+2.  **Traducción & Prompting (Llama 3):** El sistema intercepta el texto, lo envía a Llama 3 para traducirlo al inglés y enriquecerlo con términos técnicos de arte.
+3.  **Selección de Modelo (Hot-Swap):** El código decide qué modelo `.safetensors` cargar (ej. `revAnimated` para criaturas, `RPG_Maps` para terrenos) y ordena a la API cambiarlo en caliente.
+4.  **Renderizado:** Se genera la imagen con *Negative Prompts* de calidad inyectados.
+5.  **Almacenamiento:** Se guarda en `img/{ID}/{Nombre}_v{X}.png` para mantener un histórico limpio.
+
+### Generación de Texto (Llama 3)
+* **Modo Narrativo:** Escribe Lore basado en el nombre.
+* **Modo Estructurado:** Genera JSONs válidos para rellenar la `metadata` de criaturas (Peligro, Dieta, Tamaño).
+
+---
+
+## 📂 4. Mapa del Código (`src/`)
+
+```text
+src/
+├── FantasyWorld/               # Contexto Principal
+│   ├── WorldManagement/        # Módulo: Gestión de Mundos
+│   │   ├── Caos/               # Agregado Principal
+│   │   │   ├── Application/    # Casos de Uso (Verbos: Create, Propose, Publish...)
+│   │   │   ├── Domain/         # Entidades (Sustantivos)
+│   │   │   └── Infrastructure/ # Adaptadores (DjangoRepository)
+│   │   └── ...
+│   └── AI_Generation/          # Módulo: Generación Procedural
+│       ├── Domain/             # Interfaces (LoreGenerator, ImageGenerator)
+│       └── Infrastructure/     # Implementaciones Reales (LlamaService, SDService)
+│
+├── Shared/                     # Núcleo Compartido (Kernel)
+│   ├── Domain/
+│   │   └── eclai_core.py       # Motor matemático de IDs Jerárquicos v3.0
+│
+└── Infrastructure/             # Infraestructura Global
+    └── DjangoFramework/        # El Framework Web (aislado aquí)
+        ├── config/             # settings.py, urls.py
+        └── persistence/        # App de Django (Models, Views, Templates)
+
+==================== FILE: .\docs\ECLAI.md ====================
+# 🆔 ECLAI v4.0 Specification
+
+> **Enhanced Code for Logical and Architectural Identification**
+> *Versión 4.0 - Paradigma Espacial Puro*
+
+ECLAI es el sistema de identificación central del proyecto. A diferencia de los IDs autoincrementales tradicionales (1, 2, 3...), ECLAI utiliza **IDs semánticos y jerárquicos** que permiten conocer la ubicación exacta de una entidad en el multiverso solo mirando su código.
+
+---
+
+## 1. Filosofía v4.0: Separación Espacio-Tiempo
+
+En versiones anteriores (v3.0), el tiempo (Épocas) era parte de la jerarquía. En la v4.0 se ha desacoplado para permitir la persistencia de entidades a través del tiempo.
+
+* **J-ID (Espacial):** Define **QUÉ** es y **DÓNDE** está. Es inmutable. (Ej: El Planeta Tierra siempre es el mismo objeto físico).
+* **Epoch (Temporal):** Define **CUÁNDO** existe. Es un metadato relacional.
+
+---
+
+## 2. J-ID (Jerarquía Espacial)
+
+El J-ID es un string numérico de longitud variable. Cada nivel añade **2 dígitos** al ID de su padre.
+
+### Algoritmo de Generación
+`ID_HIJO = ID_PADRE + DIGITOS_HIJO`
+
+### Tabla de Niveles (Revisión Espacial)
+
+| Nivel | Longitud | Nombre | Ejemplo | Significado |
+| :--- | :---: | :--- | :--- | :--- |
+| **1** | 2 | **Caos Prime** | `01` | La raíz de todo. |
+| **2** | 4 | **Abismo** | `0101` | Divisiones primordiales. |
+| **3** | 6 | **Realidad** | `010102` | Planos de existencia. |
+| **4** | 8 | **Galaxia** | `01010205` | Cúmulos estelares (*Antes era Época*). |
+| **5** | 10 | **Sistema** | `...01` | Sistema Solar/Estelar. |
+| **6** | 12 | **Planeta** | `...03` | Cuerpo celeste. |
+| **7** | 14 | **Hemisferio** | `...01` | División geográfica grande. |
+| **8** | 16 | **Continente** | `...04` | Masa de tierra. |
+| **9** | 18 | **Territorio** | `...02` | Reino / País. |
+| **...** | ... | ... | ... | ... |
+| **16** | 34 | **Entidad** | `...99` | Objeto/Ser específico (Nivel Atómico). |
+
+---
+
+## 3. N-ID (Narrative ID)
+
+El **N-ID** conecta una entidad espacial (J-ID) con su contenido narrativo (Lore). Permite tener múltiples textos asociados a un mismo lugar.
+
+### Formato
+`[J-ID] + [TIPO] + [NUMERO] + [CAPITULO?]`
+
+### Tipos de Contenido
+| Código | Tipo | Descripción |
+| :---: | :--- | :--- |
+| **L** | Lore | Historia general, descripción, mitología. |
+| **H** | Historia | Narrativa secuencial (Novela/Cuento). Admite Capítulos (`C01`). |
+| **R** | Regla | Leyes físicas, mágicas o sistemas de juego. |
+| **E** | Evento | Sucesos históricos (Guerras, Cataclismos). |
+| **N** | NPC | Personajes no jugadores vinculados al lugar. |
+
+### Ejemplo
+* **Lugar:** `0101` (Abismo de Fuego).
+* **Lore:** `0101L01` (Descripción del Abismo).
+* **Evento:** `0101E05` (La Batalla de la Llama Eterna).
+
+---
+
+## 4. Codificación (Base62)
+
+Para uso en URLs o referencias cortas, el sistema utiliza una codificación Base62 personalizada.
+
+* **Alfabeto:** `AEIOUaeiouBCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz0123456789`
+* **Objetivo:** Comprimir IDs largos en códigos legibles y cortos.
+
+### Conversión
+* **J-ID:** `01` -> **Code:** `OD9`
+* **J-ID:** `010103` -> **Code:** `2qX` (Ejemplo)
+
+---
+
+## 5. Gestión Temporal (Épocas)
+
+El tiempo ya no está en el ID. Se gestiona mediante relaciones en la Base de Datos.
+
+* **Campo `born_in_epoch`:** Indica en qué Era se creó la entidad.
+* **Campo `died_in_epoch`:** (Opcional) Indica cuándo dejó de existir.
+
+**Ejemplo de Lógica:**
+Si estamos visualizando la **Época 5**, el sistema mostrará:
+1.  Entidades creadas en la Época 5.
+2.  Entidades creadas en Épocas 1-4 que **NO** hayan muerto antes de la 5.
+
+==================== FILE: .\docs\FUTURE_NANOID_STRATEGY.md ====================
+# 🔐 ESTRATEGIA DE IDENTIDAD PÚBLICA (NANOID) v1.0
+
+> **Estado:** Planificado (Futuro).
+> **Objetivo:** Desacoplar la identidad lógica (J-ID Jerárquico) de la identidad pública (URL) para ocultar la estructura del mundo y acortar enlaces.
+
+---
+
+## 1. El Problema Actual
+* **J-ID (Internal):** `01010105030101...` (Contiene lógica, es largo, revela padres/hijos).
+* **URL Actual:** `/mundo/0101010503...`
+* **Riesgo:** Un usuario puede deducir qué planetas existen cambiando los números finales.
+
+## 2. La Solución: "Doble Identidad"
+
+El sistema mantendrá dos IDs por cada entidad:
+
+1.  **`id` (PK):** El J-ID ECLAI actual. Se usa para relaciones, herencia de clima y ordenamiento en backend.
+2.  **`public_id` (Unique Index):** Un código aleatorio corto (NanoID). Se usa **solo** para URLs y búsquedas web.
+
+---
+
+## 3. Especificación Técnica
+
+### A. Librería Recomendada
+Usar `nanoid` o `shortuuid` para Python.
+* **Alfabeto:** `0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz-`
+* **Longitud:** 10 caracteres (suficiente para evitar colisiones en millones de mundos).
+
+### B. Cambios en Base de Datos (`CaosWorldORM`)
+Añadir columna:
+```python
+public_id = models.CharField(
+    max_length=12, 
+    unique=True, 
+    db_index=True, 
+    editable=False
+)
+
+==================== FILE: .\docs\NEXT_STEPS_HEMISPHERES.md ====================
+# 🗺️ ESPECIFICACIÓN TÉCNICA: NIVEL 7 (HEMISFERIOS) v1.0
+
+> **Estado:** Pendiente de Implementación (Backend & Frontend).
+> **Objetivo:** Dividir Planetas (Nivel 6) en contenedores climáticos lógicos para herencia de datos.
+
+---
+
+## 1. Arquitectura de División (Opción 1: Geográfica)
+
+Se establece que todo Planeta (Nivel 6) se dividirá en **2 entidades hijas fijas** (Nivel 7):
+
+| Entidad | Sufijo J-ID | Concepto Físico | Regla Estacional |
+| :--- | :---: | :--- | :--- |
+| **Hemisferio Norte** | `...01` | Latitud 0° a 90° | Verano en Junio / Invierno en Diciembre |
+| **Hemisferio Sur** | `...02` | Latitud -90° a 0° | Invierno en Junio / Verano en Diciembre |
+
+> **Nota:** Los ID son fijos. No se generan secuencialmente (03, 04...), son espacios reservados.
+
+---
+
+## 2. Sistema de "Franjas Climáticas" (Slots)
+
+Para evitar coordenadas GPS complejas, los Hemisferios actúan como contenedores de **3 Franjas (Slots)**.
+Al crear un hijo (Continente/Región), se le asignará una de estas etiquetas en su metadata para heredar el clima automáticamente.
+
+### Las 3 Franjas de Herencia:
+
+1.  **`EQUATORIAL` (Ecuador):**
+    * **Clima Base:** Cálido, Húmedo/Seco extremo.
+    * **Estaciones:** Débiles o inexistentes (Eterna primavera/verano).
+    * **Biomas probables:** Selva, Sabana, Desierto.
+
+2.  **`TEMPERATE` (Zona Templada):**
+    * **Clima Base:** Moderado.
+    * **Estaciones:** 4 estaciones marcadas (Ciclo completo).
+    * **Biomas probables:** Bosque, Pradera, Montaña habitable.
+
+3.  **`POLAR` (Zona Polar):**
+    * **Clima Base:** Gélido.
+    * **Estaciones:** Días/Noches extremos (Sol de medianoche).
+    * **Biomas probables:** Tundra, Glaciar, Taiga.
+
+---
+
+## 3. Estructura de Datos (JSONB Metadata)
+
+Cuando implementemos el código, el Hemisferio debe guardarse con esta estructura en la BD:
+
+```json
+{
+  "tipo_entidad": "HEMISFERIO",
+  "geo_config": {
+    "posicion": "NORTE", // o "SUR"
+    "rango_latitud": [0, 90],
+    "polo_magnetico": true
+  },
+  "reglas_clima": {
+    "invertir_estaciones": false, // true para el Sur
+    "gradiente_temperatura": "NORMAL" // Calor en Ecuador -> Frío en Polo
+  }
+}
+
+==================== FILE: .\docs\NEXT_STEPS_WIZARD.md ====================
+# ⚡ ESPECIFICACIÓN: "GENESIS WIZARD" (ATAJO DE CREACIÓN)
+
+> **Problema:** La navegación jerárquica (Drill-down) es demasiado lenta para crear entidades profundas como Planetas (Nivel 6).
+> **Solución:** Implementar un formulario de creación directa con selectores contextuales.
+
+---
+
+## 1. Concepto de "Contexto Predeterminado"
+
+Como las capas 1, 2 y 3 (Caos, Abismo, Realidad) son estructurales y raramente cambian, el sistema debe tener una configuración de **"Contexto Activo"**.
+
+* **Default Root:** `010101` (Caos Prime -> Abismo Prime -> Realidad Base).
+* *El usuario no debería tener que seleccionar esto cada vez.*
+
+---
+
+## 2. Flujo de UI (Frontend)
+
+Se requiere un nuevo formulario en el Dashboard (`index.html`) o una vista dedicada `create_wizard`:
+
+### Selector 1: Galaxia (Nivel 4)
+* **Fuente:** Buscar todos los hijos de `Default Root` con longitud de Nivel 4.
+* **Opción Extra:** "➕ Crear Nueva Galaxia".
+
+### Selector 2: Sistema (Nivel 5)
+* **Comportamiento:** Se carga dinámicamente al seleccionar una Galaxia.
+* **Fuente:** Buscar hijos de la Galaxia seleccionada.
+* **Opción Extra:** "➕ Crear Nuevo Sistema".
+
+### Input Final: Planeta (Nivel 6)
+* Nombre, Descripción, Metadata base.
+
+---
+
+## 3. Requerimientos Técnicos
+
+1.  **Endpoint API Interna:** Una vista ligera de Django que devuelva JSON con la estructura del árbol para llenar los `select` sin recargar la página (AJAX/Fetch).
+    * `GET /api/structure?parent=010101` -> Devuelve lista de Galaxias.
+2.  **Lógica de Creación en Cadena:**
+    * Si el usuario elige "Nueva Galaxia" + "Nuevo Sistema" + "Nuevo Planeta", el backend debe crear los 3 padres/hijos en una sola transacción atómica.
+
+---
+
+## 4. Prioridad
+Implementar esto **después** de la lógica de Hemisferios para facilitar el poblado rápido del universo.
+
+==================== FILE: .\docs\README.md ====================
+# 🪐 Fantasy World Generator v4.5 (CMS & AI-Powered)
+
+> **Sistema de Gestión de Mundos Persistentes con Generación Procedural Asistida por IA**
+
+![Status](https://img.shields.io/badge/Status-Active_Development-green)
+![Python](https://img.shields.io/badge/Python-3.11.7-blue)
+![Django](https://img.shields.io/badge/Django-5.0.1-092E20)
+![Architecture](https://img.shields.io/badge/Architecture-Screaming_%2F_DDD-orange)
+![AI](https://img.shields.io/badge/AI-Llama3_%2B_StableDiffusion-purple)
+
+Este proyecto es una plataforma **CMS (Content Management System)** diseñada para arquitectos de mundos (Worldbuilders). A diferencia de wikis tradicionales, este sistema integra inteligencia artificial local para asistir en la creación de narrativa y arte conceptual, manteniendo un control estricto sobre la estructura de datos mediante IDs jerárquicos.
+
+---
+
+## ✨ Características Principales
+
+### 🧠 Núcleo Inteligente
+* **Arquitectura "Screaming":** El código está desacoplado del framework. La lógica de negocio vive en `src/FantasyWorld` y no sabe que Django existe.
+* **IDs Jerárquicos (ECLAI v4.0):** Sistema de identificación único que define la posición espacial de cada entidad (ej. `01` Caos -> `0101` Abismo -> `010101` Región).
+* **Metadatos Flexibles:** Almacenamiento de fichas técnicas (stats, biología, clima) en formato JSONB no relacional para máxima adaptabilidad.
+
+### ⚖️ Gobierno de Datos (Workflow)
+* **Sistema de Aprobación Estricto:** Los cambios nunca afectan al entorno "Live" directamente.
+    * `Draft` (Borrador) -> `Proposal` (Propuesta vX) -> `Approval` (Aprobado) -> `Live` (Publicado).
+* **Histórico Inmutable:** Cada cambio genera una versión. Al publicar, las versiones obsoletas se archivan automáticamente.
+* **Auditoría:** Registro de autor, fecha y razón del cambio para cada modificación.
+
+### 🎨 Motor de Generación IA (Local-First)
+* **Pipeline de Arte Automatizado:**
+    * Traducción automática de prompts (Español -> Inglés) usando Llama 3.
+    * Inyección de estilos y *Negative Prompts* profesionales.
+    * Gestión de Modelos en caliente (*Hot-Swap*): Carga modelos de criaturas o mapas según necesidad.
+* **Narrativa Asistida:** Generación de descripciones y lore bajo demanda.
+
+---
+
+## 🛠️ Requisitos del Sistema
+
+Este proyecto está diseñado para correr en local aprovechando hardware de gama alta (ej. RTX 4080 Super) para inferencia de IA.
+
+* **Python:** 3.11.7 (Estrictamente recomendado).
+* **Base de Datos:** SQLite (Default) / PostgreSQL (Compatible).
+* **Servidores de IA (Externos):**
+    * **Texto:** [Oobabooga Text-Generation-WebUI](https://github.com/oobabooga/text-generation-webui) con API activada.
+    * **Imagen:** [Stable Diffusion WebUI (Automatic1111)](https://github.com/AUTOMATIC1111/stable-diffusion-webui) con API activada.
+
+---
+
+## ⚙️ Instalación y Puesta en Marcha
+
+### 1. Configuración de IAs
+Antes de iniciar el CMS, los motores de IA deben estar escuchando.
+
+* **Llama 3 (Texto):**
+    * Ejecutar en puerto **5000**.
+    * Modelo recomendado: `Meta-Llama-3.1-8B-Instruct`.
+* **Stable Diffusion (Imagen):**
+    * Ejecutar en puerto **7861**.
+    * Argumentos obligatorios en `webui-user.bat`:
+        ```bat
+        set COMMANDLINE_ARGS=--api --xformers --port 7861
+        ```
+
+### 2. Configuración del Proyecto
+```powershell
+# 1. Clonar el repositorio
+git clone [https://github.com/Alonevs/FantasyWorld_ScreamingArch.git](https://github.com/Alonevs/FantasyWorld_ScreamingArch.git)
+cd FantasyWorld_ScreamingArch
+
+# 2. Crear y activar entorno virtual (Python 3.11)
+py -3.11 -m venv venv
+.\venv\Scripts\activate
+
+# 3. Instalar dependencias
+pip install -r requirements.txt
+
+# 4. Inicializar Base de Datos (Migraciones y Semilla)
+python src/Infrastructure/DjangoFramework/manage.py migrate
+
+==================== FILE: .\src\__init__.py ====================
+
+
+==================== FILE: .\src\FantasyWorld\AI_Generation\__init__.py ====================
+
+
+==================== FILE: .\src\FantasyWorld\AI_Generation\Application\__init__.py ====================
+
+
+==================== FILE: .\src\FantasyWorld\AI_Generation\Domain\interfaces.py ====================
+from abc import ABC, abstractmethod
+
+class LoreGenerator(ABC):
+    @abstractmethod
+    def generate_description(self, prompt: str) -> str:
+        pass
+
+class ImageGenerator(ABC):
+    @abstractmethod
+    def generate_concept_art(self, prompt: str) -> str:
+        pass
+
+==================== FILE: .\src\FantasyWorld\AI_Generation\Domain\__init__.py ====================
+
+
+==================== FILE: .\src\FantasyWorld\AI_Generation\Infrastructure\llama_service.py ====================
+import requests
+import json
+import re
+from typing import Dict, Any
+from src.FantasyWorld.AI_Generation.Domain.interfaces import LoreGenerator
+
+class Llama3Service(LoreGenerator):
+    def __init__(self):
+        self.api_url_completion = "http://127.0.0.1:5000/v1/completions"
+        self.api_url_chat = "http://127.0.0.1:5000/v1/chat/completions"
+        self.headers = {"Content-Type": "application/json"}
+
+    def _call_api(self, prompt, max_tokens=200, temperature=0.7, stop=None):
+        payload = {
+            "prompt": prompt, "max_tokens": max_tokens, "temperature": temperature,
+            "top_p": 0.9, "seed": -1, "stream": False, "stop": stop or ["###", "\n\n"]
+        }
+        try:
+            r = requests.post(self.api_url_completion, headers=self.headers, json=payload, timeout=60)
+            if r.status_code == 200: return r.json()['choices'][0]['text'].strip()
+        except Exception as e: 
+            print(f"⚠️ Error IA Texto: {e}")
+        return ""
+
+    def _clean_json(self, raw_text: str) -> Dict:
+        try:
+            text = re.sub(r'```json|```', '', raw_text).strip()
+            return json.loads(text)
+        except json.JSONDecodeError:
+            print(f"⚠️ Error parseando JSON de Llama. Raw: {raw_text[:50]}...")
+            return {}
+
+    def generate_description(self, prompt: str) -> str:
+        full_prompt = f"### Instruction:\nDescribe visualmente en español (max 3 frases): \"{prompt}\"\n### Response:\n"
+        return self._call_api(full_prompt, max_tokens=150, temperature=0.6)
+
+    def generate_sd_prompt(self, name: str, description: str) -> str:
+        # --- TRADUCTOR VISUAL (ESP -> ING) ---
+        print(f" 🔡 [Llama] Traduciendo prompt para: {name}...")
+        
+        # PROMPT BLINDADO ANTI-ALUCINACIONES
+        prompt = f'''### Instruction:
+You are a prompt engineer for Stable Diffusion.
+Input: "{description}"
+Task: Convert the input concept into a comma-separated list of visual keywords in English.
+Constraints:
+1. Output ONLY the tags.
+2. NO markdown, NO images (like ![image]), NO links, NO explanations.
+3. Mandatory tags: best quality, 8k, fantasy art, top down view.
+
+### Response:
+'''
+        # Temperatura baja para ser determinista
+        raw_response = self._call_api(prompt, max_tokens=150, temperature=0.3)
+
+        # --- FILTRO DE SEGURIDAD (LOBOTOMÍA) ---
+        # Si la IA intenta colarnos un link o imagen, lo interceptamos.
+        if "![" in raw_response or "http" in raw_response or "github" in raw_response.lower():
+            print(f" ⚠️ ALUCINACIÓN DETECTADA (Link/Imagen): {raw_response[:30]}...")
+            print(f" 🛡️ Aplicando Prompt de Emergencia.")
+            return f"{name}, fantasy map, cartography, top down view, best quality, 8k, detailed"
+            
+        return raw_response
+
+    # --- MÉTODO PARA CRIATURAS (JSON ESTRUCTURADO) ---
+    def generate_structure(self, system_prompt: str, context_prompt: str) -> Dict[str, Any]:
+        print(f" 🧬 [Llama] Generando estructura JSON...")
+        payload = {
+            "mode": "instruct",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": context_prompt}
+            ],
+            "max_tokens": 600,
+            "temperature": 0.6 
+        }
+        try:
+            r = requests.post(self.api_url_chat, headers=self.headers, json=payload, timeout=90)
+            if r.status_code == 200:
+                content = r.json()['choices'][0]['message']['content']
+                return self._clean_json(content)
+        except Exception as e:
+            print(f"⚠️ Error IA Estructura: {e}")
+        return {}
+
+    # --- MÉTODO LEGACY (Compatibilidad) ---
+    def generate_entity_json(self, name, tipo, habitat):
+        # Mantenemos este por si algún código viejo lo llama
+        return self.generate_structure(
+            f"Genera JSON para: {tipo}. Keys: descripcion, tamano, peso, peligro (1-5), dieta, rasgos.", 
+            f"Nombre: {name}. Habitat: {habitat}"
+        )
+
+
+==================== FILE: .\src\FantasyWorld\AI_Generation\Infrastructure\sd_service.py ====================
+import requests
+import io
+import base64
+import time
+from PIL import Image
+from django.conf import settings
+import os
+from src.FantasyWorld.AI_Generation.Domain.interfaces import ImageGenerator
+
+class StableDiffusionService(ImageGenerator):
+    def __init__(self):
+        # ✅ PUERTO CONFIRMADO POR TU TEST
+        self.api_url = "http://127.0.0.1:7861"
+        self.headers = {"Content-Type": "application/json"}
+
+    def generate_concept_art(self, prompt: str, category: str = "defecto") -> str:
+        # Limpiamos el prompt por si acaso
+        print(f" 🎨 [SD] Conectando a 7861...")
+        print(f"    Prompt: {prompt[:60]}...")
+
+        # Payload optimizado para revAnimated (Estilo 2.5D / Ilustración)
+        payload = {
+            "prompt": f"(best quality, masterpiece, highres), {prompt}, (vibrant colors, soft lighting)",
+            "negative_prompt": "bad anatomy, low quality, text, watermark, glitch, deformed, mutated, ugly, blur, pixelated",
+            "steps": 25,            # Un poco más de calidad
+            "width": 512,
+            "height": 768,          # Formato Retrato
+            "cfg_scale": 7,
+            "sampler_name": "DPM++ 2M Karras", # El mejor para revAnimated
+            "seed": -1
+        }
+
+        try:
+            # 1. Llamada directa (Sin cambios de modelo, usamos el que ya tienes cargado)
+            response = requests.post(f"{self.api_url}/sdapi/v1/txt2img", json=payload, timeout=120)
+            
+            if response.status_code == 200:
+                r = response.json()
+                # Devolvemos el string base64 directamente
+                return r['images'][0]
+            else:
+                print(f"❌ Error SD ({response.status_code}): {response.text[:100]}")
+                return None
+
+        except requests.exceptions.ConnectionError:
+            print(f"💀 NO CONECTA al puerto 7861. ¿Seguro que la ventana negra sigue abierta?")
+            return None
+        except Exception as e:
+            print(f"⚠️ Error inesperado en SD: {e}")
+            return None
+            
+    # Alias para compatibilidad
+    def generate_image(self, prompt, filename):
+        return self.generate_concept_art(prompt)
+
+==================== FILE: .\src\FantasyWorld\AI_Generation\Infrastructure\__init__.py ====================
+
+
+==================== FILE: .\src\Infrastructure\__init__.py ====================
+
+
+==================== FILE: .\src\Infrastructure\DjangoFramework\manage.py ====================
+#!/usr/bin/env python
+import os
+import sys
+from pathlib import Path
+
+def main():
+    # --- PARCHE DE ARQUITECTURA ---
+    # Obtenemos la ruta de este archivo y subimos 3 niveles para encontrar la RAIZ del proyecto
+    # (DjangoFramework -> Infrastructure -> src -> RAIZ)
+    current_path = Path(__file__).resolve().parent
+    project_root = current_path.parents[2]
+    
+    # Añadimos la raíz al path de Python para que pueda encontrar 'src'
+    sys.path.append(str(project_root))
+    # -----------------------------
+
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'src.Infrastructure.DjangoFramework.config.settings')
+    try:
+        from django.core.management import execute_from_command_line
+    except ImportError as exc:
+        raise ImportError(
+            "Couldn't import Django. Are you sure it's installed and "
+            "available on your PYTHONPATH environment variable? Did you "
+            "forget to activate a virtual environment?"
+        ) from exc
+    execute_from_command_line(sys.argv)
+
+if __name__ == '__main__':
+    main()
+
+
+==================== FILE: .\src\Infrastructure\DjangoFramework\__init__.py ====================
+
+
+==================== FILE: .\src\Infrastructure\DjangoFramework\config\asgi.py ====================
+"""
+ASGI config for config project.
+
+It exposes the ASGI callable as a module-level variable named ``application``.
+
+For more information on this file, see
+https://docs.djangoproject.com/en/5.2/howto/deployment/asgi/
+"""
+
+import os
+
+from django.core.asgi import get_asgi_application
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+
+application = get_asgi_application()
+
+
+==================== FILE: .\src\Infrastructure\DjangoFramework\config\settings.py ====================
+"""
+Django settings for config project.
+
+Generated by 'django-admin startproject' using Django 5.2.8.
+
+For more information on this file, see
+https://docs.djangoproject.com/en/5.2/topics/settings/
+
+For the full list of settings and their values, see
+https://docs.djangoproject.com/en/5.2/ref/settings/
+"""
+
+from pathlib import Path
+
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+# Quick-start development settings - unsuitable for production
+# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
+
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = 'django-insecure-*(tm!886hoii9ahf07s5zw(f-!pu0(ciee_b!#v3(gco^xwbm&'
+
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = True
+
+ALLOWED_HOSTS = []
+
+
+# Application definition
+
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'src.Infrastructure.DjangoFramework.persistence.apps.PersistenceConfig',
+]
+
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+ROOT_URLCONF = 'config.urls'
+
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
+
+WSGI_APPLICATION = 'config.wsgi.application'
+
+
+# Database
+# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
+
+
+# Password validation
+# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
+
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
+
+
+# Internationalization
+# https://docs.djangoproject.com/en/5.2/topics/i18n/
+
+LANGUAGE_CODE = 'en-us'
+
+TIME_ZONE = 'UTC'
+
+USE_I18N = True
+
+USE_TZ = True
+
+
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/5.2/howto/static-files/
+
+STATIC_URL = 'static/'
+
+# Default primary key field type
+# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+==================== FILE: .\src\Infrastructure\DjangoFramework\config\urls.py ====================
+from django.contrib import admin
+from django.urls import path
+from src.Infrastructure.DjangoFramework.persistence.views import *
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', home, name='home'),
+    path('control/', centro_control, name='centro_control'),
+    path('mundo/<str:jid>/', ver_mundo, name='ver_mundo'),
+    path('revision/<int:version_id>/', revisar_version, name='revisar_version'),
+    
+    path('borrar/<str:jid>/', borrar_mundo, name='borrar_mundo'),
+    path('editar/<str:jid>/', editar_mundo, name='editar_mundo'),
+    path('aprobar/<int:version_id>/', aprobar_version, name='aprobar_version'),
+    path('rechazar/<int:version_id>/', rechazar_version, name='rechazar_version'),
+    path('publicar/<int:version_id>/', publicar_version, name='publicar_version'),
+    
+    path('foto_extra/<str:jid>/', generar_foto_extra, name='generar_foto_extra'),
+    path('texto_extra/<str:jid>/', generar_texto_extra, name='generar_texto_extra'),
+    path('toggle_visible/<str:jid>/', toggle_visibilidad, name='toggle_visibilidad'),
+    
+    # NUEVA RUTA: Borrar foto específica
+    # Recibe el ID del mundo y el nombre del archivo
+    path('borrar_foto/<str:jid>/<str:filename>/', borrar_foto, name='borrar_foto'),
+    path('escanear/<str:jid>/', escanear_planeta, name='escanear_planeta'),
+    path('narrativa/<str:nid>/', leer_narrativa, name='leer_narrativa'),
+    path('narrativa/editar/<str:nid>/', editar_narrativa, name='editar_narrativa'),
+    path('narrativa/crear/<str:jid>/<str:tipo_codigo>/', crear_nueva_narrativa, name='crear_narrativa'),
+    path('narrativa/subcrear/<str:parent_nid>/<str:tipo_codigo>/', crear_sub_narrativa, name='crear_sub_narrativa'),
+    path('narrativa/indice/<str:jid>/', ver_narrativa_mundo, name='ver_narrativa_mundo'),
+    path('narrativa/borrar/<str:nid>/', borrar_narrativa, name='borrar_narrativa'),
+    path('version/restaurar/<int:version_id>/', restaurar_version, name='restaurar_version'),
+]
+
+==================== FILE: .\src\Infrastructure\DjangoFramework\config\wsgi.py ====================
+"""
+WSGI config for config project.
+
+It exposes the WSGI callable as a module-level variable named ``application``.
+
+For more information on this file, see
+https://docs.djangoproject.com/en/5.2/howto/deployment/wsgi/
+"""
+
+import os
+
+from django.core.wsgi import get_wsgi_application
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+
+application = get_wsgi_application()
+
+
+==================== FILE: .\src\Infrastructure\DjangoFramework\config\__init__.py ====================
+
+
+==================== FILE: .\src\Infrastructure\DjangoFramework\persistence\admin.py ====================
+from django.contrib import admin
+
+# Register your models here.
+
+
+==================== FILE: .\src\Infrastructure\DjangoFramework\persistence\apps.py ====================
+from django.apps import AppConfig
+
+class PersistenceConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    # AQUÍ ESTABA EL PROBLEMA: Antes decía name = 'persistence'
+    name = 'src.Infrastructure.DjangoFramework.persistence'
+
+
+==================== FILE: .\src\Infrastructure\DjangoFramework\persistence\models.py ====================
+from django.db import models
+from django.contrib.auth.models import User
+from datetime import datetime
+
+# --- TABLA DE TIEMPO (NUEVO FLUJO) ---
+class CaosEpochORM(models.Model):
+    id = models.AutoField(primary_key=True) # 1, 2, 3...
+    name = models.CharField(max_length=100) # "Era de los Dragones", "Edad Oscura"
+    description = models.TextField(blank=True)
+    start_year = models.IntegerField(default=0)
+    end_year = models.IntegerField(null=True, blank=True)
+    
+    def __str__(self):
+        return f"[{self.id}] {self.name}"
+
+    class Meta:
+        db_table = 'caos_epochs'
+        ordering = ['start_year']
+
+# --- TABLA DE ESPACIO (MUNDOS) ---
+class CaosWorldORM(models.Model):
+    id = models.CharField(primary_key=True, max_length=100) # J-ID Espacial
+    id_codificado = models.CharField(max_length=30, blank=True, null=True)
+    name = models.CharField(max_length=150)
+    description = models.TextField(null=True, blank=True)
+    id_lore = models.CharField(max_length=40, null=True, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    
+    # Control
+    status = models.CharField(max_length=50, default="DRAFT")
+    visible_publico = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    # Versionado Live
+    current_version_number = models.IntegerField(default=1)
+    current_author_name = models.CharField(max_length=150, default="Sistema", blank=True)
+    
+    # VINCULACIÓN TEMPORAL (NUEVO)
+    # Indica en qué época nació esta entidad.
+    # Si nació en la época 1, existe en la 1, 2, 3... hasta que muera.
+    born_in_epoch = models.ForeignKey(CaosEpochORM, on_delete=models.SET_NULL, null=True, blank=True, related_name='entities_born')
+    
+    # Opcional: Muerte (si deja de existir en una época futura)
+    died_in_epoch = models.ForeignKey(CaosEpochORM, on_delete=models.SET_NULL, null=True, blank=True, related_name='entities_died')
+
+    class Meta:
+        db_table = 'caos_worlds'
+
+class CaosVersionORM(models.Model):
+    world = models.ForeignKey(CaosWorldORM, on_delete=models.CASCADE, related_name='versiones')
+    proposed_name = models.CharField(max_length=150)
+    proposed_description = models.TextField(null=True, blank=True)
+    version_number = models.IntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=30, default="PENDING")
+    change_log = models.CharField(max_length=255, blank=True)
+    cambios = models.JSONField(default=dict, blank=True)
+    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    es_version_activa = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'caos_versions'
+        ordering = ['-version_number']
+# --- TABLA DE NARRATIVA (LORE & RELATOS) ---
+class CaosNarrativeORM(models.Model):
+    nid = models.CharField(primary_key=True, max_length=50)
+    world = models.ForeignKey(CaosWorldORM, on_delete=models.CASCADE, related_name='narrativas')
+    
+    # Relación Múltiple (Menciones)
+    menciones = models.ManyToManyField(CaosWorldORM, related_name='menciones_en_narrativa', blank=True)
+    
+    titulo = models.CharField(max_length=200)
+    contenido = models.TextField()
+    narrador = models.CharField(max_length=150, default="???", help_text="Entidad que relata el evento")
+    
+    TIPO_CHOICES = [
+        ('LORE', '📜 Lore / Enciclopedia'),
+        ('HISTORIA', '📖 Historia / Novela'),
+        ('CAPITULO', '📑 Capítulo'),
+        ('EVENTO', '⚔️ Evento Histórico'),
+        ('LEYENDA', '🕯️ Leyenda / Mito'),
+        ('REGLA', '⚖️ Regla / Ley'),
+        ('BESTIARIO', '🐉 Entrada de Bestiario'),
+    ]
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default='LORE')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'caos_narratives'
+        ordering = ['nid']
+
+
+
+==================== FILE: .\src\Infrastructure\DjangoFramework\persistence\tests.py ====================
+from django.test import TestCase
+
+# Create your tests here.
+
+
+==================== FILE: .\src\Infrastructure\DjangoFramework\persistence\views.py ====================
+from src.WorldManagement.Caos.Application.restore_version import RestoreVersionUseCase
+import os
+import json
+from django.shortcuts import render, redirect
+from django.conf import settings
+from django.contrib.auth.models import User
+from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosVersionORM, CaosNarrativeORM
+from src.Shared.Domain import eclai_core
+
+# Use Cases
+from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
+from src.WorldManagement.Caos.Application.create_world import CreateWorldUseCase
+from src.WorldManagement.Caos.Application.create_child import CreateChildWorldUseCase
+from src.WorldManagement.Caos.Application.publish_world import PublishWorldUseCase
+from src.WorldManagement.Caos.Application.generate_lore import GenerateWorldLoreUseCase
+from src.WorldManagement.Caos.Application.generate_map import GenerateWorldMapUseCase
+from src.WorldManagement.Caos.Application.propose_change import ProposeChangeUseCase
+from src.WorldManagement.Caos.Application.approve_version import ApproveVersionUseCase
+from src.WorldManagement.Caos.Application.reject_version import RejectVersionUseCase
+from src.WorldManagement.Caos.Application.publish_to_live_version import PublishToLiveVersionUseCase
+from src.WorldManagement.Caos.Application.generate_creature_usecase import GenerateCreatureUseCase
+from src.WorldManagement.Caos.Application.generate_planet_metadata import GeneratePlanetMetadataUseCase
+from src.WorldManagement.Caos.Application.update_narrative import UpdateNarrativeUseCase
+from src.WorldManagement.Caos.Application.delete_narrative import DeleteNarrativeUseCase
+
+# Services
+from src.FantasyWorld.AI_Generation.Infrastructure.llama_service import Llama3Service
+from src.FantasyWorld.AI_Generation.Infrastructure.sd_service import StableDiffusionService
+
+def get_current_user(request):
+    if request.user.is_authenticated: return request.user
+    u, _ = User.objects.get_or_create(username='Admin')
+    return u
+
+def get_world_images(jid):
+    base = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img')
+    target = os.path.join(base, jid)
+    if not os.path.exists(target):
+        for d in os.listdir(base):
+            if d.startswith(f"{jid}_"): target = os.path.join(base, d); break
+    imgs = []
+    if os.path.exists(target):
+        dname = os.path.basename(target)
+        for f in sorted(os.listdir(target)):
+            if f.endswith('.png'): imgs.append({'url': f'{dname}/{f}', 'filename': f})
+    return imgs
+
+# --- ACCIONES MANUALES ---
+def generar_foto_extra(request, jid):
+    try: GenerateWorldMapUseCase(DjangoCaosRepository(), StableDiffusionService()).execute_single(jid)
+    except: pass
+    return redirect('ver_mundo', jid=jid)
+
+def generar_texto_extra(request, jid):
+    try: GenerateWorldLoreUseCase(DjangoCaosRepository(), Llama3Service()).execute(jid)
+    except: pass
+    return redirect('ver_mundo', jid=jid)
+
+def borrar_foto(request, jid, filename):
+    base = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img')
+    target_dir = os.path.join(base, jid)
+    if not os.path.exists(target_dir):
+        for d in os.listdir(base):
+            if d.startswith(f"{jid}_"): target_dir = os.path.join(base, d); break
+    
+    file_path = os.path.join(target_dir, filename)
+    if os.path.exists(file_path):
+        try: os.remove(file_path)
+        except: pass
+    return redirect('ver_mundo', jid=jid)
+
+def toggle_visibilidad(request, jid):
+    try:
+        w = CaosWorldORM.objects.get(id=jid)
+        w.visible_publico = not w.visible_publico
+        w.save()
+    except: pass
+    return redirect('ver_mundo', jid=jid)
+
+def escanear_planeta(request, jid):
+    try:
+        GeneratePlanetMetadataUseCase(DjangoCaosRepository(), Llama3Service()).execute(jid)
+    except Exception as e:
+        print(f"Error escaneando: {e}")
+    return redirect('ver_mundo', jid=jid)
+
+# --- GESTIÓN ---
+def editar_mundo(request, jid):
+    if request.method == 'POST':
+        desc = request.POST.get('description')
+        if request.POST.get('use_ai_edit') == 'on':
+            try:
+                prompt = f"Nombre: {request.POST.get('name')}. Concepto: {desc}"
+                generated = Llama3Service().generate_description(prompt)
+                if generated: desc = generated
+            except: pass
+        
+        ProposeChangeUseCase().execute(
+            jid, request.POST.get('name'), desc, 
+            request.POST.get('reason'), get_current_user(request)
+        )
+    return redirect('ver_mundo', jid=jid)
+
+def aprobar_version(request, version_id):
+    try: 
+        ApproveVersionUseCase().execute(version_id)
+        v = CaosVersionORM.objects.get(id=version_id)
+        return redirect('ver_mundo', jid=v.world.id)
+    except: return redirect('home')
+
+def rechazar_version(request, version_id):
+    try: 
+        RejectVersionUseCase().execute(version_id)
+        v = CaosVersionORM.objects.get(id=version_id)
+        return redirect('ver_mundo', jid=v.world.id)
+    except: return redirect('home')
+
+def publicar_version(request, version_id):
+    try: 
+        PublishToLiveVersionUseCase().execute(version_id)
+        v = CaosVersionORM.objects.get(id=version_id)
+        return redirect('ver_mundo', jid=v.world.id)
+    except: return redirect('centro_control')
+
+def borrar_mundo(request, jid):
+    try: CaosWorldORM.objects.get(id=jid).delete(); return redirect('home')
+    except: return redirect('home')
+
+# --- NARRATIVA (BIBLIOTECA) ---
+def ver_narrativa_mundo(request, jid):
+    try:
+        w = CaosWorldORM.objects.get(id=jid)
+        docs = w.narrativas.exclude(tipo='CAPITULO')
+        context = {
+            'world': w,
+            'lores': docs.filter(tipo='LORE'),
+            'historias': docs.filter(tipo='HISTORIA'),
+            'eventos': docs.filter(tipo='EVENTO'),
+            'leyendas': docs.filter(tipo='LEYENDA'),
+            'reglas': docs.filter(tipo='REGLA'),
+            'bestiario': docs.filter(tipo='BESTIARIO'),
+        }
+        return render(request, 'indice_narrativa.html', context)
+    except CaosWorldORM.DoesNotExist:
+        return redirect('home')
+
+def leer_narrativa(request, nid):
+    try:
+        narr = CaosNarrativeORM.objects.get(nid=nid)
+        todas = CaosWorldORM.objects.all().order_by('id')
+        hijos = CaosNarrativeORM.objects.filter(nid__startswith=narr.nid).exclude(nid=narr.nid).order_by('nid')
+        return render(request, 'visor_narrativa.html', {'narr': narr, 'todas_entidades': todas, 'capitulos': hijos})
+    except CaosNarrativeORM.DoesNotExist:
+        return redirect('home')
+
+def editar_narrativa(request, nid):
+    if request.method == 'POST':
+        try:
+            UpdateNarrativeUseCase().execute(
+                nid=nid,
+                titulo=request.POST.get('titulo'),
+                contenido=request.POST.get('contenido'),
+                narrador=request.POST.get('narrador'),
+                tipo=request.POST.get('tipo'),
+                menciones_ids=request.POST.getlist('menciones')
+            )
+        except Exception as e:
+            print(f"Error editando: {e}")
+    return redirect('leer_narrativa', nid=nid)
+
+def borrar_narrativa(request, nid):
+    try:
+        world_id = DeleteNarrativeUseCase().execute(nid)
+        return redirect('ver_narrativa_mundo', jid=world_id)
+    except: return redirect('home')
+
+def crear_nueva_narrativa(request, jid, tipo_codigo):
+    try:
+        world = CaosWorldORM.objects.get(id=jid)
+        prefix = f"{jid}{tipo_codigo}"
+        
+        # LOGICA GAP FILLER
+        existing_nids = CaosNarrativeORM.objects.filter(nid__startswith=prefix).values_list('nid', flat=True)
+        used_nums = set()
+        len_prefix = len(prefix)
+        for nid_str in existing_nids:
+            try:
+                suffix = nid_str[len_prefix:]
+                if suffix.isdigit(): used_nums.add(int(suffix))
+            except: pass
+        
+        next_num = 1
+        while next_num in used_nums: next_num += 1
+        new_nid = f"{prefix}{next_num:02d}"
+        
+        map_tipos = {'L':'LORE', 'H':'HISTORIA', 'C':'CAPITULO', 'E':'EVENTO', 'M':'LEYENDA', 'R':'REGLA', 'B':'BESTIARIO'}
+        tipo_completo = map_tipos.get(tipo_codigo, 'LORE')
+        
+        CaosNarrativeORM.objects.create(nid=new_nid, world=world, titulo=f"Nuevo {tipo_completo} ({next_num})", contenido="...", narrador="???", tipo=tipo_completo)
+        return redirect('editar_narrativa', nid=new_nid)
+    except Exception as e:
+        print(f"Error creando: {e}")
+        return redirect('ver_narrativa_mundo', jid=jid)
+
+def crear_sub_narrativa(request, parent_nid, tipo_codigo):
+    try:
+        padre = CaosNarrativeORM.objects.get(nid=parent_nid)
+        prefix = f"{parent_nid}{tipo_codigo}"
+        
+        # LOGICA GAP FILLER
+        existing_nids = CaosNarrativeORM.objects.filter(nid__startswith=prefix).values_list('nid', flat=True)
+        used_nums = set()
+        len_prefix = len(prefix)
+        for nid_str in existing_nids:
+            try:
+                suffix = nid_str[len_prefix:]
+                if suffix.isdigit(): used_nums.add(int(suffix))
+            except: pass
+            
+        next_num = 1
+        while next_num in used_nums: next_num += 1
+        new_nid = f"{prefix}{next_num:02d}"
+        
+        tipo_completo = 'CAPITULO'
+        CaosNarrativeORM.objects.create(nid=new_nid, world=padre.world, titulo=f"Nuevo Capítulo ({next_num})", contenido="...", narrador=padre.narrador, tipo=tipo_completo)
+        return redirect('editar_narrativa', nid=new_nid)
+    except: return redirect('leer_narrativa', nid=parent_nid)
+
+# --- VISTAS PRINCIPALES ---
+def centro_control(request):
+    todas = CaosVersionORM.objects.all().order_by('-created_at')
+    p, a, r, h = [], [], [], []
+    for v in todas:
+        l = len(v.world.id)
+        niv = 1 if l==2 else (2 if l==4 else l//2)
+        d = {'id': v.id, 'world_name': v.world.name, 'version_num': v.version_number, 'proposed_name': v.proposed_name, 'reason': v.change_log, 'date': v.created_at, 'author': v.author.username if v.author else '?', 'nivel_label': f"NIVEL {niv}"}
+        if v.status == 'PENDING': p.append(d)
+        elif v.status == 'APPROVED': a.append(d)
+        elif v.status == 'REJECTED': r.append(d)
+        elif v.status in ['ARCHIVED', 'LIVE']: h.append(d)
+    return render(request, 'control_panel.html', {'pendientes': p, 'aprobados': a, 'rechazados': r, 'archivados': h})
+
+def revisar_version(request, version_id):
+    try: v = CaosVersionORM.objects.get(id=version_id); w = v.world
+    except: return redirect('centro_control')
+    imgs = get_world_images(w.id)
+    bread = []
+    for i in range(0, len(w.id), 2):
+        chunk = w.id[0 : i+2]
+        lvl = (i // 2) + 1
+        bread.append({'id': chunk, 'label': f"Nivel {lvl}"})
+    len_h = len(w.id)+2 if len(w.id)<32 else len(w.id)+4
+    hijos = [{'id':h.id, 'name':h.name, 'code':eclai_core.encode_eclai126(h.id), 'img':(get_world_images(h.id)[0]['url'] if get_world_images(h.id) else None)} for h in CaosWorldORM.objects.filter(id__startswith=w.id, id__regex=r'^.{'+str(len_h)+r'}$')]
+    context = {'name': v.proposed_name, 'description': v.proposed_description, 'jid': w.id, 'status': f"PREVIEW v{v.version_number}", 'code_entity': eclai_core.encode_eclai126(w.id), 'nid_lore': w.id_lore if w.id_lore else f"{w.id}L01", 'imagenes': imgs, 'hijos': hijos, 'breadcrumbs': bread, 'is_preview': True, 'version_id': v.id, 'change_log': v.change_log, 'author': v.author.username if v.author else '?'}
+    return render(request, 'ficha_mundo.html', context)
+
+def ver_mundo(request, jid):
+    repo = DjangoCaosRepository()
+    if request.method == 'POST':
+        if 'edit_mode' in request.POST: return editar_mundo(request, jid)
+        child_name = request.POST.get('child_name')
+        child_type = request.POST.get('child_type')
+        if child_name:
+            if child_type == 'ENTITY' and request.POST.get('use_ai') == 'on':
+                try: GenerateCreatureUseCase(repo, Llama3Service(), StableDiffusionService()).execute(jid)
+                except: pass
+            else:
+                nid = CreateChildWorldUseCase(repo).execute(jid, child_name, request.POST.get('child_desc'))
+                if request.POST.get('use_ai') == 'on':
+                    try: GenerateWorldLoreUseCase(repo, Llama3Service()).execute(nid)
+                    except: pass
+                    try: GenerateWorldMapUseCase(repo, StableDiffusionService()).execute_single(nid)
+                    except: pass
+            return redirect('ver_mundo', jid=jid)
+
+    try: w = CaosWorldORM.objects.get(id=jid)
+    except: return render(request, '404.html', {"jid": jid})
+
+    props = w.versiones.filter(status='PENDING').order_by('-created_at')
+    historial = w.versiones.exclude(status='PENDING').order_by('-version_number')[:10]
+    
+    len_h = len(jid)+2 if len(jid)<32 else len(jid)+4
+    hijos = []
+    for h in CaosWorldORM.objects.filter(id__startswith=jid, id__regex=r'^.{'+str(len_h)+r'}$'):
+        short = h.id[len(jid):]
+        hijos.append({'id': h.id, 'name': h.name, 'short': short, 'img':(get_world_images(h.id)[0]['url'] if get_world_images(h.id) else None)})
+    
+    imgs = get_world_images(jid)
+    bread = []
+    for i in range(0, len(jid), 2):
+        chunk = jid[0 : i+2]
+        lvl = (i // 2) + 1
+        bread.append({'id': chunk, 'label': f"Nivel {lvl}"})
+
+    meta_str = json.dumps(w.metadata, indent=2) if w.metadata else "{}"
+    last_live = w.versiones.filter(status='LIVE').order_by('-created_at').first()
+    date_live = last_live.created_at if last_live else w.created_at
+
+    context = {
+        'name': w.name, 'description': w.description, 'jid': jid,
+        'status': w.status, 'version_live': w.current_version_number,
+        'author_live': getattr(w, 'current_author_name', 'Sistema'),
+        'created_at': w.created_at, 'updated_at': date_live,
+        'visible': w.visible_publico,
+        'code_entity': eclai_core.encode_eclai126(jid),
+        'nid_lore': w.id_lore if w.id_lore else f"{jid}L01",
+        'metadata': meta_str, 
+        'metadata_obj': w.metadata, 
+        'imagenes': imgs, 'hijos': hijos, 'breadcrumbs': bread, 
+        'propuestas': props, 'historial': historial
+    }
+    return render(request, 'ficha_mundo.html', context)
+
+def home(request):
+    if request.method == 'POST':
+        repo = DjangoCaosRepository()
+        jid = CreateWorldUseCase(repo).execute(request.POST.get('world_name'), request.POST.get('world_desc'))
+        return redirect('ver_mundo', jid=jid)
+    ms = CaosWorldORM.objects.all().order_by('id')
+    l = [{'id': m.id, 'name': m.name, 'status': m.status, 'code': eclai_core.encode_eclai126(m.id), 'img_file': (get_world_images(m.id)[0]['url'] if get_world_images(m.id) else None), 'has_img': bool(get_world_images(m.id))} for m in ms]
+    return render(request, 'index.html', {'mundos': l})
+
+def restaurar_version(request, version_id):
+    try:
+        RestoreVersionUseCase().execute(version_id, get_current_user(request))
+    except Exception as e:
+        print(f"Error restaurando: {e}")
+    
+    # Redirigimos al mundo para que veas la nueva propuesta pendiente
+    # Necesitamos el ID del mundo, lo sacamos de la versión
+    v = CaosVersionORM.objects.get(id=version_id)
+    return redirect('ver_mundo', jid=v.world.id)
+
+
+==================== FILE: .\src\Infrastructure\DjangoFramework\persistence\__init__.py ====================
+
+
+==================== FILE: .\src\Infrastructure\DjangoFramework\persistence\templates\control_panel.html ====================
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>ECLAI v3.0 | Gestión</title>
+    <style>
+        body { background-color: #0a0a12; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; padding: 20px 40px; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 15px; background: #0e0e16; padding: 15px 20px; border-radius: 10px; }
+        .logo { font-size: 1.5em; font-weight: bold; color: #fff; letter-spacing: 2px; }
+        .nav-btn { background: #333; color: #fff; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 0.9em; border: 1px solid #444; cursor: pointer; }
+        .nav-btn:hover { background: #555; }
+
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; }
+        .column { background: #161625; border-radius: 10px; padding: 15px; border-top: 4px solid #555; }
+        
+        .col-pending { border-color: #f1c40f; }
+        .col-approved { border-color: #2ecc71; }
+        .col-rejected { border-color: #e74c3c; }
+        .col-archived { border-color: #7f8c8d; opacity: 0.6; }
+        
+        .col-header { font-weight: bold; text-transform: uppercase; margin-bottom: 15px; text-align: center; border-bottom: 1px solid #333; padding-bottom: 10px; font-size: 0.9em; }
+        
+        .v-card { background: #1f1f33; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #333; transition: 0.2s; position: relative; }
+        .v-card:hover { transform: translateY(-2px); box-shadow: 0 5px 10px rgba(0,0,0,0.3); }
+        
+        .v-meta { display: flex; justify-content: space-between; font-size: 0.7em; color: #888; margin-bottom: 5px; }
+        .v-author { font-size: 0.7em; color: #a0a0ff; text-align: right; margin-bottom: 5px; display: block; }
+        .v-title { font-weight: bold; color: #fff; display: block; text-decoration: none; margin-bottom: 5px; font-size: 0.95em; }
+        .actions { display: flex; gap: 5px; margin-top: 8px; flex-wrap: wrap; }
+        .btn-small { border: none; padding: 4px; border-radius: 3px; cursor: pointer; font-size: 0.7em; text-decoration: none; color: #fff; flex-grow: 1; text-align: center; }
+        
+        .btn-ok { background: #27ae60; } 
+        .btn-no { background: #c0392b; } 
+        .btn-pub { background: #3498db; font-weight: bold; width: 100%; margin-bottom: 5px; }
+        .btn-rev { background: #f39c12; }
+        
+        .btn-ok:hover { background: #2ecc71; }
+        .btn-no:hover { background: #e74c3c; }
+        .btn-pub:hover { background: #2980b9; }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="logo">CENTRO DE CONTROL</div>
+        <div>
+            <button class="nav-btn" onclick="history.back()">⬅️ Atrás</button>
+            <a href="{% url 'home' %}" class="nav-btn">🏠 Dashboard</a>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="column col-pending">
+            <div class="col-header" style="color:#f1c40f;">🟠 Pendientes</div>
+            {% for v in pendientes %}
+            <div class="v-card">
+                <div class="v-meta"><span>{{ v.nivel_label }}</span><span>v{{ v.version_num }}</span></div>
+                <span class="v-author">👤 {{ v.author }}</span>
+                <a href="{% url 'revisar_version' v.id %}" class="v-title">{{ v.proposed_name }}</a>
+                <div style="font-style:italic; color:#aaa; font-size:0.8em;">"{{ v.reason }}"</div>
+                <div class="actions">
+                    <a href="{% url 'revisar_version' v.id %}" class="btn-small btn-rev" title="Revisar cambios">👁️</a>
+                    <a href="{% url 'aprobar_version' v.id %}" class="btn-small btn-ok">APROBAR</a>
+                    <a href="{% url 'rechazar_version' v.id %}" class="btn-small btn-no">RECHAZAR</a>
+                </div>
+            </div>
+            {% empty %}<div style="text-align:center; color:#555;">Limpio.</div>{% endfor %}
+        </div>
+
+        <div class="column col-approved">
+            <div class="col-header" style="color:#2ecc71;">🟢 Listos para Live</div>
+            {% for v in aprobados %}
+            <div class="v-card">
+                <div class="v-meta"><span>{{ v.nivel_label }}</span><span>{{ v.date|date:"d/m" }}</span></div>
+                <span class="v-author">👤 {{ v.author }}</span>
+                <a href="{% url 'revisar_version' v.id %}" class="v-title">{{ v.proposed_name }} (v{{ v.version_num }})</a>
+                
+                <div class="actions">
+                    <a href="{% url 'publicar_version' v.id %}" class="btn-small btn-pub">🚀 PUBLICAR AL LIVE</a>
+                    <a href="{% url 'revisar_version' v.id %}" class="btn-small btn-rev" title="Ver ficha">👁️</a>
+                    <a href="{% url 'rechazar_version' v.id %}" class="btn-small btn-no" onclick="return confirm('¿Seguro que quieres DESCARTAR esta versión aprobada?')" title="Descartar">🗑️</a>
+                </div>
+            </div>
+            {% empty %}<div style="text-align:center; color:#555;">Nada listo.</div>{% endfor %}
+        </div>
+
+        <div class="column col-rejected">
+            <div class="col-header" style="color:#e74c3c;">🔴 Rechazados</div>
+            {% for v in rechazados %}
+            <div class="v-card" style="opacity: 0.6;">
+                <div class="v-title" style="text-decoration:line-through;">{{ v.proposed_name }}</div>
+                <div style="font-size:0.8em;">{{ v.reason }}</div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="column col-archived">
+            <div class="col-header" style="color:#95a5a6;">🗄️ Histórico</div>
+            {% for v in archivados %}
+            <div class="v-card">
+                <div class="v-meta"><span>v{{ v.version_num }}</span><span>{{ v.date|date:"d/m" }}</span></div>
+                <div class="v-title">{{ v.proposed_name }}</div>
+                <div style="font-size:0.7em; color:#666;">Obsolescencia programada</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>
+
+==================== FILE: .\src\Infrastructure\DjangoFramework\persistence\templates\ficha_mundo.html ====================
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>ECLAI v3.0 | {{ name }}</title>
+    <style>
+        
+        body { background-color: #0a0a12; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; padding: 20px 40px; }
+        
+        /* SCROLLBARS GENERALES */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0a0a12; }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #d633ff; }
+
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 15px; background: #0e0e16; padding: 15px 20px; border-radius: 10px; }
+        .logo { font-size: 1.5em; font-weight: bold; color: #fff; letter-spacing: 2px; }
+        .nav-group { display: flex; gap: 10px; }
+        .nav-btn { background: #333; color: #fff; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 0.9em; border: 1px solid #444; cursor: pointer; }
+        .nav-btn:hover { background: #555; }
+        .nav-btn.special { background: #d633ff; border-color: #d633ff; }
+        .nav-btn.special:hover { background: #a569bd; }
+        
+        .card { background: #161625; border: 1px solid #2a2a40; border-radius: 15px; max-width: 1200px; margin: 0 auto; overflow: hidden; display: grid; grid-template-columns: 3fr 1fr; }
+        .card-header { grid-column: 1 / -1; background: linear-gradient(90deg, #2b1a45 0%, #1a1a2e 100%); padding: 20px; border-bottom: 2px solid #4a3b69; display: flex; justify-content: space-between; align-items: flex-start; }
+        
+        /* LAYOUT PRINCIPAL */
+        .main-content { 
+            padding: 30px; 
+            border-right: 1px solid #2a2a40; 
+            min-width: 0; /* Vital para que el scroll funcione dentro de Grid/Flex */
+        }
+        .sidebar { padding: 30px; background: #13131f; font-size: 0.9em; min-width: 250px; }
+        
+        .breadcrumbs { margin-bottom: 10px; font-size: 0.85em; color: #888; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+        .crumb-item { background: #333; padding: 2px 8px; border-radius: 10px; text-decoration: none; color: #ccc; border: 1px solid #444; transition:0.2s; }
+        .crumb-item:hover { background: #d633ff; color: #fff; border-color: #d633ff; }
+        .crumb-separator { color: #666; }
+        .crumb-active { color: #fff; font-weight: bold; border-color: #d633ff; background: rgba(214, 51, 255, 0.1); }
+
+        .status-badge { padding: 4px 12px; border-radius: 4px; font-weight: bold; font-size: 0.8em; letter-spacing: 1px; text-transform: uppercase; display: inline-block; }
+        .st-live { background: #2ecc71; color: #000; border: 1px solid #27ae60; }
+        .st-draft { background: #f39c12; color: #000; border: 1px solid #d35400; }
+
+        .actions { display: flex; gap: 10px; }
+        .btn { padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.8em; text-decoration: none; color:#fff; border:none; }
+        .btn-edit { background: #3498db; } .btn-del { background: #e74c3c; }
+        
+        /* --- GALERÍA CON SCROLL HORIZONTAL --- */
+        .gallery { 
+            display: flex; 
+            gap: 15px; 
+            overflow-x: auto;      /* Scroll lateral activado */
+            white-space: nowrap;   /* No saltar de línea */
+            padding-bottom: 15px;  /* Espacio para la barra */
+            margin-bottom: 20px;
+            
+            /* Estilo Scrollbar Firefox */
+            scrollbar-width: thin;
+            scrollbar-color: #d633ff #0e0e16;
+        }
+        /* Estilo Scrollbar Chrome/Edge */
+        .gallery::-webkit-scrollbar { height: 8px; }
+        .gallery::-webkit-scrollbar-track { background: #0e0e16; border-radius: 4px; }
+        .gallery::-webkit-scrollbar-thumb { background: #d633ff; border-radius: 4px; }
+        .gallery::-webkit-scrollbar-thumb:hover { background: #a569bd; }
+
+        .gallery-item { 
+            position: relative; 
+            display: inline-block; 
+            flex: 0 0 auto; /* No encoger */
+        }
+        .gallery-item img { 
+            width: 160px; 
+            height: 220px; 
+            object-fit: cover; 
+            border-radius: 8px; 
+            border: 2px solid #333; 
+            transition: 0.2s;
+        }
+        .gallery-item:hover img { border-color: #d633ff; transform: scale(1.02); }
+        
+        .btn-delete-img { position: absolute; top: 5px; right: 5px; background: rgba(231, 76, 60, 0.9); color: white; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-size: 12px; text-decoration: none; cursor: pointer; opacity: 0; transition: 0.2s; }
+        .gallery-item:hover .btn-delete-img { opacity: 1; }
+
+        .section-title { color: #a0a0ff; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px; margin-top: 25px; font-size: 1.1em; display: flex; justify-content: space-between; align-items: center; }
+        .lore-box { background: #111; padding: 20px; border-left: 4px solid #d633ff; font-style: italic; color: #ccc; white-space: pre-wrap; margin-bottom: 10px; max-height: 300px; overflow-y: auto; }
+        .metadata-box { background: #0e0e16; color: #0f0; font-family: 'Consolas', monospace; padding: 15px; border-radius: 5px; font-size: 0.8em; overflow-x: auto; border: 1px solid #333; }
+        
+        .children-list { display: grid; gap: 5px; }
+        .child-link { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #1f1f33; text-decoration: none; color: #eee; border-radius: 6px; border: 1px solid #333; transition:0.2s; }
+        .child-link:hover { border-color: #d633ff; transform: translateX(5px); }
+        .child-index { font-family: 'Courier New', monospace; color: #d633ff; background: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.8em; }
+        
+        .vis-toggle { text-decoration: none; font-weight: bold; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; transition:0.3s; border:1px solid transparent; cursor:pointer; display:inline-block; }
+        .vis-public { background: rgba(46, 204, 113, 0.1); color: #2ecc71; border-color: #2ecc71; }
+        .vis-private { background: rgba(231, 76, 60, 0.1); color: #e74c3c; border-color: #e74c3c; }
+        
+        .stats-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 20px; }
+        .stat-row { display:flex; justify-content:space-between; border-bottom:1px solid #333; padding:5px 0; font-size:0.9em; }
+        .label { color: #888; text-transform: uppercase; font-size:0.8em; }
+        .value { font-family: 'Courier New', monospace; color: #fff; font-weight: bold; text-align:right; }
+
+        /* RPG STATS */
+        .rpg-card { background: #0e0e16; border: 1px solid #444; border-radius: 8px; padding: 20px; margin-bottom: 20px; position: relative; overflow: hidden; }
+        .rpg-card::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, #d633ff, #2ecc71); }
+        .rpg-header { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; }
+        .rpg-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; }
+        .rpg-stat { background: #1f1f33; padding: 10px; border-radius: 5px; text-align: center; }
+        .rpg-val { font-size: 1.1em; color: #fff; font-weight: bold; }
+        .rpg-label { font-size: 0.7em; color: #aaa; text-transform: uppercase; display: block; }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; justify-content: center; align-items: center; }
+        .modal:target { display: flex; }
+        .modal-content { background: #161625; padding: 30px; border-radius: 10px; width: 600px; border: 1px solid #d633ff; box-shadow: 0 0 50px rgba(0,0,0,0.8); }
+        .edit-form input, .edit-form textarea { width: 100%; background: #0a0a12; border: 1px solid #444; color: #fff; padding: 10px; margin-top: 5px; margin-bottom:15px; box-sizing:border-box; }
+        
+        .child-form { background: #1f1f33; padding: 15px; border-radius: 8px; margin-top: 20px; display: flex; gap: 10px; }
+        .child-form input { background: #0a0a12; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 4px; flex-grow: 1; }
+        .child-form button { background: #d633ff; color: #fff; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; }
+        .child-form select { background: #000; color: #fff; border: 1px solid #444; padding: 8px; border-radius: 4px; }
+    
+    
+        /* --- ESTILOS DATA GRID (NUEVO) --- */
+        .data-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 10px; }
+        .data-card { background: #13131e; border: 1px solid #333; border-radius: 6px; overflow: hidden; }
+        .data-card-header { background: #1f1f33; padding: 8px 12px; border-bottom: 1px solid #333; font-weight: bold; color: #d633ff; text-transform: uppercase; font-size: 0.85em; letter-spacing: 1px; }
+        .data-card-body { padding: 10px; }
+        .data-row { display: flex; justify-content: space-between; border-bottom: 1px dashed #2a2a40; padding: 6px 0; font-size: 0.9em; }
+        .data-row:last-child { border-bottom: none; }
+        .data-key { color: #888; text-transform: capitalize; }
+        .data-val { color: #eee; font-weight: bold; text-align: right; }
+        
+        /* Listas dentro de tarjetas (ej: Lunas) */
+        .data-list-item { background: #000; padding: 2px 8px; border-radius: 4px; border: 1px solid #444; font-size: 0.8em; display: inline-block; margin-top: 2px; }
+    </style>
+
+</head>
+<body>
+    <div class="top-bar">
+        <div class="logo">ECLAI v3.0 // SYSTEM</div>
+        <div class="nav-group">
+            <button class="nav-btn" onclick="history.back()">⬅️ Atrás</button>
+            <a href="{% url 'home' %}" class="nav-btn">🏠 Inicio</a>
+            <a href="{% url 'centro_control' %}" class="nav-btn special">🎛️ Gestión</a>
+        </div>
+    </div>
+
+    {% if is_preview %}
+    <div style="background:#f39c12; color:#fff; padding:15px; text-align:center; margin-bottom:20px; border-radius:8px; margin: 0 auto 20px auto; max-width: 1000px;">
+        <h2>⚠️ MODO INSPECCIÓN: VERSIÓN {{ version_live }} (Propuesta)</h2>
+        <p>Autor: <strong>{{ author }}</strong> | Razón: <em>{{ change_log }}</em></p>
+        <div style="margin-top:10px;">
+            <a href="{% url 'aprobar_version' version_id %}" class="btn" style="background:#27ae60;">✅ APROBAR</a>
+            <a href="{% url 'rechazar_version' version_id %}}" class="btn" style="background:#c0392b;">❌ RECHAZAR</a>
+            <a href="{% url 'centro_control' %}" class="btn" style="background:#7f8c8d;">Cancelar</a>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <div class="breadcrumbs">
+                    <a href="{% url 'home' %}" class="crumb-item">🏠 Universo</a>
+                    {% for b in breadcrumbs %}
+                        <span class="crumb-separator">›</span>
+                        <a href="{% url 'ver_mundo' b.id %}" class="crumb-item {% if b.id == jid %}crumb-active{% endif %}">
+                            {{ b.label }}
+                        </a>
+                    {% endfor %}
+                </div>
+                
+                <h1 style="margin:10px 0 5px 0;">{{ name }}</h1>
+                
+                <div style="margin-top:5px;">
+                    {% if status == 'LIVE' %}
+                        <span class="status-badge st-live">🟢 LIVE v{{ version_live }} (Autor: {{ author_live }})</span>
+                    {% else %}
+                        <span class="status-badge st-draft">⚠️ {{ status|default:"DRAFT" }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if not is_preview %}
+            <div class="actions">
+                <a href="#editModal" class="btn btn-edit">✏️ Editar</a>
+                <a href="{% url 'borrar_mundo' jid %}" class="btn btn-del" onclick="return confirm('¿Seguro? Se borrarán hijos también.')">🗑️ Borrar</a>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="main-content">
+            {% if propuestas %}
+            <div style="background:rgba(241, 196, 15, 0.1); border:1px solid #f1c40f; padding:15px; border-radius:8px; margin-bottom:20px;">
+                <strong style="color:#f1c40f;">⚠️ Hay {{ propuestas|length }} revisión(es) pendiente(s)</strong>
+                <div style="margin-top:5px; font-size:0.9em;">
+                    <a href="{% url 'centro_control' %}" style="color:#d633ff;">Ir al Centro de Control</a> para aprobar.
+                </div>
+            </div>
+            {% endif %}
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                <div class="section-title" style="margin:0;">Arte Visual</div>
+                {% if not is_preview %}<a href="{% url 'generar_foto_extra' jid %}" class="btn" style="background:#9b59b6; font-size:0.7em;">🎨 + FOTO IA</a>{% endif %}
+            </div>
+            <div class="gallery">
+                {% for img in imagenes %} 
+                <div class="gallery-item">
+                    <img src="{% static 'persistence/img/'|add:img.url %}">
+                    {% if not is_preview %}
+                    <a href="{% url 'borrar_foto' jid img.filename %}" class="btn-delete-img" onclick="return confirm('¿Borrar imagen?')">✕</a>
+                    {% endif %}
+                </div>
+                {% empty %} 
+                <div style="color:#555; padding:20px; border:1px dashed #444; width:100%; text-align:center;">No hay arte generado.</div> 
+                {% endfor %}
+            </div>
+
+            {% if metadata_obj.peligro or metadata_obj.tipo %}
+            <div class="rpg-card">
+                <div class="rpg-header">
+                    <span style="color:#2ecc71; font-weight:bold; font-family:monospace;">FICHA TÉCNICA</span>
+                    <span style="font-size:0.8em; color:#666;">ID: {{ jid }}</span>
+                </div>
+                <div class="rpg-stats">
+                    <div class="rpg-stat"><span class="rpg-label">Tipo</span><span class="rpg-val" style="color:#a0a0ff;">{{ metadata_obj.tipo }}</span></div>
+                    <div class="rpg-stat"><span class="rpg-label">Tamaño</span><span class="rpg-val">{{ metadata_obj.tamano }}</span></div>
+                    <div class="rpg-stat"><span class="rpg-label">Peligro</span><span class="rpg-val" style="color:#e74c3c;">{{ metadata_obj.peligro }}/5</span></div>
+                </div>
+                {% if metadata_obj.rasgos %}
+                <div style="margin-top:10px; color:#ccc; font-style:italic;">"{{ metadata_obj.rasgos }}"</div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <div class="section-title">Descripción Conceptual</div>
+            <div class="lore-box">{{ description|default:"Sin descripción definida." }}</div>
+            
+            
+            <div class="section-title">Datos Analizados (Metadata)</div>
+            
+            {% if metadata_obj %}
+            <div class="data-grid">
+                {% for key, value in metadata_obj.items %}
+                    {% if key != 'tipo_entidad' and key != 'biology' and key != 'stats' and key != 'visuals' %}
+                    <div class="data-card">
+                        <div class="data-card-header">{{ key }}</div>
+                        <div class="data-card-body">
+                            {% if key == 'fisica' or key == 'clima' or key == 'leyes_fundamentales' or key == 'geo_config' or key == 'climate_profile' %}
+                                {% for subkey, subval in value.items %}
+                                <div class="data-row">
+                                    <span class="data-key">{{ subkey }}:</span>
+                                    <span class="data-val">
+                                        {% if subval|length > 0 and subval.0 %}
+                                            {% if subval.append %} 
+                                                {% for item in subval %}<span class="data-list-item">{{ item }}</span> {% endfor %}
+                                            {% else %}
+                                                {{ subval }}
+                                            {% endif %}
+                                        {% else %}
+                                            {{ subval }}
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                {% endfor %}
+                            
+                            {% else %}
+                                <div style="color:#ccc; font-style:italic;">{{ value }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            {% else %}
+                <div style="color:#555; font-style:italic; padding:10px;">Sin datos. Usa el botón ESCANEAR.</div>
+            {% endif %}
+            
+            
+        </div>
+
+        <div class="sidebar">
+            <div class="section-title" style="margin-top:0;">Ficha Técnica</div>
+            
+            <div class="stats-grid">
+                <div class="stat-row"><span class="label">J-ID</span><span class="value">{{ jid }}</span></div>
+                <div class="stat-row"><span class="label">CODE</span><span class="value" style="color:#d633ff">{{ code_entity }}</span></div>
+                <div class="stat-row"><span class="label">Creado</span><span class="value" style="font-size:0.9em;">{{ created_at|date:"d/m/Y" }}</span></div>
+                <div class="stat-row"><span class="label">Actualizado</span><span class="value" style="font-size:0.9em;">{{ updated_at|date:"d/m/Y" }}</span></div>
+                <div class="stat-row" style="align-items:center;">
+                    <span class="label">Visibilidad</span>
+                    {% if not is_preview %}
+                        <a href="{% url 'toggle_visibilidad' jid %}" class="vis-toggle {% if visible %}is-public{% else %}is-private{% endif %}">
+                            {% if visible %}🌎 PÚBLICA{% else %}🔒 PRIVADA{% endif %}
+                        </a>
+                    {% else %}
+                        <span class="vis-toggle {% if visible %}is-public{% else %}is-private{% endif %}">
+                            {% if visible %}🌎 PÚBLICA{% else %}🔒 PRIVADA{% endif %}
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            
+            
+            <div style="margin: 20px 0; padding: 15px; background: #0f0f15; border: 1px solid #333; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong style="color:#d633ff; font-size:1.1em;">📚 Archivo Narrativo</strong>
+                    <div style="font-size:0.8em; color:#aaa;">Lore, Historias, Eventos y Leyendas.</div>
+                </div>
+                <a href="{% url 'ver_narrativa_mundo' jid %}" class="btn" style="background:#d633ff; font-weight:bold; padding: 10px 20px;">ABRIR BIBLIOTECA ➔</a>
+            </div>
+    
+            <div class="section-title">Entidades Hijas</div>
+            <div class="children-list">
+                {% for h in hijos %}
+                <a href="{% url 'ver_mundo' h.id %}" class="child-link">
+                    <span><strong>{{ h.name }}</strong></span>
+                    <span class="child-index">#{{ h.short }}</span>
+                </a>
+                {% empty %} <div style="color:#555; font-style:italic;">Sin hijos.</div> {% endfor %}
+            </div>
+            
+            {% if not is_preview %}
+            <form method="POST" class="child-form">
+                {% csrf_token %}
+                <div style="display:flex; gap:10px; width:100%; flex-direction:column;">
+                    <input type="text" name="child_name" placeholder="Nuevo hijo..." style="width:100%; background:#000; border:1px solid #444; color:#fff; padding:5px;" required autocomplete="off">
+                    
+                    <div style="display:flex; gap:10px;">
+                        <select name="child_type" style="background:#000; color:#fff; border:1px solid #444; padding:5px; border-radius:4px; flex-grow:1;">
+                            <option value="LOCATION">📍 Lugar / Región</option>
+                            <option value="ENTITY">🐉 Criatura / NPC</option>
+                        </select>
+                        <button type="submit" style="width:auto; padding:5px 15px;">➕</button>
+                    </div>
+                    
+                    <label style="color:#aaa; font-size:0.8em; cursor:pointer; display:flex; align-items:center; gap:5px; margin-top:5px;">
+                        <input type="checkbox" name="use_ai"> ✨ Generar con IA
+                    </label>
+                </div>
+            </form>
+            {% endif %}
+            
+            <div class="section-title">Historial</div>
+            <ul style="padding-left:20px; font-size:0.8em; color:#aaa;">
+                {% for h in historial %}
+                
+                <li style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                    <span>v{{ h.version_number }}: {{ h.proposed_name }}</span>
+                    <a href="{% url 'restaurar_version' h.id %}" onclick="return confirm('¿Crear una nueva propuesta basada en la v{{ h.version_number }}?')" style="font-size:0.7em; color:#e74c3c; text-decoration:none; border:1px solid #e74c3c; padding:2px 5px; border-radius:4px;">↺ Restaurar</a>
+                </li>
+    
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    {% if not is_preview %}
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <h2 style="color:#fff; margin-top:0;">Proponer Cambio</h2>
+            <form method="POST" action="{% url 'editar_mundo' jid %}" class="edit-form">
+                {% csrf_token %}
+                <label>Nombre:</label><input type="text" name="name" value="{{ name }}">
+                
+                <label>Descripción Conceptual:</label>
+                <div style="margin-bottom:5px; padding:5px; background:#2c2c44; border-radius:4px; display:flex; align-items:center; justify-content:space-between;">
+                    <span style="font-size:0.8em; color:#aaa;">¿Reescribir con IA?</span>
+                    <label style="color:#d633ff; font-size:0.9em; cursor:pointer;">
+                        <input type="checkbox" name="use_ai_edit"> ✨ SÍ
+                    </label>
+                </div>
+                <textarea name="description" style="height:150px;">{{ description }}</textarea>
+                
+                <label style="color:#f1c40f;">Razón del cambio:</label><input type="text" name="reason" required>
+                
+                <div style="margin-top:20px; text-align:right;">
+                    <a href="{% url 'ver_mundo' jid %}" class="btn" style="background:#555;">Cancelar</a>
+                    <button type="submit" class="btn" style="background:#d633ff;">🚀 Enviar Propuesta</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+</body>
+</html>
+
+==================== FILE: .\src\Infrastructure\DjangoFramework\persistence\templates\index.html ====================
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>ECLAI v3.0 | Dashboard</title>
+    <style>
+        
+        body { background-color: #0a0a12; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; padding: 20px 40px; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 15px; background: #0e0e16; padding: 15px 20px; border-radius: 10px; }
+        .logo { font-size: 1.5em; font-weight: bold; color: #fff; letter-spacing: 2px; }
+        .nav-group { display: flex; gap: 10px; }
+        .nav-btn { background: #333; color: #fff; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 0.9em; border: 1px solid #444; cursor: pointer; }
+        .nav-btn:hover { background: #555; }
+        .nav-btn.special { background: #d633ff; border-color: #d633ff; }
+        .nav-btn.special:hover { background: #a569bd; }
+        
+        /* ESTILOS DASHBOARD */
+        .creation-bar { background: #161625; border: 1px solid #d633ff; padding: 20px; border-radius: 10px; margin-bottom: 40px; display: flex; gap: 15px; align-items: center; box-shadow: 0 0 15px rgba(214, 51, 255, 0.1); }
+        input[type="text"] { background: #0a0a12; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 5px; flex-grow: 1; }
+        button { background: #d633ff; color: #fff; border: none; padding: 10px 25px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        button:hover { background: #fff; color: #d633ff; }
+
+        h2 { color: #fff; border-bottom: 2px solid #4a3b69; padding-bottom: 10px; margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 25px; }
+        .card { background: #161625; border: 1px solid #2a2a40; border-radius: 10px; overflow: hidden; transition: 0.2s; text-decoration: none; color: inherit; position: relative; display: block; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(214, 51, 255, 0.2); border-color: #d633ff; }
+        
+        .thumb { height: 150px; background: #000; overflow: hidden; position: relative; }
+        .thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .thumb-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #444; background: #0e0e16; font-size:0.8em; }
+        
+        .info { padding: 15px; }
+        .code { font-family: 'Courier New', monospace; color: #d633ff; font-size: 0.8em; }
+        .title { font-size: 1.2em; font-weight: bold; margin: 5px 0; color: #fff; }
+        
+        .quick-edit { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); color: #fff; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 14px; opacity: 0; transition: 0.2s; z-index: 10; }
+        .card:hover .quick-edit { opacity: 1; }
+        .quick-edit:hover { background: #3498db; transform: scale(1.1); }
+        
+        /* Inbox Alert */
+        .inbox-panel { background: #2c2c44; border: 1px solid #f1c40f; border-radius: 10px; padding: 15px; margin-bottom: 40px; }
+        .task-item { background: #1f1f33; padding: 10px; margin-top: 5px; border-radius: 5px; display:flex; justify-content:space-between; align-items:center; }
+    
+    
+        /* Grid con Scroll */
+        .grid-container {
+            max-height: 70vh; /* Altura máxima (70% de la ventana) */
+            overflow-y: auto; /* Scroll si se pasa */
+            padding-right: 10px; /* Espacio para la barra */
+            
+            /* Estilo Scrollbar */
+            scrollbar-width: thin;
+            scrollbar-color: #d633ff #0a0a12;
+        }
+        .grid-container::-webkit-scrollbar { width: 8px; }
+        .grid-container::-webkit-scrollbar-track { background: #0a0a12; }
+        .grid-container::-webkit-scrollbar-thumb { background: #d633ff; border-radius: 4px; }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 25px; }
+    
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="logo">ECLAI v3.0 // DASHBOARD</div>
+        <div class="nav-group">
+            <button class="nav-btn" onclick="location.reload()">🔄 Recargar</button>
+            <a href="{% url 'centro_control' %}" class="nav-btn special">🎛️ Gestión</a>
+        </div>
+    </div>
+
+    {% if pendientes %}
+    <div class="inbox-panel">
+        <strong style="color:#f1c40f;">⚠️ Tienes {{ pendientes|length }} tarea(s) pendiente(s)</strong>
+        {% for p in pendientes %}
+        <div class="task-item">
+            <span style="font-size:0.9em;"><strong>{{ p.world_name }}</strong>: v{{ p.version_num }}</span>
+            <a href="{% url 'revisar_version' p.id %}" style="color:#3498db; text-decoration:none; font-weight:bold;">REVISAR →</a>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="creation-bar">
+        <div style="font-weight:bold; color:#d633ff; white-space: nowrap;">BIG BANG:</div>
+        <form method="POST" style="display:flex; gap:10px; flex-grow:1;">
+            {% csrf_token %}
+            <input type="text" name="world_name" placeholder="Nombre del Nuevo Universo..." required autocomplete="off">
+            <input type="text" name="world_desc" placeholder="Idea base..." style="width: 30%;">
+            <button type="submit">⚡ CREAR</button>
+        </form>
+    </div>
+
+    
+    
+
+    <h2>UNIVERSO CONOCIDO</h2>
+    <div class="grid-container">
+    <div class="grid">
+        {% for m in mundos %}
+        <a href="{% url 'ver_mundo' m.id %}" class="card">
+            <div class="thumb">
+                {% if m.has_img %}
+                    <img src="{% static 'persistence/img/'|add:m.img_file %}" alt="{{ m.name }}">
+                {% else %}
+                    <div class="thumb-placeholder">NO SIGNAL</div>
+                {% endif %}
+            </div>
+            <div class="info">
+                <div class="code">J-ID: {{ m.id }}</div>
+                <div class="title">{{ m.name }}</div>
+                <div style="font-size:0.8em; color:#666;">{{ m.code }}</div>
+            </div>
+        </a>
+        {% empty %}
+        <div style="grid-column: 1/-1; text-align: center; color: #666; padding: 50px;">
+            El vacío reina en la existencia.
+        </div>
+        {% endfor %}
+    </div>
+    </div>
+</body>
+</html>
+
+==================== FILE: .\src\Infrastructure\DjangoFramework\persistence\templates\indice_narrativa.html ====================
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>ECLAI | Biblioteca de {{ world.name }}</title>
+    <style>
+        body { background-color: #050505; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; padding: 30px; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
+        .back-btn { background: #333; color: #fff; text-decoration: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; border: 1px solid #444; }
+        .back-btn:hover { background: #555; }
+        
+        h1 { margin: 0; color: #d633ff; font-weight: 300; letter-spacing: 2px; }
+        
+        /* GRID DE CATEGORÍAS */
+        .library-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px; }
+        
+        .category-card { background: #0e0e12; border: 1px solid #2a2a40; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; height: 400px; }
+        
+        .cat-header { padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222; }
+        .cat-title { font-weight: bold; font-size: 1.1em; text-transform: uppercase; }
+        .add-btn { text-decoration: none; width: 24px; height: 24px; text-align: center; line-height: 24px; border-radius: 4px; color: #000; font-weight: bold; font-size: 1.2em; transition: 0.2s; }
+        .add-btn:hover { transform: scale(1.1); color: #fff; }
+        
+        .doc-list { padding: 10px; overflow-y: auto; flex-grow: 1; }
+        .doc-item { display: block; padding: 10px; margin-bottom: 5px; background: #16161e; border-radius: 4px; text-decoration: none; color: #aaa; border-left: 2px solid transparent; transition: 0.2s; }
+        .doc-item:hover { background: #1f1f2a; color: #fff; padding-left: 15px; }
+        
+        .nid-tag { font-family: 'Courier New', monospace; font-size: 0.95em; color: #a0a0a0; font-weight: bold; display: block; margin-bottom: 4px; letter-spacing: 1px; }
+        
+        /* ESTILOS POR TIPO */
+        .style-LORE { border-top: 3px solid #d633ff; } .btn-LORE { background: #d633ff; } .doc-LORE:hover { border-left-color: #d633ff; }
+        .style-HISTORIA { border-top: 3px solid #f1c40f; } .btn-HISTORIA { background: #f1c40f; } .doc-HISTORIA:hover { border-left-color: #f1c40f; }
+        .style-EVENTO { border-top: 3px solid #e74c3c; } .btn-EVENTO { background: #e74c3c; } .doc-EVENTO:hover { border-left-color: #e74c3c; }
+        .style-LEYENDA { border-top: 3px solid #e67e22; } .btn-LEYENDA { background: #e67e22; } .doc-LEYENDA:hover { border-left-color: #e67e22; }
+        .style-REGLA { border-top: 3px solid #3498db; } .btn-REGLA { background: #3498db; } .doc-REGLA:hover { border-left-color: #3498db; }
+        .style-BESTIARIO { border-top: 3px solid #2ecc71; } .btn-BESTIARIO { background: #2ecc71; } .doc-BESTIARIO:hover { border-left-color: #2ecc71; }
+        
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>BIBLIOTECA // {{ world.name }}</h1>
+        <a href="{% url 'ver_mundo' world.id %}" class="back-btn">⬅ Volver al Mundo</a>
+    </div>
+
+    <div class="library-grid">
+        <div class="category-card style-LORE">
+            <div class="cat-header">
+                <span class="cat-title" style="color:#d633ff">📜 Lore General</span>
+                <a href="{% url 'crear_narrativa' world.id 'L' %}" class="add-btn btn-LORE" title="Crear Lore">+</a>
+            </div>
+            <div class="doc-list">
+                {% for d in lores %}
+                <a href="{% url 'leer_narrativa' d.nid %}" class="doc-item doc-LORE">
+                    <span class="nid-tag">{{ d.nid }}</span> {{ d.titulo }}
+                </a>
+                {% empty %}<div style="color:#444; padding:10px; font-style:italic;">Vacío.</div>{% endfor %}
+            </div>
+        </div>
+
+        <div class="category-card style-HISTORIA">
+            <div class="cat-header">
+                <span class="cat-title" style="color:#f1c40f">📖 Historias</span>
+                <a href="{% url 'crear_narrativa' world.id 'H' %}" class="add-btn btn-HISTORIA" title="Crear Historia">+</a>
+            </div>
+            <div class="doc-list">
+                {% for d in historias %}
+                <a href="{% url 'leer_narrativa' d.nid %}" class="doc-item doc-HISTORIA">
+                    <span class="nid-tag">{{ d.nid }}</span> {{ d.titulo }}
+                </a>
+                {% empty %}<div style="color:#444; padding:10px; font-style:italic;">Vacío.</div>{% endfor %}
+            </div>
+        </div>
+
+        <div class="category-card style-EVENTO">
+            <div class="cat-header">
+                <span class="cat-title" style="color:#e74c3c">⚔️ Eventos</span>
+                <a href="{% url 'crear_narrativa' world.id 'E' %}" class="add-btn btn-EVENTO" title="Crear Evento">+</a>
+            </div>
+            <div class="doc-list">
+                {% for d in eventos %}
+                <a href="{% url 'leer_narrativa' d.nid %}" class="doc-item doc-EVENTO">
+                    <span class="nid-tag">{{ d.nid }}</span> {{ d.titulo }}
+                </a>
+                {% empty %}<div style="color:#444; padding:10px; font-style:italic;">Vacío.</div>{% endfor %}
+            </div>
+        </div>
+
+        <div class="category-card style-LEYENDA">
+            <div class="cat-header">
+                <span class="cat-title" style="color:#e67e22">🕯️ Leyendas</span>
+                <a href="{% url 'crear_narrativa' world.id 'M' %}" class="add-btn btn-LEYENDA" title="Crear Leyenda">+</a>
+            </div>
+            <div class="doc-list">
+                {% for d in leyendas %}
+                <a href="{% url 'leer_narrativa' d.nid %}" class="doc-item doc-LEYENDA">
+                    <span class="nid-tag">{{ d.nid }}</span> {{ d.titulo }}
+                </a>
+                {% empty %}<div style="color:#444; padding:10px; font-style:italic;">Vacío.</div>{% endfor %}
+            </div>
+        </div>
+
+        <div class="category-card style-REGLA">
+            <div class="cat-header">
+                <span class="cat-title" style="color:#3498db">⚖️ Reglas / Sistemas</span>
+                <a href="{% url 'crear_narrativa' world.id 'R' %}" class="add-btn btn-REGLA" title="Crear Regla">+</a>
+            </div>
+            <div class="doc-list">
+                {% for d in reglas %}
+                <a href="{% url 'leer_narrativa' d.nid %}" class="doc-item doc-REGLA">
+                    <span class="nid-tag">{{ d.nid }}</span> {{ d.titulo }}
+                </a>
+                {% empty %}<div style="color:#444; padding:10px; font-style:italic;">Vacío.</div>{% endfor %}
+            </div>
+        </div>
+
+        <div class="category-card style-BESTIARIO">
+            <div class="cat-header">
+                <span class="cat-title" style="color:#2ecc71">🐉 Bestiario</span>
+                <a href="{% url 'crear_narrativa' world.id 'B' %}" class="add-btn btn-BESTIARIO" title="Crear Entrada">+</a>
+            </div>
+            <div class="doc-list">
+                {% for d in bestiario %}
+                <a href="{% url 'leer_narrativa' d.nid %}" class="doc-item doc-BESTIARIO">
+                    <span class="nid-tag">{{ d.nid }}</span> {{ d.titulo }}
+                </a>
+                {% empty %}<div style="color:#444; padding:10px; font-style:italic;">Vacío.</div>{% endfor %}
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
+
+
+==================== FILE: .\src\Infrastructure\DjangoFramework\persistence\templates\visor_narrativa.html ====================
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>ECLAI | {{ narr.get_tipo_display }}</title>
+    <style>
+        body { background-color: #050505; color: #c0c0c0; font-family: 'Georgia', serif; padding: 40px; display:flex; justify-content:center; }
+        .document-container { max-width: 800px; width: 100%; }
+        
+        .meta-header { border-bottom: 1px solid #333; padding-bottom: 20px; margin-bottom: 30px; display:flex; justify-content:space-between; align-items:flex-end; }
+        .back-btn { text-decoration: none; color: #666; font-family: sans-serif; font-size: 0.8em; border: 1px solid #333; padding: 5px 10px; border-radius: 4px; transition:0.3s; }
+        .back-btn:hover { border-color: #d633ff; color: #d633ff; }
+        
+        .nid-stamp { font-family: 'Courier New', monospace; color: #444; font-size: 0.9em; letter-spacing: 1px; }
+        
+        /* ETIQUETAS DE TIPO */
+        .type-badge { font-family: sans-serif; font-size: 0.7em; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; border: 1px solid transparent; }
+        .type-LORE { color: #d633ff; border-color: #d633ff; background: rgba(214, 51, 255, 0.1); }
+        .type-HISTORIA { color: #f1c40f; border-color: #f1c40f; background: rgba(241, 196, 15, 0.1); }
+        .type-CAPITULO { color: #ecf0f1; border-color: #7f8c8d; background: rgba(127, 140, 141, 0.1); }
+        .type-EVENTO { color: #e74c3c; border-color: #e74c3c; background: rgba(231, 76, 60, 0.1); }
+        .type-LEYENDA { color: #e67e22; border-color: #e67e22; background: rgba(230, 126, 34, 0.1); }
+        .type-REGLA { color: #3498db; border-color: #3498db; background: rgba(52, 152, 219, 0.1); }
+        .type-BESTIARIO { color: #2ecc71; border-color: #2ecc71; background: rgba(46, 204, 113, 0.1); }
+
+        h1 { color: #eee; font-size: 2.5em; margin: 10px 0; text-align: center; letter-spacing: 1px; }
+        
+        .narrator-box { text-align: center; margin-bottom: 40px; }
+        .narrator-label { color: #666; font-size: 0.8em; text-transform: uppercase; letter-spacing: 2px; font-family: sans-serif; }
+        .narrator-name { color: #d633ff; font-style: italic; font-weight: bold; }
+        
+        .content-body { line-height: 1.8; font-size: 1.1em; color: #ccc; text-align: justify; white-space: pre-wrap; }
+        
+        /* MENCIONES */
+        .mentions-box { margin-top: 40px; padding: 20px; border-top: 1px dashed #333; background: #0a0a0f; border-radius: 8px; }
+        .mentions-label { color: #555; font-size: 0.7em; letter-spacing: 2px; font-weight: bold; display: block; margin-bottom: 10px; }
+        .mention-tag { display: inline-block; background: #1f1f33; color: #a0a0ff; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-size: 0.8em; margin-right: 5px; margin-bottom: 5px; border: 1px solid #333; transition: 0.2s; }
+        .mention-tag:hover { border-color: #d633ff; color: #fff; }
+
+        .footer-note { margin-top: 50px; border-top: 1px solid #222; padding-top: 20px; text-align: center; font-size: 0.8em; color: #444; font-family: sans-serif; }
+
+        /* ESTILOS DEL MODAL */
+        .float-edit-btn { position: fixed; bottom: 30px; right: 30px; background: #d633ff; color: #fff; width: 50px; height: 50px; border-radius: 50%; text-align: center; line-height: 50px; font-size: 24px; text-decoration: none; box-shadow: 0 0 20px rgba(214, 51, 255, 0.4); transition: 0.3s; }
+        .float-edit-btn:hover { transform: scale(1.1); background: #fff; color: #d633ff; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 100; align-items: center; justify-content: center; }
+        .modal:target { display: flex; }
+        .modal-content { background: #111; border: 1px solid #333; padding: 30px; width: 900px; max-width: 95%; border-radius: 5px; box-shadow: 0 0 50px #000; font-family: sans-serif; }
+        .modal-header { display: flex; justify-content: space-between; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .modal-header h2 { margin: 0; color: #ccc; font-size: 1.2em; }
+        .close-btn { text-decoration: none; color: #666; font-size: 1.5em; }
+        
+        form label { display: block; color: #888; font-size: 0.8em; margin-top: 15px; text-transform: uppercase; }
+        form input, form textarea, form select { width: 100%; background: #080808; border: 1px solid #333; color: #ccc; padding: 10px; margin-top: 5px; box-sizing: border-box; font-family: 'Georgia', serif; }
+        form textarea { height: 400px; line-height: 1.6; font-size: 1.1em; resize: vertical; }
+        form input:focus, form textarea:focus, form select:focus { border-color: #d633ff; outline: none; }
+        .save-btn { background: #d633ff; color: #fff; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; border-radius: 3px; }
+        .save-btn:hover { background: #a569bd; }
+    
+        .nid-stamp { 
+            font-family: 'Courier New', monospace; 
+            color: #3498db; 
+            font-size: 1.2em; 
+            font-weight: bold;
+            letter-spacing: 2px; 
+            border: 1px solid #3498db;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+    
+</style>
+</head>
+<body>
+    <div class="document-container">
+        <div class="meta-header">
+            <a href="{% url 'ver_mundo' narr.world.id %}" class="back-btn">⬅ Volver a {{ narr.world.name }}</a>
+            <div>
+                <span class="type-badge type-{{ narr.tipo }}">{{ narr.get_tipo_display }}</span>
+                <span class="nid-stamp" style="margin-left:10px;">REF: {{ narr.nid }}</span>
+            </div>
+        </div>
+
+        <h1>{{ narr.titulo }}</h1>
+        
+        <div class="narrator-box">
+            <span class="narrator-label">Registrado por:</span><br>
+            <span class="narrator-name">{{ narr.narrator }}</span>
+        </div>
+
+        <div class="content-body">{{ narr.contenido }}</div>
+
+        {% if narr.tipo == 'HISTORIA' or capitulos %}
+        <div class="toc-box">
+            <div class="toc-header">
+                <span>📑 TABLA DE CONTENIDOS</span>
+                <a href="{% url 'crear_sub_narrativa' narr.nid 'C' %}" class="btn-chapter">➕ Nuevo Capítulo</a>
+            </div>
+            <div class="toc-list">
+                {% for cap in capitulos %}
+                <a href="{% url 'leer_narrativa' cap.nid %}" class="toc-item">
+                    <span class="toc-nid">{{ cap.nid }}</span>
+                    {{ cap.titulo }}
+                </a>
+                {% empty %}
+                <div style="padding:10px; color:#555; font-style:italic;">No hay capítulos aún.</div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <style>
+            .toc-box { margin: 40px 0; border: 1px solid #333; background: #0e0e12; border-radius: 6px; overflow: hidden; }
+            .toc-header { background: #1a1a25; padding: 10px 15px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; color: #a0a0ff; font-weight: bold; letter-spacing: 1px; font-size: 0.9em; }
+            .btn-chapter { background: #27ae60; color: #fff; text-decoration: none; padding: 3px 10px; border-radius: 4px; font-size: 0.8em; }
+            .btn-chapter:hover { background: #2ecc71; }
+            .toc-list { display: flex; flex-direction: column; }
+            .toc-item { padding: 10px 15px; text-decoration: none; color: #ccc; border-bottom: 1px dashed #222; transition: 0.2s; display: flex; align-items: center; }
+            .toc-item:last-child { border-bottom: none; }
+            .toc-item:hover { background: #1f1f33; color: #fff; padding-left: 20px; }
+            .toc-nid { font-family: monospace; color: #666; font-size: 0.8em; margin-right: 15px; }
+        
+        .nid-stamp { 
+            font-family: 'Courier New', monospace; 
+            color: #3498db; 
+            font-size: 1.2em; 
+            font-weight: bold;
+            letter-spacing: 2px; 
+            border: 1px solid #3498db;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+    
+</style>
+        {% endif %}
+
+
+        {% if narr.menciones.all %}
+        <div class="mentions-box">
+            <span class="mentions-label">REFERENCIAS CRUZADAS:</span>
+            <div class="mentions-list">
+                {% for ref in narr.menciones.all %}
+                <a href="{% url 'ver_mundo' ref.id %}" class="mention-tag">🔗 {{ ref.name }}</a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="footer-note">
+            ECLAI ARCHIVE SYSTEM v4.7 // La veracidad de este registro es subjetiva.
+        </div>
+    </div>
+
+    
+    <a href="{% url 'borrar_narrativa' narr.nid %}" class="float-del-btn" onclick="return confirm('⚠️ ¿ESTÁS SEGURO?\n\nEsta acción borrará este documento permanentemente.\nNo hay deshacer.')">🗑️</a>
+    
+    <style>
+        .float-del-btn {
+            position: fixed; bottom: 90px; right: 30px; /* Encima del edit (30+50+10) */
+            background: #c0392b; color: #fff; width: 40px; height: 40px;
+            border-radius: 50%; text-align: center; line-height: 40px;
+            font-size: 18px; text-decoration: none; box-shadow: 0 0 15px rgba(192, 57, 43, 0.4);
+            transition: 0.3s; z-index: 90;
+        }
+        .float-del-btn:hover { transform: scale(1.1); background: #e74c3c; }
+    
+        .nid-stamp { 
+            font-family: 'Courier New', monospace; 
+            color: #3498db; 
+            font-size: 1.2em; 
+            font-weight: bold;
+            letter-spacing: 2px; 
+            border: 1px solid #3498db;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+    
+</style>
+
+    <a href="#editModal" class="float-edit-btn">✒️</a>
+
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Editar Registro</h2>
+                <a href="#" class="close-btn">✕</a>
+            </div>
+            <form method="POST" action="{% url 'editar_narrativa' narr.nid %}">
+                {% csrf_token %}
+                
+                <div style="display:flex; gap:15px;">
+                    <div style="flex-grow:1;">
+                        <label>Título del Registro</label>
+                        <input type="text" name="titulo" value="{{ narr.titulo }}" required>
+                    </div>
+                    <div style="width:25%;">
+                        <label>Tipo de Documento</label>
+                        <select name="tipo">
+                            <option value="LORE" {% if narr.tipo == 'LORE' %}selected{% endif %}>📜 Lore General</option>
+                            <option value="HISTORIA" {% if narr.tipo == 'HISTORIA' %}selected{% endif %}>📖 Historia</option>
+                            <option value="CAPITULO" {% if narr.tipo == 'CAPITULO' %}selected{% endif %}>📑 Capítulo</option>
+                            <option value="EVENTO" {% if narr.tipo == 'EVENTO' %}selected{% endif %}>⚔️ Evento</option>
+                            <option value="LEYENDA" {% if narr.tipo == 'LEYENDA' %}selected{% endif %}>🕯️ Leyenda</option>
+                            <option value="REGLA" {% if narr.tipo == 'REGLA' %}selected{% endif %}>⚖️ Regla</option>
+                            <option value="BESTIARIO" {% if narr.tipo == 'BESTIARIO' %}selected{% endif %}>🐉 Bestiario</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="display:flex; gap:15px;">
+                    <div style="flex-grow:1;">
+                        <label>Identidad del Narrador (POV)</label>
+                        <input type="text" name="narrador" value="{{ narr.narrator }}" style="color:#d633ff; font-weight:bold;">
+                    </div>
+                    <div style="width:40%;">
+                        <label>Vincular Entidades (Ctrl+Click)</label>
+                        <select name="menciones" multiple style="height:50px;">
+                            {% for ent in todas_entidades %}
+                            <option value="{{ ent.id }}" {% if ent in narr.menciones.all %}selected{% endif %}>
+                                {{ ent.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <label>Contenido</label>
+                <textarea name="contenido" required>{{ narr.contenido }}</textarea>
+                
+                <div style="text-align:right; margin-top:20px;">
+                    <button type="submit" class="save-btn">💾 GUARDAR CAMBIOS</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
+
+
+==================== FILE: .\src\Shared\Domain\eclai_core.py ====================
+# src/Shared/Domain/eclai_core.py
+# Sistema de identificación ECLAI v4.0 (Jerarquía Espacial Pura)
+
+ALPHABET = "AEIOUaeiouBCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz0123456789"
+BASE = len(ALPHABET)
+
+def get_level_from_jid_length(jid_len: int) -> int:
+    # TABLA DE NIVELES ACTUALIZADA (Sin Época)
+    if jid_len == 2: return 1    # Caos
+    if jid_len == 4: return 2    # Abismos
+    if jid_len == 6: return 3    # Realidad
+    # SALTO: Época (antiguo 4) desaparece.
+    if jid_len == 8: return 4    # Galaxia (Antes 5)
+    if jid_len == 10: return 5   # Sistema Estelar
+    if jid_len == 12: return 6   # Planeta
+    if jid_len == 14: return 7   # Hemisferio
+    if jid_len == 16: return 8   # Continente
+    if jid_len == 18: return 9   # Territorio
+    if jid_len == 20: return 10  # Subterritorio
+    if jid_len == 22: return 11  # Asentamiento
+    if jid_len == 24: return 12  # Lugar
+    if jid_len == 26: return 13  # Raza
+    if jid_len == 28: return 14  # Subraza
+    if jid_len == 30: return 15  # Clase
+    # La entidad final ahora es Nivel 16 (34 caracteres)
+    if jid_len == 34: return 16  # Entidad (4 dígitos)
+    
+    raise ValueError(f"Longitud de J-ID no válida para v4.0: {jid_len}")
+
+def split_nid(nid: str):
+    i = 0
+    while i < len(nid) and nid[i].isdigit(): i += 1
+    return nid[:i], nid[i:]
+
+def encode_eclai126(text: str) -> str:
+    if not text: return ""
+    num = int.from_bytes(text.encode("ascii"), "big")
+    if num == 0: return ALPHABET[0]
+    out = []
+    while num:
+        num, r = divmod(num, BASE)
+        out.append(ALPHABET[r])
+    return "".join(reversed(out))
+
+def decode_eclai126(encoded: str) -> str:
+    if not encoded: return ""
+    num = 0
+    for c in encoded: num = num * BASE + ALPHABET.index(c)
+    byte_len = (num.bit_length() + 7) // 8
+    return num.to_bytes(byte_len or 1, "big").decode("ascii")
+
+def nid_to_encoded(nid: str) -> str:
+    return encode_eclai126(nid)
+
+def construir_jid(ruta_base: str, nivel: int, segmento_final: str) -> str:
+    # Validación de Nivel 1
+    if nivel == 1:
+        if len(segmento_final) != 2: raise ValueError("Nivel 1 requiere 2 dígitos")
+        return segmento_final
+
+    # Validación base
+    if len(ruta_base) % 2 != 0 or not ruta_base.isdigit():
+        raise ValueError("ruta_base debe ser par y dígitos")
+    
+    niveles_base = len(ruta_base) // 2
+    if nivel <= niveles_base:
+        raise ValueError(f"El nivel objetivo ({nivel}) debe ser mayor que la base ({niveles_base})")
+
+    # NIVEL FINAL (ENTIDAD) - Ahora es el 16
+    if nivel == 16:
+        if len(segmento_final) != 4: 
+            raise ValueError("Nivel 16 (Entidad) requiere 4 dígitos numéricos")
+        # Relleno hasta llegar al nivel 16 desde donde estemos
+        # Objetivo: 2 chars * 15 niveles + 4 chars = 34 chars total
+        # ruta_base tiene (niveles_base * 2)
+        # ceros necesarios = (15 - niveles_base) * 2
+        ceros = "00" * (15 - niveles_base)
+        return ruta_base + ceros + segmento_final
+    else:
+        # Niveles intermedios (2 dígitos)
+        if len(segmento_final) != 2: 
+            raise ValueError(f"Nivel {nivel} requiere segmento de 2 dígitos")
+        ceros_intermedios = "00" * (nivel - niveles_base - 1)
+        return ruta_base + ceros_intermedios + segmento_final
+
+def generar_nid(jid: str, tipo: str, numero: int) -> str:
+    return f"{jid}{tipo}{numero:02d}"
+
+==================== FILE: .\src\Shared\Domain\value_objects.py ====================
+import uuid
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class WorldID:
+    value: str
+
+    @staticmethod
+    def next_id():
+        return WorldID(str(uuid.uuid4()))
+    
+    def __str__(self):
+        return self.value
+
+==================== FILE: .\src\Shared\Domain\__init__.py ====================
+
+
+==================== FILE: .\src\WorldManagement\Caos\Application\approve_version.py ====================
+from src.Infrastructure.DjangoFramework.persistence.models import CaosVersionORM
+
+class ApproveVersionUseCase:
+    def execute(self, version_id: int):
+        try:
+            version = CaosVersionORM.objects.get(id=version_id)
+        except CaosVersionORM.DoesNotExist:
+            raise Exception("Versión no encontrada")
+
+        if version.status != "PENDING":
+            raise Exception(f"Solo se pueden aprobar pendientes. Estado actual: {version.status}")
+
+        # SOLO CAMBIAMOS EL ESTADO (No tocamos el Live)
+        version.status = "APPROVED"
+        version.save()
+        
+        print(f" ✅ Versión {version.version_number} APROBADA (Esperando publicación).")
+
+==================== FILE: .\src\WorldManagement\Caos\Application\create_child.py ====================
+from src.Shared.Domain.value_objects import WorldID
+from src.WorldManagement.Caos.Domain.entities import CaosWorld
+from src.WorldManagement.Caos.Domain.repositories import CaosRepository
+from src.Shared.Domain import eclai_core
+
+class CreateChildWorldUseCase:
+    def __init__(self, repository: CaosRepository):
+        self.repository = repository
+
+    def execute(self, parent_id: str, name: str, description: str) -> str:
+        print(f" 🐣 Iniciando nacimiento de una nueva entidad en {parent_id}...")
+
+        # 1. Calcular el ID del nuevo hijo
+        # El repositorio hace el trabajo sucio de mirar la DB
+        new_child_id = self.repository.get_next_child_id(parent_id)
+        
+        print(f"    Calculado ID: {new_child_id} (Hijo de {parent_id})")
+
+        # 2. Crear la Entidad
+        new_world = CaosWorld(
+            id=WorldID(new_child_id), 
+            name=name, 
+            lore_description=description
+        )
+        
+        # 3. Guardar
+        self.repository.save(new_world)
+        
+        # Codificación para mostrar en log
+        code = eclai_core.encode_eclai126(new_child_id)
+        print(f" ✨ [ECLAI] Sub-Mundo creado: {name}")
+        print(f"    └── J-ID: {new_child_id} | CODE: {code}")
+        
+        return new_child_id
+
+==================== FILE: .\src\WorldManagement\Caos\Application\create_entity_full.py ====================
+from src.Shared.Domain.value_objects import WorldID
+from src.WorldManagement.Caos.Domain.entities import CaosWorld
+from src.WorldManagement.Caos.Domain.repositories import CaosRepository
+from src.FantasyWorld.AI_Generation.Infrastructure.llama_service import Llama3Service
+from src.FantasyWorld.AI_Generation.Infrastructure.sd_service import StableDiffusionService
+from src.Shared.Domain import eclai_core
+
+class CreateEntityFullUseCase:
+    def __init__(self, repository: CaosRepository):
+        self.repo = repository
+        self.ia_text = Llama3Service()
+        self.ia_art = StableDiffusionService()
+
+    def execute(self, parent_id: str, name: str, tipo: str):
+        # 1. Buscar Padre
+        parent = self.repo.find_by_id(WorldID(parent_id))
+        if not parent: return None
+        
+        # 2. Calcular ID Hijo
+        new_id = self.repo.get_next_child_id(parent_id)
+        
+        # 3. Generar Datos (JSON)
+        print(f" 🧬 Generando ficha técnica para: {name}...")
+        datos = self.ia_text.generate_entity_json(name, tipo, parent.name)
+        
+        desc = datos.get("descripcion", f"Una entidad de tipo {tipo}.")
+        rasgos = datos.get("rasgos", f"A {tipo} creature")
+
+        # 4. Generar Imagen
+        print(f" 🎨 Pintando criatura...")
+        # Usamos el modelo 'criatura' si está configurado en sd_service, o el defecto
+        self.ia_art.generate_concept_art(f"{name}, {tipo}, {rasgos}", category="criatura")
+        
+        # 5. Guardar Entidad
+        entity = CaosWorld(
+            id=WorldID(new_id),
+            name=name,
+            lore_description=desc,
+            status="DRAFT",
+            metadata=datos, # Guardamos el JSON completo
+            visible_publico=False
+        )
+        
+        self.repo.save(entity)
+        return new_id
+
+==================== FILE: .\src\WorldManagement\Caos\Application\create_world.py ====================
+from src.Shared.Domain.value_objects import WorldID
+from src.WorldManagement.Caos.Domain.entities import CaosWorld
+from src.WorldManagement.Caos.Domain.repositories import CaosRepository
+from src.Shared.Domain import eclai_core
+
+class CreateWorldUseCase:
+    """
+    Caso de Uso: Crear un Nuevo Mundo (Nivel Caos).
+    
+    Orquesta la creación de una nueva entidad raíz en el universo.
+    Responsabilidades:
+    1. Generar el ID Jerárquico (J-ID) para el nuevo mundo.
+    2. Generar el ID Narrativo (N-ID) para su Lore inicial.
+    3. Persistir la entidad a través del repositorio.
+    """
+    
+    def __init__(self, repository: CaosRepository):
+        """
+        Args:
+            repository (CaosRepository): Implementación concreta del repositorio para persistencia.
+        """
+        self.repository = repository
+
+    def execute(self, name: str, description: str) -> str:
+        """
+        Ejecuta la lógica de creación del mundo.
+
+        Args:
+            name (str): Nombre del mundo.
+            description (str): Descripción narrativa inicial (Lore).
+
+        Returns:
+            str: El J-ID del mundo creado (ej. "01").
+        """
+        # --- PASO 1: GENERACIÓN DEL J-ID (ENTIDAD) ---
+        # Nivel 1 (Caos) -> "01"
+        jid_entidad = "01"
+        
+        # --- CORRECCIÓN CLAVE ---
+        # Usamos encode_eclai126 DIRECTAMENTE.
+        # Al ser "01" (2 dígitos), el sistema ya sabe implícitamente que es Nivel 1.
+        # No usamos nid_to_encoded() para evitar que le añada el prefijo "01" extra.
+        codigo_entidad = eclai_core.encode_eclai126(jid_entidad)
+
+        # --- PASO 2: LORE (Aquí sí usamos N-ID completo) ---
+        nid_lore = eclai_core.generar_nid(jid_entidad, "L", 1)
+        # Para el Lore (01L01) sí podemos usar la codificación estándar o la directa,
+        # usaremos la directa también para consistencia visual.
+        codigo_lore = eclai_core.encode_eclai126(nid_lore)
+
+        # --- PASO 3: PERSISTENCIA ---
+        new_world = CaosWorld(
+            id=WorldID(jid_entidad), 
+            name=name, 
+            lore_description=description
+        )
+        
+        self.repository.save(new_world)
+        
+        print(f" ✅ [ECLAI v3.0] Mundo 'Caos' (Nivel 1) creado.")
+        print(f" ---------------------------------------------------")
+        print(f" 🏛️  TABLA ENTIDADES (Mundos):")
+        print(f"    └── J-ID: {jid_entidad}")
+        print(f"    └── CODE: {codigo_entidad}   <-- ¡Código Corto Puro!")
+        print(f"")
+        print(f" 📜 TABLA NARRATIVA (Lore):")
+        print(f"    └── N-ID: {nid_lore}")
+        print(f"    └── CODE: {codigo_lore}")
+        print(f" ---------------------------------------------------")
+        
+        return jid_entidad
+
+==================== FILE: .\src\WorldManagement\Caos\Application\delete_narrative.py ====================
+from src.Infrastructure.DjangoFramework.persistence.models import CaosNarrativeORM
+
+class DeleteNarrativeUseCase:
+    def execute(self, nid: str) -> str:
+        try:
+            narrativa = CaosNarrativeORM.objects.get(nid=nid)
+            world_id = narrativa.world.id # Guardamos el ID del mundo para volver
+            narrativa.delete()
+            print(f" 🗑️ Narrativa {nid} eliminada.")
+            return world_id
+        except CaosNarrativeORM.DoesNotExist:
+            raise Exception("Narrativa no encontrada.")
+
+
+==================== FILE: .\src\WorldManagement\Caos\Application\generate_creature_usecase.py ====================
+from src.WorldManagement.Caos.Domain.creature import Creature
+from src.WorldManagement.Caos.Domain.repositories import CaosRepository
+from src.FantasyWorld.AI_Generation.Domain.interfaces import LoreGenerator, ImageGenerator
+
+class GenerateCreatureUseCase:
+    """
+    Orquesta la creación de una criatura usando IA Textual (Biología) y Visual (Foto).
+    """
+    def __init__(self, repository: CaosRepository, lore_service: LoreGenerator, image_service: ImageGenerator):
+        self.repo = repository
+        self.llama = lore_service
+        self.sd = image_service
+
+    def execute(self, parent_id: str) -> str:
+        # 1. Obtener contexto del padre (Planeta/Región)
+        # Nota: find_by_id acepta string o WorldID gracias al repo inteligente
+        parent = self.repo.find_by_id(parent_id)
+        if not parent:
+            raise Exception(f"Padre {parent_id} no encontrado")
+
+        print(f" 🧬 Diseñando forma de vida para: {parent.name}...")
+
+        # 2. Generar Biología (Llama 3)
+        system_prompt = """
+        Role: Expert Xenobiologist.
+        Task: Design a unique fauna species for the provided environment.
+        Output: STRICT JSON.
+        Keys required: name, taxonomy, description, danger_level (int 1-10), behavior, visual_dna (list), sd_prompt.
+        """
+        
+        context_prompt = f"World: {parent.name}. Context: {parent.lore_description}"
+        
+        bio_data = self.llama.generate_structure(system_prompt, context_prompt)
+
+        # Fallback de seguridad
+        if not bio_data:
+            bio_data = {
+                "name": "Especie Desconocida",
+                "taxonomy": "Anomalía",
+                "description": "Datos biológicos corruptos o ilegibles.",
+                "danger_level": 1,
+                "behavior": "Errático",
+                "visual_dna": ["glitch", "shadow"],
+                "sd_prompt": "glitch artifact, error texture"
+            }
+
+        # 3. Calcular ID (ECLAI Nivel 16)
+        # El repositorio ya sabe que las criaturas van al nivel 16
+        new_id = self.repo.get_next_child_id(parent_id)
+
+        # 4. Crear Entidad Dominio
+        creature = Creature.from_ai_data(bio_data, parent_id)
+        creature.eclai_id = new_id
+
+        # 5. Generar Imagen (Stable Diffusion)
+        print(f" 🎨 Renderizando espécimen: {creature.name}")
+        image_base64 = self.sd.generate_concept_art(creature.sd_prompt)
+
+        # 6. Persistencia
+        self.repo.save_creature(creature)
+        
+        if image_base64:
+            self.repo.save_image(new_id, image_base64)
+            
+        return new_id
+
+
+==================== FILE: .\src\WorldManagement\Caos\Application\generate_lore.py ====================
+from src.Shared.Domain.value_objects import WorldID
+from src.WorldManagement.Caos.Domain.repositories import CaosRepository
+from src.FantasyWorld.AI_Generation.Domain.interfaces import LoreGenerator
+
+class GenerateWorldLoreUseCase:
+    def __init__(self, repository: CaosRepository, ai_service: LoreGenerator):
+        self.repository = repository
+        self.ai_service = ai_service
+
+    def execute(self, world_id_str: str):
+        # 1. Recuperar el mundo (Entidad)
+        # OJO: world_id_str es "01", pero el repositorio espera un WorldID
+        w_id = WorldID(world_id_str)
+        world = self.repository.find_by_id(w_id)
+        
+        if not world:
+            print(f"❌ Mundo {world_id_str} no encontrado en DB.")
+            return
+
+        # 2. Llamar a la IA
+        print(f" 🎤 Pidiendo a la IA (Oobabooga) lore para: {world.name}")
+        new_lore = self.ai_service.generate_description(world.name)
+        
+        # 3. Actualizar la Entidad
+        if new_lore:
+            world.lore_description = new_lore
+            
+            # 4. Guardar cambios
+            self.repository.save(world)
+            print(f" ✨ LORE GENERADO Y GUARDADO.")
+            print(f" 📝 Preview: {new_lore[:100]}...")
+        else:
+            print(" ⚠️ La IA no devolvió texto.")
+        
+        return new_lore
+
+==================== FILE: .\src\WorldManagement\Caos\Application\generate_map.py ====================
+import base64
+import os
+import re
+import random
+from src.Shared.Domain.value_objects import WorldID
+from src.WorldManagement.Caos.Domain.repositories import CaosRepository
+from src.FantasyWorld.AI_Generation.Domain.interfaces import ImageGenerator
+from src.FantasyWorld.AI_Generation.Infrastructure.llama_service import Llama3Service 
+from src.Shared.Domain import eclai_core
+
+class GenerateWorldMapUseCase:
+    def __init__(self, repository: CaosRepository, image_service: ImageGenerator):
+        self.repository = repository
+        self.image_service = image_service
+        self.base_folder = os.path.abspath("src/Infrastructure/DjangoFramework/persistence/static/persistence/img")
+        self.translator = Llama3Service() # Instancia para traducir
+
+    def _sanitize(self, name):
+        s = re.sub(r'[^a-zA-Z0-9\-_]', '_', name)
+        return re.sub(r'_+', '_', s)
+
+    def _get_translated_prompt(self, world):
+        # 1. Cogemos la descripción del mundo (Español)
+        desc_es = world.lore_description
+        if not desc_es: 
+            desc_es = f"Un lugar de fantasía llamado {world.name}"
+        
+        # 2. La pasamos por Llama 3 para que la traduzca y optimice
+        try:
+            prompt_en = self.translator.generate_sd_prompt(world.name, desc_es)
+            if prompt_en and len(prompt_en) > 5:
+                print(f" ✨ Prompt Traducido: {prompt_en[:60]}...")
+                return prompt_en
+        except Exception as e:
+            print(f" ⚠️ Fallo Traductor ({e}). Usando fallback.")
+        
+        # Fallback si Llama falla: Nombre + tags genéricos
+        return f"{world.name}, fantasy concept art, masterpiece, best quality"
+
+    def _get_next_version(self, folder_path):
+        max_v = 0
+        if os.path.exists(folder_path):
+            for f in os.listdir(folder_path):
+                if f.lower().endswith(".png"):
+                    match = re.search(r'_v(\d+)\.png$', f)
+                    if match:
+                        if int(match.group(1)) > max_v: max_v = int(match.group(1))
+        return max_v + 1
+
+    def execute_single(self, world_id_str: str):
+        w_id = WorldID(world_id_str)
+        world = self.repository.find_by_id(w_id)
+        if not world: return None
+
+        target_folder = os.path.join(self.base_folder, world_id_str)
+        os.makedirs(target_folder, exist_ok=True)
+
+        # --- PASO CLAVE: OBTENER PROMPT EN INGLÉS ---
+        final_prompt = self._get_translated_prompt(world)
+        
+        # Añadimos estilo aleatorio para variedad
+        estilos = ["cinematic lighting", "atmospheric fog", "dramatic shadows", "golden hour"]
+        final_prompt = f"{final_prompt}, {random.choice(estilos)}"
+        
+        # Llamada a SD
+        img_base64 = self.image_service.generate_concept_art(final_prompt)
+        
+        if img_base64:
+            version = self._get_next_version(target_folder)
+            safe_name = self._sanitize(world.name)
+            filename = f"{safe_name}_v{version}.png"
+            filepath = os.path.join(target_folder, filename)
+            with open(filepath, "wb") as fh: fh.write(base64.b64decode(img_base64))
+            print(f"    ✅ Foto guardada: {filename}")
+            return filename
+        return None
+
+==================== FILE: .\src\WorldManagement\Caos\Application\generate_planet_metadata.py ====================
+from src.WorldManagement.Caos.Domain.repositories import CaosRepository
+from src.FantasyWorld.AI_Generation.Domain.interfaces import LoreGenerator
+from src.Shared.Domain.value_objects import WorldID
+import json
+import re
+
+class GeneratePlanetMetadataUseCase:
+    def __init__(self, repository: CaosRepository, ai_service: LoreGenerator):
+        self.repo = repository
+        self.ai = ai_service
+
+    def execute(self, world_id: str):
+        # 1. Cargar Mundo
+        world = self.repo.find_by_id(WorldID(world_id))
+        if not world: raise Exception("Mundo no encontrado")
+
+        # 2. Preparar el Prompt de Análisis
+        print(f" 🔭 Escaneando datos planetarios de: {world.name}...")
+        
+        # PROMPT CORREGIDO: MÁS ESTRICTO
+        system_prompt = """
+        Role: Database System.
+        Task: Convert the input text into a JSON object.
+        Input Lore: "{lore}"
+        
+        RULES:
+        1. Output ONLY valid JSON.
+        2. DO NOT write Python code (no 'import json', no variables).
+        3. DO NOT write explanations.
+        4. Starts with {{ and ends with }}.
+        
+        JSON Structure:
+        {{
+            "tipo_entidad": "PLANETA",
+            "fisica": {{
+                "gravedad": "1.0G",
+                "ciclo_dia": "24h",
+                "lunas": ["Luna 1"]
+            }},
+            "clima": {{
+                "tipo": "Tundra",
+                "atmosfera": "Toxic",
+                "temperatura_media": "-10C"
+            }},
+            "rasgos": "Resumen geológico breve"
+        }}
+        """.format(lore=world.lore_description or "Planeta generico")
+        
+        # 3. Invocar a Llama 3
+        # Usamos un mensaje de usuario simple para detonar la respuesta JSON
+        meta_json = self.ai.generate_structure(system_prompt, "JSON OUTPUT:")
+
+        # 4. Guardar
+        if meta_json:
+            if not world.metadata: world.metadata = {}
+            world.metadata.update(meta_json)
+            self.repo.save(world)
+            print(f" ✅ Metadatos actualizados: {json.dumps(meta_json, indent=2)}")
+            return meta_json
+        
+        return None
+
+
+==================== FILE: .\src\WorldManagement\Caos\Application\propose_change.py ====================
+from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosVersionORM
+from django.contrib.auth.models import User
+
+class ProposeChangeUseCase:
+    def execute(self, world_id: str, new_name: str, new_desc: str, reason: str, user: User) -> int:
+        # 1. Recuperar la "Verdad Absoluta" (Datos actuales en Live)
+        try:
+            live_world = CaosWorldORM.objects.get(id=world_id)
+        except CaosWorldORM.DoesNotExist:
+            raise Exception("Mundo no encontrado")
+
+        # 2. Calcular siguiente número de versión
+        last_ver = live_world.versiones.first()
+        next_num = (last_ver.version_number + 1) if last_ver else 1
+
+        # 3. ESTRATEGIA DE COPIA SEGURA (SNAPSHOT)
+        # Si el formulario no envía un dato (es None o vacío), MANTENEMOS el dato viejo.
+        # Esto evita borrar datos accidentalmente si el formulario está incompleto.
+        
+        final_name = new_name if new_name is not None else live_world.name
+        final_desc = new_desc if new_desc is not None else live_world.description
+        
+        # (En el futuro, aquí añadirías: final_poblacion = new_pob or live_world.poblacion)
+
+        # 4. Crear la Versión (Es una copia completa del estado deseado)
+        version = CaosVersionORM.objects.create(
+            world=live_world,
+            proposed_name=final_name,          # Guardamos la fusión
+            proposed_description=final_desc,   # Guardamos la fusión
+            version_number=next_num,
+            status="PENDING",
+            change_log=reason,
+            author=user
+        )
+        
+        print(f" 📝 Propuesta v{next_num} generada (Copia segura de '{live_world.name}').")
+        return next_num
+
+==================== FILE: .\src\WorldManagement\Caos\Application\publish_to_live_version.py ====================
+from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosVersionORM
+
+class PublishToLiveVersionUseCase:
+    def execute(self, version_id: int):
+        try:
+            version = CaosVersionORM.objects.get(id=version_id)
+        except CaosVersionORM.DoesNotExist:
+            raise Exception("Versión no encontrada")
+
+        if version.status != "APPROVED":
+            raise Exception("Solo se pueden publicar versiones APROBADAS.")
+
+        # 1. APLICAR AL LIVE
+        world = version.world
+        world.name = version.proposed_name
+        world.description = version.proposed_description
+        world.current_version_number = version.version_number
+        world.current_author_name = version.author.username if version.author else "Desconocido"
+        
+        # --- CORRECCIÓN: ACTUALIZAR ESTADO DEL MUNDO ---
+        world.status = "LIVE" 
+        # -----------------------------------------------
+        
+        world.save()
+
+        # 2. MARCAR VERSIÓN COMO LIVE
+        version.status = "LIVE"
+        version.save()
+        
+        # 3. LIMPIEZA (Archivar obsoletas)
+        obsoletas = CaosVersionORM.objects.filter(
+            world=world,
+            version_number__lt=version.version_number,
+            status__in=['PENDING', 'APPROVED']
+        )
+        obsoletas.update(status='ARCHIVED')
+        
+        print(f" 🚀 Publicada v{version.version_number}. Mundo '{world.name}' ahora está LIVE.")
+
+==================== FILE: .\src\WorldManagement\Caos\Application\publish_world.py ====================
+from src.Shared.Domain.value_objects import WorldID
+from src.WorldManagement.Caos.Domain.repositories import CaosRepository
+
+class PublishWorldUseCase:
+    def __init__(self, repository: CaosRepository):
+        self.repository = repository
+
+    def execute(self, world_id_str: str):
+        # 1. Recuperar
+        w_id = WorldID(world_id_str)
+        world = self.repository.find_by_id(w_id)
+        
+        if not world:
+            raise Exception("Mundo no encontrado")
+
+        # 2. Ejecutar lógica de dominio
+        world.publish()
+        
+        # 3. Guardar cambios
+        self.repository.save(world)
+        print(f" LOGICA NEGOCIO: Mundo '{world.name}' ha sido PUBLICADO oficialmente.")
+
+==================== FILE: .\src\WorldManagement\Caos\Application\reject_version.py ====================
+from src.Infrastructure.DjangoFramework.persistence.models import CaosVersionORM
+
+class RejectVersionUseCase:
+    def execute(self, version_id: int):
+        try:
+            version = CaosVersionORM.objects.get(id=version_id)
+        except CaosVersionORM.DoesNotExist:
+            raise Exception("Versión no encontrada")
+
+        # CAMBIO: Ahora permitimos rechazar PENDING y APPROVED
+        if version.status not in ["PENDING", "APPROVED"]:
+            raise Exception(f"No se puede rechazar una versión en estado {version.status}")
+
+        # Cambiamos el estado a REJECTED (Papelera)
+        version.status = "REJECTED"
+        version.save()
+        
+        print(f" ❌ Rechazada/Descartada propuesta v{version.version_number} para '{version.world.name}'.")
+
+==================== FILE: .\src\WorldManagement\Caos\Application\restore_version.py ====================
+from src.Infrastructure.DjangoFramework.persistence.models import CaosVersionORM, CaosWorldORM
+from src.WorldManagement.Caos.Application.propose_change import ProposeChangeUseCase
+
+class RestoreVersionUseCase:
+    def execute(self, version_id: int, user):
+        try:
+            # 1. Recuperamos la versión antigua (la copia de seguridad)
+            target_version = CaosVersionORM.objects.get(id=version_id)
+            world = target_version.world
+            
+            # 2. Preparamos la razón del cambio automática
+            reason = f"ROLLBACK: Restauración forzada desde la versión {target_version.version_number}"
+            
+            # 3. Usamos el mecanismo de propuesta existente para crear una nueva versión
+            # que sea idéntica a la antigua. ¡Reutilizamos lógica!
+            ProposeChangeUseCase().execute(
+                world_id=world.id,
+                new_name=target_version.proposed_name,
+                new_desc=target_version.proposed_description,
+                reason=reason,
+                user=user
+            )
+            
+            print(f" ⏪ Restauración iniciada: v{target_version.version_number} copiada a nueva propuesta.")
+            
+        except CaosVersionORM.DoesNotExist:
+            raise Exception("Versión no encontrada.")
+
+
+==================== FILE: .\src\WorldManagement\Caos\Application\update_narrative.py ====================
+from src.Infrastructure.DjangoFramework.persistence.models import CaosNarrativeORM, CaosWorldORM
+
+class UpdateNarrativeUseCase:
+    def execute(self, nid: str, titulo: str, contenido: str, narrador: str, tipo: str, menciones_ids: list = None):
+        try:
+            narrativa = CaosNarrativeORM.objects.get(nid=nid)
+            narrativa.titulo = titulo
+            narrativa.contenido = contenido
+            narrativa.narrador = narrador
+            narrativa.tipo = tipo
+            
+            # Actualizar menciones si se envían
+            if menciones_ids is not None:
+                entidades = CaosWorldORM.objects.filter(id__in=menciones_ids)
+                narrativa.menciones.set(entidades)
+                
+            narrativa.save()
+            print(f" ✒️ Narrativa {nid} actualizada (Tipo: {tipo}).")
+        except CaosNarrativeORM.DoesNotExist:
+            raise Exception("Narrativa no encontrada.")
+
+
+==================== FILE: .\src\WorldManagement\Caos\Application\__init__.py ====================
+
+
+==================== FILE: .\src\WorldManagement\Caos\Domain\creature.py ====================
+from dataclasses import dataclass, field
+from typing import List, Dict
+from uuid import uuid4
+
+@dataclass
+class Creature:
+    """
+    Entidad de Dominio: Criatura / Fauna.
+    No depende de Django ni de la IA. Solo datos puros.
+    """
+    # Identificadores
+    eclai_id: str
+    parent_eclai_id: str # Puntero al mundo padre (Ej: 0101)
+
+    # Biología
+    name: str = "Unknown"
+    taxonomy: str = "Anomaly"
+    description: str = ""
+
+    # Stats (RPG / Lógica)
+    danger_level: int = 1
+    behavior: str = "Neutral"
+
+    # Visuales (Stable Diffusion Metadata)
+    visual_dna: List[str] = field(default_factory=list)
+    sd_prompt: str = ""
+
+    def to_metadata_dict(self) -> Dict:
+        """Serializa la parte flexible para guardar en el JSONB del ORM"""
+        return {
+            "biology": {
+                "taxonomy": self.taxonomy,
+                "description": self.description
+            },
+            "stats": {
+                "danger_level": self.danger_level,
+                "behavior": self.behavior
+            },
+            "visuals": {
+                "dna": self.visual_dna,
+                "prompt": self.sd_prompt
+            }
+        }
+
+    @classmethod
+    def from_ai_data(cls, data: Dict, parent_id: str):
+        """Factory method para crear la entidad desde el JSON sucio de la IA"""
+        return cls(
+            eclai_id="", # Se asignará en el repositorio al calcular el ID
+            parent_eclai_id=parent_id,
+            name=data.get('name', 'Unnamed Entity'),
+            taxonomy=data.get('taxonomy', 'Unknown'),
+            description=data.get('description', 'No data available.'),
+            danger_level=data.get('danger_level', 1),
+            behavior=data.get('behavior', 'Passive'),
+            visual_dna=data.get('visual_dna', []),
+            sd_prompt=data.get('sd_prompt', '')
+        )
+
+
+==================== FILE: .\src\WorldManagement\Caos\Domain\entities.py ====================
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Optional, Dict, Any
+from src.Shared.Domain.value_objects import WorldID
+
+class VersionStatus(Enum):
+    DRAFT = "DRAFT"
+    PENDING_APPROVAL = "PENDING_APPROVAL"
+    APPROVED = "APPROVED"
+    LIVE = "LIVE"
+    ARCHIVED = "ARCHIVED"
+
+@dataclass
+class CaosWorld:
+    id: WorldID
+    name: str
+    lore_description: str
+    status: VersionStatus = VersionStatus.DRAFT
+    created_at: datetime = field(default_factory=datetime.now)
+    # [NUEVO] Campo Metadata para JSONB (Planetas, Criaturas, etc.)
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    def publish(self):
+        self.status = VersionStatus.LIVE
+        
+    def rename(self, new_name: str):
+        if len(new_name) < 3:
+            raise ValueError("El nombre debe tener al menos 3 caracteres")
+        self.name = new_name
+
+
+==================== FILE: .\src\WorldManagement\Caos\Domain\repositories.py ====================
+from abc import ABC, abstractmethod
+from typing import Optional
+from .entities import CaosWorld
+from src.Shared.Domain.value_objects import WorldID
+
+class CaosRepository(ABC):
+    @abstractmethod
+    def save(self, world: CaosWorld):
+        pass
+
+    @abstractmethod
+    def find_by_id(self, world_id: WorldID) -> Optional[CaosWorld]:
+        pass
+        
+    # Nuevo método necesario
+    def get_next_child_id(self, parent_id_str: str) -> str:
+        pass
+
+==================== FILE: .\src\WorldManagement\Caos\Domain\__init__.py ====================
+
+
+==================== FILE: .\src\WorldManagement\Caos\Infrastructure\django_repository.py ====================
+import os
+import base64
+from django.conf import settings
+from django.db.models import Max
+from django.db.models.functions import Length
+
+from src.WorldManagement.Caos.Domain.repositories import CaosRepository
+from src.WorldManagement.Caos.Domain.entities import CaosWorld, VersionStatus
+from src.WorldManagement.Caos.Domain.creature import Creature
+from src.Shared.Domain.value_objects import WorldID
+from src.Shared.Domain import eclai_core
+from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM
+
+class DjangoCaosRepository(CaosRepository):
+    
+    def save(self, world: CaosWorld):
+        status_str = world.status.value if hasattr(world.status, 'value') else world.status
+        CaosWorldORM.objects.update_or_create(
+            id=world.id.value,
+            defaults={
+                'name': world.name,
+                'description': world.lore_description,
+                'status': status_str,
+                'metadata': world.metadata
+            }
+        )
+        print(f" 💾 [DB] Guardado: {world.name}")
+
+    def find_by_id(self, world_id):
+        val = world_id.value if hasattr(world_id, 'value') else world_id
+        try:
+            orm_obj = CaosWorldORM.objects.get(id=val)
+            return CaosWorld(
+                id=WorldID(str(orm_obj.id)),
+                name=orm_obj.name,
+                lore_description=orm_obj.description,
+                status=getattr(VersionStatus, orm_obj.status, VersionStatus.DRAFT),
+                metadata=orm_obj.metadata or {}
+            )
+        except CaosWorldORM.DoesNotExist:
+            return None
+
+    # --- MÉTODOS DE CRIATURAS ---
+    def save_creature(self, creature: Creature):
+        CaosWorldORM.objects.update_or_create(
+            id=creature.eclai_id,
+            defaults={
+                'name': creature.name,
+                'description': creature.description,
+                'metadata': creature.to_metadata_dict(),
+                'status': 'DRAFT',
+                'current_version_number': 1,
+                'current_author_name': 'AI_Genesis',
+                'id_codificado': eclai_core.encode_eclai126(creature.eclai_id)
+            }
+        )
+        print(f" 🧬 [DB] Criatura guardada: {creature.name}")
+
+    def save_image(self, jid: str, base64_data: str):
+        if not base64_data: return
+        base_dir = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img')
+        target_dir = os.path.join(base_dir, jid)
+        os.makedirs(target_dir, exist_ok=True)
+        filename = f"{jid}_v1.png"
+        file_path = os.path.join(target_dir, filename)
+        try:
+            if "," in base64_data: base64_data = base64_data.split(",")[1]
+            with open(file_path, "wb") as f:
+                f.write(base64.b64decode(base64_data))
+            print(f" 🎨 [FS] Imagen guardada: {filename}")
+        except Exception as e:
+            print(f"⚠️ Error guardando imagen: {e}")
+
+    def get_next_child_id(self, parent_id_str: str) -> str:
+        len_parent = len(parent_id_str)
+        nivel_padre = eclai_core.get_level_from_jid_length(len_parent)
+        nivel_hijo = nivel_padre + 1
+        es_entidad = (nivel_hijo == 16) 
+        len_hijo = 34 if es_entidad else len_parent + 2
+
+        ultimo_hijo = CaosWorldORM.objects.filter(
+            id__startswith=parent_id_str
+        ).annotate(id_len=Length('id')).filter(
+            id_len=len_hijo
+        ).aggregate(Max('id'))['id__max']
+
+        if not ultimo_hijo:
+            siguiente_seq = 1
+        else:
+            cut = 4 if es_entidad else 2
+            segmento = ultimo_hijo[-cut:]
+            siguiente_seq = int(segmento) + 1
+
+        if es_entidad: nuevo_segmento = f"{siguiente_seq:04d}"
+        else: nuevo_segmento = f"{siguiente_seq:02d}"
+
+        return eclai_core.construir_jid(parent_id_str, nivel_hijo, nuevo_segmento)
+
+
+==================== FILE: .\src\WorldManagement\Caos\Infrastructure\in_memory_repository.py ====================
+from typing import Dict, Optional
+from src.WorldManagement.Caos.Domain.repositories import CaosRepository
+from src.WorldManagement.Caos.Domain.entities import CaosWorld
+from src.Shared.Domain.value_objects import WorldID
+
+# Simulación de una Base de Datos (Para pruebas rápidas sin SQL)
+class InMemoryCaosRepository(CaosRepository):
+    def __init__(self):
+        self.db: Dict[str, CaosWorld] = {}
+
+    def save(self, world: CaosWorld):
+        self.db[str(world.id)] = world
+        print(f" [DB] Guardado en memoria: {world.id}")
+
+    def find_by_id(self, world_id: WorldID) -> Optional[CaosWorld]:
+        return self.db.get(str(world_id))
+
+==================== FILE: .\src\WorldManagement\Caos\Infrastructure\__init__.py ====================
+

@@ -1,10 +1,9 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Optional
+from typing import Optional, Dict, Any
 from src.Shared.Domain.value_objects import WorldID
 
-# Definimos los estados posibles
 class VersionStatus(Enum):
     DRAFT = "DRAFT"
     PENDING_APPROVAL = "PENDING_APPROVAL"
@@ -12,7 +11,6 @@ class VersionStatus(Enum):
     LIVE = "LIVE"
     ARCHIVED = "ARCHIVED"
 
-# Esta es la clase que faltaba y que el Repositorio busca desesperadamente
 @dataclass
 class CaosWorld:
     id: WorldID
@@ -20,8 +18,9 @@ class CaosWorld:
     lore_description: str
     status: VersionStatus = VersionStatus.DRAFT
     created_at: datetime = field(default_factory=datetime.now)
+    # [NUEVO] Campo Metadata para JSONB (Planetas, Criaturas, etc.)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
-    # Lógica de dominio simple
     def publish(self):
         self.status = VersionStatus.LIVE
         

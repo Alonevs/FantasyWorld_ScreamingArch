@@ -61,3 +61,32 @@ class CaosVersionORM(models.Model):
     class Meta:
         db_table = 'caos_versions'
         ordering = ['-version_number']
+# --- TABLA DE NARRATIVA (LORE & RELATOS) ---
+class CaosNarrativeORM(models.Model):
+    nid = models.CharField(primary_key=True, max_length=50)
+    world = models.ForeignKey(CaosWorldORM, on_delete=models.CASCADE, related_name='narrativas')
+    
+    # Relación Múltiple (Menciones)
+    menciones = models.ManyToManyField(CaosWorldORM, related_name='menciones_en_narrativa', blank=True)
+    
+    titulo = models.CharField(max_length=200)
+    contenido = models.TextField()
+    narrador = models.CharField(max_length=150, default="???", help_text="Entidad que relata el evento")
+    
+    TIPO_CHOICES = [
+        ('LORE', '📜 Lore / Enciclopedia'),
+        ('HISTORIA', '📖 Historia / Novela'),
+        ('CAPITULO', '📑 Capítulo'),
+        ('EVENTO', '⚔️ Evento Histórico'),
+        ('LEYENDA', '🕯️ Leyenda / Mito'),
+        ('REGLA', '⚖️ Regla / Ley'),
+        ('BESTIARIO', '🐉 Entrada de Bestiario'),
+    ]
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default='LORE')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'caos_narratives'
+        ordering = ['nid']
+

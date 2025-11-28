@@ -22,4 +22,12 @@ urlpatterns = [
     # NUEVA RUTA: Borrar foto específica
     # Recibe el ID del mundo y el nombre del archivo
     path('borrar_foto/<str:jid>/<str:filename>/', borrar_foto, name='borrar_foto'),
+    path('escanear/<str:jid>/', escanear_planeta, name='escanear_planeta'),
+    path('narrativa/<str:nid>/', leer_narrativa, name='leer_narrativa'),
+    path('narrativa/editar/<str:nid>/', editar_narrativa, name='editar_narrativa'),
+    path('narrativa/crear/<str:jid>/<str:tipo_codigo>/', crear_nueva_narrativa, name='crear_narrativa'),
+    path('narrativa/subcrear/<str:parent_nid>/<str:tipo_codigo>/', crear_sub_narrativa, name='crear_sub_narrativa'),
+    path('narrativa/indice/<str:jid>/', ver_narrativa_mundo, name='ver_narrativa_mundo'),
+    path('narrativa/borrar/<str:nid>/', borrar_narrativa, name='borrar_narrativa'),
+    path('version/restaurar/<int:version_id>/', restaurar_version, name='restaurar_version'),
 ]

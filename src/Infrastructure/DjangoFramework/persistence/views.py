@@ -1,16 +1,16 @@
+from src.WorldManagement.Caos.Application.restore_version import RestoreVersionUseCase
 import os
 import json
 from django.shortcuts import render, redirect
 from django.conf import settings
 from django.contrib.auth.models import User
-from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosVersionORM
+from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosVersionORM, CaosNarrativeORM
 from src.Shared.Domain import eclai_core
 
-# Imports de Aplicación
+# Use Cases
 from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
 from src.WorldManagement.Caos.Application.create_world import CreateWorldUseCase
 from src.WorldManagement.Caos.Application.create_child import CreateChildWorldUseCase
-from src.WorldManagement.Caos.Application.create_entity_full import CreateEntityFullUseCase
 from src.WorldManagement.Caos.Application.publish_world import PublishWorldUseCase
 from src.WorldManagement.Caos.Application.generate_lore import GenerateWorldLoreUseCase
 from src.WorldManagement.Caos.Application.generate_map import GenerateWorldMapUseCase
@@ -18,6 +18,12 @@ from src.WorldManagement.Caos.Application.propose_change import ProposeChangeUse
 from src.WorldManagement.Caos.Application.approve_version import ApproveVersionUseCase
 from src.WorldManagement.Caos.Application.reject_version import RejectVersionUseCase
 from src.WorldManagement.Caos.Application.publish_to_live_version import PublishToLiveVersionUseCase
+from src.WorldManagement.Caos.Application.generate_creature_usecase import GenerateCreatureUseCase
+from src.WorldManagement.Caos.Application.generate_planet_metadata import GeneratePlanetMetadataUseCase
+from src.WorldManagement.Caos.Application.update_narrative import UpdateNarrativeUseCase
+from src.WorldManagement.Caos.Application.delete_narrative import DeleteNarrativeUseCase
+
+# Services
 from src.FantasyWorld.AI_Generation.Infrastructure.llama_service import Llama3Service
 from src.FantasyWorld.AI_Generation.Infrastructure.sd_service import StableDiffusionService
 
@@ -27,7 +33,6 @@ def get_current_user(request):
     return u
 
 def get_world_images(jid):
-    # Busca imágenes en la carpeta del ID o por prefijo
     base = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img')
     target = os.path.join(base, jid)
     if not os.path.exists(target):
@@ -37,9 +42,7 @@ def get_world_images(jid):
     if os.path.exists(target):
         dname = os.path.basename(target)
         for f in sorted(os.listdir(target)):
-            if f.endswith('.png'): 
-                # Devolvemos diccionario para facilitar el uso en template
-                imgs.append({'url': f'{dname}/{f}', 'filename': f})
+            if f.endswith('.png'): imgs.append({'url': f'{dname}/{f}', 'filename': f})
     return imgs
 
 # --- ACCIONES MANUALES ---
@@ -61,7 +64,7 @@ def borrar_foto(request, jid, filename):
             if d.startswith(f"{jid}_"): target_dir = os.path.join(base, d); break
     
     file_path = os.path.join(target_dir, filename)
-    if os.path.exists(file_path) and filename.endswith('.png'):
+    if os.path.exists(file_path):
         try: os.remove(file_path)
         except: pass
     return redirect('ver_mundo', jid=jid)
@@ -74,6 +77,13 @@ def toggle_visibilidad(request, jid):
     except: pass
     return redirect('ver_mundo', jid=jid)
 
+def escanear_planeta(request, jid):
+    try:
+        GeneratePlanetMetadataUseCase(DjangoCaosRepository(), Llama3Service()).execute(jid)
+    except Exception as e:
+        print(f"Error escaneando: {e}")
+    return redirect('ver_mundo', jid=jid)
+
 # --- GESTIÓN ---
 def editar_mundo(request, jid):
     if request.method == 'POST':
@@ -84,7 +94,7 @@ def editar_mundo(request, jid):
                 generated = Llama3Service().generate_description(prompt)
                 if generated: desc = generated
             except: pass
-
+        
         ProposeChangeUseCase().execute(
             jid, request.POST.get('name'), desc, 
             request.POST.get('reason'), get_current_user(request)
@@ -92,35 +102,175 @@ def editar_mundo(request, jid):
     return redirect('ver_mundo', jid=jid)
 
 def aprobar_version(request, version_id):
-    try: ApproveVersionUseCase().execute(version_id); return redirect('ver_mundo', jid=CaosVersionORM.objects.get(id=version_id).world.id)
+    try: 
+        ApproveVersionUseCase().execute(version_id)
+        v = CaosVersionORM.objects.get(id=version_id)
+        return redirect('ver_mundo', jid=v.world.id)
     except: return redirect('home')
 
 def rechazar_version(request, version_id):
-    try: RejectVersionUseCase().execute(version_id); return redirect('ver_mundo', jid=CaosVersionORM.objects.get(id=version_id).world.id)
+    try: 
+        RejectVersionUseCase().execute(version_id)
+        v = CaosVersionORM.objects.get(id=version_id)
+        return redirect('ver_mundo', jid=v.world.id)
     except: return redirect('home')
 
 def publicar_version(request, version_id):
-    try: PublishToLiveVersionUseCase().execute(version_id); return redirect('ver_mundo', jid=CaosVersionORM.objects.get(id=version_id).world.id)
+    try: 
+        PublishToLiveVersionUseCase().execute(version_id)
+        v = CaosVersionORM.objects.get(id=version_id)
+        return redirect('ver_mundo', jid=v.world.id)
     except: return redirect('centro_control')
 
 def borrar_mundo(request, jid):
     try: CaosWorldORM.objects.get(id=jid).delete(); return redirect('home')
     except: return redirect('home')
 
+# --- NARRATIVA (BIBLIOTECA) ---
+def ver_narrativa_mundo(request, jid):
+    try:
+        w = CaosWorldORM.objects.get(id=jid)
+        docs = w.narrativas.exclude(tipo='CAPITULO')
+        context = {
+            'world': w,
+            'lores': docs.filter(tipo='LORE'),
+            'historias': docs.filter(tipo='HISTORIA'),
+            'eventos': docs.filter(tipo='EVENTO'),
+            'leyendas': docs.filter(tipo='LEYENDA'),
+            'reglas': docs.filter(tipo='REGLA'),
+            'bestiario': docs.filter(tipo='BESTIARIO'),
+        }
+        return render(request, 'indice_narrativa.html', context)
+    except CaosWorldORM.DoesNotExist:
+        return redirect('home')
+
+def leer_narrativa(request, nid):
+    try:
+        narr = CaosNarrativeORM.objects.get(nid=nid)
+        todas = CaosWorldORM.objects.all().order_by('id')
+        hijos = CaosNarrativeORM.objects.filter(nid__startswith=narr.nid).exclude(nid=narr.nid).order_by('nid')
+        return render(request, 'visor_narrativa.html', {'narr': narr, 'todas_entidades': todas, 'capitulos': hijos})
+    except CaosNarrativeORM.DoesNotExist:
+        return redirect('home')
+
+def editar_narrativa(request, nid):
+    if request.method == 'POST':
+        try:
+            UpdateNarrativeUseCase().execute(
+                nid=nid,
+                titulo=request.POST.get('titulo'),
+                contenido=request.POST.get('contenido'),
+                narrador=request.POST.get('narrador'),
+                tipo=request.POST.get('tipo'),
+                menciones_ids=request.POST.getlist('menciones')
+            )
+        except Exception as e:
+            print(f"Error editando: {e}")
+    return redirect('leer_narrativa', nid=nid)
+
+def borrar_narrativa(request, nid):
+    try:
+        world_id = DeleteNarrativeUseCase().execute(nid)
+        return redirect('ver_narrativa_mundo', jid=world_id)
+    except: return redirect('home')
+
+def crear_nueva_narrativa(request, jid, tipo_codigo):
+    try:
+        world = CaosWorldORM.objects.get(id=jid)
+        prefix = f"{jid}{tipo_codigo}"
+        
+        # LOGICA GAP FILLER
+        existing_nids = CaosNarrativeORM.objects.filter(nid__startswith=prefix).values_list('nid', flat=True)
+        used_nums = set()
+        len_prefix = len(prefix)
+        for nid_str in existing_nids:
+            try:
+                suffix = nid_str[len_prefix:]
+                if suffix.isdigit(): used_nums.add(int(suffix))
+            except: pass
+        
+        next_num = 1
+        while next_num in used_nums: next_num += 1
+        new_nid = f"{prefix}{next_num:02d}"
+        
+        map_tipos = {'L':'LORE', 'H':'HISTORIA', 'C':'CAPITULO', 'E':'EVENTO', 'M':'LEYENDA', 'R':'REGLA', 'B':'BESTIARIO'}
+        tipo_completo = map_tipos.get(tipo_codigo, 'LORE')
+        
+        CaosNarrativeORM.objects.create(nid=new_nid, world=world, titulo=f"Nuevo {tipo_completo} ({next_num})", contenido="...", narrador="???", tipo=tipo_completo)
+        return redirect('editar_narrativa', nid=new_nid)
+    except Exception as e:
+        print(f"Error creando: {e}")
+        return redirect('ver_narrativa_mundo', jid=jid)
+
+def crear_sub_narrativa(request, parent_nid, tipo_codigo):
+    try:
+        padre = CaosNarrativeORM.objects.get(nid=parent_nid)
+        prefix = f"{parent_nid}{tipo_codigo}"
+        
+        # LOGICA GAP FILLER
+        existing_nids = CaosNarrativeORM.objects.filter(nid__startswith=prefix).values_list('nid', flat=True)
+        used_nums = set()
+        len_prefix = len(prefix)
+        for nid_str in existing_nids:
+            try:
+                suffix = nid_str[len_prefix:]
+                if suffix.isdigit(): used_nums.add(int(suffix))
+            except: pass
+            
+        next_num = 1
+        while next_num in used_nums: next_num += 1
+        new_nid = f"{prefix}{next_num:02d}"
+        
+        tipo_completo = 'CAPITULO'
+        CaosNarrativeORM.objects.create(nid=new_nid, world=padre.world, titulo=f"Nuevo Capítulo ({next_num})", contenido="...", narrador=padre.narrador, tipo=tipo_completo)
+        return redirect('editar_narrativa', nid=new_nid)
+    except: return redirect('leer_narrativa', nid=parent_nid)
+
 # --- VISTAS PRINCIPALES ---
+def centro_control(request):
+    todas = CaosVersionORM.objects.all().order_by('-created_at')
+    p, a, r, h = [], [], [], []
+    for v in todas:
+        l = len(v.world.id)
+        niv = 1 if l==2 else (2 if l==4 else l//2)
+        d = {'id': v.id, 'world_name': v.world.name, 'version_num': v.version_number, 'proposed_name': v.proposed_name, 'reason': v.change_log, 'date': v.created_at, 'author': v.author.username if v.author else '?', 'nivel_label': f"NIVEL {niv}"}
+        if v.status == 'PENDING': p.append(d)
+        elif v.status == 'APPROVED': a.append(d)
+        elif v.status == 'REJECTED': r.append(d)
+        elif v.status in ['ARCHIVED', 'LIVE']: h.append(d)
+    return render(request, 'control_panel.html', {'pendientes': p, 'aprobados': a, 'rechazados': r, 'archivados': h})
+
+def revisar_version(request, version_id):
+    try: v = CaosVersionORM.objects.get(id=version_id); w = v.world
+    except: return redirect('centro_control')
+    imgs = get_world_images(w.id)
+    bread = []
+    for i in range(0, len(w.id), 2):
+        chunk = w.id[0 : i+2]
+        lvl = (i // 2) + 1
+        bread.append({'id': chunk, 'label': f"Nivel {lvl}"})
+    len_h = len(w.id)+2 if len(w.id)<32 else len(w.id)+4
+    hijos = [{'id':h.id, 'name':h.name, 'code':eclai_core.encode_eclai126(h.id), 'img':(get_world_images(h.id)[0]['url'] if get_world_images(h.id) else None)} for h in CaosWorldORM.objects.filter(id__startswith=w.id, id__regex=r'^.{'+str(len_h)+r'}$')]
+    context = {'name': v.proposed_name, 'description': v.proposed_description, 'jid': w.id, 'status': f"PREVIEW v{v.version_number}", 'code_entity': eclai_core.encode_eclai126(w.id), 'nid_lore': w.id_lore if w.id_lore else f"{w.id}L01", 'imagenes': imgs, 'hijos': hijos, 'breadcrumbs': bread, 'is_preview': True, 'version_id': v.id, 'change_log': v.change_log, 'author': v.author.username if v.author else '?'}
+    return render(request, 'ficha_mundo.html', context)
+
 def ver_mundo(request, jid):
     repo = DjangoCaosRepository()
     if request.method == 'POST':
         if 'edit_mode' in request.POST: return editar_mundo(request, jid)
-        
         child_name = request.POST.get('child_name')
         child_type = request.POST.get('child_type')
-        
         if child_name:
-            if child_type == 'ENTITY':
-                CreateEntityFullUseCase(repo).execute(jid, child_name, "Criatura")
+            if child_type == 'ENTITY' and request.POST.get('use_ai') == 'on':
+                try: GenerateCreatureUseCase(repo, Llama3Service(), StableDiffusionService()).execute(jid)
+                except: pass
             else:
-                CreateChildWorldUseCase(repo).execute(jid, child_name, request.POST.get('child_desc'))
+                nid = CreateChildWorldUseCase(repo).execute(jid, child_name, request.POST.get('child_desc'))
+                if request.POST.get('use_ai') == 'on':
+                    try: GenerateWorldLoreUseCase(repo, Llama3Service()).execute(nid)
+                    except: pass
+                    try: GenerateWorldMapUseCase(repo, StableDiffusionService()).execute_single(nid)
+                    except: pass
             return redirect('ver_mundo', jid=jid)
 
     try: w = CaosWorldORM.objects.get(id=jid)
@@ -130,10 +280,12 @@ def ver_mundo(request, jid):
     historial = w.versiones.exclude(status='PENDING').order_by('-version_number')[:10]
     
     len_h = len(jid)+2 if len(jid)<32 else len(jid)+4
-    hijos = [{'id':h.id, 'name':h.name, 'code':eclai_core.encode_eclai126(h.id), 'img':(get_world_images(h.id)[0]['url'] if get_world_images(h.id) else None), 'short': h.id[len(jid):]} for h in CaosWorldORM.objects.filter(id__startswith=jid, id__regex=r'^.{'+str(len_h)+r'}$')]
+    hijos = []
+    for h in CaosWorldORM.objects.filter(id__startswith=jid, id__regex=r'^.{'+str(len_h)+r'}$'):
+        short = h.id[len(jid):]
+        hijos.append({'id': h.id, 'name': h.name, 'short': short, 'img':(get_world_images(h.id)[0]['url'] if get_world_images(h.id) else None)})
     
     imgs = get_world_images(jid)
-    
     bread = []
     for i in range(0, len(jid), 2):
         chunk = jid[0 : i+2]
@@ -146,65 +298,35 @@ def ver_mundo(request, jid):
 
     context = {
         'name': w.name, 'description': w.description, 'jid': jid,
-        'status': w.status, 
-        'version_live': w.current_version_number,
+        'status': w.status, 'version_live': w.current_version_number,
         'author_live': getattr(w, 'current_author_name', 'Sistema'),
         'created_at': w.created_at, 'updated_at': date_live,
         'visible': w.visible_publico,
         'code_entity': eclai_core.encode_eclai126(jid),
-        'nid_lore': f"{jid}L{eclai_core.encode_eclai126(jid)[:2]}",
-        'metadata': meta_str, 'imagenes': imgs, 'hijos': hijos, 
-        'breadcrumbs': bread, 'propuestas': props, 'historial': historial
+        'nid_lore': w.id_lore if w.id_lore else f"{jid}L01",
+        'metadata': meta_str, 
+        'metadata_obj': w.metadata, 
+        'imagenes': imgs, 'hijos': hijos, 'breadcrumbs': bread, 
+        'propuestas': props, 'historial': historial
     }
     return render(request, 'ficha_mundo.html', context)
-
-def revisar_version(request, version_id):
-    try: v = CaosVersionORM.objects.get(id=version_id); w = v.world
-    except: return redirect('centro_control')
-    imgs = get_world_images(w.id)
-    bread = [{'id': w.id[0:i+2], 'label': f"Nivel {(i//2)+1}"} for i in range(0, len(w.id), 2)]
-    context = {
-        'name': v.proposed_name, 'description': v.proposed_description,
-        'jid': w.id, 'status': f"PREVIEW v{v.version_number}",
-        'code_entity': eclai_core.encode_eclai126(w.id), 
-        'nid_lore': f"{w.id}L{eclai_core.encode_eclai126(w.id)[:2]}",
-        'imagenes': imgs, 'hijos': [], 'breadcrumbs': bread,
-        'is_preview': True, 'version_id': v.id, 'change_log': v.change_log, 'author': v.author.username if v.author else '?'
-    }
-    return render(request, 'ficha_mundo.html', context)
-
-def centro_control(request):
-    todas = CaosVersionORM.objects.all().order_by('-created_at')
-    p, a, r, h = [], [], [], []
-    for v in todas:
-        l = len(v.world.id)
-        niv = 1 if l==2 else (2 if l==4 else l//2)
-        d = {'id': v.id, 'world_name': v.world.name, 'world_id': v.world.id, 'version_num': v.version_number, 'proposed_name': v.proposed_name, 'reason': v.change_log, 'date': v.created_at, 'author': v.author.username if v.author else '?', 'nivel_label': f"NIVEL {niv}"}
-        if v.status == 'PENDING': p.append(d)
-        elif v.status == 'APPROVED': a.append(d)
-        elif v.status == 'REJECTED': r.append(d)
-        elif v.status in ['ARCHIVED', 'LIVE']: h.append(d)
-    return render(request, 'control_panel.html', {'pendientes': p, 'aprobados': a, 'rechazados': r, 'archivados': h})
 
 def home(request):
     if request.method == 'POST':
         repo = DjangoCaosRepository()
         jid = CreateWorldUseCase(repo).execute(request.POST.get('world_name'), request.POST.get('world_desc'))
-        
-        if request.POST.get('use_ai') == 'on':
-            try: GenerateWorldLoreUseCase(repo, Llama3Service()).execute(jid)
-            except: pass
-            
-        # Generar foto inicial
-        try: GenerateWorldMapUseCase(repo, StableDiffusionService()).execute_single(jid)
-        except: pass
-
         return redirect('ver_mundo', jid=jid)
-
-    ms = CaosWorldORM.objects.filter(id__regex=r'^..$').order_by('-created_at')
-    l = []
-    for m in ms:
-        imgs = get_world_images(m.id)
-        thumb = imgs[0]['url'] if imgs else None
-        l.append({'id': m.id, 'name': m.name, 'status': m.status, 'code': eclai_core.encode_eclai126(m.id), 'img_file': thumb, 'has_img': thumb is not None})
+    ms = CaosWorldORM.objects.all().order_by('id')
+    l = [{'id': m.id, 'name': m.name, 'status': m.status, 'code': eclai_core.encode_eclai126(m.id), 'img_file': (get_world_images(m.id)[0]['url'] if get_world_images(m.id) else None), 'has_img': bool(get_world_images(m.id))} for m in ms]
     return render(request, 'index.html', {'mundos': l})
+
+def restaurar_version(request, version_id):
+    try:
+        RestoreVersionUseCase().execute(version_id, get_current_user(request))
+    except Exception as e:
+        print(f"Error restaurando: {e}")
+    
+    # Redirigimos al mundo para que veas la nueva propuesta pendiente
+    # Necesitamos el ID del mundo, lo sacamos de la versión
+    v = CaosVersionORM.objects.get(id=version_id)
+    return redirect('ver_mundo', jid=v.world.id)

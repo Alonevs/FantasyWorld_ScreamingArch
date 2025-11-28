@@ -59,6 +59,7 @@
                 <a href="{% url 'revisar_version' v.id %}" class="v-title">{{ v.proposed_name }}</a>
                 <div style="font-style:italic; color:#aaa; font-size:0.8em;">"{{ v.reason }}"</div>
                 <div class="actions">
+                    <a href="{% url 'revisar_version' v.id %}" class="btn-small btn-rev" title="Revisar cambios">👁️</a>
                     <a href="{% url 'aprobar_version' v.id %}" class="btn-small btn-ok">APROBAR</a>
                     <a href="{% url 'rechazar_version' v.id %}" class="btn-small btn-no">RECHAZAR</a>
                 </div>
