@@ -381,3 +381,11 @@ def subir_imagen_manual(request, jid):
         except Exception as e:
             messages.error(request, f"Error crítico: {e}")
     return redirect('ver_mundo', jid=jid)
+def init_hemisferios(request, jid):
+    try:
+        repo = DjangoCaosRepository()
+        InitializeHemispheresUseCase(repo).execute(jid)
+        messages.success(request, "✅ Planeta dividido geográficamente.")
+    except Exception as e:
+        messages.error(request, f"Error al dividir: {e}")
+    return redirect('ver_mundo', jid=jid)

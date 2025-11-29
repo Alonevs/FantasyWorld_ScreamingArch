@@ -32,4 +32,5 @@ urlpatterns = [
     path('version/restaurar/<int:version_id>/', restaurar_version, name='restaurar_version'),
     path('subir_foto/<str:jid>/', subir_imagen_manual, name='subir_imagen_manual'),
     path('cover/<str:jid>/<str:filename>/', set_cover_image, name='set_cover_image'),
+    path('init_hemisferios/<str:jid>/', init_hemisferios, name='init_hemisferios'),
 ]
