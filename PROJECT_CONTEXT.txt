@@ -1,4 +1,4 @@
-PROJECT SNAPSHOT: 2025-11-28 22:36:35
+PROJECT SNAPSHOT: 2025-11-29 20:41:31
 ============================================================
 
 📦 ESTRUCTURA DEL PROYECTO:
@@ -1006,6 +1006,8 @@ urlpatterns = [
     path('narrativa/indice/<str:jid>/', ver_narrativa_mundo, name='ver_narrativa_mundo'),
     path('narrativa/borrar/<str:nid>/', borrar_narrativa, name='borrar_narrativa'),
     path('version/restaurar/<int:version_id>/', restaurar_version, name='restaurar_version'),
+    path('subir_foto/<str:jid>/', subir_imagen_manual, name='subir_imagen_manual'),
+    path('cover/<str:jid>/<str:filename>/', set_cover_image, name='set_cover_image'),
 ]
 
 ==================== FILE: .\src\Infrastructure\DjangoFramework\config\wsgi.py ====================
@@ -1151,6 +1153,7 @@ from src.WorldManagement.Caos.Application.restore_version import RestoreVersionU
 import os
 import json
 from django.shortcuts import render, redirect
+from django.contrib import messages
 from django.conf import settings
 from django.contrib.auth.models import User
 from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosVersionORM, CaosNarrativeORM
@@ -1191,7 +1194,7 @@ def get_world_images(jid):
     if os.path.exists(target):
         dname = os.path.basename(target)
         for f in sorted(os.listdir(target)):
-            if f.endswith('.png'): imgs.append({'url': f'{dname}/{f}', 'filename': f})
+            if f.lower().endswith(('.png', '.webp', '.jpg')): imgs.append({'url': f'{dname}/{f}', 'filename': f})
     return imgs
 
 # --- ACCIONES MANUALES ---
@@ -1375,6 +1378,18 @@ def crear_sub_narrativa(request, parent_nid, tipo_codigo):
         return redirect('editar_narrativa', nid=new_nid)
     except: return redirect('leer_narrativa', nid=parent_nid)
 
+
+def set_cover_image(request, jid, filename):
+    try:
+        w = CaosWorldORM.objects.get(id=jid)
+        if not w.metadata: w.metadata = {}
+        w.metadata['cover_image'] = filename
+        w.save()
+        messages.success(request, f"⭐ Portada actualizada: {filename}")
+    except Exception as e:
+        messages.error(request, f"Error: {e}")
+    return redirect('ver_mundo', jid=jid)
+
 # --- VISTAS PRINCIPALES ---
 def centro_control(request):
     todas = CaosVersionORM.objects.all().order_by('-created_at')
@@ -1465,8 +1480,34 @@ def home(request):
         repo = DjangoCaosRepository()
         jid = CreateWorldUseCase(repo).execute(request.POST.get('world_name'), request.POST.get('world_desc'))
         return redirect('ver_mundo', jid=jid)
+    
     ms = CaosWorldORM.objects.all().order_by('id')
-    l = [{'id': m.id, 'name': m.name, 'status': m.status, 'code': eclai_core.encode_eclai126(m.id), 'img_file': (get_world_images(m.id)[0]['url'] if get_world_images(m.id) else None), 'has_img': bool(get_world_images(m.id))} for m in ms]
+    l = []
+    for m in ms:
+        imgs = get_world_images(m.id)
+        cover = None
+        
+        # 1. LÓGICA DE PORTADA INTELIGENTE
+        if m.metadata and 'cover_image' in m.metadata:
+            # Buscamos si el archivo favorito existe en la lista real
+            target = m.metadata['cover_image']
+            found = next((i for i in imgs if i['filename'] == target), None)
+            if found:
+                cover = found['url']
+        
+        # 2. FALLBACK (Si no hay favorita o se rompió, usa la primera)
+        if not cover and imgs:
+            cover = imgs[0]['url']
+            
+        l.append({
+            'id': m.id, 
+            'name': m.name, 
+            'status': m.status, 
+            'code': eclai_core.encode_eclai126(m.id), 
+            'img_file': cover, 
+            'has_img': bool(cover)
+        })
+    
     return render(request, 'index.html', {'mundos': l})
 
 def restaurar_version(request, version_id):
@@ -1479,6 +1520,18 @@ def restaurar_version(request, version_id):
     # Necesitamos el ID del mundo, lo sacamos de la versión
     v = CaosVersionORM.objects.get(id=version_id)
     return redirect('ver_mundo', jid=v.world.id)
+
+def subir_imagen_manual(request, jid):
+    if request.method == 'POST' and request.FILES.get('imagen_manual'):
+        try:
+            repo = DjangoCaosRepository()
+            if repo.save_manual_file(jid, request.FILES['imagen_manual'], request.user.username):
+                messages.success(request, "✅ Imagen guardada correctamente.")
+            else:
+                messages.error(request, "❌ Error al guardar imagen.")
+        except Exception as e:
+            messages.error(request, f"Error crítico: {e}")
+    return redirect('ver_mundo', jid=jid)
 
 
 ==================== FILE: .\src\Infrastructure\DjangoFramework\persistence\__init__.py ====================
@@ -1601,17 +1654,17 @@ def restaurar_version(request, version_id):
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>ECLAI v3.0 | {{ name }}</title>
+    <title>ECLAI v4.8 | {{ name }}</title>
+    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
+
     <style>
-        
         body { background-color: #0a0a12; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; padding: 20px 40px; }
-        
-        /* SCROLLBARS GENERALES */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #0a0a12; }
         ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #d633ff; }
 
+        /* CABECERA */
         .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 15px; background: #0e0e16; padding: 15px 20px; border-radius: 10px; }
         .logo { font-size: 1.5em; font-weight: bold; color: #fff; letter-spacing: 2px; }
         .nav-group { display: flex; gap: 10px; }
@@ -1620,17 +1673,14 @@ def restaurar_version(request, version_id):
         .nav-btn.special { background: #d633ff; border-color: #d633ff; }
         .nav-btn.special:hover { background: #a569bd; }
         
+        /* TARJETA PRINCIPAL */
         .card { background: #161625; border: 1px solid #2a2a40; border-radius: 15px; max-width: 1200px; margin: 0 auto; overflow: hidden; display: grid; grid-template-columns: 3fr 1fr; }
         .card-header { grid-column: 1 / -1; background: linear-gradient(90deg, #2b1a45 0%, #1a1a2e 100%); padding: 20px; border-bottom: 2px solid #4a3b69; display: flex; justify-content: space-between; align-items: flex-start; }
         
-        /* LAYOUT PRINCIPAL */
-        .main-content { 
-            padding: 30px; 
-            border-right: 1px solid #2a2a40; 
-            min-width: 0; /* Vital para que el scroll funcione dentro de Grid/Flex */
-        }
+        .main-content { padding: 30px; border-right: 1px solid #2a2a40; min-width: 0; }
         .sidebar { padding: 30px; background: #13131f; font-size: 0.9em; min-width: 250px; }
         
+        /* BREADCRUMBS & STATUS */
         .breadcrumbs { margin-bottom: 10px; font-size: 0.85em; color: #888; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
         .crumb-item { background: #333; padding: 2px 8px; border-radius: 10px; text-decoration: none; color: #ccc; border: 1px solid #444; transition:0.2s; }
         .crumb-item:hover { background: #d633ff; color: #fff; border-color: #d633ff; }
@@ -1641,51 +1691,39 @@ def restaurar_version(request, version_id):
         .st-live { background: #2ecc71; color: #000; border: 1px solid #27ae60; }
         .st-draft { background: #f39c12; color: #000; border: 1px solid #d35400; }
 
+        /* BOTONES GENÉRICOS */
         .actions { display: flex; gap: 10px; }
-        .btn { padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.8em; text-decoration: none; color:#fff; border:none; }
+        .btn { padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.8em; text-decoration: none; color:#fff; border:none; display:inline-block; }
         .btn-edit { background: #3498db; } .btn-del { background: #e74c3c; }
         
-        /* --- GALERÍA CON SCROLL HORIZONTAL --- */
-        .gallery { 
-            display: flex; 
-            gap: 15px; 
-            overflow-x: auto;      /* Scroll lateral activado */
-            white-space: nowrap;   /* No saltar de línea */
-            padding-bottom: 15px;  /* Espacio para la barra */
-            margin-bottom: 20px;
-            
-            /* Estilo Scrollbar Firefox */
-            scrollbar-width: thin;
-            scrollbar-color: #d633ff #0e0e16;
-        }
-        /* Estilo Scrollbar Chrome/Edge */
-        .gallery::-webkit-scrollbar { height: 8px; }
-        .gallery::-webkit-scrollbar-track { background: #0e0e16; border-radius: 4px; }
-        .gallery::-webkit-scrollbar-thumb { background: #d633ff; border-radius: 4px; }
-        .gallery::-webkit-scrollbar-thumb:hover { background: #a569bd; }
+        /* GALERÍA */
+        .gallery { display: flex; gap: 15px; overflow-x: auto; white-space: nowrap; padding-bottom: 15px; margin-bottom: 20px; scrollbar-width: thin; scrollbar-color: #d633ff #0e0e16; }
+        .gallery-item { position: relative; display: inline-block; flex: 0 0 auto; width: 160px; height: 220px; }
+        .img-wrapper { position: relative; width: 100%; height: 100%; overflow: hidden; border-radius: 8px; border: 2px solid #333; cursor: pointer; }
+        .img-wrapper img { width: 100%; height: 100%; object-fit: cover; transition: 0.3s; }
+        .gallery-item:hover .img-wrapper img { transform: scale(1.05); }
+        .gallery-item:hover .img-wrapper { border-color: #d633ff; }
 
-        .gallery-item { 
-            position: relative; 
-            display: inline-block; 
-            flex: 0 0 auto; /* No encoger */
+        /* INSPECTOR DE METADATOS (OVERLAY) */
+        .meta-overlay {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            background: rgba(0, 0, 0, 0.85); color: #fff;
+            padding: 5px 0; text-align: center;
+            opacity: 0; transition: 0.2s; pointer-events: none;
+            display: flex; flex-direction: column; z-index: 5;
         }
-        .gallery-item img { 
-            width: 160px; 
-            height: 220px; 
-            object-fit: cover; 
-            border-radius: 8px; 
-            border: 2px solid #333; 
-            transition: 0.2s;
-        }
-        .gallery-item:hover img { border-color: #d633ff; transform: scale(1.02); }
-        
-        .btn-delete-img { position: absolute; top: 5px; right: 5px; background: rgba(231, 76, 60, 0.9); color: white; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-size: 12px; text-decoration: none; cursor: pointer; opacity: 0; transition: 0.2s; }
+        .gallery-item:hover .meta-overlay { opacity: 1; }
+        .res { color: #d633ff; font-weight: bold; font-family: monospace; font-size: 0.8em; }
+        .fmt { color: #aaa; font-size: 0.7em; }
+
+        .btn-delete-img { position: absolute; top: 5px; right: 5px; background: rgba(231, 76, 60, 0.9); color: white; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-size: 12px; text-decoration: none; cursor: pointer; opacity: 0; transition: 0.2s; z-index: 10; }
         .gallery-item:hover .btn-delete-img { opacity: 1; }
 
+        /* SECCIONES */
         .section-title { color: #a0a0ff; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px; margin-top: 25px; font-size: 1.1em; display: flex; justify-content: space-between; align-items: center; }
         .lore-box { background: #111; padding: 20px; border-left: 4px solid #d633ff; font-style: italic; color: #ccc; white-space: pre-wrap; margin-bottom: 10px; max-height: 300px; overflow-y: auto; }
-        .metadata-box { background: #0e0e16; color: #0f0; font-family: 'Consolas', monospace; padding: 15px; border-radius: 5px; font-size: 0.8em; overflow-x: auto; border: 1px solid #333; }
         
+        /* SIDEBAR */
         .children-list { display: grid; gap: 5px; }
         .child-link { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #1f1f33; text-decoration: none; color: #eee; border-radius: 6px; border: 1px solid #333; transition:0.2s; }
         .child-link:hover { border-color: #d633ff; transform: translateX(5px); }
@@ -1700,15 +1738,18 @@ def restaurar_version(request, version_id):
         .label { color: #888; text-transform: uppercase; font-size:0.8em; }
         .value { font-family: 'Courier New', monospace; color: #fff; font-weight: bold; text-align:right; }
 
-        /* RPG STATS */
-        .rpg-card { background: #0e0e16; border: 1px solid #444; border-radius: 8px; padding: 20px; margin-bottom: 20px; position: relative; overflow: hidden; }
-        .rpg-card::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, #d633ff, #2ecc71); }
-        .rpg-header { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; }
-        .rpg-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; }
-        .rpg-stat { background: #1f1f33; padding: 10px; border-radius: 5px; text-align: center; }
-        .rpg-val { font-size: 1.1em; color: #fff; font-weight: bold; }
-        .rpg-label { font-size: 0.7em; color: #aaa; text-transform: uppercase; display: block; }
+        /* TARJETAS METADATA */
+        .data-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 10px; }
+        .data-card { background: #13131e; border: 1px solid #333; border-radius: 6px; overflow: hidden; }
+        .data-card-header { background: #1f1f33; padding: 8px 12px; border-bottom: 1px solid #333; font-weight: bold; color: #d633ff; text-transform: uppercase; font-size: 0.85em; letter-spacing: 1px; }
+        .data-card-body { padding: 10px; }
+        .data-row { display: flex; justify-content: space-between; border-bottom: 1px dashed #2a2a40; padding: 6px 0; font-size: 0.9em; }
+        .data-row:last-child { border-bottom: none; }
+        .data-key { color: #888; text-transform: capitalize; }
+        .data-val { color: #eee; font-weight: bold; text-align: right; }
+        .data-list-item { background: #000; padding: 2px 8px; border-radius: 4px; border: 1px solid #444; font-size: 0.8em; display: inline-block; margin-top: 2px; }
 
+        /* MODALES */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; justify-content: center; align-items: center; }
         .modal:target { display: flex; }
         .modal-content { background: #161625; padding: 30px; border-radius: 10px; width: 600px; border: 1px solid #d633ff; box-shadow: 0 0 50px rgba(0,0,0,0.8); }
@@ -1718,26 +1759,29 @@ def restaurar_version(request, version_id):
         .child-form input { background: #0a0a12; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 4px; flex-grow: 1; }
         .child-form button { background: #d633ff; color: #fff; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; }
         .child-form select { background: #000; color: #fff; border: 1px solid #444; padding: 8px; border-radius: 4px; }
-    
-    
-        /* --- ESTILOS DATA GRID (NUEVO) --- */
-        .data-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 10px; }
-        .data-card { background: #13131e; border: 1px solid #333; border-radius: 6px; overflow: hidden; }
-        .data-card-header { background: #1f1f33; padding: 8px 12px; border-bottom: 1px solid #333; font-weight: bold; color: #d633ff; text-transform: uppercase; font-size: 0.85em; letter-spacing: 1px; }
-        .data-card-body { padding: 10px; }
-        .data-row { display: flex; justify-content: space-between; border-bottom: 1px dashed #2a2a40; padding: 6px 0; font-size: 0.9em; }
-        .data-row:last-child { border-bottom: none; }
-        .data-key { color: #888; text-transform: capitalize; }
-        .data-val { color: #eee; font-weight: bold; text-align: right; }
-        
-        /* Listas dentro de tarjetas (ej: Lunas) */
-        .data-list-item { background: #000; padding: 2px 8px; border-radius: 4px; border: 1px solid #444; font-size: 0.8em; display: inline-block; margin-top: 2px; }
-    </style>
 
+        .messages-container { position: fixed; top: 20px; right: 20px; z-index: 9999; width: 300px; }
+        .alert { padding: 15px; margin-bottom: 10px; border-radius: 5px; color: #fff; font-weight: bold; box-shadow: 0 5px 15px rgba(0,0,0,0.5); transition: opacity 0.5s; }
+        .alert-success { background: rgba(39, 174, 96, 0.9); border: 1px solid #2ecc71; }
+        .alert-error { background: rgba(192, 57, 43, 0.9); border: 1px solid #e74c3c; }
+    </style>
 </head>
 <body>
+    {% if messages %}
+    <div class="messages-container">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    <script>
+        setTimeout(function() {
+            document.querySelectorAll('.alert').forEach(a => { a.style.opacity = '0'; setTimeout(() => a.remove(), 500); });
+        }, 5000);
+    </script>
+    {% endif %}
+
     <div class="top-bar">
-        <div class="logo">ECLAI v3.0 // SYSTEM</div>
+        <div class="logo">ECLAI v4.8 // SYSTEM</div>
         <div class="nav-group">
             <button class="nav-btn" onclick="history.back()">⬅️ Atrás</button>
             <a href="{% url 'home' %}" class="nav-btn">🏠 Inicio</a>
@@ -1747,7 +1791,7 @@ def restaurar_version(request, version_id):
 
     {% if is_preview %}
     <div style="background:#f39c12; color:#fff; padding:15px; text-align:center; margin-bottom:20px; border-radius:8px; margin: 0 auto 20px auto; max-width: 1000px;">
-        <h2>⚠️ MODO INSPECCIÓN: VERSIÓN {{ version_live }} (Propuesta)</h2>
+        <h2>⚠️ MODO INSPECCIÓN: VERSIÓN {{ version_live }}</h2>
         <p>Autor: <strong>{{ author }}</strong> | Razón: <em>{{ change_log }}</em></p>
         <div style="margin-top:10px;">
             <a href="{% url 'aprobar_version' version_id %}" class="btn" style="background:#27ae60;">✅ APROBAR</a>
@@ -1764,9 +1808,7 @@ def restaurar_version(request, version_id):
                     <a href="{% url 'home' %}" class="crumb-item">🏠 Universo</a>
                     {% for b in breadcrumbs %}
                         <span class="crumb-separator">›</span>
-                        <a href="{% url 'ver_mundo' b.id %}" class="crumb-item {% if b.id == jid %}crumb-active{% endif %}">
-                            {{ b.label }}
-                        </a>
+                        <a href="{% url 'ver_mundo' b.id %}" class="crumb-item {% if b.id == jid %}crumb-active{% endif %}">{{ b.label }}</a>
                     {% endfor %}
                 </div>
                 
@@ -1774,7 +1816,7 @@ def restaurar_version(request, version_id):
                 
                 <div style="margin-top:5px;">
                     {% if status == 'LIVE' %}
-                        <span class="status-badge st-live">🟢 LIVE v{{ version_live }} (Autor: {{ author_live }})</span>
+                        <span class="status-badge st-live">🟢 LIVE v{{ version_live }}</span>
                     {% else %}
                         <span class="status-badge st-draft">⚠️ {{ status|default:"DRAFT" }}</span>
                     {% endif %}
@@ -1800,70 +1842,50 @@ def restaurar_version(request, version_id):
             {% endif %}
 
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                <div class="section-title" style="margin:0;">Arte Visual</div>
-                {% if not is_preview %}<a href="{% url 'generar_foto_extra' jid %}" class="btn" style="background:#9b59b6; font-size:0.7em;">🎨 + FOTO IA</a>{% endif %}
+                <div class="section-title" style="margin:0;">Visual Database</div>
+                {% if not is_preview %}
+                <div style="display:flex; align-items:center;">
+                    <a href="{% url 'generar_foto_extra' jid %}" class="btn" style="background:#9b59b6; font-size:0.7em;">🎨 + FOTO IA</a>
+                    <form id="form-manual-upload" method="POST" action="{% url 'subir_imagen_manual' jid %}" enctype="multipart/form-data" style="display:inline; margin-left:5px;">
+                        {% csrf_token %}
+                        <label for="file-upload" class="btn" style="background:#555; font-size:0.7em; cursor:pointer;" title="Subir archivo propio">📎 SUBIR</label>
+                        <input id="file-upload" type="file" name="imagen_manual" accept="image/*" style="display:none;" onchange="openUploadModal(this)">
+                    </form>
+                </div>
+                {% endif %}
             </div>
+
             <div class="gallery">
                 {% for img in imagenes %} 
                 <div class="gallery-item">
-                    <img src="{% static 'persistence/img/'|add:img.url %}">
+                    <div class="img-wrapper">
+                        <img src="{% static 'persistence/img/'|add:img.url %}" onclick="openLightbox(this.src, '{{ img.filename }}')" onload="loadMeta(this)">
+                        <div class="meta-overlay">
+                            <span class="res">...</span>
+                            <span class="fmt">WEBP</span>
+                        </div>
+                    </div>
                     {% if not is_preview %}
                     <a href="{% url 'borrar_foto' jid img.filename %}" class="btn-delete-img" onclick="return confirm('¿Borrar imagen?')">✕</a>
                     {% endif %}
                 </div>
                 {% empty %} 
-                <div style="color:#555; padding:20px; border:1px dashed #444; width:100%; text-align:center;">No hay arte generado.</div> 
+                <div style="color:#555; padding:20px; border:1px dashed #444; width:100%; text-align:center; font-size:0.8em;">No hay datos visuales.</div> 
                 {% endfor %}
             </div>
 
-            {% if metadata_obj.peligro or metadata_obj.tipo %}
-            <div class="rpg-card">
-                <div class="rpg-header">
-                    <span style="color:#2ecc71; font-weight:bold; font-family:monospace;">FICHA TÉCNICA</span>
-                    <span style="font-size:0.8em; color:#666;">ID: {{ jid }}</span>
-                </div>
-                <div class="rpg-stats">
-                    <div class="rpg-stat"><span class="rpg-label">Tipo</span><span class="rpg-val" style="color:#a0a0ff;">{{ metadata_obj.tipo }}</span></div>
-                    <div class="rpg-stat"><span class="rpg-label">Tamaño</span><span class="rpg-val">{{ metadata_obj.tamano }}</span></div>
-                    <div class="rpg-stat"><span class="rpg-label">Peligro</span><span class="rpg-val" style="color:#e74c3c;">{{ metadata_obj.peligro }}/5</span></div>
-                </div>
-                {% if metadata_obj.rasgos %}
-                <div style="margin-top:10px; color:#ccc; font-style:italic;">"{{ metadata_obj.rasgos }}"</div>
-                {% endif %}
-            </div>
-            {% endif %}
-
-            <div class="section-title">Descripción Conceptual</div>
-            <div class="lore-box">{{ description|default:"Sin descripción definida." }}</div>
-            
-            
+            {% if metadata_obj and metadata_obj.fisica or metadata_obj.clima or metadata_obj.biology %}
             <div class="section-title">Datos Analizados (Metadata)</div>
-            
-            {% if metadata_obj %}
             <div class="data-grid">
                 {% for key, value in metadata_obj.items %}
-                    {% if key != 'tipo_entidad' and key != 'biology' and key != 'stats' and key != 'visuals' %}
+                    {% if key != 'tipo_entidad' and key != 'biology' and key != 'stats' and key != 'visuals' and key != 'gallery_log' and key != 'cover_image' %}
                     <div class="data-card">
                         <div class="data-card-header">{{ key }}</div>
                         <div class="data-card-body">
                             {% if key == 'fisica' or key == 'clima' or key == 'leyes_fundamentales' or key == 'geo_config' or key == 'climate_profile' %}
                                 {% for subkey, subval in value.items %}
-                                <div class="data-row">
-                                    <span class="data-key">{{ subkey }}:</span>
-                                    <span class="data-val">
-                                        {% if subval|length > 0 and subval.0 %}
-                                            {% if subval.append %} 
-                                                {% for item in subval %}<span class="data-list-item">{{ item }}</span> {% endfor %}
-                                            {% else %}
-                                                {{ subval }}
-                                            {% endif %}
-                                        {% else %}
-                                            {{ subval }}
-                                        {% endif %}
-                                    </span>
-                                </div>
+                                <div class="data-row"><span class="data-key">{{ subkey }}:</span><span class="data-val">{% if subval.append %}{% for item in subval %}<span class="data-list-item">{{ item }}</span> {% endfor %}{% else %}{{ subval }}{% endif %}</span></div>
                                 {% endfor %}
-                            
                             {% else %}
                                 <div style="color:#ccc; font-style:italic;">{{ value }}</div>
                             {% endif %}
@@ -1871,46 +1893,51 @@ def restaurar_version(request, version_id):
                     </div>
                     {% endif %}
                 {% endfor %}
+                
+                {% if metadata_obj.biology %}
+                <div class="data-card" style="border-color:#2ecc71;">
+                    <div class="data-card-header" style="color:#2ecc71;">BIO-SCAN</div>
+                    <div class="data-card-body">
+                        <div class="data-row"><span class="data-key">Clase:</span><span class="data-val">{{ metadata_obj.biology.taxonomy }}</span></div>
+                        <div class="data-row"><span class="data-key">Peligro:</span><span class="data-val" style="color:#e74c3c;">{{ metadata_obj.stats.danger_level }}/10</span></div>
+                    </div>
+                </div>
+                {% endif %}
             </div>
-            {% else %}
-                <div style="color:#555; font-style:italic; padding:10px;">Sin datos. Usa el botón ESCANEAR.</div>
             {% endif %}
-            
-            
+
+            <div class="section-title">Descripción Conceptual</div>
+            <div class="lore-box">{{ description|default:"Sin descripción definida." }}</div>
         </div>
 
         <div class="sidebar">
             <div class="section-title" style="margin-top:0;">Ficha Técnica</div>
-            
             <div class="stats-grid">
                 <div class="stat-row"><span class="label">J-ID</span><span class="value">{{ jid }}</span></div>
                 <div class="stat-row"><span class="label">CODE</span><span class="value" style="color:#d633ff">{{ code_entity }}</span></div>
-                <div class="stat-row"><span class="label">Creado</span><span class="value" style="font-size:0.9em;">{{ created_at|date:"d/m/Y" }}</span></div>
                 <div class="stat-row"><span class="label">Actualizado</span><span class="value" style="font-size:0.9em;">{{ updated_at|date:"d/m/Y" }}</span></div>
                 <div class="stat-row" style="align-items:center;">
                     <span class="label">Visibilidad</span>
                     {% if not is_preview %}
-                        <a href="{% url 'toggle_visibilidad' jid %}" class="vis-toggle {% if visible %}is-public{% else %}is-private{% endif %}">
-                            {% if visible %}🌎 PÚBLICA{% else %}🔒 PRIVADA{% endif %}
-                        </a>
+                        <a href="{% url 'toggle_visibilidad' jid %}" class="vis-toggle {% if visible %}is-public{% else %}is-private{% endif %}">{% if visible %}🌎 PÚBLICA{% else %}🔒 PRIVADA{% endif %}</a>
                     {% else %}
-                        <span class="vis-toggle {% if visible %}is-public{% else %}is-private{% endif %}">
-                            {% if visible %}🌎 PÚBLICA{% else %}🔒 PRIVADA{% endif %}
-                        </span>
+                        <span class="vis-toggle">{% if visible %}🌎 PÚBLICA{% else %}🔒 PRIVADA{% endif %}</span>
                     {% endif %}
                 </div>
             </div>
 
-            
-            
             <div style="margin: 20px 0; padding: 15px; background: #0f0f15; border: 1px solid #333; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <strong style="color:#d633ff; font-size:1.1em;">📚 Archivo Narrativo</strong>
-                    <div style="font-size:0.8em; color:#aaa;">Lore, Historias, Eventos y Leyendas.</div>
-                </div>
+                <div><strong style="color:#d633ff; font-size:1.1em;">📚 Archivo Narrativo</strong></div>
                 <a href="{% url 'ver_narrativa_mundo' jid %}" class="btn" style="background:#d633ff; font-weight:bold; padding: 10px 20px;">ABRIR BIBLIOTECA ➔</a>
             </div>
-    
+
+            {% if jid|length == 12 %}
+            <div style="margin: 20px 0; padding: 15px; background: rgba(41, 128, 185, 0.1); border: 1px dashed #3498db; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <div><strong style="color:#3498db;">🪐 Estructura</strong></div>
+                <a href="{% url 'init_hemisferios' jid %}" class="btn" style="background:#2980b9;">🌍 DIVIDIR</a>
+            </div>
+            {% endif %}
+
             <div class="section-title">Entidades Hijas</div>
             <div class="children-list">
                 {% for h in hijos %}
@@ -1925,18 +1952,16 @@ def restaurar_version(request, version_id):
             <form method="POST" class="child-form">
                 {% csrf_token %}
                 <div style="display:flex; gap:10px; width:100%; flex-direction:column;">
-                    <input type="text" name="child_name" placeholder="Nuevo hijo..." style="width:100%; background:#000; border:1px solid #444; color:#fff; padding:5px;" required autocomplete="off">
-                    
+                    <input type="text" name="child_name" placeholder="Nuevo hijo..." style="width:100%; background:#000; border:1px solid #444; color:#fff; padding:5px;" autocomplete="off">
                     <div style="display:flex; gap:10px;">
                         <select name="child_type" style="background:#000; color:#fff; border:1px solid #444; padding:5px; border-radius:4px; flex-grow:1;">
+                            <option value="ENTITY">🐉 Criatura / Fauna</option>
                             <option value="LOCATION">📍 Lugar / Región</option>
-                            <option value="ENTITY">🐉 Criatura / NPC</option>
                         </select>
                         <button type="submit" style="width:auto; padding:5px 15px;">➕</button>
                     </div>
-                    
                     <label style="color:#aaa; font-size:0.8em; cursor:pointer; display:flex; align-items:center; gap:5px; margin-top:5px;">
-                        <input type="checkbox" name="use_ai"> ✨ Generar con IA
+                        <input type="checkbox" name="use_ai" checked> ✨ Generar con IA
                     </label>
                 </div>
             </form>
@@ -1945,36 +1970,63 @@ def restaurar_version(request, version_id):
             <div class="section-title">Historial</div>
             <ul style="padding-left:20px; font-size:0.8em; color:#aaa;">
                 {% for h in historial %}
-                
                 <li style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
                     <span>v{{ h.version_number }}: {{ h.proposed_name }}</span>
-                    <a href="{% url 'restaurar_version' h.id %}" onclick="return confirm('¿Crear una nueva propuesta basada en la v{{ h.version_number }}?')" style="font-size:0.7em; color:#e74c3c; text-decoration:none; border:1px solid #e74c3c; padding:2px 5px; border-radius:4px;">↺ Restaurar</a>
+                    <a href="{% url 'restaurar_version' h.id %}" onclick="return confirm('¿Restaurar?')" style="font-size:0.7em; color:#e74c3c; text-decoration:none; border:1px solid #e74c3c; padding:2px 5px; border-radius:4px;">↺ Restaurar</a>
                 </li>
-    
                 {% endfor %}
             </ul>
+        </div>
+    </div>
+
+    <div id="uploadModal" class="modal">
+        <div class="modal-content" style="width: 500px; text-align: center;">
+            <div class="modal-header"><h2>Revisar Imagen</h2><a href="#" onclick="closeUploadModal()" class="close-btn">✕</a></div>
+            <div style="margin: 20px 0; background: #000; padding: 10px; border-radius: 8px; border: 1px dashed #444; min-height: 200px; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+                <div id="scan-status" style="margin-bottom:10px; font-family:monospace;">⏳ PREPARANDO...</div>
+                <img id="preview-img" src="" style="max-width: 100%; max-height: 350px; border-radius: 4px; display:none;">
+                <div id="file-info" style="margin-top: 10px; color: #888; font-family: monospace; font-size: 0.8em;"></div>
+            </div>
+            <div style="display:flex; justify-content: space-between; gap: 10px;">
+                <button onclick="closeUploadModal()" class="btn" style="background: #e74c3c; flex-grow:1;">❌ CANCELAR</button>
+                <button id="btn-confirm-upload" onclick="confirmUpload()" class="btn" style="background: #2ecc71; flex-grow:1; display:none;">✅ SUBIR AHORA</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="lightbox" class="modal" onclick="if(event.target === this) closeLightbox()">
+        <div class="modal-content" style="width: 800px; max-width:95%; display:flex; gap:20px; text-align:left;">
+            <div style="flex:2;">
+                <img id="lb-img" src="" style="width:100%; border-radius:4px; border:1px solid #444;">
+            </div>
+            <div style="flex:1; background:#0a0a0f; padding:15px; border-radius:4px;">
+                <h3 style="margin-top:0; color:#d633ff;">Ficha de Imagen</h3>
+                <div style="font-size:0.9em; line-height:1.6;">
+                    <div style="color:#888;">Archivo:</div>
+                    <div id="lb-name" style="color:#fff; word-break:break-all; margin-bottom:10px;">-</div>
+                    <div style="color:#888;">Subido por:</div>
+                    <div id="lb-uploader" style="color:#2ecc71; font-weight:bold; margin-bottom:10px;">-</div>
+                    <div style="color:#888;">Fecha:</div>
+                    <div id="lb-date" style="color:#ccc; margin-bottom:10px;">-</div>
+                    <div style="color:#888;">Metadatos:</div>
+                    <div id="lb-meta" style="color:#f1c40f; font-size:0.8em; margin-bottom:10px;">-</div>
+                </div>
+                <button onclick="setAsCover()" class="btn" style="background:#f1c40f; width:100%; margin-top:10px; color:#000; font-weight:bold; border:none; cursor:pointer;">⭐ ESTABLECER PORTADA</button>
+                <button onclick="closeLightbox()" class="btn" style="background:#555; width:100%; margin-top:10px;">CERRAR</button>
+            </div>
         </div>
     </div>
 
     {% if not is_preview %}
     <div id="editModal" class="modal">
         <div class="modal-content">
-            <h2 style="color:#fff; margin-top:0;">Proponer Cambio</h2>
+            <h2>Proponer Cambio</h2>
             <form method="POST" action="{% url 'editar_mundo' jid %}" class="edit-form">
                 {% csrf_token %}
                 <label>Nombre:</label><input type="text" name="name" value="{{ name }}">
-                
                 <label>Descripción Conceptual:</label>
-                <div style="margin-bottom:5px; padding:5px; background:#2c2c44; border-radius:4px; display:flex; align-items:center; justify-content:space-between;">
-                    <span style="font-size:0.8em; color:#aaa;">¿Reescribir con IA?</span>
-                    <label style="color:#d633ff; font-size:0.9em; cursor:pointer;">
-                        <input type="checkbox" name="use_ai_edit"> ✨ SÍ
-                    </label>
-                </div>
                 <textarea name="description" style="height:150px;">{{ description }}</textarea>
-                
                 <label style="color:#f1c40f;">Razón del cambio:</label><input type="text" name="reason" required>
-                
                 <div style="margin-top:20px; text-align:right;">
                     <a href="{% url 'ver_mundo' jid %}" class="btn" style="background:#555;">Cancelar</a>
                     <button type="submit" class="btn" style="background:#d633ff;">🚀 Enviar Propuesta</button>
@@ -1983,6 +2035,169 @@ def restaurar_version(request, version_id):
         </div>
     </div>
     {% endif %}
+
+    
+    <script>
+        // --- GESTOR DE SUBIDA: MODO ROBUSTO (A prueba de AdBlock) ---
+        const galleryLog = {{ metadata_obj.gallery_log|default:"{}"|safe }};
+        let nsfwModel = null;
+
+        // Intentamos cargar la IA, pero si falla, no lloramos
+        window.addEventListener('load', async () => {
+            try {
+                if (typeof nsfwjs !== 'undefined') {
+                    nsfwModel = await nsfwjs.load();
+                    console.log("🛡️ IA de Seguridad: ACTIVA");
+                } else {
+                    console.warn("⚠️ IA de Seguridad: BLOQUEADA (Modo Manual activo)");
+                }
+            } catch (e) {
+                console.warn("⚠️ Error cargando IA:", e);
+            }
+        });
+
+        function openUploadModal(input) {
+            if (!input.files || !input.files[0]) return;
+            const file = input.files[0];
+            
+            // UI Elements
+            const modal = document.getElementById('uploadModal');
+            const imgPreview = document.getElementById('preview-img');
+            const statusDiv = document.getElementById('scan-status');
+            const btnConfirm = document.getElementById('btn-confirm-upload');
+            const fileInfo = document.getElementById('file-info');
+            
+            // Reset UI
+            modal.style.display = 'flex';
+            imgPreview.style.display = 'none';
+            // IMPORTANTE: El botón empieza oculto pero tenemos un temporizador de seguridad
+            btnConfirm.style.display = 'none'; 
+            statusDiv.innerHTML = '⏳ PREPARANDO...';
+            statusDiv.style.color = '#fff';
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imgPreview.src = e.target.result;
+                imgPreview.style.display = 'block';
+                fileInfo.innerText = file.name + " (" + (file.size/1024).toFixed(1) + " KB)";
+                
+                // Lanzamos el análisis
+                runRobustScan(imgPreview, file, statusDiv, btnConfirm);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function runRobustScan(imgElement, file, statusDiv, btnConfirm) {
+            let warnings = [];
+            let blocked = false;
+
+            // 1. CHEQUEO METADATOS (EXIF) - Suele funcionar siempre
+            try {
+                if (typeof EXIF !== 'undefined') {
+                    statusDiv.innerHTML = '🔍 LEYENDO METADATOS...';
+                    await new Promise(r => EXIF.getData(file, r));
+                    const tags = JSON.stringify(EXIF.getAllTags(file)).toLowerCase();
+                    if (tags.includes('copyright') || tags.includes('getty')) {
+                        warnings.push("⚠️ Copyright detectado en metadatos");
+                    }
+                }
+            } catch (e) {
+                console.log("Skip EXIF:", e);
+            }
+
+            // 2. CHEQUEO IA (NSFW) - Aquí es donde fallaba
+            if (nsfwModel) {
+                try {
+                    statusDiv.innerHTML = '🤖 LA IA ESTÁ MIRANDO...';
+                    const predictions = await nsfwModel.classify(imgElement);
+                    const porn = predictions.find(p => p.className === 'Porn');
+                    
+                    if (porn && porn.probability > 0.6) {
+                        statusDiv.innerHTML = '⛔ BLOQUEADO: CONTENIDO OBSCENO';
+                        statusDiv.style.color = '#e74c3c';
+                        blocked = true;
+                    }
+                } catch (e) {
+                    warnings.push("⚠️ Fallo en análisis IA");
+                }
+            } else {
+                warnings.push("ℹ️ Escaneo IA omitido (Librería no cargada)");
+            }
+
+            // 3. RESULTADO FINAL
+            if (!blocked) {
+                if (warnings.length > 0) {
+                    statusDiv.innerHTML = "✅ LISTO (" + warnings[0] + ")";
+                    statusDiv.style.color = "#f1c40f"; // Amarillo advertencia
+                } else {
+                    statusDiv.innerHTML = "✅ VERIFICADO Y SEGURO";
+                    statusDiv.style.color = "#2ecc71"; // Verde puro
+                }
+                // ¡SIEMPRE MOSTRAMOS EL BOTÓN SI NO ESTÁ BLOQUEADO EXPLÍCITAMENTE!
+                btnConfirm.style.display = 'inline-block';
+            }
+        }
+
+        // --- RED DE SEGURIDAD (TIMEOUT) ---
+        // Si por lo que sea el script se cuelga, a los 2 segundos mostramos el botón igual
+        // para que el usuario no se quede atrapado.
+        setInterval(() => {
+            const modal = document.getElementById('uploadModal');
+            const btn = document.getElementById('btn-confirm-upload');
+            const status = document.getElementById('scan-status');
+            
+            if (modal && modal.style.display === 'flex' && btn.style.display === 'none') {
+                // Si lleva mucho rato así...
+                if (status.innerText.includes('...')) {
+                     console.log("Rescate activado: Forzando botón de subida.");
+                     status.innerText = "⚠️ Tiempo agotado. Subida manual habilitada.";
+                     status.style.color = "#aaa";
+                     btn.style.display = 'inline-block';
+                }
+            }
+        }, 3000); // 3 segundos de gracia
+
+        function closeUploadModal() {
+            document.getElementById('uploadModal').style.display = 'none';
+            document.getElementById('file-upload').value = "";
+        }
+        function confirmUpload() { document.getElementById('form-manual-upload').submit(); }
+
+        // Funciones de Galería (Se mantienen igual)
+        function openLightbox(imgUrl, filename) {
+            document.getElementById('lightbox').style.display = 'flex';
+            document.getElementById('lb-img').src = imgUrl;
+            document.getElementById('lb-name').innerText = filename;
+            
+            const data = galleryLog[filename];
+            if (data) {
+                document.getElementById('lb-uploader').innerText = data.uploader;
+                document.getElementById('lb-date').innerText = data.date;
+                document.getElementById('lb-meta').innerText = data.origin || "Manual";
+            } else {
+                document.getElementById('lb-uploader').innerText = "Sistema / Desconocido";
+                document.getElementById('lb-date').innerText = "-";
+                document.getElementById('lb-meta').innerText = "Sin registro auditoría";
+            }
+        }
+        function closeLightbox() { document.getElementById('lightbox').style.display = 'none'; }
+        
+        function setAsCover() {
+            const filename = document.getElementById('lb-name').innerText;
+            if (!filename || filename === "-") return;
+            const baseUrl = "{% url 'set_cover_image' jid '123456' %}";
+            window.location.href = baseUrl.replace('123456', encodeURIComponent(filename));
+        }
+
+        function loadMeta(imgElement) {
+             if (imgElement.naturalWidth) {
+                const wrapper = imgElement.parentElement;
+                const res = wrapper.querySelector('.res');
+                if (res) res.innerText = imgElement.naturalWidth + 'x' + imgElement.naturalHeight + 'px';
+            }
+        }
+    </script>
+
 </body>
 </html>
 
@@ -3329,6 +3544,10 @@ class CaosRepository(ABC):
 ==================== FILE: .\src\WorldManagement\Caos\Infrastructure\django_repository.py ====================
 import os
 import base64
+import io
+import time
+from datetime import datetime
+from PIL import Image
 from django.conf import settings
 from django.db.models import Max
 from django.db.models.functions import Length
@@ -3385,20 +3604,96 @@ class DjangoCaosRepository(CaosRepository):
         )
         print(f" 🧬 [DB] Criatura guardada: {creature.name}")
 
+
+    def _inject_metadata(self, image, artist="ECLAI User"):
+        """Inyecta metadatos EXIF básicos en la imagen."""
+        try:
+            from PIL.ExifTags import TAGS
+            
+            # Obtener objeto EXIF o crear uno nuevo
+            exif = image.getexif()
+            
+            # IDs de tags estándar (Artist: 0x013b, Software: 0x0131, Copyright: 0x8298, DateTime: 0x0132)
+            # Nota: Pillow maneja esto a bajo nivel
+            exif[0x013b] = artist
+            exif[0x0131] = "ECLAI World Builder v4.8"
+            exif[0x8298] = "Project Internal Use"
+            exif[0x0132] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            
+            return exif
+        except Exception as e:
+            print(f"⚠️ No se pudo inyectar EXIF: {e}")
+            return image.getexif() # Devolver original si falla
+
+    def _audit_log(self, jid, filename, uploader, origin):
+        """Registra la imagen en el JSON del mundo."""
+        try:
+            world = CaosWorldORM.objects.get(id=jid)
+            if not world.metadata: world.metadata = {}
+            if 'gallery_log' not in world.metadata: world.metadata['gallery_log'] = {}
+            
+            world.metadata['gallery_log'][filename] = {
+                "uploader": uploader,
+                "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "origin": origin
+            }
+            world.save()
+        except Exception as e:
+            print(f"⚠️ Error auditoría: {e}")
+
     def save_image(self, jid: str, base64_data: str):
+        """Guarda imagen IA (WebP + Metadatos + Auditoría)."""
         if not base64_data: return
         base_dir = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img')
         target_dir = os.path.join(base_dir, jid)
         os.makedirs(target_dir, exist_ok=True)
-        filename = f"{jid}_v1.png"
+        
+        # Usar timestamp para evitar cachés y colisiones
+        timestamp = int(time.time())
+        filename = f"{jid}_ia_{timestamp}.webp"
         file_path = os.path.join(target_dir, filename)
+
         try:
             if "," in base64_data: base64_data = base64_data.split(",")[1]
-            with open(file_path, "wb") as f:
-                f.write(base64.b64decode(base64_data))
-            print(f" 🎨 [FS] Imagen guardada: {filename}")
+            image = Image.open(io.BytesIO(base64.b64decode(base64_data)))
+            
+            # Inyectar Firma
+            exif_data = self._inject_metadata(image, artist="AI Generation")
+            
+            image.save(file_path, "WEBP", quality=85, exif=exif_data)
+            self._audit_log(jid, filename, "AI System", "GENERATED")
+            print(f" 🎨 [FS] Imagen IA firmada y guardada: {filename}")
+            
         except Exception as e:
-            print(f"⚠️ Error guardando imagen: {e}")
+            print(f"⚠️ Error guardando imagen IA: {e}")
+
+    def save_manual_file(self, jid: str, uploaded_file, username: str = "Unknown"):
+        """Guarda imagen manual (WebP + Preservar/Inyectar + Auditoría)."""
+        base_dir = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img')
+        target_dir = os.path.join(base_dir, jid)
+        os.makedirs(target_dir, exist_ok=True)
+
+        timestamp = int(time.time())
+        filename = f"{jid}_m_{timestamp}.webp"
+        file_path = os.path.join(target_dir, filename)
+
+        try:
+            image = Image.open(uploaded_file)
+            if image.mode in ("RGBA", "P"): image = image.convert("RGB")
+            
+            # Si ya trae EXIF, lo mantenemos. Si no, le ponemos el nuestro.
+            exif_data = image.info.get('exif')
+            if not exif_data:
+                exif_data = self._inject_metadata(image, artist=username)
+            
+            image.save(file_path, "WEBP", quality=90, exif=exif_data)
+            self._audit_log(jid, filename, username, "MANUAL_UPLOAD")
+            print(f" 📎 [Upload] Imagen manual firmada y guardada: {filename}")
+            return True
+        except Exception as e:
+            print(f"⚠️ Error crítico subida manual: {e}")
+            return False
+
 
     def get_next_child_id(self, parent_id_str: str) -> str:
         len_parent = len(parent_id_str)

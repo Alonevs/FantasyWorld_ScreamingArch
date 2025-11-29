@@ -30,4 +30,6 @@ urlpatterns = [
     path('narrativa/indice/<str:jid>/', ver_narrativa_mundo, name='ver_narrativa_mundo'),
     path('narrativa/borrar/<str:nid>/', borrar_narrativa, name='borrar_narrativa'),
     path('version/restaurar/<int:version_id>/', restaurar_version, name='restaurar_version'),
+    path('subir_foto/<str:jid>/', subir_imagen_manual, name='subir_imagen_manual'),
+    path('cover/<str:jid>/<str:filename>/', set_cover_image, name='set_cover_image'),
 ]

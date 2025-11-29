@@ -2,6 +2,7 @@ from src.WorldManagement.Caos.Application.restore_version import RestoreVersionU
 import os
 import json
 from django.shortcuts import render, redirect
+from django.contrib import messages
 from django.conf import settings
 from django.contrib.auth.models import User
 from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosVersionORM, CaosNarrativeORM
@@ -42,7 +43,7 @@ def get_world_images(jid):
     if os.path.exists(target):
         dname = os.path.basename(target)
         for f in sorted(os.listdir(target)):
-            if f.endswith('.png'): imgs.append({'url': f'{dname}/{f}', 'filename': f})
+            if f.lower().endswith(('.png', '.webp', '.jpg')): imgs.append({'url': f'{dname}/{f}', 'filename': f})
     return imgs
 
 # --- ACCIONES MANUALES ---
@@ -226,6 +227,18 @@ def crear_sub_narrativa(request, parent_nid, tipo_codigo):
         return redirect('editar_narrativa', nid=new_nid)
     except: return redirect('leer_narrativa', nid=parent_nid)
 
+
+def set_cover_image(request, jid, filename):
+    try:
+        w = CaosWorldORM.objects.get(id=jid)
+        if not w.metadata: w.metadata = {}
+        w.metadata['cover_image'] = filename
+        w.save()
+        messages.success(request, f"⭐ Portada actualizada: {filename}")
+    except Exception as e:
+        messages.error(request, f"Error: {e}")
+    return redirect('ver_mundo', jid=jid)
+
 # --- VISTAS PRINCIPALES ---
 def centro_control(request):
     todas = CaosVersionORM.objects.all().order_by('-created_at')
@@ -316,8 +329,34 @@ def home(request):
         repo = DjangoCaosRepository()
         jid = CreateWorldUseCase(repo).execute(request.POST.get('world_name'), request.POST.get('world_desc'))
         return redirect('ver_mundo', jid=jid)
+    
     ms = CaosWorldORM.objects.all().order_by('id')
-    l = [{'id': m.id, 'name': m.name, 'status': m.status, 'code': eclai_core.encode_eclai126(m.id), 'img_file': (get_world_images(m.id)[0]['url'] if get_world_images(m.id) else None), 'has_img': bool(get_world_images(m.id))} for m in ms]
+    l = []
+    for m in ms:
+        imgs = get_world_images(m.id)
+        cover = None
+        
+        # 1. LÓGICA DE PORTADA INTELIGENTE
+        if m.metadata and 'cover_image' in m.metadata:
+            # Buscamos si el archivo favorito existe en la lista real
+            target = m.metadata['cover_image']
+            found = next((i for i in imgs if i['filename'] == target), None)
+            if found:
+                cover = found['url']
+        
+        # 2. FALLBACK (Si no hay favorita o se rompió, usa la primera)
+        if not cover and imgs:
+            cover = imgs[0]['url']
+            
+        l.append({
+            'id': m.id, 
+            'name': m.name, 
+            'status': m.status, 
+            'code': eclai_core.encode_eclai126(m.id), 
+            'img_file': cover, 
+            'has_img': bool(cover)
+        })
+    
     return render(request, 'index.html', {'mundos': l})
 
 def restaurar_version(request, version_id):
@@ -330,3 +369,15 @@ def restaurar_version(request, version_id):
     # Necesitamos el ID del mundo, lo sacamos de la versión
     v = CaosVersionORM.objects.get(id=version_id)
     return redirect('ver_mundo', jid=v.world.id)
+
+def subir_imagen_manual(request, jid):
+    if request.method == 'POST' and request.FILES.get('imagen_manual'):
+        try:
+            repo = DjangoCaosRepository()
+            if repo.save_manual_file(jid, request.FILES['imagen_manual'], request.user.username):
+                messages.success(request, "✅ Imagen guardada correctamente.")
+            else:
+                messages.error(request, "❌ Error al guardar imagen.")
+        except Exception as e:
+            messages.error(request, f"Error crítico: {e}")
+    return redirect('ver_mundo', jid=jid)
