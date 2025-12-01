@@ -20,33 +20,17 @@ from src.WorldManagement.Caos.Application.approve_version import ApproveVersionU
 from src.WorldManagement.Caos.Application.reject_version import RejectVersionUseCase
 from src.WorldManagement.Caos.Application.publish_to_live_version import PublishToLiveVersionUseCase
 from src.WorldManagement.Caos.Application.generate_creature_usecase import GenerateCreatureUseCase
-from src.WorldManagement.Caos.Application.generate_planet_metadata import GeneratePlanetMetadataUseCase
 from src.WorldManagement.Caos.Application.update_narrative import UpdateNarrativeUseCase
 from src.WorldManagement.Caos.Application.delete_narrative import DeleteNarrativeUseCase
 from src.WorldManagement.Caos.Application.initialize_hemispheres import InitializeHemispheresUseCase
 from src.WorldManagement.Caos.Application.create_narrative import CreateNarrativeUseCase
 
-# Services
-from src.FantasyWorld.AI_Generation.Infrastructure.llama_service import Llama3Service
-from src.FantasyWorld.AI_Generation.Infrastructure.sd_service import StableDiffusionService
+from src.Infrastructure.DjangoFramework.persistence.utils import generate_breadcrumbs, get_world_images
 
 def get_current_user(request):
     if request.user.is_authenticated: return request.user
     u, _ = User.objects.get_or_create(username='Admin')
     return u
-
-def get_world_images(jid):
-    base = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img')
-    target = os.path.join(base, jid)
-    if not os.path.exists(target):
-        for d in os.listdir(base):
-            if d.startswith(f"{jid}_"): target = os.path.join(base, d); break
-    imgs = []
-    if os.path.exists(target):
-        dname = os.path.basename(target)
-        for f in sorted(os.listdir(target)):
-            if f.lower().endswith(('.png', '.webp', '.jpg')): imgs.append({'url': f'{dname}/{f}', 'filename': f})
-    return imgs
 
 # --- ACCIONES MANUALES ---
 def generar_foto_extra(request, jid):
@@ -207,7 +191,27 @@ def set_cover_image(request, jid, filename):
         messages.error(request, f"Error: {e}")
     return redirect('ver_mundo', jid=jid)
 
-# --- VISTAS PRINCIPALES ---
+def subir_imagen_manual(request, jid):
+    if request.method == 'POST' and request.FILES.get('imagen_manual'):
+        try:
+            repo = DjangoCaosRepository()
+            if repo.save_manual_file(jid, request.FILES['imagen_manual'], request.user.username):
+                messages.success(request, "✅ Imagen guardada correctamente.")
+            else:
+                messages.error(request, "❌ Error al guardar imagen.")
+        except Exception as e:
+            messages.error(request, f"Error crítico: {e}")
+    return redirect('ver_mundo', jid=jid)
+
+def init_hemisferios(request, jid):
+    try:
+        repo = DjangoCaosRepository()
+        InitializeHemispheresUseCase(repo).execute(jid)
+        messages.success(request, "✅ Planeta dividido geográficamente.")
+    except Exception as e:
+        messages.error(request, f"Error al dividir: {e}")
+    return redirect('ver_mundo', jid=jid)
+
 def centro_control(request):
     todas = CaosVersionORM.objects.all().order_by('-created_at')
     p, a, r, h = [], [], [], []
@@ -225,11 +229,7 @@ def revisar_version(request, version_id):
     try: v = CaosVersionORM.objects.get(id=version_id); w = v.world
     except: return redirect('centro_control')
     imgs = get_world_images(w.id)
-    bread = []
-    for i in range(0, len(w.id), 2):
-        chunk = w.id[0 : i+2]
-        lvl = (i // 2) + 1
-        bread.append({'id': chunk, 'label': f"Nivel {lvl}"})
+    bread = generate_breadcrumbs(w.id)
     len_h = len(w.id)+2 if len(w.id)<32 else len(w.id)+4
     hijos = [{'id':h.id, 'name':h.name, 'code':eclai_core.encode_eclai126(h.id), 'img':(get_world_images(h.id)[0]['url'] if get_world_images(h.id) else None)} for h in CaosWorldORM.objects.filter(id__startswith=w.id, id__regex=r'^.{'+str(len_h)+r'}$')]
     context = {'name': v.proposed_name, 'description': v.proposed_description, 'jid': w.id, 'status': f"PREVIEW v{v.version_number}", 'code_entity': eclai_core.encode_eclai126(w.id), 'nid_lore': w.id_lore if w.id_lore else f"{w.id}L01", 'imagenes': imgs, 'hijos': hijos, 'breadcrumbs': bread, 'is_preview': True, 'version_id': v.id, 'change_log': v.change_log, 'author': v.author.username if v.author else '?'}
@@ -267,11 +267,7 @@ def ver_mundo(request, jid):
         hijos.append({'id': h.id, 'name': h.name, 'short': short, 'img':(get_world_images(h.id)[0]['url'] if get_world_images(h.id) else None)})
     
     imgs = get_world_images(jid)
-    bread = []
-    for i in range(0, len(jid), 2):
-        chunk = jid[0 : i+2]
-        lvl = (i // 2) + 1
-        bread.append({'id': chunk, 'label': f"Nivel {lvl}"})
+    bread = generate_breadcrumbs(jid)
 
     meta_str = json.dumps(w.metadata, indent=2) if w.metadata else "{}"
     last_live = w.versiones.filter(status='LIVE').order_by('-created_at').first()
@@ -337,23 +333,3 @@ def restaurar_version(request, version_id):
     # Necesitamos el ID del mundo, lo sacamos de la versión
     v = CaosVersionORM.objects.get(id=version_id)
     return redirect('ver_mundo', jid=v.world.id)
-
-def subir_imagen_manual(request, jid):
-    if request.method == 'POST' and request.FILES.get('imagen_manual'):
-        try:
-            repo = DjangoCaosRepository()
-            if repo.save_manual_file(jid, request.FILES['imagen_manual'], request.user.username):
-                messages.success(request, "✅ Imagen guardada correctamente.")
-            else:
-                messages.error(request, "❌ Error al guardar imagen.")
-        except Exception as e:
-            messages.error(request, f"Error crítico: {e}")
-    return redirect('ver_mundo', jid=jid)
-def init_hemisferios(request, jid):
-    try:
-        repo = DjangoCaosRepository()
-        InitializeHemispheresUseCase(repo).execute(jid)
-        messages.success(request, "✅ Planeta dividido geográficamente.")
-    except Exception as e:
-        messages.error(request, f"Error al dividir: {e}")
-    return redirect('ver_mundo', jid=jid)
