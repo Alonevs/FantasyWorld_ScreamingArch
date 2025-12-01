@@ -175,3 +175,18 @@ class DjangoCaosRepository(CaosRepository):
         else: nuevo_segmento = f"{siguiente_seq:02d}"
 
         return eclai_core.construir_jid(parent_id_str, nivel_hijo, nuevo_segmento)
+
+    def get_next_narrative_id(self, prefix: str) -> str:
+        from src.Infrastructure.DjangoFramework.persistence.models import CaosNarrativeORM
+        existing_nids = CaosNarrativeORM.objects.filter(nid__startswith=prefix).values_list('nid', flat=True)
+        used_nums = set()
+        len_prefix = len(prefix)
+        for nid_str in existing_nids:
+            try:
+                suffix = nid_str[len_prefix:]
+                if suffix.isdigit(): used_nums.add(int(suffix))
+            except: pass
+        
+        next_num = 1
+        while next_num in used_nums: next_num += 1
+        return f"{prefix}{next_num:02d}"

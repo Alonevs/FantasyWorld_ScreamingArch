@@ -23,6 +23,8 @@ from src.WorldManagement.Caos.Application.generate_creature_usecase import Gener
 from src.WorldManagement.Caos.Application.generate_planet_metadata import GeneratePlanetMetadataUseCase
 from src.WorldManagement.Caos.Application.update_narrative import UpdateNarrativeUseCase
 from src.WorldManagement.Caos.Application.delete_narrative import DeleteNarrativeUseCase
+from src.WorldManagement.Caos.Application.initialize_hemispheres import InitializeHemispheresUseCase
+from src.WorldManagement.Caos.Application.create_narrative import CreateNarrativeUseCase
 
 # Services
 from src.FantasyWorld.AI_Generation.Infrastructure.llama_service import Llama3Service
@@ -177,55 +179,21 @@ def borrar_narrativa(request, nid):
 
 def crear_nueva_narrativa(request, jid, tipo_codigo):
     try:
-        world = CaosWorldORM.objects.get(id=jid)
-        prefix = f"{jid}{tipo_codigo}"
-        
-        # LOGICA GAP FILLER
-        existing_nids = CaosNarrativeORM.objects.filter(nid__startswith=prefix).values_list('nid', flat=True)
-        used_nums = set()
-        len_prefix = len(prefix)
-        for nid_str in existing_nids:
-            try:
-                suffix = nid_str[len_prefix:]
-                if suffix.isdigit(): used_nums.add(int(suffix))
-            except: pass
-        
-        next_num = 1
-        while next_num in used_nums: next_num += 1
-        new_nid = f"{prefix}{next_num:02d}"
-        
-        map_tipos = {'L':'LORE', 'H':'HISTORIA', 'C':'CAPITULO', 'E':'EVENTO', 'M':'LEYENDA', 'R':'REGLA', 'B':'BESTIARIO'}
-        tipo_completo = map_tipos.get(tipo_codigo, 'LORE')
-        
-        CaosNarrativeORM.objects.create(nid=new_nid, world=world, titulo=f"Nuevo {tipo_completo} ({next_num})", contenido="...", narrador="???", tipo=tipo_completo)
+        repo = DjangoCaosRepository()
+        new_nid = CreateNarrativeUseCase(repo).execute(world_id=jid, tipo_codigo=tipo_codigo)
         return redirect('editar_narrativa', nid=new_nid)
     except Exception as e:
-        print(f"Error creando: {e}")
+        messages.error(request, f"Error creando narrativa: {e}")
         return redirect('ver_narrativa_mundo', jid=jid)
 
 def crear_sub_narrativa(request, parent_nid, tipo_codigo):
     try:
-        padre = CaosNarrativeORM.objects.get(nid=parent_nid)
-        prefix = f"{parent_nid}{tipo_codigo}"
-        
-        # LOGICA GAP FILLER
-        existing_nids = CaosNarrativeORM.objects.filter(nid__startswith=prefix).values_list('nid', flat=True)
-        used_nums = set()
-        len_prefix = len(prefix)
-        for nid_str in existing_nids:
-            try:
-                suffix = nid_str[len_prefix:]
-                if suffix.isdigit(): used_nums.add(int(suffix))
-            except: pass
-            
-        next_num = 1
-        while next_num in used_nums: next_num += 1
-        new_nid = f"{prefix}{next_num:02d}"
-        
-        tipo_completo = 'CAPITULO'
-        CaosNarrativeORM.objects.create(nid=new_nid, world=padre.world, titulo=f"Nuevo Capítulo ({next_num})", contenido="...", narrador=padre.narrador, tipo=tipo_completo)
+        repo = DjangoCaosRepository()
+        new_nid = CreateNarrativeUseCase(repo).execute(world_id=None, tipo_codigo=tipo_codigo, parent_nid=parent_nid)
         return redirect('editar_narrativa', nid=new_nid)
-    except: return redirect('leer_narrativa', nid=parent_nid)
+    except Exception as e:
+        messages.error(request, f"Error creando sub-narrativa: {e}")
+        return redirect('leer_narrativa', nid=parent_nid)
 
 
 def set_cover_image(request, jid, filename):

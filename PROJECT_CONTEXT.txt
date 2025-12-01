@@ -1,4 +1,4 @@
-PROJECT SNAPSHOT: 2025-11-29 20:41:31
+PROJECT SNAPSHOT: 2025-12-01 16:08:24
 ============================================================
 
 📦 ESTRUCTURA DEL PROYECTO:
@@ -50,6 +50,9 @@ PROJECT SNAPSHOT: 2025-11-29 20:41:31
                         index.html
                         indice_narrativa.html
                         visor_narrativa.html
+                    templatetags/
+                        custom_filters.py
+                        __init__.py
         Shared/
             Domain/
                 eclai_core.py
@@ -61,12 +64,14 @@ PROJECT SNAPSHOT: 2025-11-29 20:41:31
                     approve_version.py
                     create_child.py
                     create_entity_full.py
+                    create_narrative.py
                     create_world.py
                     delete_narrative.py
                     generate_creature_usecase.py
                     generate_lore.py
                     generate_map.py
                     generate_planet_metadata.py
+                    initialize_hemispheres.py
                     propose_change.py
                     publish_to_live_version.py
                     publish_world.py
@@ -1008,6 +1013,7 @@ urlpatterns = [
     path('version/restaurar/<int:version_id>/', restaurar_version, name='restaurar_version'),
     path('subir_foto/<str:jid>/', subir_imagen_manual, name='subir_imagen_manual'),
     path('cover/<str:jid>/<str:filename>/', set_cover_image, name='set_cover_image'),
+    path('init_hemisferios/<str:jid>/', init_hemisferios, name='init_hemisferios'),
 ]
 
 ==================== FILE: .\src\Infrastructure\DjangoFramework\config\wsgi.py ====================
@@ -1174,6 +1180,8 @@ from src.WorldManagement.Caos.Application.generate_creature_usecase import Gener
 from src.WorldManagement.Caos.Application.generate_planet_metadata import GeneratePlanetMetadataUseCase
 from src.WorldManagement.Caos.Application.update_narrative import UpdateNarrativeUseCase
 from src.WorldManagement.Caos.Application.delete_narrative import DeleteNarrativeUseCase
+from src.WorldManagement.Caos.Application.initialize_hemispheres import InitializeHemispheresUseCase
+from src.WorldManagement.Caos.Application.create_narrative import CreateNarrativeUseCase
 
 # Services
 from src.FantasyWorld.AI_Generation.Infrastructure.llama_service import Llama3Service
@@ -1328,55 +1336,21 @@ def borrar_narrativa(request, nid):
 
 def crear_nueva_narrativa(request, jid, tipo_codigo):
     try:
-        world = CaosWorldORM.objects.get(id=jid)
-        prefix = f"{jid}{tipo_codigo}"
-        
-        # LOGICA GAP FILLER
-        existing_nids = CaosNarrativeORM.objects.filter(nid__startswith=prefix).values_list('nid', flat=True)
-        used_nums = set()
-        len_prefix = len(prefix)
-        for nid_str in existing_nids:
-            try:
-                suffix = nid_str[len_prefix:]
-                if suffix.isdigit(): used_nums.add(int(suffix))
-            except: pass
-        
-        next_num = 1
-        while next_num in used_nums: next_num += 1
-        new_nid = f"{prefix}{next_num:02d}"
-        
-        map_tipos = {'L':'LORE', 'H':'HISTORIA', 'C':'CAPITULO', 'E':'EVENTO', 'M':'LEYENDA', 'R':'REGLA', 'B':'BESTIARIO'}
-        tipo_completo = map_tipos.get(tipo_codigo, 'LORE')
-        
-        CaosNarrativeORM.objects.create(nid=new_nid, world=world, titulo=f"Nuevo {tipo_completo} ({next_num})", contenido="...", narrador="???", tipo=tipo_completo)
+        repo = DjangoCaosRepository()
+        new_nid = CreateNarrativeUseCase(repo).execute(world_id=jid, tipo_codigo=tipo_codigo)
         return redirect('editar_narrativa', nid=new_nid)
     except Exception as e:
-        print(f"Error creando: {e}")
+        messages.error(request, f"Error creando narrativa: {e}")
         return redirect('ver_narrativa_mundo', jid=jid)
 
 def crear_sub_narrativa(request, parent_nid, tipo_codigo):
     try:
-        padre = CaosNarrativeORM.objects.get(nid=parent_nid)
-        prefix = f"{parent_nid}{tipo_codigo}"
-        
-        # LOGICA GAP FILLER
-        existing_nids = CaosNarrativeORM.objects.filter(nid__startswith=prefix).values_list('nid', flat=True)
-        used_nums = set()
-        len_prefix = len(prefix)
-        for nid_str in existing_nids:
-            try:
-                suffix = nid_str[len_prefix:]
-                if suffix.isdigit(): used_nums.add(int(suffix))
-            except: pass
-            
-        next_num = 1
-        while next_num in used_nums: next_num += 1
-        new_nid = f"{prefix}{next_num:02d}"
-        
-        tipo_completo = 'CAPITULO'
-        CaosNarrativeORM.objects.create(nid=new_nid, world=padre.world, titulo=f"Nuevo Capítulo ({next_num})", contenido="...", narrador=padre.narrador, tipo=tipo_completo)
+        repo = DjangoCaosRepository()
+        new_nid = CreateNarrativeUseCase(repo).execute(world_id=None, tipo_codigo=tipo_codigo, parent_nid=parent_nid)
         return redirect('editar_narrativa', nid=new_nid)
-    except: return redirect('leer_narrativa', nid=parent_nid)
+    except Exception as e:
+        messages.error(request, f"Error creando sub-narrativa: {e}")
+        return redirect('leer_narrativa', nid=parent_nid)
 
 
 def set_cover_image(request, jid, filename):
@@ -1532,7 +1506,14 @@ def subir_imagen_manual(request, jid):
         except Exception as e:
             messages.error(request, f"Error crítico: {e}")
     return redirect('ver_mundo', jid=jid)
-
+def init_hemisferios(request, jid):
+    try:
+        repo = DjangoCaosRepository()
+        InitializeHemispheresUseCase(repo).execute(jid)
+        messages.success(request, "✅ Planeta dividido geográficamente.")
+    except Exception as e:
+        messages.error(request, f"Error al dividir: {e}")
+    return redirect('ver_mundo', jid=jid)
 
 ==================== FILE: .\src\Infrastructure\DjangoFramework\persistence\__init__.py ====================
 
@@ -2703,6 +2684,16 @@ def subir_imagen_manual(request, jid):
 </html>
 
 
+==================== FILE: .\src\Infrastructure\DjangoFramework\persistence\templatetags\custom_filters.py ====================
+from django import template
+register = template.Library()
+@register.filter
+def get_item(dictionary, key):
+    return dictionary.get(key) if dictionary else None
+
+==================== FILE: .\src\Infrastructure\DjangoFramework\persistence\templatetags\__init__.py ====================
+
+
 ==================== FILE: .\src\Shared\Domain\eclai_core.py ====================
 # src/Shared/Domain/eclai_core.py
 # Sistema de identificación ECLAI v4.0 (Jerarquía Espacial Pura)
@@ -2911,6 +2902,56 @@ class CreateEntityFullUseCase:
         
         self.repo.save(entity)
         return new_id
+
+==================== FILE: .\src\WorldManagement\Caos\Application\create_narrative.py ====================
+from src.WorldManagement.Caos.Domain.repositories import CaosRepository
+from src.Infrastructure.DjangoFramework.persistence.models import CaosNarrativeORM, CaosWorldORM
+
+class CreateNarrativeUseCase:
+    def __init__(self, repository: CaosRepository):
+        self.repository = repository
+
+    def execute(self, world_id: str, tipo_codigo: str, parent_nid: str = None) -> str:
+        """
+        Crea una nueva narrativa o sub-narrativa (capítulo).
+        Retorna el NID de la nueva narrativa.
+        """
+        map_tipos = {'L':'LORE', 'H':'HISTORIA', 'C':'CAPITULO', 'E':'EVENTO', 'M':'LEYENDA', 'R':'REGLA', 'B':'BESTIARIO'}
+        
+        if parent_nid:
+            # Es una sub-narrativa (Capítulo)
+            padre = CaosNarrativeORM.objects.get(nid=parent_nid)
+            prefix = f"{parent_nid}{tipo_codigo}"
+            new_nid = self.repository.get_next_narrative_id(prefix)
+            
+            tipo_completo = 'CAPITULO'
+            # TODO: Mover creación de ORM al repositorio en el futuro
+            CaosNarrativeORM.objects.create(
+                nid=new_nid, 
+                world=padre.world, 
+                titulo=f"Nuevo Capítulo ({new_nid[-2:]})", 
+                contenido="...", 
+                narrador=padre.narrador, 
+                tipo=tipo_completo
+            )
+            return new_nid
+        else:
+            # Es una narrativa raíz
+            world = CaosWorldORM.objects.get(id=world_id)
+            prefix = f"{world_id}{tipo_codigo}"
+            new_nid = self.repository.get_next_narrative_id(prefix)
+            
+            tipo_completo = map_tipos.get(tipo_codigo, 'LORE')
+            CaosNarrativeORM.objects.create(
+                nid=new_nid, 
+                world=world, 
+                titulo=f"Nuevo {tipo_completo} ({new_nid[-2:]})", 
+                contenido="...", 
+                narrador="???", 
+                tipo=tipo_completo
+            )
+            return new_nid
+
 
 ==================== FILE: .\src\WorldManagement\Caos\Application\create_world.py ====================
 from src.Shared.Domain.value_objects import WorldID
@@ -3247,6 +3288,56 @@ class GeneratePlanetMetadataUseCase:
         return None
 
 
+==================== FILE: .\src\WorldManagement\Caos\Application\initialize_hemispheres.py ====================
+from src.Shared.Domain.value_objects import WorldID
+from src.WorldManagement.Caos.Domain.entities import CaosWorld, VersionStatus
+from src.WorldManagement.Caos.Domain.repositories import CaosRepository
+
+class InitializeHemispheresUseCase:
+    def __init__(self, repository: CaosRepository):
+        self.repository = repository
+
+    def execute(self, planet_jid: str):
+        # Validación: Solo los Planetas (Nivel 6, 12 caracteres) pueden tener hemisferios
+        if len(planet_jid) != 12:
+            raise ValueError(f"El ID {planet_jid} no es un Planeta (Debe tener 12 caracteres).")
+
+        # IDs Deterministas (No secuenciales)
+        id_norte = f"{planet_jid}01"
+        id_sur   = f"{planet_jid}02"
+
+        # Definición de Metadata (Franjas Climáticas)
+        meta_norte = {
+            "tipo_entidad": "HEMISFERIO",
+            "geo_config": { "posicion": "NORTE", "rango_latitud": [0, 90], "polo_magnetico": True },
+            "reglas_clima": { "invertir_estaciones": False, "gradiente_temperatura": "NORMAL" },
+            "slots_climaticos": ["EQUATORIAL", "TEMPERATE", "POLAR"]
+        }
+
+        meta_sur = {
+            "tipo_entidad": "HEMISFERIO",
+            "geo_config": { "posicion": "SUR", "rango_latitud": [-90, 0], "polo_magnetico": False },
+            "reglas_clima": { "invertir_estaciones": True, "gradiente_temperatura": "NORMAL" },
+            "slots_climaticos": ["EQUATORIAL", "TEMPERATE", "POLAR"]
+        }
+
+        # Creación de Entidades (Nacen en estado LIVE para uso inmediato)
+        norte = CaosWorld(
+            id=WorldID(id_norte), name="Hemisferio Norte", 
+            lore_description="Tierras boreales. Latitud 0° a 90°.", 
+            status=VersionStatus.LIVE, metadata=meta_norte
+        )
+        
+        sur = CaosWorld(
+            id=WorldID(id_sur), name="Hemisferio Sur", 
+            lore_description="Tierras australes. Latitud -90° a 0°.", 
+            status=VersionStatus.LIVE, metadata=meta_sur
+        )
+
+        self.repository.save(norte)
+        self.repository.save(sur)
+
+
 ==================== FILE: .\src\WorldManagement\Caos\Application\propose_change.py ====================
 from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosVersionORM
 from django.contrib.auth.models import User
@@ -3538,6 +3629,10 @@ class CaosRepository(ABC):
     def get_next_child_id(self, parent_id_str: str) -> str:
         pass
 
+    @abstractmethod
+    def get_next_narrative_id(self, prefix: str) -> str:
+        pass
+
 ==================== FILE: .\src\WorldManagement\Caos\Domain\__init__.py ====================
 
 
@@ -3719,6 +3814,21 @@ class DjangoCaosRepository(CaosRepository):
         else: nuevo_segmento = f"{siguiente_seq:02d}"
 
         return eclai_core.construir_jid(parent_id_str, nivel_hijo, nuevo_segmento)
+
+    def get_next_narrative_id(self, prefix: str) -> str:
+        from src.Infrastructure.DjangoFramework.persistence.models import CaosNarrativeORM
+        existing_nids = CaosNarrativeORM.objects.filter(nid__startswith=prefix).values_list('nid', flat=True)
+        used_nums = set()
+        len_prefix = len(prefix)
+        for nid_str in existing_nids:
+            try:
+                suffix = nid_str[len_prefix:]
+                if suffix.isdigit(): used_nums.add(int(suffix))
+            except: pass
+        
+        next_num = 1
+        while next_num in used_nums: next_num += 1
+        return f"{prefix}{next_num:02d}"
 
 
 ==================== FILE: .\src\WorldManagement\Caos\Infrastructure\in_memory_repository.py ====================
