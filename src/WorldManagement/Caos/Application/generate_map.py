@@ -37,40 +37,22 @@ class GenerateWorldMapUseCase:
         # Fallback si Llama falla: Nombre + tags genéricos
         return f"{world.name}, fantasy concept art, masterpiece, best quality"
 
-    def _get_next_version(self, folder_path):
-        max_v = 0
-        if os.path.exists(folder_path):
-            for f in os.listdir(folder_path):
-                if f.lower().endswith(".png"):
-                    match = re.search(r'_v(\d+)\.png$', f)
-                    if match:
-                        if int(match.group(1)) > max_v: max_v = int(match.group(1))
-        return max_v + 1
-
-    def execute_single(self, world_id_str: str):
+    def generate_preview(self, world_id_str: str):
+        """Genera la imagen y devuelve base64 sin guardar."""
         w_id = WorldID(world_id_str)
         world = self.repository.find_by_id(w_id)
         if not world: return None
 
-        target_folder = os.path.join(self.base_folder, world_id_str)
-        os.makedirs(target_folder, exist_ok=True)
-
-        # --- PASO CLAVE: OBTENER PROMPT EN INGLÉS ---
         final_prompt = self._get_translated_prompt(world)
-        
-        # Añadimos estilo aleatorio para variedad
         estilos = ["cinematic lighting", "atmospheric fog", "dramatic shadows", "golden hour"]
         final_prompt = f"{final_prompt}, {random.choice(estilos)}"
         
-        # Llamada a SD
-        img_base64 = self.image_service.generate_concept_art(final_prompt)
-        
+        return self.image_service.generate_concept_art(final_prompt)
+
+    def execute_single(self, world_id_str: str):
+        # Legacy method (kept for compatibility if needed, but UI will use preview flow)
+        img_base64 = self.generate_preview(world_id_str)
         if img_base64:
-            version = self._get_next_version(target_folder)
-            safe_name = self._sanitize(world.name)
-            filename = f"{safe_name}_v{version}.png"
-            filepath = os.path.join(target_folder, filename)
-            with open(filepath, "wb") as fh: fh.write(base64.b64decode(img_base64))
-            print(f"    ✅ Foto guardada: {filename}")
-            return filename
+            self.repository.save_image(world_id_str, img_base64)
+            return True
         return None

@@ -81,7 +81,7 @@ class DjangoCaosRepository(CaosRepository):
             print(f"⚠️ No se pudo inyectar EXIF: {e}")
             return image.getexif() # Devolver original si falla
 
-    def _audit_log(self, jid, filename, uploader, origin):
+    def _audit_log(self, jid, filename, uploader, origin, title=None):
         """Registra la imagen en el JSON del mundo."""
         try:
             world = CaosWorldORM.objects.get(id=jid)
@@ -91,22 +91,36 @@ class DjangoCaosRepository(CaosRepository):
             world.metadata['gallery_log'][filename] = {
                 "uploader": uploader,
                 "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "origin": origin
+                "origin": origin,
+                "title": title or "Untitled"
             }
             world.save()
         except Exception as e:
             print(f"⚠️ Error auditoría: {e}")
 
-    def save_image(self, jid: str, base64_data: str):
+    def save_image(self, jid: str, base64_data: str, title: str = None, username: str = "AI System"):
         """Guarda imagen IA (WebP + Metadatos + Auditoría)."""
         if not base64_data: return
         base_dir = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img')
         target_dir = os.path.join(base_dir, jid)
         os.makedirs(target_dir, exist_ok=True)
         
-        # Usar timestamp para evitar cachés y colisiones
-        timestamp = int(time.time())
-        filename = f"{jid}_ia_{timestamp}.webp"
+        # Determinar nombre base
+        if title:
+            # Sanitize: solo alfanuméricos, guiones y espacios (convertidos a _)
+            safe_title = "".join([c for c in title if c.isalnum() or c in (' ', '-', '_')]).strip()
+            safe_title = safe_title.replace(" ", "_")
+            if not safe_title: safe_title = "untitled"
+        else:
+            safe_title = f"{jid}_ia_{int(time.time())}"
+
+        # Lógica de colisiones (pedro, pedro_1, pedro_2...)
+        filename = f"{safe_title}.webp"
+        counter = 1
+        while os.path.exists(os.path.join(target_dir, filename)):
+            filename = f"{safe_title}_{counter}.webp"
+            counter += 1
+            
         file_path = os.path.join(target_dir, filename)
 
         try:
@@ -114,11 +128,11 @@ class DjangoCaosRepository(CaosRepository):
             image = Image.open(io.BytesIO(base64.b64decode(base64_data)))
             
             # Inyectar Firma
-            exif_data = self._inject_metadata(image, artist="AI Generation")
+            exif_data = self._inject_metadata(image, artist=username)
             
             image.save(file_path, "WEBP", quality=85, exif=exif_data)
-            self._audit_log(jid, filename, "AI System", "GENERATED")
-            print(f" 🎨 [FS] Imagen IA firmada y guardada: {filename}")
+            self._audit_log(jid, filename, username, "GENERATED", title)
+            print(f" 🎨 [FS] Imagen IA firmada y guardada: {filename} by {username}")
             
         except Exception as e:
             print(f"⚠️ Error guardando imagen IA: {e}")

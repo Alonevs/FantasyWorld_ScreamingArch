@@ -83,6 +83,10 @@ class CaosNarrativeORM(models.Model):
         ('BESTIARIO', '🐉 Entrada de Bestiario'),
     ]
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default='LORE')
+    # --- AUDITORIA ---
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='narrativas_creadas')
+    updated_at = models.DateTimeField(auto_now=True)
+    
     
     created_at = models.DateTimeField(auto_now_add=True)
 

@@ -1,10 +1,11 @@
-PROJECT SNAPSHOT: 2025-12-01 16:08:24
+PROJECT SNAPSHOT: 2025-12-02 15:52:33
 ============================================================
 
 📦 ESTRUCTURA DEL PROYECTO:
 ./
     main.py
     requirements.txt
+    verify_navigation.py
     docs/
         ARCHITECTURE.md
         ECLAI.md
@@ -42,6 +43,7 @@ PROJECT SNAPSHOT: 2025-12-01 16:08:24
                     apps.py
                     models.py
                     tests.py
+                    utils.py
                     views.py
                     __init__.py
                     templates/
@@ -200,6 +202,90 @@ Pillow==10.2.0          # Para procesar las imágenes que genere la IA
 
 # --- UTILIDADES ---
 black==23.12.1          # Formateador de código
+
+==================== FILE: .\verify_navigation.py ====================
+import os
+import django
+import sys
+
+# Setup Django environment
+sys.path.append('d:\\FantasyWorld_ScreamingArch')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'src.Infrastructure.DjangoFramework.config.settings')
+django.setup()
+
+from src.Infrastructure.DjangoFramework.persistence.views import generate_breadcrumbs
+from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM
+
+def test_generate_breadcrumbs():
+    print("Testing generate_breadcrumbs...")
+    
+    # Create dummy worlds for testing
+    # Level 1: 10
+    # Level 2: 1020
+    # Level 3: 102030
+    # ...
+    # Level 15: ...
+    # Level 16 (Entity): ... + 1234
+    
+    # We need to ensure these worlds exist or at least the function handles missing ones gracefully (it uses .get with default)
+    # But to test labels, we should create them.
+    
+    w1 = CaosWorldORM.objects.create(id="99", name="Level 1 World", description="Test")
+    w2 = CaosWorldORM.objects.create(id="9988", name="Level 2 World", description="Test")
+    w3 = CaosWorldORM.objects.create(id="998877", name="Level 3 World", description="Test")
+    
+    # Test Level 1
+    b1 = generate_breadcrumbs("99")
+    print(f"Breadcrumbs for 99: {b1}")
+    assert len(b1) == 1
+    assert b1[0]['id'] == "99"
+    assert b1[0]['label'] == "Level 1 World"
+    
+    # Test Level 2
+    b2 = generate_breadcrumbs("9988")
+    print(f"Breadcrumbs for 9988: {b2}")
+    assert len(b2) == 2
+    assert b2[0]['id'] == "99"
+    assert b2[1]['id'] == "9988"
+    assert b2[1]['label'] == "Level 2 World"
+    
+    # Test Level 3
+    b3 = generate_breadcrumbs("998877")
+    print(f"Breadcrumbs for 998877: {b3}")
+    assert len(b3) == 3
+    assert b3[2]['id'] == "998877"
+    
+    # Test Entity Level (Level 16)
+    # ID length: 15*2 = 30 chars + 4 chars = 34 chars
+    # Let's simulate a deep ID
+    deep_id_parent = "99" + "00"*14 # 30 chars
+    entity_id = deep_id_parent + "1234" # 34 chars
+    
+    # We won't create the DB objects for this deep one, just check ID parsing
+    b_deep = generate_breadcrumbs(entity_id)
+    print(f"Breadcrumbs for deep ID (len {len(entity_id)}): {len(b_deep)} crumbs")
+    
+    # Should have 16 crumbs
+    assert len(b_deep) == 16
+    # Last one should be the entity
+    assert b_deep[-1]['id'] == entity_id
+    # Penultimate should be the parent
+    assert b_deep[-2]['id'] == deep_id_parent
+    
+    # Cleanup
+    w1.delete()
+    w2.delete()
+    w3.delete()
+    
+    print("✅ generate_breadcrumbs passed!")
+
+if __name__ == "__main__":
+    try:
+        test_generate_breadcrumbs()
+    except Exception as e:
+        print(f"❌ Test failed: {e}")
+        sys.exit(1)
+
 
 ==================== FILE: .\docs\ARCHITECTURE.md ====================
 # 🏗️ Arquitectura del Sistema v4.5
@@ -1154,6 +1240,59 @@ from django.test import TestCase
 # Create your tests here.
 
 
+==================== FILE: .\src\Infrastructure\DjangoFramework\persistence\utils.py ====================
+import os
+from django.conf import settings
+from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM
+
+def generate_breadcrumbs(jid):
+    """Genera breadcrumbs robustos manejando longitudes variables y nombres reales."""
+    breadcrumbs = []
+    current_len = 0
+    target_len = len(jid)
+    
+    ids_to_fetch = []
+    
+    # 1. Calcular todos los IDs de la ruta
+    while current_len < target_len:
+        # Niveles 1-15 son de 2 chars, Nivel 16 (Entidad) es de 4 chars
+        # Si ya estamos en longitud 30 (Nivel 15), el siguiente salto es de 4
+        step = 4 if current_len >= 30 else 2
+        
+        # Protección contra IDs mal formados
+        if current_len + step > target_len: break
+        
+        current_len += step
+        chunk_id = jid[:current_len]
+        ids_to_fetch.append(chunk_id)
+
+    # 2. Obtener nombres de la DB en una sola consulta
+    worlds = {w.id: w.name for w in CaosWorldORM.objects.filter(id__in=ids_to_fetch)}
+    
+    # 3. Construir lista ordenada
+    for i, pid in enumerate(ids_to_fetch):
+        # El nivel es el índice + 1
+        breadcrumbs.append({
+            'id': pid, 
+            'label': worlds.get(pid, f"Nivel {i+1}")
+        })
+        
+    return breadcrumbs
+
+def get_world_images(jid):
+    base = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img')
+    target = os.path.join(base, jid)
+    if not os.path.exists(target):
+        for d in os.listdir(base):
+            if d.startswith(f"{jid}_"): target = os.path.join(base, d); break
+    imgs = []
+    if os.path.exists(target):
+        dname = os.path.basename(target)
+        for f in sorted(os.listdir(target)):
+            if f.lower().endswith(('.png', '.webp', '.jpg')): imgs.append({'url': f'{dname}/{f}', 'filename': f})
+    return imgs
+
+
 ==================== FILE: .\src\Infrastructure\DjangoFramework\persistence\views.py ====================
 from src.WorldManagement.Caos.Application.restore_version import RestoreVersionUseCase
 import os
@@ -1177,33 +1316,17 @@ from src.WorldManagement.Caos.Application.approve_version import ApproveVersionU
 from src.WorldManagement.Caos.Application.reject_version import RejectVersionUseCase
 from src.WorldManagement.Caos.Application.publish_to_live_version import PublishToLiveVersionUseCase
 from src.WorldManagement.Caos.Application.generate_creature_usecase import GenerateCreatureUseCase
-from src.WorldManagement.Caos.Application.generate_planet_metadata import GeneratePlanetMetadataUseCase
 from src.WorldManagement.Caos.Application.update_narrative import UpdateNarrativeUseCase
 from src.WorldManagement.Caos.Application.delete_narrative import DeleteNarrativeUseCase
 from src.WorldManagement.Caos.Application.initialize_hemispheres import InitializeHemispheresUseCase
 from src.WorldManagement.Caos.Application.create_narrative import CreateNarrativeUseCase
 
-# Services
-from src.FantasyWorld.AI_Generation.Infrastructure.llama_service import Llama3Service
-from src.FantasyWorld.AI_Generation.Infrastructure.sd_service import StableDiffusionService
+from src.Infrastructure.DjangoFramework.persistence.utils import generate_breadcrumbs, get_world_images
 
 def get_current_user(request):
     if request.user.is_authenticated: return request.user
     u, _ = User.objects.get_or_create(username='Admin')
     return u
-
-def get_world_images(jid):
-    base = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img')
-    target = os.path.join(base, jid)
-    if not os.path.exists(target):
-        for d in os.listdir(base):
-            if d.startswith(f"{jid}_"): target = os.path.join(base, d); break
-    imgs = []
-    if os.path.exists(target):
-        dname = os.path.basename(target)
-        for f in sorted(os.listdir(target)):
-            if f.lower().endswith(('.png', '.webp', '.jpg')): imgs.append({'url': f'{dname}/{f}', 'filename': f})
-    return imgs
 
 # --- ACCIONES MANUALES ---
 def generar_foto_extra(request, jid):
@@ -1364,7 +1487,27 @@ def set_cover_image(request, jid, filename):
         messages.error(request, f"Error: {e}")
     return redirect('ver_mundo', jid=jid)
 
-# --- VISTAS PRINCIPALES ---
+def subir_imagen_manual(request, jid):
+    if request.method == 'POST' and request.FILES.get('imagen_manual'):
+        try:
+            repo = DjangoCaosRepository()
+            if repo.save_manual_file(jid, request.FILES['imagen_manual'], request.user.username):
+                messages.success(request, "✅ Imagen guardada correctamente.")
+            else:
+                messages.error(request, "❌ Error al guardar imagen.")
+        except Exception as e:
+            messages.error(request, f"Error crítico: {e}")
+    return redirect('ver_mundo', jid=jid)
+
+def init_hemisferios(request, jid):
+    try:
+        repo = DjangoCaosRepository()
+        InitializeHemispheresUseCase(repo).execute(jid)
+        messages.success(request, "✅ Planeta dividido geográficamente.")
+    except Exception as e:
+        messages.error(request, f"Error al dividir: {e}")
+    return redirect('ver_mundo', jid=jid)
+
 def centro_control(request):
     todas = CaosVersionORM.objects.all().order_by('-created_at')
     p, a, r, h = [], [], [], []
@@ -1382,11 +1525,7 @@ def revisar_version(request, version_id):
     try: v = CaosVersionORM.objects.get(id=version_id); w = v.world
     except: return redirect('centro_control')
     imgs = get_world_images(w.id)
-    bread = []
-    for i in range(0, len(w.id), 2):
-        chunk = w.id[0 : i+2]
-        lvl = (i // 2) + 1
-        bread.append({'id': chunk, 'label': f"Nivel {lvl}"})
+    bread = generate_breadcrumbs(w.id)
     len_h = len(w.id)+2 if len(w.id)<32 else len(w.id)+4
     hijos = [{'id':h.id, 'name':h.name, 'code':eclai_core.encode_eclai126(h.id), 'img':(get_world_images(h.id)[0]['url'] if get_world_images(h.id) else None)} for h in CaosWorldORM.objects.filter(id__startswith=w.id, id__regex=r'^.{'+str(len_h)+r'}$')]
     context = {'name': v.proposed_name, 'description': v.proposed_description, 'jid': w.id, 'status': f"PREVIEW v{v.version_number}", 'code_entity': eclai_core.encode_eclai126(w.id), 'nid_lore': w.id_lore if w.id_lore else f"{w.id}L01", 'imagenes': imgs, 'hijos': hijos, 'breadcrumbs': bread, 'is_preview': True, 'version_id': v.id, 'change_log': v.change_log, 'author': v.author.username if v.author else '?'}
@@ -1424,11 +1563,7 @@ def ver_mundo(request, jid):
         hijos.append({'id': h.id, 'name': h.name, 'short': short, 'img':(get_world_images(h.id)[0]['url'] if get_world_images(h.id) else None)})
     
     imgs = get_world_images(jid)
-    bread = []
-    for i in range(0, len(jid), 2):
-        chunk = jid[0 : i+2]
-        lvl = (i // 2) + 1
-        bread.append({'id': chunk, 'label': f"Nivel {lvl}"})
+    bread = generate_breadcrumbs(jid)
 
     meta_str = json.dumps(w.metadata, indent=2) if w.metadata else "{}"
     last_live = w.versiones.filter(status='LIVE').order_by('-created_at').first()
@@ -1494,26 +1629,6 @@ def restaurar_version(request, version_id):
     # Necesitamos el ID del mundo, lo sacamos de la versión
     v = CaosVersionORM.objects.get(id=version_id)
     return redirect('ver_mundo', jid=v.world.id)
-
-def subir_imagen_manual(request, jid):
-    if request.method == 'POST' and request.FILES.get('imagen_manual'):
-        try:
-            repo = DjangoCaosRepository()
-            if repo.save_manual_file(jid, request.FILES['imagen_manual'], request.user.username):
-                messages.success(request, "✅ Imagen guardada correctamente.")
-            else:
-                messages.error(request, "❌ Error al guardar imagen.")
-        except Exception as e:
-            messages.error(request, f"Error crítico: {e}")
-    return redirect('ver_mundo', jid=jid)
-def init_hemisferios(request, jid):
-    try:
-        repo = DjangoCaosRepository()
-        InitializeHemispheresUseCase(repo).execute(jid)
-        messages.success(request, "✅ Planeta dividido geográficamente.")
-    except Exception as e:
-        messages.error(request, f"Error al dividir: {e}")
-    return redirect('ver_mundo', jid=jid)
 
 ==================== FILE: .\src\Infrastructure\DjangoFramework\persistence\__init__.py ====================
 

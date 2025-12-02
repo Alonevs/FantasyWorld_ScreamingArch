@@ -25,7 +25,15 @@ from src.WorldManagement.Caos.Application.delete_narrative import DeleteNarrativ
 from src.WorldManagement.Caos.Application.initialize_hemispheres import InitializeHemispheresUseCase
 from src.WorldManagement.Caos.Application.create_narrative import CreateNarrativeUseCase
 
+from src.WorldManagement.Caos.Application.create_narrative import CreateNarrativeUseCase
+from src.WorldManagement.Caos.Application.generate_planet_metadata import GeneratePlanetMetadataUseCase
+
+# Services
+from src.FantasyWorld.AI_Generation.Infrastructure.sd_service import StableDiffusionService
+from src.FantasyWorld.AI_Generation.Infrastructure.llama_service import Llama3Service
+
 from src.Infrastructure.DjangoFramework.persistence.utils import generate_breadcrumbs, get_world_images
+
 
 def get_current_user(request):
     if request.user.is_authenticated: return request.user
@@ -34,9 +42,43 @@ def get_current_user(request):
 
 # --- ACCIONES MANUALES ---
 def generar_foto_extra(request, jid):
-    try: GenerateWorldMapUseCase(DjangoCaosRepository(), StableDiffusionService()).execute_single(jid)
-    except: pass
+    try: 
+        GenerateWorldMapUseCase(DjangoCaosRepository(), StableDiffusionService()).execute_single(jid)
+    except Exception as e:
+        print(f"Error generating extra photo: {e}")
     return redirect('ver_mundo', jid=jid)
+
+# --- API JSON (AJAX) ---
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+
+def api_preview_foto(request, jid):
+    try:
+        # Generamos la imagen pero NO la guardamos
+        b64 = GenerateWorldMapUseCase(DjangoCaosRepository(), StableDiffusionService()).generate_preview(jid)
+        if b64:
+            return JsonResponse({'success': True, 'image': b64})
+        return JsonResponse({'success': False, 'error': 'No image generated'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@csrf_exempt
+def api_save_foto(request, jid):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            img_b64 = data.get('image')
+            title = data.get('title')
+            
+            username = request.user.username if request.user.is_authenticated else "Anonymous"
+            
+            repo = DjangoCaosRepository()
+            repo.save_image(jid, img_b64, title=title, username=username)
+            
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Method not allowed'})
 
 def generar_texto_extra(request, jid):
     try: GenerateWorldLoreUseCase(DjangoCaosRepository(), Llama3Service()).execute(jid)
@@ -164,7 +206,9 @@ def borrar_narrativa(request, nid):
 def crear_nueva_narrativa(request, jid, tipo_codigo):
     try:
         repo = DjangoCaosRepository()
-        new_nid = CreateNarrativeUseCase(repo).execute(world_id=jid, tipo_codigo=tipo_codigo)
+        
+        user = request.user if request.user.is_authenticated else None
+        new_nid = CreateNarrativeUseCase(repo).execute(world_id=jid, tipo_codigo=tipo_codigo, user=user)
         return redirect('editar_narrativa', nid=new_nid)
     except Exception as e:
         messages.error(request, f"Error creando narrativa: {e}")
@@ -173,7 +217,9 @@ def crear_nueva_narrativa(request, jid, tipo_codigo):
 def crear_sub_narrativa(request, parent_nid, tipo_codigo):
     try:
         repo = DjangoCaosRepository()
-        new_nid = CreateNarrativeUseCase(repo).execute(world_id=None, tipo_codigo=tipo_codigo, parent_nid=parent_nid)
+        
+        user = request.user if request.user.is_authenticated else None
+        new_nid = CreateNarrativeUseCase(repo).execute(world_id=None, tipo_codigo=tipo_codigo, parent_nid=parent_nid, user=user)
         return redirect('editar_narrativa', nid=new_nid)
     except Exception as e:
         messages.error(request, f"Error creando sub-narrativa: {e}")
@@ -233,6 +279,8 @@ def revisar_version(request, version_id):
     len_h = len(w.id)+2 if len(w.id)<32 else len(w.id)+4
     hijos = [{'id':h.id, 'name':h.name, 'code':eclai_core.encode_eclai126(h.id), 'img':(get_world_images(h.id)[0]['url'] if get_world_images(h.id) else None)} for h in CaosWorldORM.objects.filter(id__startswith=w.id, id__regex=r'^.{'+str(len_h)+r'}$')]
     context = {'name': v.proposed_name, 'description': v.proposed_description, 'jid': w.id, 'status': f"PREVIEW v{v.version_number}", 'code_entity': eclai_core.encode_eclai126(w.id), 'nid_lore': w.id_lore if w.id_lore else f"{w.id}L01", 'imagenes': imgs, 'hijos': hijos, 'breadcrumbs': bread, 'is_preview': True, 'version_id': v.id, 'change_log': v.change_log, 'author': v.author.username if v.author else '?'}
+    context['metadata'] = json.dumps(w.metadata, indent=2) if w.metadata else "{}"
+    context['metadata_obj'] = w.metadata
     return render(request, 'ficha_mundo.html', context)
 
 def ver_mundo(request, jid):

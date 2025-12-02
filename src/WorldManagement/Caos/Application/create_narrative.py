@@ -5,7 +5,7 @@ class CreateNarrativeUseCase:
     def __init__(self, repository: CaosRepository):
         self.repository = repository
 
-    def execute(self, world_id: str, tipo_codigo: str, parent_nid: str = None) -> str:
+    def execute(self, world_id: str, tipo_codigo: str, parent_nid: str = None, user = None) -> str:
         """
         Crea una nueva narrativa o sub-narrativa (capítulo).
         Retorna el NID de la nueva narrativa.
@@ -26,7 +26,8 @@ class CreateNarrativeUseCase:
                 titulo=f"Nuevo Capítulo ({new_nid[-2:]})", 
                 contenido="...", 
                 narrador=padre.narrador, 
-                tipo=tipo_completo
+                tipo=tipo_completo,
+                created_by=user
             )
             return new_nid
         else:
@@ -42,6 +43,7 @@ class CreateNarrativeUseCase:
                 titulo=f"Nuevo {tipo_completo} ({new_nid[-2:]})", 
                 contenido="...", 
                 narrador="???", 
-                tipo=tipo_completo
+                tipo=tipo_completo,
+                created_by=user
             )
             return new_nid

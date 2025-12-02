@@ -65,6 +65,15 @@
     <div class="top-bar">
         <div class="logo">ECLAI v3.0 // DASHBOARD</div>
         <div class="nav-group">
+            {% if user.is_authenticated %}
+                <span style="color:#aaa; font-size:0.8em; align-self:center; margin-right:10px;">👤 {{ user.username }}</span>
+                <form action="{% url 'logout' %}" method="post" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="nav-btn" style="background:#c0392b; border-color:#e74c3c;">🚪 Salir</button>
+                </form>
+            {% else %}
+                <a href="{% url 'login' %}" class="nav-btn" style="background:#27ae60; border-color:#2ecc71;">🔑 Entrar</a>
+            {% endif %}
             <button class="nav-btn" onclick="location.reload()">🔄 Recargar</button>
             <a href="{% url 'centro_control' %}" class="nav-btn special">🎛️ Gestión</a>
         </div>

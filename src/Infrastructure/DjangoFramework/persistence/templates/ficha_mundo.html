@@ -132,6 +132,15 @@
     <div class="top-bar">
         <div class="logo">ECLAI v4.8 // SYSTEM</div>
         <div class="nav-group">
+            {% if user.is_authenticated %}
+                <span style="color:#aaa; font-size:0.8em; align-self:center; margin-right:10px;">👤 {{ user.username }}</span>
+                <form action="{% url 'logout' %}" method="post" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="nav-btn" style="background:#c0392b; border-color:#e74c3c;">🚪 Salir</button>
+                </form>
+            {% else %}
+                <a href="{% url 'login' %}" class="nav-btn" style="background:#27ae60; border-color:#2ecc71;">🔑 Entrar</a>
+            {% endif %}
             <button class="nav-btn" onclick="history.back()">⬅️ Atrás</button>
             <a href="{% url 'home' %}" class="nav-btn">🏠 Inicio</a>
             <a href="{% url 'centro_control' %}" class="nav-btn special">🎛️ Gestión</a>
@@ -194,7 +203,7 @@
                 <div class="section-title" style="margin:0;">Visual Database</div>
                 {% if not is_preview %}
                 <div style="display:flex; align-items:center;">
-                    <a href="{% url 'generar_foto_extra' jid %}" class="btn" style="background:#9b59b6; font-size:0.7em;">🎨 + FOTO IA</a>
+                    <button onclick="openAiModal()" class="btn" style="background:#9b59b6; font-size:0.7em; border:none;">🎨 + FOTO IA</button>
                     <form id="form-manual-upload" method="POST" action="{% url 'subir_imagen_manual' jid %}" enctype="multipart/form-data" style="display:inline; margin-left:5px;">
                         {% csrf_token %}
                         <label for="file-upload" class="btn" style="background:#555; font-size:0.7em; cursor:pointer;" title="Subir archivo propio">📎 SUBIR</label>
@@ -343,6 +352,37 @@
         </div>
     </div>
 
+    <!-- MODAL GENERACIÓN IA -->
+    <div id="aiModal" class="modal">
+        <div class="modal-content" style="width: 500px; text-align: center;">
+            <div class="modal-header"><h2>Generador Neural</h2><a href="#" onclick="closeAiModal()" class="close-btn">✕</a></div>
+            
+            <div id="ai-step-1">
+                <p style="color:#aaa; margin-bottom:20px;">La IA analizará la descripción del mundo y generará una visualización única.</p>
+                <button onclick="generatePreview()" class="btn" style="background:#d633ff; padding:15px 30px; font-size:1.1em;">✨ GENERAR AHORA</button>
+            </div>
+
+            <div id="ai-step-loading" style="display:none; padding:40px;">
+                <div style="font-size:3em;">🔮</div>
+                <p style="color:#d633ff; font-weight:bold; margin-top:10px;">Soñando píxeles...</p>
+            </div>
+
+            <div id="ai-step-result" style="display:none;">
+                <img id="ai-preview-img" src="" style="width:100%; border-radius:8px; border:2px solid #d633ff; margin-bottom:15px;">
+                
+                <div style="text-align:left; margin-bottom:15px;">
+                    <label style="color:#aaa; font-size:0.8em;">Título de la obra:</label>
+                    <input type="text" id="ai-img-title" placeholder="Ej: Paisaje de las Sombras..." style="width:100%; background:#0a0a12; border:1px solid #444; color:#fff; padding:8px; border-radius:4px; margin-top:5px;">
+                </div>
+
+                <div style="display:flex; gap:10px;">
+                    <button onclick="discardAiImage()" class="btn" style="background:#e74c3c; flex:1;">🗑️ DESCARTAR</button>
+                    <button onclick="saveAiImage()" class="btn" style="background:#2ecc71; flex:1;">💾 GUARDAR</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="lightbox" class="modal" onclick="if(event.target === this) closeLightbox()">
         <div class="modal-content" style="width: 800px; max-width:95%; display:flex; gap:20px; text-align:left;">
             <div style="flex:2;">
@@ -388,7 +428,9 @@
     
     <script>
         // --- GESTOR DE SUBIDA: MODO ROBUSTO (A prueba de AdBlock) ---
-        const galleryLog = {{ metadata_obj.gallery_log|default:"{}"|safe }};
+        const metadataRaw = '{{ metadata|default:"{}"|escapejs }}';
+const allMetadata = JSON.parse(metadataRaw);
+        const galleryLog = allMetadata.gallery_log || {};
         let nsfwModel = null;
 
         // Intentamos cargar la IA, pero si falla, no lloramos
@@ -544,6 +586,66 @@
                 const res = wrapper.querySelector('.res');
                 if (res) res.innerText = imgElement.naturalWidth + 'x' + imgElement.naturalHeight + 'px';
             }
+        }
+
+        // --- AI MODAL LOGIC ---
+        function openAiModal() {
+            document.getElementById('aiModal').style.display = 'flex';
+            document.getElementById('ai-step-1').style.display = 'block';
+            document.getElementById('ai-step-loading').style.display = 'none';
+            document.getElementById('ai-step-result').style.display = 'none';
+            document.getElementById('ai-img-title').value = "";
+        }
+        function closeAiModal() { document.getElementById('aiModal').style.display = 'none'; }
+
+        let currentBase64 = null;
+
+        function generatePreview() {
+            document.getElementById('ai-step-1').style.display = 'none';
+            document.getElementById('ai-step-loading').style.display = 'block';
+
+            fetch("{% url 'api_preview_foto' jid %}")
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('ai-step-loading').style.display = 'none';
+                    if (data.success) {
+                        currentBase64 = data.image;
+                        document.getElementById('ai-preview-img').src = "data:image/webp;base64," + data.image;
+                        document.getElementById('ai-step-result').style.display = 'block';
+                    } else {
+                        alert("Error: " + data.error);
+                        closeAiModal();
+                    }
+                })
+                .catch(e => {
+                    alert("Error de red: " + e);
+                    closeAiModal();
+                });
+        }
+
+        function discardAiImage() {
+            if(confirm("¿Seguro que quieres descartar esta imagen?")) {
+                openAiModal(); // Reset
+            }
+        }
+
+        function saveAiImage() {
+            const title = document.getElementById('ai-img-title').value;
+            if (!title) { alert("Por favor, ponle un título."); return; }
+
+            fetch("{% url 'api_save_foto' jid %}", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ image: currentBase64, title: title })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert("Error guardando: " + data.error);
+                }
+            });
         }
     </script>
 

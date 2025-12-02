@@ -1,0 +1,57 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>ECLAI v4.8 | Acceso al Sistema</title>
+    <style>
+        body { background-color: #0a0a12; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-card { background: #161625; border: 1px solid #2a2a40; border-radius: 15px; padding: 40px; width: 400px; box-shadow: 0 0 50px rgba(0,0,0,0.5); text-align: center; }
+        .logo { font-size: 2em; font-weight: bold; color: #fff; letter-spacing: 2px; margin-bottom: 10px; }
+        .subtitle { color: #888; margin-bottom: 30px; font-size: 0.9em; }
+        
+        input { width: 100%; padding: 12px; margin: 10px 0; background: #0a0a12; border: 1px solid #444; color: #fff; border-radius: 5px; box-sizing: border-box; font-size: 1em; }
+        input:focus { border-color: #d633ff; outline: none; }
+        
+        button { width: 100%; padding: 12px; background: #d633ff; color: #fff; border: none; border-radius: 5px; font-size: 1.1em; font-weight: bold; cursor: pointer; margin-top: 20px; transition: 0.3s; }
+        button:hover { background: #a569bd; }
+        
+        .error-list { color: #e74c3c; list-style: none; padding: 0; margin-bottom: 20px; font-size: 0.9em; }
+        
+        .back-link { display: block; margin-top: 20px; color: #666; text-decoration: none; font-size: 0.9em; }
+        .back-link:hover { color: #fff; }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <div class="logo">ECLAI SYSTEM</div>
+        <div class="subtitle">Identificación de Usuario</div>
+
+        {% if form.errors %}
+            <ul class="error-list">
+                {% for field in form %}
+                    {% for error in field.errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+                {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        <form method="post" action="{% url 'login' %}">
+            {% csrf_token %}
+            <input type="text" name="username" placeholder="Usuario" autofocus required>
+            <input type="password" name="password" placeholder="Contraseña" required>
+            
+            <button type="submit">🔓 ACCEDER</button>
+            <input type="hidden" name="next" value="{{ next }}">
+        </form>
+
+        <a href="{% url 'home' %}" class="back-link">← Volver al Universo</a>
+    </div>
+
+</body>
+</html>

@@ -1,28 +1,15 @@
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 from src.Infrastructure.DjangoFramework.persistence.views import *
 
 urlpatterns = [
+    path('accounts/', include('django.contrib.auth.urls')),
     path('admin/', admin.site.urls),
     path('', home, name='home'),
     path('control/', centro_control, name='centro_control'),
     path('mundo/<str:jid>/', ver_mundo, name='ver_mundo'),
     path('revision/<int:version_id>/', revisar_version, name='revisar_version'),
     
-    path('borrar/<str:jid>/', borrar_mundo, name='borrar_mundo'),
-    path('editar/<str:jid>/', editar_mundo, name='editar_mundo'),
-    path('aprobar/<int:version_id>/', aprobar_version, name='aprobar_version'),
-    path('rechazar/<int:version_id>/', rechazar_version, name='rechazar_version'),
-    path('publicar/<int:version_id>/', publicar_version, name='publicar_version'),
-    
-    path('foto_extra/<str:jid>/', generar_foto_extra, name='generar_foto_extra'),
-    path('texto_extra/<str:jid>/', generar_texto_extra, name='generar_texto_extra'),
-    path('toggle_visible/<str:jid>/', toggle_visibilidad, name='toggle_visibilidad'),
-    
-    # NUEVA RUTA: Borrar foto específica
-    # Recibe el ID del mundo y el nombre del archivo
-    path('borrar_foto/<str:jid>/<str:filename>/', borrar_foto, name='borrar_foto'),
-    path('escanear/<str:jid>/', escanear_planeta, name='escanear_planeta'),
     path('narrativa/<str:nid>/', leer_narrativa, name='leer_narrativa'),
     path('narrativa/editar/<str:nid>/', editar_narrativa, name='editar_narrativa'),
     path('narrativa/crear/<str:jid>/<str:tipo_codigo>/', crear_nueva_narrativa, name='crear_narrativa'),
@@ -33,4 +20,19 @@ urlpatterns = [
     path('subir_foto/<str:jid>/', subir_imagen_manual, name='subir_imagen_manual'),
     path('cover/<str:jid>/<str:filename>/', set_cover_image, name='set_cover_image'),
     path('init_hemisferios/<str:jid>/', init_hemisferios, name='init_hemisferios'),
+
+    # World Management
+    path('mundo/editar/<str:jid>/', editar_mundo, name='editar_mundo'),
+    path('mundo/borrar/<str:jid>/', borrar_mundo, name='borrar_mundo'),
+    path('mundo/visibilidad/<str:jid>/', toggle_visibilidad, name='toggle_visibilidad'),
+    
+    # Version Control
+    path('version/aprobar/<int:version_id>/', aprobar_version, name='aprobar_version'),
+    path('version/rechazar/<int:version_id>/', rechazar_version, name='rechazar_version'),
+    path('version/publicar/<int:version_id>/', publicar_version, name='publicar_version'),
+
+    # Image Management
+    path('foto/borrar/<str:jid>/<str:filename>/', borrar_foto, name='borrar_foto'),
+    path('api/preview_foto/<str:jid>/', api_preview_foto, name='api_preview_foto'),
+    path('api/save_foto/<str:jid>/', api_save_foto, name='api_save_foto'),
 ]
