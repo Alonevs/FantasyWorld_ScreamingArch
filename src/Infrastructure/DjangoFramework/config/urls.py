@@ -35,4 +35,5 @@ urlpatterns = [
     path('foto/borrar/<str:jid>/<str:filename>/', borrar_foto, name='borrar_foto'),
     path('api/preview_foto/<str:jid>/', api_preview_foto, name='api_preview_foto'),
     path('api/save_foto/<str:jid>/', api_save_foto, name='api_save_foto'),
+    path('mapa/<str:public_id>/', mapa_arbol, name='mapa_arbol'),
 ]

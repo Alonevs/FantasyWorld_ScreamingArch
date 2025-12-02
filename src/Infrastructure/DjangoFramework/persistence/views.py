@@ -322,7 +322,7 @@ def ver_mundo(request, jid):
     date_live = last_live.created_at if last_live else w.created_at
 
     context = {
-        'name': w.name, 'description': w.description, 'jid': jid,
+        'name': w.name, 'description': w.description, 'jid': jid, 'public_id': w.public_id,
         'status': w.status, 'version_live': w.current_version_number,
         'author_live': getattr(w, 'current_author_name', 'Sistema'),
         'created_at': w.created_at, 'updated_at': date_live,
@@ -381,3 +381,28 @@ def restaurar_version(request, version_id):
     # Necesitamos el ID del mundo, lo sacamos de la versión
     v = CaosVersionORM.objects.get(id=version_id)
     return redirect('ver_mundo', jid=v.world.id)
+
+# --- VISTA DE ARBOL (Añadido por Script) ---
+def mapa_arbol(request, public_id):
+    try:
+        root = resolve_jid(public_id)
+        if not root: return redirect('home')
+        
+        nodes = CaosWorldORM.objects.filter(id__startswith=root.id).order_by('id')
+        tree_data = []
+        base_len = len(root.id)
+
+        for node in nodes:
+            depth = (len(node.id) - base_len) // 2
+            tree_data.append({
+                'name': node.name,
+                'public_id': node.public_id,
+                'id_display': node.id,
+                'indent_px': depth * 30,
+                'is_root': node.id == root.id,
+                'status': node.status
+            })
+        return render(request, 'mapa_arbol.html', {'root_name': root.name, 'tree': tree_data})
+    except Exception as e:
+        print(f"Error mapa: {e}")
+        return redirect('ver_mundo', public_id=public_id)
