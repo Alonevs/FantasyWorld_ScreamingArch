@@ -3,133 +3,100 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>ECLAI | Biblioteca de {{ world.name }}</title>
+    <title>Biblioteca | {{ world.name }}</title>
     <style>
-        body { background-color: #050505; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; padding: 30px; }
+        body { background-color: #0a0a12; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; padding: 20px 40px; }
+        a { text-decoration: none; color: inherit; }
         
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
-        .back-btn { background: #333; color: #fff; text-decoration: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; border: 1px solid #444; }
-        .back-btn:hover { background: #555; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; background: #0e0e16; padding: 15px 20px; border-radius: 10px; border-bottom: 1px solid #333; }
+        .nav-btn { background: #333; color: #fff; padding: 8px 15px; border-radius: 5px; border: 1px solid #444; cursor: pointer; margin-left: 5px; }
+        .nav-btn:hover { background: #555; }
+
+        .container { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr 300px; gap: 30px; }
+        .main-col { }
+        .sidebar { background: #13131f; padding: 20px; border-radius: 10px; height: fit-content; }
+
+        h1 { color: #d633ff; margin-top: 0; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        h2 { color: #a0a0ff; border-bottom: 1px solid #333; padding-bottom: 5px; margin-top: 30px; font-size: 1.2em; }
+
+        .lore-card { background: #1f1f2e; border: 1px solid #333; padding: 15px; margin-bottom: 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
+        .lore-card:hover { border-color: #d633ff; transform: translateX(5px); }
+        .lore-title { font-weight: bold; font-size: 1.1em; }
+        .lore-meta { font-size: 0.8em; color: #888; }
+        .tag { font-size: 0.7em; padding: 2px 6px; background: #000; border-radius: 4px; color: #d633ff; border: 1px solid #444; margin-right: 10px; }
+
+        .btn-create { display: block; width: 100%; padding: 10px; background: #d633ff; color: white; text-align: center; border-radius: 5px; font-weight: bold; margin-bottom: 10px; border: none; cursor: pointer; }
+        .btn-create:hover { background: #b02ce0; }
         
-        h1 { margin: 0; color: #d633ff; font-weight: 300; letter-spacing: 2px; }
-        
-        /* GRID DE CATEGORÍAS */
-        .library-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px; }
-        
-        .category-card { background: #0e0e12; border: 1px solid #2a2a40; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; height: 400px; }
-        
-        .cat-header { padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222; }
-        .cat-title { font-weight: bold; font-size: 1.1em; text-transform: uppercase; }
-        .add-btn { text-decoration: none; width: 24px; height: 24px; text-align: center; line-height: 24px; border-radius: 4px; color: #000; font-weight: bold; font-size: 1.2em; transition: 0.2s; }
-        .add-btn:hover { transform: scale(1.1); color: #fff; }
-        
-        .doc-list { padding: 10px; overflow-y: auto; flex-grow: 1; }
-        .doc-item { display: block; padding: 10px; margin-bottom: 5px; background: #16161e; border-radius: 4px; text-decoration: none; color: #aaa; border-left: 2px solid transparent; transition: 0.2s; }
-        .doc-item:hover { background: #1f1f2a; color: #fff; padding-left: 15px; }
-        
-        .nid-tag { font-family: 'Courier New', monospace; font-size: 0.95em; color: #a0a0a0; font-weight: bold; display: block; margin-bottom: 4px; letter-spacing: 1px; }
-        
-        /* ESTILOS POR TIPO */
-        .style-LORE { border-top: 3px solid #d633ff; } .btn-LORE { background: #d633ff; } .doc-LORE:hover { border-left-color: #d633ff; }
-        .style-HISTORIA { border-top: 3px solid #f1c40f; } .btn-HISTORIA { background: #f1c40f; } .doc-HISTORIA:hover { border-left-color: #f1c40f; }
-        .style-EVENTO { border-top: 3px solid #e74c3c; } .btn-EVENTO { background: #e74c3c; } .doc-EVENTO:hover { border-left-color: #e74c3c; }
-        .style-LEYENDA { border-top: 3px solid #e67e22; } .btn-LEYENDA { background: #e67e22; } .doc-LEYENDA:hover { border-left-color: #e67e22; }
-        .style-REGLA { border-top: 3px solid #3498db; } .btn-REGLA { background: #3498db; } .doc-REGLA:hover { border-left-color: #3498db; }
-        .style-BESTIARIO { border-top: 3px solid #2ecc71; } .btn-BESTIARIO { background: #2ecc71; } .doc-BESTIARIO:hover { border-left-color: #2ecc71; }
-        
+        select, input { width: 100%; padding: 8px; background: #000; border: 1px solid #444; color: white; margin-bottom: 10px; box-sizing: border-box; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>BIBLIOTECA // {{ world.name }}</h1>
-        <a href="{% url 'ver_mundo' world.id %}" class="back-btn">⬅ Volver al Mundo</a>
+    <div class="top-bar">
+        <div style="font-weight:bold; font-size:1.5em;">BIBLIOTECA</div>
+        <div>
+            <a href="{% url 'ver_mundo' world.id %}" class="nav-btn">⬅ Volver al Mundo</a>
+            <a href="{% url 'home' %}" class="nav-btn">🏠 Inicio</a>
+        </div>
     </div>
 
-    <div class="library-grid">
-        <div class="category-card style-LORE">
-            <div class="cat-header">
-                <span class="cat-title" style="color:#d633ff">📜 Lore General</span>
-                <a href="{% url 'crear_narrativa' world.id 'L' %}" class="add-btn btn-LORE" title="Crear Lore">+</a>
-            </div>
-            <div class="doc-list">
-                {% for d in lores %}
-                <a href="{% url 'leer_narrativa' d.nid %}" class="doc-item doc-LORE">
-                    <span class="nid-tag">{{ d.nid }}</span> {{ d.titulo }}
+    <div class="container">
+        <div class="main-col">
+            <h1>{{ world.name }} <span style="font-size:0.5em; color:#666;">ARCHIVO</span></h1>
+            
+            {% if lores %}
+                <h2>📜 Lores & Fundamentos</h2>
+                {% for l in lores %}
+                    <a href="{% url 'leer_narrativa' l.nid %}" class="lore-card">
+                        <div>
+                            <span class="tag">{{ l.nid }}</span>
+                            <span class="lore-title">{{ l.titulo }}</span>
+                        </div>
+                        <span class="lore-meta">Leer ➔</span>
+                    </a>
+                {% endfor %}
+            {% endif %}
+
+            {% if historias %}
+                <h2>📖 Historias</h2>
+                {% for h in historias %}
+                <a href="{% url 'leer_narrativa' h.nid %}" class="lore-card">
+                    <div><span class="tag">{{ h.nid }}</span> <span class="lore-title">{{ h.titulo }}</span></div>
+                    <span class="lore-meta">Leer ➔</span>
                 </a>
-                {% empty %}<div style="color:#444; padding:10px; font-style:italic;">Vacío.</div>{% endfor %}
-            </div>
+                {% endfor %}
+            {% endif %}
+
+            {% if not lores and not historias %}
+                <div style="text-align:center; padding:50px; color:#666; border:2px dashed #333;">La biblioteca está vacía.</div>
+            {% endif %}
         </div>
 
-        <div class="category-card style-HISTORIA">
-            <div class="cat-header">
-                <span class="cat-title" style="color:#f1c40f">📖 Historias</span>
-                <a href="{% url 'crear_narrativa' world.id 'H' %}" class="add-btn btn-HISTORIA" title="Crear Historia">+</a>
-            </div>
-            <div class="doc-list">
-                {% for d in historias %}
-                <a href="{% url 'leer_narrativa' d.nid %}" class="doc-item doc-HISTORIA">
-                    <span class="nid-tag">{{ d.nid }}</span> {{ d.titulo }}
-                </a>
-                {% empty %}<div style="color:#444; padding:10px; font-style:italic;">Vacío.</div>{% endfor %}
-            </div>
+        <div class="sidebar">
+            <h3 style="margin-top:0; color:#fff;">Escribir Nuevo</h3>
+            <form method="POST" action="{% url 'crear_narrativa' world.id 'placeholder' %}" id="createForm">
+                {% csrf_token %}
+                <label style="font-size:0.9em; color:#aaa;">Tipo de Documento:</label>
+                <select id="typeSelector" onchange="updateAction()">
+                    <option value="LORE">📜 Lore / Enciclopedia</option>
+                    <option value="HISTORIA">📖 Historia / Trama</option>
+                    <option value="LEYENDA">🕯️ Leyenda</option>
+                    <option value="REGLA">⚖️ Regla / Sistema</option>
+                </select>
+                <button type="submit" class="btn-create">✍️ CREAR</button>
+            </form>
+            
+            <script>
+                function updateAction() {
+                    const type = document.getElementById('typeSelector').value;
+                    const form = document.getElementById('createForm');
+                    // Usamos world.id (J-ID)
+                    let base = "{% url 'crear_narrativa' world.id 'placeholder' %}";
+                    form.action = base.replace('placeholder', type);
+                }
+                updateAction(); // Init
+            </script>
         </div>
-
-        <div class="category-card style-EVENTO">
-            <div class="cat-header">
-                <span class="cat-title" style="color:#e74c3c">⚔️ Eventos</span>
-                <a href="{% url 'crear_narrativa' world.id 'E' %}" class="add-btn btn-EVENTO" title="Crear Evento">+</a>
-            </div>
-            <div class="doc-list">
-                {% for d in eventos %}
-                <a href="{% url 'leer_narrativa' d.nid %}" class="doc-item doc-EVENTO">
-                    <span class="nid-tag">{{ d.nid }}</span> {{ d.titulo }}
-                </a>
-                {% empty %}<div style="color:#444; padding:10px; font-style:italic;">Vacío.</div>{% endfor %}
-            </div>
-        </div>
-
-        <div class="category-card style-LEYENDA">
-            <div class="cat-header">
-                <span class="cat-title" style="color:#e67e22">🕯️ Leyendas</span>
-                <a href="{% url 'crear_narrativa' world.id 'M' %}" class="add-btn btn-LEYENDA" title="Crear Leyenda">+</a>
-            </div>
-            <div class="doc-list">
-                {% for d in leyendas %}
-                <a href="{% url 'leer_narrativa' d.nid %}" class="doc-item doc-LEYENDA">
-                    <span class="nid-tag">{{ d.nid }}</span> {{ d.titulo }}
-                </a>
-                {% empty %}<div style="color:#444; padding:10px; font-style:italic;">Vacío.</div>{% endfor %}
-            </div>
-        </div>
-
-        <div class="category-card style-REGLA">
-            <div class="cat-header">
-                <span class="cat-title" style="color:#3498db">⚖️ Reglas / Sistemas</span>
-                <a href="{% url 'crear_narrativa' world.id 'R' %}" class="add-btn btn-REGLA" title="Crear Regla">+</a>
-            </div>
-            <div class="doc-list">
-                {% for d in reglas %}
-                <a href="{% url 'leer_narrativa' d.nid %}" class="doc-item doc-REGLA">
-                    <span class="nid-tag">{{ d.nid }}</span> {{ d.titulo }}
-                </a>
-                {% empty %}<div style="color:#444; padding:10px; font-style:italic;">Vacío.</div>{% endfor %}
-            </div>
-        </div>
-
-        <div class="category-card style-BESTIARIO">
-            <div class="cat-header">
-                <span class="cat-title" style="color:#2ecc71">🐉 Bestiario</span>
-                <a href="{% url 'crear_narrativa' world.id 'B' %}" class="add-btn btn-BESTIARIO" title="Crear Entrada">+</a>
-            </div>
-            <div class="doc-list">
-                {% for d in bestiario %}
-                <a href="{% url 'leer_narrativa' d.nid %}" class="doc-item doc-BESTIARIO">
-                    <span class="nid-tag">{{ d.nid }}</span> {{ d.titulo }}
-                </a>
-                {% empty %}<div style="color:#444; padding:10px; font-style:italic;">Vacío.</div>{% endfor %}
-            </div>
-        </div>
-
     </div>
 </body>
 </html>

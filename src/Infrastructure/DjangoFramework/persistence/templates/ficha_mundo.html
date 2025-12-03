@@ -3,651 +3,432 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>ECLAI v4.8 | {{ name }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECLAI v5.0 | {{ name }}</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
-
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#0a0a12',
+                        card: '#161625',
+                        accent: '#d633ff',
+                        'accent-hover': '#b02ce0',
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        body { background-color: #0a0a12; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; padding: 20px 40px; }
+        /* Scrollbar personalizada */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #0a0a12; }
-        ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #d633ff; }
-
-        /* CABECERA */
-        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 15px; background: #0e0e16; padding: 15px 20px; border-radius: 10px; }
-        .logo { font-size: 1.5em; font-weight: bold; color: #fff; letter-spacing: 2px; }
-        .nav-group { display: flex; gap: 10px; }
-        .nav-btn { background: #333; color: #fff; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 0.9em; border: 1px solid #444; cursor: pointer; }
-        .nav-btn:hover { background: #555; }
-        .nav-btn.special { background: #d633ff; border-color: #d633ff; }
-        .nav-btn.special:hover { background: #a569bd; }
-        
-        /* TARJETA PRINCIPAL */
-        .card { background: #161625; border: 1px solid #2a2a40; border-radius: 15px; max-width: 1200px; margin: 0 auto; overflow: hidden; display: grid; grid-template-columns: 3fr 1fr; }
-        .card-header { grid-column: 1 / -1; background: linear-gradient(90deg, #2b1a45 0%, #1a1a2e 100%); padding: 20px; border-bottom: 2px solid #4a3b69; display: flex; justify-content: space-between; align-items: flex-start; }
-        
-        .main-content { padding: 30px; border-right: 1px solid #2a2a40; min-width: 0; }
-        .sidebar { padding: 30px; background: #13131f; font-size: 0.9em; min-width: 250px; }
-        
-        /* BREADCRUMBS & STATUS */
-        .breadcrumbs { margin-bottom: 10px; font-size: 0.85em; color: #888; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
-        .crumb-item { background: #333; padding: 2px 8px; border-radius: 10px; text-decoration: none; color: #ccc; border: 1px solid #444; transition:0.2s; }
-        .crumb-item:hover { background: #d633ff; color: #fff; border-color: #d633ff; }
-        .crumb-separator { color: #666; }
-        .crumb-active { color: #fff; font-weight: bold; border-color: #d633ff; background: rgba(214, 51, 255, 0.1); }
-
-        .status-badge { padding: 4px 12px; border-radius: 4px; font-weight: bold; font-size: 0.8em; letter-spacing: 1px; text-transform: uppercase; display: inline-block; }
-        .st-live { background: #2ecc71; color: #000; border: 1px solid #27ae60; }
-        .st-draft { background: #f39c12; color: #000; border: 1px solid #d35400; }
-
-        /* BOTONES GENÉRICOS */
-        .actions { display: flex; gap: 10px; }
-        .btn { padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.8em; text-decoration: none; color:#fff; border:none; display:inline-block; }
-        .btn-edit { background: #3498db; } .btn-del { background: #e74c3c; }
-        
-        /* GALERÍA */
-        .gallery { display: flex; gap: 15px; overflow-x: auto; white-space: nowrap; padding-bottom: 15px; margin-bottom: 20px; scrollbar-width: thin; scrollbar-color: #d633ff #0e0e16; }
-        .gallery-item { position: relative; display: inline-block; flex: 0 0 auto; width: 160px; height: 220px; }
-        .img-wrapper { position: relative; width: 100%; height: 100%; overflow: hidden; border-radius: 8px; border: 2px solid #333; cursor: pointer; }
-        .img-wrapper img { width: 100%; height: 100%; object-fit: cover; transition: 0.3s; }
-        .gallery-item:hover .img-wrapper img { transform: scale(1.05); }
-        .gallery-item:hover .img-wrapper { border-color: #d633ff; }
-
-        /* INSPECTOR DE METADATOS (OVERLAY) */
-        .meta-overlay {
-            position: absolute; bottom: 0; left: 0; width: 100%;
-            background: rgba(0, 0, 0, 0.85); color: #fff;
-            padding: 5px 0; text-align: center;
-            opacity: 0; transition: 0.2s; pointer-events: none;
-            display: flex; flex-direction: column; z-index: 5;
-        }
-        .gallery-item:hover .meta-overlay { opacity: 1; }
-        .res { color: #d633ff; font-weight: bold; font-family: monospace; font-size: 0.8em; }
-        .fmt { color: #aaa; font-size: 0.7em; }
-
-        .btn-delete-img { position: absolute; top: 5px; right: 5px; background: rgba(231, 76, 60, 0.9); color: white; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-size: 12px; text-decoration: none; cursor: pointer; opacity: 0; transition: 0.2s; z-index: 10; }
-        .gallery-item:hover .btn-delete-img { opacity: 1; }
-
-        /* SECCIONES */
-        .section-title { color: #a0a0ff; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px; margin-top: 25px; font-size: 1.1em; display: flex; justify-content: space-between; align-items: center; }
-        .lore-box { background: #111; padding: 20px; border-left: 4px solid #d633ff; font-style: italic; color: #ccc; white-space: pre-wrap; margin-bottom: 10px; max-height: 300px; overflow-y: auto; }
-        
-        /* SIDEBAR */
-        .children-list { display: grid; gap: 5px; }
-        .child-link { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #1f1f33; text-decoration: none; color: #eee; border-radius: 6px; border: 1px solid #333; transition:0.2s; }
-        .child-link:hover { border-color: #d633ff; transform: translateX(5px); }
-        .child-index { font-family: 'Courier New', monospace; color: #d633ff; background: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.8em; }
-        
-        .vis-toggle { text-decoration: none; font-weight: bold; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; transition:0.3s; border:1px solid transparent; cursor:pointer; display:inline-block; }
-        .vis-public { background: rgba(46, 204, 113, 0.1); color: #2ecc71; border-color: #2ecc71; }
-        .vis-private { background: rgba(231, 76, 60, 0.1); color: #e74c3c; border-color: #e74c3c; }
-        
-        .stats-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 20px; }
-        .stat-row { display:flex; justify-content:space-between; border-bottom:1px solid #333; padding:5px 0; font-size:0.9em; }
-        .label { color: #888; text-transform: uppercase; font-size:0.8em; }
-        .value { font-family: 'Courier New', monospace; color: #fff; font-weight: bold; text-align:right; }
-
-        /* TARJETAS METADATA */
-        .data-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 10px; }
-        .data-card { background: #13131e; border: 1px solid #333; border-radius: 6px; overflow: hidden; }
-        .data-card-header { background: #1f1f33; padding: 8px 12px; border-bottom: 1px solid #333; font-weight: bold; color: #d633ff; text-transform: uppercase; font-size: 0.85em; letter-spacing: 1px; }
-        .data-card-body { padding: 10px; }
-        .data-row { display: flex; justify-content: space-between; border-bottom: 1px dashed #2a2a40; padding: 6px 0; font-size: 0.9em; }
-        .data-row:last-child { border-bottom: none; }
-        .data-key { color: #888; text-transform: capitalize; }
-        .data-val { color: #eee; font-weight: bold; text-align: right; }
-        .data-list-item { background: #000; padding: 2px 8px; border-radius: 4px; border: 1px solid #444; font-size: 0.8em; display: inline-block; margin-top: 2px; }
-
-        /* MODALES */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; justify-content: center; align-items: center; }
-        .modal:target { display: flex; }
-        .modal-content { background: #161625; padding: 30px; border-radius: 10px; width: 600px; border: 1px solid #d633ff; box-shadow: 0 0 50px rgba(0,0,0,0.8); }
-        .edit-form input, .edit-form textarea { width: 100%; background: #0a0a12; border: 1px solid #444; color: #fff; padding: 10px; margin-top: 5px; margin-bottom:15px; box-sizing:border-box; }
-        
-        .child-form { background: #1f1f33; padding: 15px; border-radius: 8px; margin-top: 20px; display: flex; gap: 10px; }
-        .child-form input { background: #0a0a12; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 4px; flex-grow: 1; }
-        .child-form button { background: #d633ff; color: #fff; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; }
-        .child-form select { background: #000; color: #fff; border: 1px solid #444; padding: 8px; border-radius: 4px; }
-
-        .messages-container { position: fixed; top: 20px; right: 20px; z-index: 9999; width: 300px; }
-        .alert { padding: 15px; margin-bottom: 10px; border-radius: 5px; color: #fff; font-weight: bold; box-shadow: 0 5px 15px rgba(0,0,0,0.5); transition: opacity 0.5s; }
-        .alert-success { background: rgba(39, 174, 96, 0.9); border: 1px solid #2ecc71; }
-        .alert-error { background: rgba(192, 57, 43, 0.9); border: 1px solid #e74c3c; }
+        /* Ocultar scrollbar en galería pero permitir scroll */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body>
+<body class="bg-dark text-gray-200 font-sans p-4 lg:p-8 min-h-screen">
+
     {% if messages %}
-    <div class="messages-container">
+    <div class="fixed top-5 right-5 z-50 w-80 space-y-2">
         {% for message in messages %}
-        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        <div class="p-4 rounded-lg shadow-lg font-bold text-white {% if message.tags == 'success' %}bg-green-600{% else %}bg-red-600{% endif %}">
+            {{ message }}
+        </div>
         {% endfor %}
     </div>
-    <script>
-        setTimeout(function() {
-            document.querySelectorAll('.alert').forEach(a => { a.style.opacity = '0'; setTimeout(() => a.remove(), 500); });
-        }, 5000);
-    </script>
     {% endif %}
 
-    <div class="top-bar">
-        <div class="logo">ECLAI v4.8 // SYSTEM</div>
-        <div class="nav-group">
-            {% if user.is_authenticated %}
-                <span style="color:#aaa; font-size:0.8em; align-self:center; margin-right:10px;">👤 {{ user.username }}</span>
-                <form action="{% url 'logout' %}" method="post" style="display:inline;">
-                    {% csrf_token %}
-                    <button type="submit" class="nav-btn" style="background:#c0392b; border-color:#e74c3c;">🚪 Salir</button>
-                </form>
-            {% else %}
-                <a href="{% url 'login' %}" class="nav-btn" style="background:#27ae60; border-color:#2ecc71;">🔑 Entrar</a>
-            {% endif %}
-            <button class="nav-btn" onclick="history.back()">⬅️ Atrás</button>
-            <a href="{% url 'home' %}" class="nav-btn">🏠 Inicio</a>
-            <a href="{% url 'centro_control' %}" class="nav-btn special">🎛️ Gestión</a>
+    <div class="flex justify-between items-center mb-6 bg-gray-900/80 p-4 rounded-xl border border-gray-800 backdrop-blur-md">
+        <div class="text-xl font-bold tracking-widest text-white">
+            ECLAI <span class="text-xs text-green-400 ml-2 bg-green-900/30 px-2 py-1 rounded border border-green-800">
+                {% if user.is_authenticated %}👤 {{ user.username|upper }}{% else %}👻 ANÓNIMO{% endif %}
+            </span>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="history.back()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm border border-gray-700 transition">⬅️ Atrás</button>
+            <a href="{% url 'home' %}" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm border border-gray-700 transition">🏠 Inicio</a>
         </div>
     </div>
 
-    {% if is_preview %}
-    <div style="background:#f39c12; color:#fff; padding:15px; text-align:center; margin-bottom:20px; border-radius:8px; margin: 0 auto 20px auto; max-width: 1000px;">
-        <h2>⚠️ MODO INSPECCIÓN: VERSIÓN {{ version_live }}</h2>
-        <p>Autor: <strong>{{ author }}</strong> | Razón: <em>{{ change_log }}</em></p>
-        <div style="margin-top:10px;">
-            <a href="{% url 'aprobar_version' version_id %}" class="btn" style="background:#27ae60;">✅ APROBAR</a>
-            <a href="{% url 'rechazar_version' version_id %}}" class="btn" style="background:#c0392b;">❌ RECHAZAR</a>
-            <a href="{% url 'centro_control' %}" class="btn" style="background:#7f8c8d;">Cancelar</a>
-        </div>
-    </div>
-    {% endif %}
-
-    <div class="card">
-        <div class="card-header">
+    <div class="bg-card border border-gray-800 rounded-2xl max-w-7xl mx-auto overflow-hidden shadow-2xl grid grid-cols-1 lg:grid-cols-4">
+        
+        <div class="col-span-1 lg:col-span-4 bg-gradient-to-r from-indigo-950 to-gray-900 p-6 border-b border-indigo-900 flex justify-between items-start">
             <div>
-                <div class="breadcrumbs">
-                    <a href="{% url 'home' %}" class="crumb-item">🏠 Universo</a>
+                <div class="flex items-center gap-2 text-xs text-gray-400 mb-2">
+                    <a href="{% url 'home' %}" class="hover:text-accent">🏠 Universo</a>
                     {% for b in breadcrumbs %}
-                        <span class="crumb-separator">›</span>
-                        <a href="{% url 'ver_mundo' b.id %}" class="crumb-item {% if b.id == jid %}crumb-active{% endif %}">{{ b.label }}</a>
+                        <span>›</span>
+                        <a href="{% url 'ver_mundo' b.id %}" class="{% if b.id == jid %}text-accent font-bold{% else %}hover:text-white{% endif %}">{{ b.label }}</a>
                     {% endfor %}
                 </div>
-                
-                <h1 style="margin:10px 0 5px 0;">{{ name }}</h1>
-                
-                <div style="margin-top:5px;">
-                    {% if status == 'LIVE' %}
-                        <span class="status-badge st-live">🟢 LIVE v{{ version_live }}</span>
-                    {% else %}
-                        <span class="status-badge st-draft">⚠️ {{ status|default:"DRAFT" }}</span>
-                    {% endif %}
+                <h1 class="text-3xl lg:text-4xl font-bold text-white mb-2">{{ name }}</h1>
+                <div class="text-xs font-mono text-gray-500 bg-black/30 px-2 py-1 rounded inline-block border border-gray-800">
+                    J-ID: {{ jid }} <span class="text-gray-600 mx-2">|</span> CODE: <span class="text-accent">{{ public_id }}</span>
                 </div>
             </div>
-            
             {% if not is_preview %}
-            <div class="actions">
-                <a href="#editModal" class="btn btn-edit">✏️ Editar</a>
-                <a href="{% url 'borrar_mundo' jid %}" class="btn btn-del" onclick="return confirm('¿Seguro? Se borrarán hijos también.')">🗑️ Borrar</a>
+            <div>
+                <a href="{% url 'borrar_mundo' jid %}" onclick="return confirm('¿Borrar mundo?')" class="p-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg transition border border-red-900/50" title="Borrar">🗑️</a>
             </div>
             {% endif %}
         </div>
 
-        <div class="main-content">
-            {% if propuestas %}
-            <div style="background:rgba(241, 196, 15, 0.1); border:1px solid #f1c40f; padding:15px; border-radius:8px; margin-bottom:20px;">
-                <strong style="color:#f1c40f;">⚠️ Hay {{ propuestas|length }} revisión(es) pendiente(s)</strong>
-                <div style="margin-top:5px; font-size:0.9em;">
-                    <a href="{% url 'centro_control' %}" style="color:#d633ff;">Ir al Centro de Control</a> para aprobar.
-                </div>
-            </div>
-            {% endif %}
-
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                <div class="section-title" style="margin:0;">Visual Database</div>
+        <div class="col-span-1 lg:col-span-3 p-6 lg:p-8 border-r border-gray-800">
+            
+            <div class="flex justify-between items-end mb-4 border-b border-gray-800 pb-2">
+                <h3 class="text-accent font-bold tracking-wider text-sm uppercase">Visual Database</h3>
                 {% if not is_preview %}
-                <div style="display:flex; align-items:center;">
-                    <button onclick="openAiModal()" class="btn" style="background:#9b59b6; font-size:0.7em; border:none;">🎨 + FOTO IA</button>
-                    <form id="form-manual-upload" method="POST" action="{% url 'subir_imagen_manual' jid %}" enctype="multipart/form-data" style="display:inline; margin-left:5px;">
+                <div class="flex gap-2">
+                    <button onclick="openAiModal()" class="px-3 py-1 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded transition shadow-lg shadow-purple-900/20">🎨 IA GENERATOR</button>
+                    <button onclick="document.getElementById('file-upload').click()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold rounded transition">📎 SUBIR</button>
+                    
+                    <form id="form-manual-upload" method="POST" action="{% url 'subir_imagen_manual' public_id %}" enctype="multipart/form-data" class="hidden">
                         {% csrf_token %}
-                        <label for="file-upload" class="btn" style="background:#555; font-size:0.7em; cursor:pointer;" title="Subir archivo propio">📎 SUBIR</label>
-                        <input id="file-upload" type="file" name="imagen_manual" accept="image/*" style="display:none;" onchange="openUploadModal(this)">
+                        <input id="file-upload" type="file" name="imagen_manual" accept="image/*" onchange="openUploadModal(this)">
+                        <input type="hidden" id="hidden-use-original" name="use_original_name">
+                        <input type="hidden" id="hidden-custom-name" name="custom_name">
                     </form>
                 </div>
                 {% endif %}
             </div>
 
-            <div class="gallery">
-                {% for img in imagenes %} 
-                <div class="gallery-item">
-                    <div class="img-wrapper">
-                        <img src="{% static 'persistence/img/'|add:img.url %}" onclick="openLightbox(this.src, '{{ img.filename }}')" onload="loadMeta(this)">
-                        <div class="meta-overlay">
-                            <span class="res">...</span>
-                            <span class="fmt">WEBP</span>
-                        </div>
+            <div class="flex gap-4 overflow-x-auto pb-4 mb-8 snap-x">
+                {% for img in imagenes %}
+                <div class="snap-start shrink-0 relative group w-40 h-56">
+                    <div class="w-full h-full rounded-lg overflow-hidden border border-gray-700 cursor-pointer hover:border-accent transition shadow-lg bg-black" onclick="openLightbox('{% static 'persistence/img/'|add:img.url %}', '{{ img.filename }}')">
+                        <img src="{% static 'persistence/img/'|add:img.url %}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500 opacity-90 group-hover:opacity-100">
                     </div>
                     {% if not is_preview %}
-                    <a href="{% url 'borrar_foto' jid img.filename %}" class="btn-delete-img" onclick="return confirm('¿Borrar imagen?')">✕</a>
+                    <a href="{% url 'borrar_foto' jid img.filename %}" class="absolute top-1 right-1 bg-red-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition hover:bg-red-500 shadow-lg" onclick="event.stopPropagation(); return confirm('¿Borrar?')">✕</a>
                     {% endif %}
                 </div>
-                {% empty %} 
-                <div style="color:#555; padding:20px; border:1px dashed #444; width:100%; text-align:center; font-size:0.8em;">No hay datos visuales.</div> 
+                {% empty %}
+                <div class="w-full py-12 border-2 border-dashed border-gray-800 rounded-lg text-center text-gray-600 text-sm bg-black/20">
+                    🌑 Sin registros visuales.
+                </div>
                 {% endfor %}
             </div>
 
-            {% if metadata_obj and metadata_obj.fisica or metadata_obj.clima or metadata_obj.biology %}
-            <div class="section-title">Datos Analizados (Metadata)</div>
-            <div class="data-grid">
-                {% for key, value in metadata_obj.items %}
-                    {% if key != 'tipo_entidad' and key != 'biology' and key != 'stats' and key != 'visuals' and key != 'gallery_log' and key != 'cover_image' %}
-                    <div class="data-card">
-                        <div class="data-card-header">{{ key }}</div>
-                        <div class="data-card-body">
-                            {% if key == 'fisica' or key == 'clima' or key == 'leyes_fundamentales' or key == 'geo_config' or key == 'climate_profile' %}
-                                {% for subkey, subval in value.items %}
-                                <div class="data-row"><span class="data-key">{{ subkey }}:</span><span class="data-val">{% if subval.append %}{% for item in subval %}<span class="data-list-item">{{ item }}</span> {% endfor %}{% else %}{{ subval }}{% endif %}</span></div>
-                                {% endfor %}
-                            {% else %}
-                                <div style="color:#ccc; font-style:italic;">{{ value }}</div>
-                            {% endif %}
+            {% if metadata_obj %}
+            <div class="mb-8">
+                <h3 class="text-accent font-bold tracking-wider text-sm uppercase mb-3 border-b border-gray-800 pb-1">Datos Analizados</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {% for key, value in metadata_obj.items %}
+                        {% if key != 'gallery_log' and key != 'cover_image' and key != 'visuals' and key != 'biology' and key != 'stats' %}
+                        <div class="bg-gray-950 border border-gray-800 p-3 rounded-lg">
+                            <div class="text-xs text-gray-500 uppercase mb-1 font-bold">{{ key }}</div>
+                            <div class="text-sm font-mono text-gray-300 truncate">
+                                {% if value.append %}
+                                    {% for item in value %}
+                                        <span class="inline-block bg-black px-2 py-0.5 rounded border border-gray-700 text-xs mr-1">{{ item }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    {{ value }}
+                                {% endif %}
+                            </div>
                         </div>
-                    </div>
-                    {% endif %}
-                {% endfor %}
-                
-                {% if metadata_obj.biology %}
-                <div class="data-card" style="border-color:#2ecc71;">
-                    <div class="data-card-header" style="color:#2ecc71;">BIO-SCAN</div>
-                    <div class="data-card-body">
-                        <div class="data-row"><span class="data-key">Clase:</span><span class="data-val">{{ metadata_obj.biology.taxonomy }}</span></div>
-                        <div class="data-row"><span class="data-key">Peligro:</span><span class="data-val" style="color:#e74c3c;">{{ metadata_obj.stats.danger_level }}/10</span></div>
-                    </div>
+                        {% endif %}
+                    {% endfor %}
                 </div>
-                {% endif %}
             </div>
             {% endif %}
 
-            <div class="section-title">Descripción Conceptual</div>
-            <div class="lore-box">{{ description|default:"Sin descripción definida." }}</div>
+            <div>
+                <h3 class="text-accent font-bold tracking-wider text-sm uppercase mb-3 border-b border-gray-800 pb-1">Lore</h3>
+                <div class="bg-black/30 p-6 rounded-lg border-l-4 border-accent text-gray-300 leading-relaxed whitespace-pre-wrap font-serif text-lg">
+                    {{ description|default:"Sin descripción disponible." }}
+                </div>
+            </div>
         </div>
 
-        <div class="sidebar">
-            <div class="section-title" style="margin-top:0;">Ficha Técnica</div>
-            <div class="stats-grid">
-                <div class="stat-row"><span class="label">J-ID</span><span class="value">{{ jid }}</span></div>
-                <div class="stat-row"><span class="label">PUBLIC ID</span><span class="value" style="color:#d633ff">{{ public_id }}</span></div>
-                <div class="stat-row"><span class="label">Actualizado</span><span class="value" style="font-size:0.9em;">{{ updated_at|date:"d/m/Y" }}</span></div>
-                <div class="stat-row" style="align-items:center;">
-                    <span class="label">Visibilidad</span>
-                    {% if not is_preview %}
-                        <a href="{% url 'toggle_visibilidad' jid %}" class="vis-toggle {% if visible %}is-public{% else %}is-private{% endif %}">{% if visible %}🌎 PÚBLICA{% else %}🔒 PRIVADA{% endif %}</a>
-                    {% else %}
-                        <span class="vis-toggle">{% if visible %}🌎 PÚBLICA{% else %}🔒 PRIVADA{% endif %}</span>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div style="margin: 20px 0; padding: 15px; background: #0f0f15; border: 1px solid #333; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
-                <div><strong style="color:#d633ff; font-size:1.1em;">📚 Archivo Narrativo</strong></div>
-                <a href="{% url 'ver_narrativa_mundo' jid %}" class="btn" style="background:#d633ff; font-weight:bold; padding: 10px 20px;">ABRIR BIBLIOTECA ➔</a>
-            </div>
-
-            {% if jid|length == 12 %}
-            <div style="margin: 20px 0; padding: 15px; background: rgba(41, 128, 185, 0.1); border: 1px dashed #3498db; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
-                <div><strong style="color:#3498db;">🪐 Estructura</strong></div>
-                <a href="{% url 'init_hemisferios' jid %}" class="btn" style="background:#2980b9;">🌍 DIVIDIR</a>
-            </div>
-            {% endif %}
-
-            <div class="section-title">Entidades Hijas</div>
-            <div class="children-list">
-                {% for h in hijos %}
-                <a href="{% url 'ver_mundo' h.id %}" class="child-link">
-                    <span><strong>{{ h.name }}</strong></span>
-                    <span class="child-index">#{{ h.short }}</span>
+        <div class="col-span-1 bg-gray-900/50 p-6 text-sm flex flex-col h-full border-l border-gray-800">
+            
+            <div class="space-y-3 mb-8">
+                <a href="{% url 'mapa_arbol' public_id|default:jid %}" class="block w-full py-3 bg-slate-700 hover:bg-slate-600 text-white font-bold text-center rounded-lg border border-slate-600 shadow transition">
+                    🗺️ VER MAPA
                 </a>
-                {% empty %} <div style="color:#555; font-style:italic;">Sin hijos.</div> {% endfor %}
+                <a href="{% url 'ver_narrativa_mundo' jid %}" class="block w-full py-3 bg-gray-800 hover:bg-gray-700 text-accent font-bold text-center rounded-lg border border-gray-700 transition">
+                    📚 NARRATIVA
+                </a>
             </div>
-            
-            {% if not is_preview %}
-            <form method="POST" class="child-form">
-                {% csrf_token %}
-                <div style="display:flex; gap:10px; width:100%; flex-direction:column;">
-                    <input type="text" name="child_name" placeholder="Nuevo hijo..." style="width:100%; background:#000; border:1px solid #444; color:#fff; padding:5px;" autocomplete="off">
-                    <div style="display:flex; gap:10px;">
-                        <select name="child_type" style="background:#000; color:#fff; border:1px solid #444; padding:5px; border-radius:4px; flex-grow:1;">
-                            <option value="ENTITY">🐉 Criatura / Fauna</option>
-                            <option value="LOCATION">📍 Lugar / Región</option>
-                        </select>
-                        <button type="submit" style="width:auto; padding:5px 15px;">➕</button>
-                    </div>
-                    <label style="color:#aaa; font-size:0.8em; cursor:pointer; display:flex; align-items:center; gap:5px; margin-top:5px;">
-                        <input type="checkbox" name="use_ai" checked> ✨ Generar con IA
-                    </label>
+
+            <div class="mb-6 flex-grow">
+                <h4 class="text-gray-500 uppercase text-xs font-bold mb-3">Sub-Niveles ({{ hijos|length }})</h4>
+                <div class="space-y-2 max-h-[600px] overflow-y-auto pr-1 custom-scroll">
+                    {% for h in hijos %}
+                    <a href="{% url 'ver_mundo' h.id %}" class="flex justify-between items-center p-3 bg-gray-950 hover:bg-gray-800 rounded border border-gray-800 hover:border-accent transition group">
+                        <span class="font-bold text-gray-300 group-hover:text-white">{{ h.name }}</span>
+                        <span class="font-mono text-xs text-gray-600 group-hover:text-accent">#{{ h.short }}</span>
+                    </a>
+                    {% empty %}
+                    <div class="text-center text-gray-600 italic py-4 bg-gray-950 rounded border border-dashed border-gray-800">Vacío</div>
+                    {% endfor %}
                 </div>
-            </form>
+            </div>
+
+            {% if not is_preview %}
+            <div class="bg-gray-950 p-4 rounded-lg border border-gray-800 mt-auto">
+                <h4 class="text-gray-500 uppercase text-[10px] font-bold mb-2">Crear Nuevo</h4>
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="text" name="child_name" placeholder="Nombre..." class="w-full bg-black border border-gray-700 rounded p-2 text-sm mb-2 focus:border-accent focus:outline-none text-white placeholder-gray-600">
+                    <div class="flex gap-2">
+                        <select name="child_type" class="bg-black border border-gray-700 rounded p-2 text-xs text-gray-300 flex-grow focus:border-accent focus:outline-none">
+                            <option value="ENTITY">Criatura</option>
+                            <option value="LOCATION">Lugar</option>
+                        </select>
+                        <button type="submit" class="bg-accent hover:bg-accent-hover text-white px-4 rounded font-bold text-lg leading-none flex items-center justify-center shadow-lg shadow-purple-900/30">+</button>
+                    </div>
+                    <label class="flex items-center gap-2 mt-2 cursor-pointer">
+                        <input type="checkbox" name="use_ai" checked class="accent-accent w-3 h-3">
+                        <span class="text-[10px] text-gray-400">Generar con IA</span>
+                    </label>
+                </form>
+            </div>
             {% endif %}
-            
-            <div class="section-title">Historial</div>
-            <ul style="padding-left:20px; font-size:0.8em; color:#aaa;">
-                {% for h in historial %}
-                <li style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                    <span>v{{ h.version_number }}: {{ h.proposed_name }}</span>
-                    <a href="{% url 'restaurar_version' h.id %}" onclick="return confirm('¿Restaurar?')" style="font-size:0.7em; color:#e74c3c; text-decoration:none; border:1px solid #e74c3c; padding:2px 5px; border-radius:4px;">↺ Restaurar</a>
-                </li>
-                {% endfor %}
-            </ul>
+
         </div>
     </div>
 
-    <div id="uploadModal" class="modal">
-        <div class="modal-content" style="width: 500px; text-align: center;">
-            <div class="modal-header"><h2>Revisar Imagen</h2><a href="#" onclick="closeUploadModal()" class="close-btn">✕</a></div>
-            <div style="margin: 20px 0; background: #000; padding: 10px; border-radius: 8px; border: 1px dashed #444; min-height: 200px; display:flex; flex-direction:column; justify-content:center; align-items:center;">
-                <div id="scan-status" style="margin-bottom:10px; font-family:monospace;">⏳ PREPARANDO...</div>
-                <img id="preview-img" src="" style="max-width: 100%; max-height: 350px; border-radius: 4px; display:none;">
-                <div id="file-info" style="margin-top: 10px; color: #888; font-family: monospace; font-size: 0.8em;"></div>
-            </div>
-            <div style="display:flex; justify-content: space-between; gap: 10px;">
-                <button onclick="closeUploadModal()" class="btn" style="background: #e74c3c; flex-grow:1;">❌ CANCELAR</button>
-                <button id="btn-confirm-upload" onclick="confirmUpload()" class="btn" style="background: #2ecc71; flex-grow:1; display:none;">✅ SUBIR AHORA</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL GENERACIÓN IA -->
-    <div id="aiModal" class="modal">
-        <div class="modal-content" style="width: 500px; text-align: center;">
-            <div class="modal-header"><h2>Generador Neural</h2><a href="#" onclick="closeAiModal()" class="close-btn">✕</a></div>
+    <div id="aiModal" class="fixed inset-0 bg-black/90 z-50 hidden items-center justify-center backdrop-blur-sm">
+        <div class="bg-card border border-accent/50 rounded-2xl p-8 max-w-md w-full text-center shadow-[0_0_50px_rgba(214,51,255,0.2)]">
+            <h2 class="text-2xl font-bold text-white mb-1">Generador Neural</h2>
+            <p class="text-xs text-gray-400 mb-6 uppercase tracking-widest">Stable Diffusion + Llama 3</p>
             
             <div id="ai-step-1">
-                <p style="color:#aaa; margin-bottom:20px;">La IA analizará la descripción del mundo y generará una visualización única.</p>
-                <button onclick="generatePreview()" class="btn" style="background:#d633ff; padding:15px 30px; font-size:1.1em;">✨ GENERAR AHORA</button>
+                <p class="text-gray-300 mb-6 text-sm">La IA leerá la descripción de este mundo y generará una visualización única.</p>
+                <button onclick="generatePreview()" class="w-full py-3 bg-accent hover:bg-accent-hover text-white font-bold rounded-lg mb-3 transition">✨ GENERAR AHORA</button>
+                <button onclick="closeAiModal()" class="text-gray-500 hover:text-white text-sm underline">Cancelar</button>
             </div>
 
-            <div id="ai-step-loading" style="display:none; padding:40px;">
-                <div style="font-size:3em;">🔮</div>
-                <p style="color:#d633ff; font-weight:bold; margin-top:10px;">Soñando píxeles...</p>
+            <div id="ai-step-loading" class="hidden py-8">
+                <div class="text-4xl animate-bounce mb-4">🔮</div>
+                <p class="text-accent font-bold animate-pulse">Soñando píxeles...</p>
             </div>
 
-            <div id="ai-step-result" style="display:none;">
-                <img id="ai-preview-img" src="" style="width:100%; border-radius:8px; border:2px solid #d633ff; margin-bottom:15px;">
+            <div id="ai-step-result" class="hidden">
+                <img id="ai-preview-img" class="w-full rounded-lg border border-gray-700 mb-4 shadow-xl">
+                <div class="text-left mb-4">
+                    <label class="text-xs text-gray-500 uppercase font-bold">Título</label>
+                    <input type="text" id="ai-img-title" placeholder="Ej: Paisaje Desolado..." class="w-full bg-black border border-gray-700 rounded p-2 mt-1 text-white focus:border-accent focus:outline-none">
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="discardAiImage()" class="flex-1 py-2 bg-gray-800 hover:bg-red-900/50 text-gray-300 hover:text-red-200 rounded-lg border border-gray-700 transition">Descartar</button>
+                    <button onclick="saveAiImage()" class="flex-1 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg shadow-lg shadow-green-900/50 transition">💾 GUARDAR</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="uploadModal" class="fixed inset-0 bg-black/90 z-50 hidden items-center justify-center backdrop-blur-sm">
+        <div class="bg-card border border-gray-700 rounded-2xl p-8 max-w-md w-full text-center">
+            <h2 class="text-xl font-bold text-white mb-4">Confirmar Subida</h2>
+            <div id="file-info" class="text-xs font-mono text-accent mb-2"></div>
+            <img id="preview-img" class="w-full h-48 object-contain bg-black rounded border border-gray-800 mb-4 hidden">
+            
+            <div class="bg-gray-950 p-4 rounded-lg border border-gray-800 text-left mb-4">
+                <label class="flex items-center gap-2 mb-3 cursor-pointer group">
+                    <input type="checkbox" id="chk-original-name" onchange="toggleCustomName()" class="accent-accent w-4 h-4">
+                    <span class="text-sm text-gray-300 group-hover:text-white transition">Usar nombre original</span>
+                </label>
+                <input type="text" id="inp-custom-name" placeholder="O escribe un nombre..." class="w-full bg-black border border-gray-700 rounded p-2 text-sm text-white focus:border-accent focus:outline-none transition">
+            </div>
+
+            <div id="scan-status" class="text-xs font-bold mb-4 tracking-widest h-4"></div>
+
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeUploadModal()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded text-gray-300">Cancelar</button>
+                <button id="btn-confirm-upload" onclick="confirmUpload()" class="px-6 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded shadow-lg hidden">🚀 SUBIR</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="lightbox" class="fixed inset-0 bg-black/95 z-50 hidden items-center justify-center p-4 lg:p-10" onclick="if(event.target === this) closeLightbox()">
+        <div class="max-w-5xl w-full bg-gray-900 rounded-xl overflow-hidden border border-gray-800 flex flex-col lg:flex-row shadow-2xl h-[90vh] lg:h-auto">
+            <div class="flex-1 bg-black flex items-center justify-center relative p-4">
+                <img id="lb-img" class="max-w-full max-h-[80vh] object-contain shadow-2xl">
+            </div>
+            <div class="w-full lg:w-80 bg-gray-950 p-6 border-l border-gray-800 flex flex-col">
+                <div class="mb-6 border-b border-gray-800 pb-4">
+                    <div class="text-[10px] text-accent font-bold tracking-widest uppercase mb-1">Ficha de Imagen</div>
+                    <div class="flex items-start justify-between gap-2 mb-2 group">
+                        <h2 id="lb-title" class="text-xl font-bold text-white leading-tight break-words">Sin Título</h2>
+                        <button onclick="editImageTitle()" class="text-gray-600 hover:text-white transition p-1" title="Renombrar">✏️</button>
+                    </div>
+                    <div class="text-xs text-gray-400 space-y-1">
+                        <div class="flex justify-between"><span>Por:</span> <span id="lb-uploader" class="text-green-400 font-bold">-</span></div>
+                        <div class="flex justify-between"><span>Fecha:</span> <span id="lb-date">-</span></div>
+                    </div>
+                </div>
                 
-                <div style="text-align:left; margin-bottom:15px;">
-                    <label style="color:#aaa; font-size:0.8em;">Título de la obra:</label>
-                    <input type="text" id="ai-img-title" placeholder="Ej: Paisaje de las Sombras..." style="width:100%; background:#0a0a12; border:1px solid #444; color:#fff; padding:8px; border-radius:4px; margin-top:5px;">
+                <div class="bg-black p-3 rounded border border-gray-800 text-[10px] font-mono text-gray-600 mb-auto">
+                    <div class="flex justify-between"><span>ORIGEN:</span> <span id="lb-meta" class="text-yellow-600">-</span></div>
+                    <div class="flex justify-between mt-1 break-all"><span>REF:</span> <span id="lb-name">-</span></div>
                 </div>
 
-                <div style="display:flex; gap:10px;">
-                    <button onclick="discardAiImage()" class="btn" style="background:#e74c3c; flex:1;">🗑️ DESCARTAR</button>
-                    <button onclick="saveAiImage()" class="btn" style="background:#2ecc71; flex:1;">💾 GUARDAR</button>
+                <div class="space-y-2 mt-4">
+                    <button onclick="setAsCover()" class="w-full py-3 bg-yellow-700/50 hover:bg-yellow-600 text-yellow-100 font-bold rounded transition border border-yellow-900">⭐ PORTADA</button>
+                    <button onclick="closeLightbox()" class="w-full py-3 bg-gray-800 hover:bg-gray-700 text-white rounded transition border border-gray-700">Cerrar</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="lightbox" class="modal" onclick="if(event.target === this) closeLightbox()">
-        <div class="modal-content" style="width: 800px; max-width:95%; display:flex; gap:20px; text-align:left;">
-            <div style="flex:2;">
-                <img id="lb-img" src="" style="width:100%; border-radius:4px; border:1px solid #444;">
-            </div>
-            <div style="flex:1; background:#0a0a0f; padding:15px; border-radius:4px;">
-                <h3 style="margin-top:0; color:#d633ff;">Ficha de Imagen</h3>
-                <div style="font-size:0.9em; line-height:1.6;">
-                    <div style="color:#888;">Archivo:</div>
-                    <div id="lb-name" style="color:#fff; word-break:break-all; margin-bottom:10px;">-</div>
-                    <div style="color:#888;">Subido por:</div>
-                    <div id="lb-uploader" style="color:#2ecc71; font-weight:bold; margin-bottom:10px;">-</div>
-                    <div style="color:#888;">Fecha:</div>
-                    <div id="lb-date" style="color:#ccc; margin-bottom:10px;">-</div>
-                    <div style="color:#888;">Metadatos:</div>
-                    <div id="lb-meta" style="color:#f1c40f; font-size:0.8em; margin-bottom:10px;">-</div>
-                </div>
-                <button onclick="setAsCover()" class="btn" style="background:#f1c40f; width:100%; margin-top:10px; color:#000; font-weight:bold; border:none; cursor:pointer;">⭐ ESTABLECER PORTADA</button>
-                <button onclick="closeLightbox()" class="btn" style="background:#555; width:100%; margin-top:10px;">CERRAR</button>
-            </div>
-        </div>
-    </div>
-
-    {% if not is_preview %}
-    <div id="editModal" class="modal">
-        <div class="modal-content">
-            <h2>Proponer Cambio</h2>
-            <form method="POST" action="{% url 'editar_mundo' jid %}" class="edit-form">
-                {% csrf_token %}
-                <label>Nombre:</label><input type="text" name="name" value="{{ name }}">
-                <label>Descripción Conceptual:</label>
-                <textarea name="description" style="height:150px;">{{ description }}</textarea>
-                <label style="color:#f1c40f;">Razón del cambio:</label><input type="text" name="reason" required>
-                <div style="margin-top:20px; text-align:right;">
-                    <a href="{% url 'ver_mundo' jid %}" class="btn" style="background:#555;">Cancelar</a>
-                    <button type="submit" class="btn" style="background:#d633ff;">🚀 Enviar Propuesta</button>
-                </div>
-            </form>
-        </div>
-    </div>
-    {% endif %}
-
-    
     <script>
-        // --- GESTOR DE SUBIDA: MODO ROBUSTO (A prueba de AdBlock) ---
+        // CONFIG
         const metadataRaw = '{{ metadata|default:"{}"|escapejs }}';
-const allMetadata = JSON.parse(metadataRaw);
+        let allMetadata = {};
+        try { allMetadata = JSON.parse(metadataRaw); } catch(e) { console.error(e); }
         const galleryLog = allMetadata.gallery_log || {};
+        let currentBase64 = null;
         let nsfwModel = null;
 
-        // Intentamos cargar la IA, pero si falla, no lloramos
+        // INIT
         window.addEventListener('load', async () => {
-            try {
-                if (typeof nsfwjs !== 'undefined') {
-                    nsfwModel = await nsfwjs.load();
-                    console.log("🛡️ IA de Seguridad: ACTIVA");
-                } else {
-                    console.warn("⚠️ IA de Seguridad: BLOQUEADA (Modo Manual activo)");
-                }
-            } catch (e) {
-                console.warn("⚠️ Error cargando IA:", e);
-            }
+            try { if(typeof nsfwjs !== 'undefined') nsfwModel = await nsfwjs.load(); } catch(e){}
         });
 
-        function openUploadModal(input) {
-            if (!input.files || !input.files[0]) return;
-            const file = input.files[0];
-            
-            // UI Elements
-            const modal = document.getElementById('uploadModal');
-            const imgPreview = document.getElementById('preview-img');
-            const statusDiv = document.getElementById('scan-status');
-            const btnConfirm = document.getElementById('btn-confirm-upload');
-            const fileInfo = document.getElementById('file-info');
-            
-            // Reset UI
-            modal.style.display = 'flex';
-            imgPreview.style.display = 'none';
-            // IMPORTANTE: El botón empieza oculto pero tenemos un temporizador de seguridad
-            btnConfirm.style.display = 'none'; 
-            statusDiv.innerHTML = '⏳ PREPARANDO...';
-            statusDiv.style.color = '#fff';
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                imgPreview.src = e.target.result;
-                imgPreview.style.display = 'block';
-                fileInfo.innerText = file.name + " (" + (file.size/1024).toFixed(1) + " KB)";
-                
-                // Lanzamos el análisis
-                runRobustScan(imgPreview, file, statusDiv, btnConfirm);
-            };
-            reader.readAsDataURL(file);
-        }
-
-        async function runRobustScan(imgElement, file, statusDiv, btnConfirm) {
-            let warnings = [];
-            let blocked = false;
-
-            // 1. CHEQUEO METADATOS (EXIF) - Suele funcionar siempre
-            try {
-                if (typeof EXIF !== 'undefined') {
-                    statusDiv.innerHTML = '🔍 LEYENDO METADATOS...';
-                    await new Promise(r => EXIF.getData(file, r));
-                    const tags = JSON.stringify(EXIF.getAllTags(file)).toLowerCase();
-                    if (tags.includes('copyright') || tags.includes('getty')) {
-                        warnings.push("⚠️ Copyright detectado en metadatos");
-                    }
-                }
-            } catch (e) {
-                console.log("Skip EXIF:", e);
-            }
-
-            // 2. CHEQUEO IA (NSFW) - Aquí es donde fallaba
-            if (nsfwModel) {
-                try {
-                    statusDiv.innerHTML = '🤖 LA IA ESTÁ MIRANDO...';
-                    const predictions = await nsfwModel.classify(imgElement);
-                    const porn = predictions.find(p => p.className === 'Porn');
-                    
-                    if (porn && porn.probability > 0.6) {
-                        statusDiv.innerHTML = '⛔ BLOQUEADO: CONTENIDO OBSCENO';
-                        statusDiv.style.color = '#e74c3c';
-                        blocked = true;
-                    }
-                } catch (e) {
-                    warnings.push("⚠️ Fallo en análisis IA");
-                }
-            } else {
-                warnings.push("ℹ️ Escaneo IA omitido (Librería no cargada)");
-            }
-
-            // 3. RESULTADO FINAL
-            if (!blocked) {
-                if (warnings.length > 0) {
-                    statusDiv.innerHTML = "✅ LISTO (" + warnings[0] + ")";
-                    statusDiv.style.color = "#f1c40f"; // Amarillo advertencia
-                } else {
-                    statusDiv.innerHTML = "✅ VERIFICADO Y SEGURO";
-                    statusDiv.style.color = "#2ecc71"; // Verde puro
-                }
-                // ¡SIEMPRE MOSTRAMOS EL BOTÓN SI NO ESTÁ BLOQUEADO EXPLÍCITAMENTE!
-                btnConfirm.style.display = 'inline-block';
-            }
-        }
-
-        // --- RED DE SEGURIDAD (TIMEOUT) ---
-        // Si por lo que sea el script se cuelga, a los 2 segundos mostramos el botón igual
-        // para que el usuario no se quede atrapado.
-        setInterval(() => {
-            const modal = document.getElementById('uploadModal');
-            const btn = document.getElementById('btn-confirm-upload');
-            const status = document.getElementById('scan-status');
-            
-            if (modal && modal.style.display === 'flex' && btn.style.display === 'none') {
-                // Si lleva mucho rato así...
-                if (status.innerText.includes('...')) {
-                     console.log("Rescate activado: Forzando botón de subida.");
-                     status.innerText = "⚠️ Tiempo agotado. Subida manual habilitada.";
-                     status.style.color = "#aaa";
-                     btn.style.display = 'inline-block';
-                }
-            }
-        }, 3000); // 3 segundos de gracia
-
-        function closeUploadModal() {
-            document.getElementById('uploadModal').style.display = 'none';
-            document.getElementById('file-upload').value = "";
-        }
-        function confirmUpload() { document.getElementById('form-manual-upload').submit(); }
-
-        // Funciones de Galería (Se mantienen igual)
-        function openLightbox(imgUrl, filename) {
-            document.getElementById('lightbox').style.display = 'flex';
-            document.getElementById('lb-img').src = imgUrl;
-            document.getElementById('lb-name').innerText = filename;
-            
-            const data = galleryLog[filename];
-            if (data) {
-                document.getElementById('lb-uploader').innerText = data.uploader;
-                document.getElementById('lb-date').innerText = data.date;
-                document.getElementById('lb-meta').innerText = data.origin || "Manual";
-            } else {
-                document.getElementById('lb-uploader').innerText = "Sistema / Desconocido";
-                document.getElementById('lb-date').innerText = "-";
-                document.getElementById('lb-meta').innerText = "Sin registro auditoría";
-            }
-        }
-        function closeLightbox() { document.getElementById('lightbox').style.display = 'none'; }
-        
-        function setAsCover() {
-            const filename = document.getElementById('lb-name').innerText;
-            if (!filename || filename === "-") return;
-            const baseUrl = "{% url 'set_cover_image' jid '123456' %}";
-            window.location.href = baseUrl.replace('123456', encodeURIComponent(filename));
-        }
-
-        function loadMeta(imgElement) {
-             if (imgElement.naturalWidth) {
-                const wrapper = imgElement.parentElement;
-                const res = wrapper.querySelector('.res');
-                if (res) res.innerText = imgElement.naturalWidth + 'x' + imgElement.naturalHeight + 'px';
-            }
-        }
-
-        // --- AI MODAL LOGIC ---
+        // IA LOGIC
         function openAiModal() {
-            document.getElementById('aiModal').style.display = 'flex';
-            document.getElementById('ai-step-1').style.display = 'block';
-            document.getElementById('ai-step-loading').style.display = 'none';
-            document.getElementById('ai-step-result').style.display = 'none';
+            document.getElementById('aiModal').classList.remove('hidden');
+            document.getElementById('aiModal').classList.add('flex');
+            document.getElementById('ai-step-1').classList.remove('hidden');
+            document.getElementById('ai-step-loading').classList.add('hidden');
+            document.getElementById('ai-step-result').classList.add('hidden');
             document.getElementById('ai-img-title').value = "";
         }
-        function closeAiModal() { document.getElementById('aiModal').style.display = 'none'; }
-
-        let currentBase64 = null;
-
+        function closeAiModal() {
+            document.getElementById('aiModal').classList.add('hidden');
+            document.getElementById('aiModal').classList.remove('flex');
+        }
+        
         function generatePreview() {
-            document.getElementById('ai-step-1').style.display = 'none';
-            document.getElementById('ai-step-loading').style.display = 'block';
-
+            document.getElementById('ai-step-1').classList.add('hidden');
+            document.getElementById('ai-step-loading').classList.remove('hidden');
             fetch("{% url 'api_preview_foto' jid %}")
                 .then(r => r.json())
                 .then(data => {
-                    document.getElementById('ai-step-loading').style.display = 'none';
-                    if (data.success) {
+                    document.getElementById('ai-step-loading').classList.add('hidden');
+                    if(data.status === 'ok') {
                         currentBase64 = data.image;
                         document.getElementById('ai-preview-img').src = "data:image/webp;base64," + data.image;
-                        document.getElementById('ai-step-result').style.display = 'block';
-                    } else {
-                        alert("Error: " + data.error);
-                        closeAiModal();
-                    }
-                })
-                .catch(e => {
-                    alert("Error de red: " + e);
-                    closeAiModal();
-                });
+                        document.getElementById('ai-step-result').classList.remove('hidden');
+                    } else alert("Error IA: " + data.message);
+                }).catch(e => { alert("Error conexión"); closeAiModal(); });
         }
-
-        function discardAiImage() {
-            if(confirm("¿Seguro que quieres descartar esta imagen?")) {
-                openAiModal(); // Reset
-            }
-        }
-
+        
         function saveAiImage() {
-            const title = document.getElementById('ai-img-title').value;
-            if (!title) { alert("Por favor, ponle un título."); return; }
-
+            const t = document.getElementById('ai-img-title').value || "Generado por IA";
+            if(!currentBase64) return;
             fetch("{% url 'api_save_foto' jid %}", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ image: currentBase64, title: title })
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    alert("Error guardando: " + data.error);
-                }
+                headers: { "Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token }}" },
+                body: JSON.stringify({ image: currentBase64, title: t })
+            }).then(r => r.json()).then(d => {
+                if(d.status === 'ok') location.reload();
+                else alert("Error: " + d.message);
             });
         }
-    </script>
+        function discardAiImage() { if(confirm("¿Descartar?")) openAiModal(); }
 
+        // UPLOAD LOGIC
+        function openUploadModal(input) {
+            if(!input.files[0]) return;
+            const f = input.files[0];
+            const modal = document.getElementById('uploadModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            document.getElementById('preview-img').src = URL.createObjectURL(f);
+            document.getElementById('preview-img').classList.remove('hidden');
+            document.getElementById('file-info').innerText = f.name;
+            
+            // Reset
+            document.getElementById('chk-original-name').checked = false;
+            document.getElementById('inp-custom-name').value = f.name.split('.')[0];
+            toggleCustomName();
+            
+            // Scan fake
+            const st = document.getElementById('scan-status');
+            const btn = document.getElementById('btn-confirm-upload');
+            st.innerText = "⏳ ANALIZANDO..."; st.style.color = "#aaa"; btn.classList.add('hidden');
+            setTimeout(() => { st.innerText = "✅ SEGURO"; st.style.color = "#4ade80"; btn.classList.remove('hidden'); }, 800);
+        }
+        
+        function closeUploadModal() { 
+            const modal = document.getElementById('uploadModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.getElementById('file-upload').value=""; 
+        }
+        
+        function toggleCustomName() {
+            const chk = document.getElementById('chk-original-name');
+            const inp = document.getElementById('inp-custom-name');
+            inp.disabled = chk.checked;
+            inp.style.opacity = chk.checked ? 0.5 : 1;
+        }
+        
+        function confirmUpload() {
+            document.getElementById('hidden-use-original').value = document.getElementById('chk-original-name').checked ? 'true' : 'false';
+            document.getElementById('hidden-custom-name').value = document.getElementById('inp-custom-name').value;
+            document.getElementById('form-manual-upload').submit();
+        }
+
+        // LIGHTBOX LOGIC
+        function openLightbox(url, fn) {
+            const lb = document.getElementById('lightbox');
+            lb.classList.remove('hidden');
+            lb.classList.add('flex');
+            document.getElementById('lb-img').src = url;
+            document.getElementById('lb-name').innerText = fn;
+            
+            const d = galleryLog[fn] || {};
+            document.getElementById('lb-title').innerText = d.title || fn;
+            document.getElementById('lb-uploader').innerText = d.uploader || "-";
+            document.getElementById('lb-date').innerText = d.date || "-";
+            document.getElementById('lb-title').dataset.filename = fn;
+        }
+        
+        function closeLightbox() { 
+            const lb = document.getElementById('lightbox');
+            lb.classList.add('hidden');
+            lb.classList.remove('flex');
+        }
+        
+        function editImageTitle() {
+            const el = document.getElementById('lb-title');
+            const fn = el.dataset.filename;
+            const nt = prompt("Nuevo título:", el.innerText);
+            if(nt) {
+                fetch("{% url 'api_update_image_metadata' jid %}", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token }}" },
+                    body: JSON.stringify({ filename: fn, title: nt })
+                })
+                .then(r => r.json())
+                .then(d => {
+                    if(d.status === 'ok') {
+                        el.innerText = nt;
+                        if(!galleryLog[fn]) galleryLog[fn] = {};
+                        galleryLog[fn].title = nt;
+                    } else alert(d.message);
+                });
+            }
+        }
+        
+        function setAsCover() {
+            const filename = document.getElementById('lb-name').innerText;
+            if(filename !== "-") window.location.href = "{% url 'set_cover_image' jid '123456' %}".replace('123456', encodeURIComponent(filename));
+        }
+    </script>
 </body>
 </html>

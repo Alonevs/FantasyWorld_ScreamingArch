@@ -44,7 +44,6 @@ class DjangoCaosRepository(CaosRepository):
         except CaosWorldORM.DoesNotExist:
             return None
 
-    # --- MÉTODOS DE CRIATURAS ---
     def save_creature(self, creature: Creature):
         CaosWorldORM.objects.update_or_create(
             id=creature.eclai_id,
@@ -60,29 +59,18 @@ class DjangoCaosRepository(CaosRepository):
         )
         print(f" 🧬 [DB] Criatura guardada: {creature.name}")
 
-
     def _inject_metadata(self, image, artist="ECLAI User"):
-        """Inyecta metadatos EXIF básicos en la imagen."""
         try:
-            from PIL.ExifTags import TAGS
-            
-            # Obtener objeto EXIF o crear uno nuevo
             exif = image.getexif()
-            
-            # IDs de tags estándar (Artist: 0x013b, Software: 0x0131, Copyright: 0x8298, DateTime: 0x0132)
-            # Nota: Pillow maneja esto a bajo nivel
+            # 0x013b: Artist, 0x0131: Software, 0x0132: DateTime
             exif[0x013b] = artist
-            exif[0x0131] = "ECLAI World Builder v4.8"
-            exif[0x8298] = "Project Internal Use"
+            exif[0x0131] = "ECLAI World Builder v4.9"
             exif[0x0132] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            
             return exif
-        except Exception as e:
-            print(f"⚠️ No se pudo inyectar EXIF: {e}")
-            return image.getexif() # Devolver original si falla
+        except:
+            return image.getexif()
 
     def _audit_log(self, jid, filename, uploader, origin, title=None):
-        """Registra la imagen en el JSON del mundo."""
         try:
             world = CaosWorldORM.objects.get(id=jid)
             if not world.metadata: world.metadata = {}
@@ -92,78 +80,81 @@ class DjangoCaosRepository(CaosRepository):
                 "uploader": uploader,
                 "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "origin": origin,
-                "title": title or "Untitled"
+                "title": title or "Sin Título"
             }
             world.save()
         except Exception as e:
             print(f"⚠️ Error auditoría: {e}")
 
-    def save_image(self, jid: str, base64_data: str, title: str = None, username: str = "AI System"):
-        """Guarda imagen IA (WebP + Metadatos + Auditoría)."""
-        if not base64_data: return
+    # --- MÉTODO QUE FALTABA ---
+    def update_image_metadata(self, jid, filename, new_title):
+        try:
+            world = CaosWorldORM.objects.get(id=jid)
+            if not world.metadata: return False
+            if 'gallery_log' not in world.metadata: return False
+            
+            # Buscamos la entrada de la imagen
+            if filename in world.metadata['gallery_log']:
+                world.metadata['gallery_log'][filename]['title'] = new_title
+                world.save()
+                print(f" ✏️ [Metadata] Título actualizado para {filename}: {new_title}")
+                return True
+            return False
+        except Exception as e:
+            print(f"⚠️ Error actualizando metadata: {e}")
+            return False
+    # --------------------------
+
+    def save_image(self, jid, base64_data, title=None, username="AI System"):
+        if not base64_data: return None
         base_dir = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img')
         target_dir = os.path.join(base_dir, jid)
         os.makedirs(target_dir, exist_ok=True)
-        
-        # Determinar nombre base
-        if title:
-            # Sanitize: solo alfanuméricos, guiones y espacios (convertidos a _)
-            safe_title = "".join([c for c in title if c.isalnum() or c in (' ', '-', '_')]).strip()
-            safe_title = safe_title.replace(" ", "_")
-            if not safe_title: safe_title = "untitled"
-        else:
-            safe_title = f"{jid}_ia_{int(time.time())}"
-
-        # Lógica de colisiones (pedro, pedro_1, pedro_2...)
-        filename = f"{safe_title}.webp"
-        counter = 1
-        while os.path.exists(os.path.join(target_dir, filename)):
-            filename = f"{safe_title}_{counter}.webp"
-            counter += 1
-            
+        timestamp = int(time.time())
+        filename = f"{jid}_ia_{timestamp}.webp"
         file_path = os.path.join(target_dir, filename)
 
         try:
             if "," in base64_data: base64_data = base64_data.split(",")[1]
             image = Image.open(io.BytesIO(base64.b64decode(base64_data)))
-            
-            # Inyectar Firma
-            exif_data = self._inject_metadata(image, artist=username)
-            
-            image.save(file_path, "WEBP", quality=85, exif=exif_data)
-            self._audit_log(jid, filename, username, "GENERATED", title)
-            print(f" 🎨 [FS] Imagen IA firmada y guardada: {filename} by {username}")
-            
+            exif = self._inject_metadata(image, artist=username)
+            image.save(file_path, "WEBP", quality=85, exif=exif)
+            self._audit_log(jid, filename, username, "GENERATED", title=title)
+            return filename
         except Exception as e:
-            print(f"⚠️ Error guardando imagen IA: {e}")
+            print(f"⚠️ Error IA save: {e}")
+            return None
 
-    def save_manual_file(self, jid: str, uploaded_file, username: str = "Unknown"):
-        """Guarda imagen manual (WebP + Preservar/Inyectar + Auditoría)."""
+    def save_manual_file(self, jid, uploaded_file, username="Unknown", title=None):
         base_dir = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img')
         target_dir = os.path.join(base_dir, jid)
         os.makedirs(target_dir, exist_ok=True)
 
-        timestamp = int(time.time())
-        filename = f"{jid}_m_{timestamp}.webp"
+        # Determinar nombre
+        raw_name = title if title else f"{jid}_m_{int(time.time())}"
+        safe_name = "".join([c for c in raw_name if c.isalnum() or c in (' ', '-', '_')]).strip().replace(' ', '_')
+        if not safe_name: safe_name = "imagen"
+
+        # Anti-Colisión
+        filename = f"{safe_name}.webp"
+        counter = 1
+        while os.path.exists(os.path.join(target_dir, filename)):
+            filename = f"{safe_name}_{counter}.webp"
+            counter += 1
+            
         file_path = os.path.join(target_dir, filename)
 
         try:
             image = Image.open(uploaded_file)
             if image.mode in ("RGBA", "P"): image = image.convert("RGB")
-            
-            # Si ya trae EXIF, lo mantenemos. Si no, le ponemos el nuestro.
-            exif_data = image.info.get('exif')
-            if not exif_data:
-                exif_data = self._inject_metadata(image, artist=username)
-            
-            image.save(file_path, "WEBP", quality=90, exif=exif_data)
-            self._audit_log(jid, filename, username, "MANUAL_UPLOAD")
-            print(f" 📎 [Upload] Imagen manual firmada y guardada: {filename}")
+            exif = self._inject_metadata(image, artist=username)
+            image.save(file_path, "WEBP", quality=90, exif=exif)
+            self._audit_log(jid, filename, username, "MANUAL_UPLOAD", title=title)
+            print(f" 📎 [Upload] Guardado: {filename}")
             return True
         except Exception as e:
-            print(f"⚠️ Error crítico subida manual: {e}")
+            print(f"⚠️ Error manual save: {e}")
             return False
-
 
     def get_next_child_id(self, parent_id_str: str) -> str:
         len_parent = len(parent_id_str)
@@ -172,14 +163,9 @@ class DjangoCaosRepository(CaosRepository):
         es_entidad = (nivel_hijo == 16) 
         len_hijo = 34 if es_entidad else len_parent + 2
 
-        ultimo_hijo = CaosWorldORM.objects.filter(
-            id__startswith=parent_id_str
-        ).annotate(id_len=Length('id')).filter(
-            id_len=len_hijo
-        ).aggregate(Max('id'))['id__max']
+        ultimo_hijo = CaosWorldORM.objects.filter(id__startswith=parent_id_str).annotate(id_len=Length('id')).filter(id_len=len_hijo).aggregate(Max('id'))['id__max']
 
-        if not ultimo_hijo:
-            siguiente_seq = 1
+        if not ultimo_hijo: siguiente_seq = 1
         else:
             cut = 4 if es_entidad else 2
             segmento = ultimo_hijo[-cut:]
@@ -200,7 +186,6 @@ class DjangoCaosRepository(CaosRepository):
                 suffix = nid_str[len_prefix:]
                 if suffix.isdigit(): used_nums.add(int(suffix))
             except: pass
-        
         next_num = 1
         while next_num in used_nums: next_num += 1
         return f"{prefix}{next_num:02d}"

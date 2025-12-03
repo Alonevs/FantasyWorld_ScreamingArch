@@ -3,233 +3,112 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>ECLAI | {{ narr.get_tipo_display }}</title>
+    <title>{{ narr.titulo }} | Lectura</title>
     <style>
-        body { background-color: #050505; color: #c0c0c0; font-family: 'Georgia', serif; padding: 40px; display:flex; justify-content:center; }
-        .document-container { max-width: 800px; width: 100%; }
+        body { background-color: #0a0a12; color: #ccc; font-family: 'Georgia', serif; padding: 40px; line-height: 1.6; }
         
-        .meta-header { border-bottom: 1px solid #333; padding-bottom: 20px; margin-bottom: 30px; display:flex; justify-content:space-between; align-items:flex-end; }
-        .back-btn { text-decoration: none; color: #666; font-family: sans-serif; font-size: 0.8em; border: 1px solid #333; padding: 5px 10px; border-radius: 4px; transition:0.3s; }
-        .back-btn:hover { border-color: #d633ff; color: #d633ff; }
+        .nav { position:fixed; top:0; left:0; width:100%; background:#0e0e16; border-bottom:1px solid #333; padding:10px 20px; display:flex; justify-content:space-between; align-items:center; z-index:100; box-sizing:border-box; }
+        .nav a, .nav button { background:#333; color:#fff; text-decoration:none; padding:5px 15px; border-radius:4px; border:1px solid #444; font-family:'Segoe UI', sans-serif; font-size:0.9em; cursor:pointer; }
+        .nav a:hover, .nav button:hover { background:#555; }
         
-        .nid-stamp { font-family: 'Courier New', monospace; color: #444; font-size: 0.9em; letter-spacing: 1px; }
+        .paper { max-width: 800px; margin: 80px auto 40px auto; background: #161620; padding: 60px; border-radius: 5px; box-shadow: 0 0 50px rgba(0,0,0,0.5); min-height: 80vh; border: 1px solid #222; }
         
-        /* ETIQUETAS DE TIPO */
-        .type-badge { font-family: sans-serif; font-size: 0.7em; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; border: 1px solid transparent; }
-        .type-LORE { color: #d633ff; border-color: #d633ff; background: rgba(214, 51, 255, 0.1); }
-        .type-HISTORIA { color: #f1c40f; border-color: #f1c40f; background: rgba(241, 196, 15, 0.1); }
-        .type-CAPITULO { color: #ecf0f1; border-color: #7f8c8d; background: rgba(127, 140, 141, 0.1); }
-        .type-EVENTO { color: #e74c3c; border-color: #e74c3c; background: rgba(231, 76, 60, 0.1); }
-        .type-LEYENDA { color: #e67e22; border-color: #e67e22; background: rgba(230, 126, 34, 0.1); }
-        .type-REGLA { color: #3498db; border-color: #3498db; background: rgba(52, 152, 219, 0.1); }
-        .type-BESTIARIO { color: #2ecc71; border-color: #2ecc71; background: rgba(46, 204, 113, 0.1); }
-
-        h1 { color: #eee; font-size: 2.5em; margin: 10px 0; text-align: center; letter-spacing: 1px; }
+        h1 { color: #d633ff; font-family: 'Segoe UI', sans-serif; font-size: 2.5em; margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 20px; }
+        .meta { color: #666; font-family: monospace; font-size: 0.8em; margin-bottom: 30px; display:flex; justify-content:space-between; }
         
-        .narrator-box { text-align: center; margin-bottom: 40px; }
-        .narrator-label { color: #666; font-size: 0.8em; text-transform: uppercase; letter-spacing: 2px; font-family: sans-serif; }
-        .narrator-name { color: #d633ff; font-style: italic; font-weight: bold; }
+        .content { font-size: 1.1em; color: #e0e0e0; white-space: pre-wrap; }
         
-        .content-body { line-height: 1.8; font-size: 1.1em; color: #ccc; text-align: justify; white-space: pre-wrap; }
+        .edit-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 200; padding: 40px; box-sizing:border-box; }
+        .edit-container { max-width: 900px; margin: 0 auto; background: #1f1f2e; padding: 30px; border-radius: 10px; border: 1px solid #d633ff; height: 90%; display: flex; flex-direction: column; }
+        input, textarea, select { background: #0a0a12; border: 1px solid #444; color: white; padding: 10px; margin-bottom: 10px; font-family: inherit; }
+        textarea { flex-grow: 1; resize: none; line-height: 1.5; }
+        .toolbar { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
+        .btn-save { background: #2ecc71; color: white; border: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; }
         
-        /* MENCIONES */
-        .mentions-box { margin-top: 40px; padding: 20px; border-top: 1px dashed #333; background: #0a0a0f; border-radius: 8px; }
-        .mentions-label { color: #555; font-size: 0.7em; letter-spacing: 2px; font-weight: bold; display: block; margin-bottom: 10px; }
-        .mention-tag { display: inline-block; background: #1f1f33; color: #a0a0ff; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-size: 0.8em; margin-right: 5px; margin-bottom: 5px; border: 1px solid #333; transition: 0.2s; }
-        .mention-tag:hover { border-color: #d633ff; color: #fff; }
-
-        .footer-note { margin-top: 50px; border-top: 1px solid #222; padding-top: 20px; text-align: center; font-size: 0.8em; color: #444; font-family: sans-serif; }
-
-        /* ESTILOS DEL MODAL */
-        .float-edit-btn { position: fixed; bottom: 30px; right: 30px; background: #d633ff; color: #fff; width: 50px; height: 50px; border-radius: 50%; text-align: center; line-height: 50px; font-size: 24px; text-decoration: none; box-shadow: 0 0 20px rgba(214, 51, 255, 0.4); transition: 0.3s; }
-        .float-edit-btn:hover { transform: scale(1.1); background: #fff; color: #d633ff; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 100; align-items: center; justify-content: center; }
-        .modal:target { display: flex; }
-        .modal-content { background: #111; border: 1px solid #333; padding: 30px; width: 900px; max-width: 95%; border-radius: 5px; box-shadow: 0 0 50px #000; font-family: sans-serif; }
-        .modal-header { display: flex; justify-content: space-between; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; }
-        .modal-header h2 { margin: 0; color: #ccc; font-size: 1.2em; }
-        .close-btn { text-decoration: none; color: #666; font-size: 1.5em; }
-        
-        form label { display: block; color: #888; font-size: 0.8em; margin-top: 15px; text-transform: uppercase; }
-        form input, form textarea, form select { width: 100%; background: #080808; border: 1px solid #333; color: #ccc; padding: 10px; margin-top: 5px; box-sizing: border-box; font-family: 'Georgia', serif; }
-        form textarea { height: 400px; line-height: 1.6; font-size: 1.1em; resize: vertical; }
-        form input:focus, form textarea:focus, form select:focus { border-color: #d633ff; outline: none; }
-        .save-btn { background: #d633ff; color: #fff; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; border-radius: 3px; }
-        .save-btn:hover { background: #a569bd; }
-    
-        .nid-stamp { 
-            font-family: 'Courier New', monospace; 
-            color: #3498db; 
-            font-size: 1.2em; 
-            font-weight: bold;
-            letter-spacing: 2px; 
-            border: 1px solid #3498db;
-            padding: 5px 10px;
-            border-radius: 4px;
-        }
-    
-</style>
+        .children-section { max-width: 800px; margin: 0 auto; border-top: 1px solid #333; padding-top: 20px; }
+        .child-card { display: block; background: #111; padding: 15px; margin-bottom: 10px; text-decoration: none; color: #aaa; border-left: 3px solid #444; transition: 0.2s; font-family: 'Segoe UI', sans-serif; }
+        .child-card:hover { border-left-color: #d633ff; background: #1a1a25; color: #fff; padding-left: 20px; }
+    </style>
 </head>
 <body>
-    <div class="document-container">
-        <div class="meta-header">
-            <a href="{% url 'ver_mundo' narr.world.id %}" class="back-btn">⬅ Volver a {{ narr.world.name }}</a>
-            <div>
-                <span class="type-badge type-{{ narr.tipo }}">{{ narr.get_tipo_display }}</span>
-                <span class="nid-stamp" style="margin-left:10px;">REF: {{ narr.nid }}</span>
-            </div>
-        </div>
 
+    <div class="nav">
+        <div style="font-weight:bold; color:#d633ff;">{{ narr.world.name }}</div>
+        <div>
+            <a href="{% url 'ver_narrativa_mundo' narr.world.id %}">⬅ Volver al Índice</a>
+            <button onclick="toggleEdit()">✏️ EDITAR</button>
+        </div>
+    </div>
+
+    <div class="paper">
+        <div class="meta">
+            <span>REF: {{ narr.nid }}</span>
+            <span>AUTOR: {{ narr.created_by.username|default:"Sistema" }}</span>
+        </div>
+        
         <h1>{{ narr.titulo }}</h1>
         
-        <div class="narrator-box">
-            <span class="narrator-label">Registrado por:</span><br>
-            <span class="narrator-name">{{ narr.narrator }}</span>
-        </div>
-
-        <div class="content-body">{{ narr.contenido }}</div>
-
-        {% if narr.tipo == 'HISTORIA' or capitulos %}
-        <div class="toc-box">
-            <div class="toc-header">
-                <span>📑 TABLA DE CONTENIDOS</span>
-                <a href="{% url 'crear_sub_narrativa' narr.nid 'C' %}" class="btn-chapter">➕ Nuevo Capítulo</a>
-            </div>
-            <div class="toc-list">
-                {% for cap in capitulos %}
-                <a href="{% url 'leer_narrativa' cap.nid %}" class="toc-item">
-                    <span class="toc-nid">{{ cap.nid }}</span>
-                    {{ cap.titulo }}
-                </a>
-                {% empty %}
-                <div style="padding:10px; color:#555; font-style:italic;">No hay capítulos aún.</div>
-                {% endfor %}
-            </div>
-        </div>
-        
-        <style>
-            .toc-box { margin: 40px 0; border: 1px solid #333; background: #0e0e12; border-radius: 6px; overflow: hidden; }
-            .toc-header { background: #1a1a25; padding: 10px 15px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; color: #a0a0ff; font-weight: bold; letter-spacing: 1px; font-size: 0.9em; }
-            .btn-chapter { background: #27ae60; color: #fff; text-decoration: none; padding: 3px 10px; border-radius: 4px; font-size: 0.8em; }
-            .btn-chapter:hover { background: #2ecc71; }
-            .toc-list { display: flex; flex-direction: column; }
-            .toc-item { padding: 10px 15px; text-decoration: none; color: #ccc; border-bottom: 1px dashed #222; transition: 0.2s; display: flex; align-items: center; }
-            .toc-item:last-child { border-bottom: none; }
-            .toc-item:hover { background: #1f1f33; color: #fff; padding-left: 20px; }
-            .toc-nid { font-family: monospace; color: #666; font-size: 0.8em; margin-right: 15px; }
-        
-        .nid-stamp { 
-            font-family: 'Courier New', monospace; 
-            color: #3498db; 
-            font-size: 1.2em; 
-            font-weight: bold;
-            letter-spacing: 2px; 
-            border: 1px solid #3498db;
-            padding: 5px 10px;
-            border-radius: 4px;
-        }
-    
-</style>
-        {% endif %}
-
-
-        {% if narr.menciones.all %}
-        <div class="mentions-box">
-            <span class="mentions-label">REFERENCIAS CRUZADAS:</span>
-            <div class="mentions-list">
-                {% for ref in narr.menciones.all %}
-                <a href="{% url 'ver_mundo' ref.id %}" class="mention-tag">🔗 {{ ref.name }}</a>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        <div class="footer-note">
-            ECLAI ARCHIVE SYSTEM v4.7 // La veracidad de este registro es subjetiva.
-        </div>
+        <div class="content">{{ narr.contenido|default:"(Escribe aquí tu historia...)" }}</div>
     </div>
 
-    
-    <a href="{% url 'borrar_narrativa' narr.nid %}" class="float-del-btn" onclick="return confirm('⚠️ ¿ESTÁS SEGURO?\n\nEsta acción borrará este documento permanentemente.\nNo hay deshacer.')">🗑️</a>
-    
-    <style>
-        .float-del-btn {
-            position: fixed; bottom: 90px; right: 30px; /* Encima del edit (30+50+10) */
-            background: #c0392b; color: #fff; width: 40px; height: 40px;
-            border-radius: 50%; text-align: center; line-height: 40px;
-            font-size: 18px; text-decoration: none; box-shadow: 0 0 15px rgba(192, 57, 43, 0.4);
-            transition: 0.3s; z-index: 90;
-        }
-        .float-del-btn:hover { transform: scale(1.1); background: #e74c3c; }
-    
-        .nid-stamp { 
-            font-family: 'Courier New', monospace; 
-            color: #3498db; 
-            font-size: 1.2em; 
-            font-weight: bold;
-            letter-spacing: 2px; 
-            border: 1px solid #3498db;
-            padding: 5px 10px;
-            border-radius: 4px;
-        }
-    
-</style>
-
-    <a href="#editModal" class="float-edit-btn">✒️</a>
-
-    <div id="editModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Editar Registro</h2>
-                <a href="#" class="close-btn">✕</a>
-            </div>
-            <form method="POST" action="{% url 'editar_narrativa' narr.nid %}">
-                {% csrf_token %}
-                
-                <div style="display:flex; gap:15px;">
-                    <div style="flex-grow:1;">
-                        <label>Título del Registro</label>
-                        <input type="text" name="titulo" value="{{ narr.titulo }}" required>
-                    </div>
-                    <div style="width:25%;">
-                        <label>Tipo de Documento</label>
-                        <select name="tipo">
-                            <option value="LORE" {% if narr.tipo == 'LORE' %}selected{% endif %}>📜 Lore General</option>
-                            <option value="HISTORIA" {% if narr.tipo == 'HISTORIA' %}selected{% endif %}>📖 Historia</option>
-                            <option value="CAPITULO" {% if narr.tipo == 'CAPITULO' %}selected{% endif %}>📑 Capítulo</option>
-                            <option value="EVENTO" {% if narr.tipo == 'EVENTO' %}selected{% endif %}>⚔️ Evento</option>
-                            <option value="LEYENDA" {% if narr.tipo == 'LEYENDA' %}selected{% endif %}>🕯️ Leyenda</option>
-                            <option value="REGLA" {% if narr.tipo == 'REGLA' %}selected{% endif %}>⚖️ Regla</option>
-                            <option value="BESTIARIO" {% if narr.tipo == 'BESTIARIO' %}selected{% endif %}>🐉 Bestiario</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div style="display:flex; gap:15px;">
-                    <div style="flex-grow:1;">
-                        <label>Identidad del Narrador (POV)</label>
-                        <input type="text" name="narrador" value="{{ narr.narrator }}" style="color:#d633ff; font-weight:bold;">
-                    </div>
-                    <div style="width:40%;">
-                        <label>Vincular Entidades (Ctrl+Click)</label>
-                        <select name="menciones" multiple style="height:50px;">
-                            {% for ent in todas_entidades %}
-                            <option value="{{ ent.id }}" {% if ent in narr.menciones.all %}selected{% endif %}>
-                                {{ ent.name }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                
-                <label>Contenido</label>
-                <textarea name="contenido" required>{{ narr.contenido }}</textarea>
-                
-                <div style="text-align:right; margin-top:20px;">
-                    <button type="submit" class="save-btn">💾 GUARDAR CAMBIOS</button>
-                </div>
-            </form>
-        </div>
+    {% if capitulos %}
+    <div class="children-section">
+        <h3 style="font-family: 'Segoe UI', sans-serif; color: #888;">CONTINUACIÓN / SUB-CAPÍTULOS</h3>
+        {% for c in capitulos %}
+            <a href="{% url 'leer_narrativa' c.nid %}" class="child-card">
+                <strong>{{ c.titulo }}</strong> <span style="font-size:0.8em; float:right;">{{ c.tipo }}</span>
+            </a>
+        {% endfor %}
     </div>
+    {% endif %}
+    
+    <div class="children-section" style="text-align:center; margin-top:20px;">
+        <form method="POST" action="{% url 'crear_sub_narrativa' narr.nid 'CAPITULO' %}">
+            {% csrf_token %}
+            <button type="submit" style="background:#333; color:#888; border:1px dashed #444; padding:10px 20px; cursor:pointer;">+ AÑADIR SUB-CAPÍTULO</button>
+        </form>
+    </div>
+
+    <div id="editor" class="edit-overlay">
+        <form method="POST" action="{% url 'editar_narrativa' narr.nid %}" class="edit-container">
+            {% csrf_token %}
+            <h2 style="margin-top:0; font-family:'Segoe UI';">Modo Edición</h2>
+            
+            <label>Título:</label>
+            <input type="text" name="titulo" value="{{ narr.titulo }}">
+            
+            <div style="display:flex; gap:10px;">
+                <div style="flex:1;">
+                    <label>Tipo:</label>
+                    <select name="tipo">
+                        <option value="LORE" {% if narr.tipo == 'LORE' %}selected{% endif %}>📜 Lore</option>
+                        <option value="HISTORIA" {% if narr.tipo == 'HISTORIA' %}selected{% endif %}>📖 Historia</option>
+                        <option value="CAPITULO" {% if narr.tipo == 'CAPITULO' %}selected{% endif %}>📑 Capítulo</option>
+                    </select>
+                </div>
+                <div style="flex:1;">
+                    <label>Narrador:</label>
+                    <input type="text" name="narrador" value="{{ narr.narrador }}">
+                </div>
+            </div>
+
+            <label>Contenido:</label>
+            <textarea name="contenido">{{ narr.contenido }}</textarea>
+            
+            <div class="toolbar">
+                <a href="{% url 'borrar_narrativa' narr.nid %}" onclick="return confirm('¿BORRAR PARA SIEMPRE?')" style="color:#e74c3c; margin-right:auto; align-self:center; cursor:pointer;">🗑️ Eliminar</a>
+                <button type="button" onclick="toggleEdit()" style="background:#555; color:white; border:none; padding:10px 20px; border-radius:4px; cursor:pointer;">Cancelar</button>
+                <button type="submit" class="btn-save">💾 GUARDAR CAMBIOS</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        function toggleEdit() {
+            const el = document.getElementById('editor');
+            el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+        }
+    </script>
+
 </body>
 </html>

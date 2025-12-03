@@ -1,133 +1,205 @@
-{% load static %}
+{% load static tailwind_tags %}
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
-    <title>ECLAI v3.0 | Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECLAI - Universo</title>
+    {% tailwind_css %}
     <style>
-        
-        body { background-color: #0a0a12; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; padding: 20px 40px; }
-        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 15px; background: #0e0e16; padding: 15px 20px; border-radius: 10px; }
-        .logo { font-size: 1.5em; font-weight: bold; color: #fff; letter-spacing: 2px; }
-        .nav-group { display: flex; gap: 10px; }
-        .nav-btn { background: #333; color: #fff; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 0.9em; border: 1px solid #444; cursor: pointer; }
-        .nav-btn:hover { background: #555; }
-        .nav-btn.special { background: #d633ff; border-color: #d633ff; }
-        .nav-btn.special:hover { background: #a569bd; }
-        
-        /* ESTILOS DASHBOARD */
-        .creation-bar { background: #161625; border: 1px solid #d633ff; padding: 20px; border-radius: 10px; margin-bottom: 40px; display: flex; gap: 15px; align-items: center; box-shadow: 0 0 15px rgba(214, 51, 255, 0.1); }
-        input[type="text"] { background: #0a0a12; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 5px; flex-grow: 1; }
-        button { background: #d633ff; color: #fff; border: none; padding: 10px 25px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.3s; }
-        button:hover { background: #fff; color: #d633ff; }
-
-        h2 { color: #fff; border-bottom: 2px solid #4a3b69; padding-bottom: 10px; margin-bottom: 20px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 25px; }
-        .card { background: #161625; border: 1px solid #2a2a40; border-radius: 10px; overflow: hidden; transition: 0.2s; text-decoration: none; color: inherit; position: relative; display: block; }
-        .card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(214, 51, 255, 0.2); border-color: #d633ff; }
-        
-        .thumb { height: 150px; background: #000; overflow: hidden; position: relative; }
-        .thumb img { width: 100%; height: 100%; object-fit: cover; }
-        .thumb-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #444; background: #0e0e16; font-size:0.8em; }
-        
-        .info { padding: 15px; }
-        .code { font-family: 'Courier New', monospace; color: #d633ff; font-size: 0.8em; }
-        .title { font-size: 1.2em; font-weight: bold; margin: 5px 0; color: #fff; }
-        
-        .quick-edit { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); color: #fff; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 14px; opacity: 0; transition: 0.2s; z-index: 10; }
-        .card:hover .quick-edit { opacity: 1; }
-        .quick-edit:hover { background: #3498db; transform: scale(1.1); }
-        
-        /* Inbox Alert */
-        .inbox-panel { background: #2c2c44; border: 1px solid #f1c40f; border-radius: 10px; padding: 15px; margin-bottom: 40px; }
-        .task-item { background: #1f1f33; padding: 10px; margin-top: 5px; border-radius: 5px; display:flex; justify-content:space-between; align-items:center; }
-    
-    
-        /* Grid con Scroll */
-        .grid-container {
-            max-height: 70vh; /* Altura máxima (70% de la ventana) */
-            overflow-y: auto; /* Scroll si se pasa */
-            padding-right: 10px; /* Espacio para la barra */
-            
-            /* Estilo Scrollbar */
-            scrollbar-width: thin;
-            scrollbar-color: #d633ff #0a0a12;
+        body {
+            background-color: #0e0e16;
+            color: #eee;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        .grid-container::-webkit-scrollbar { width: 8px; }
-        .grid-container::-webkit-scrollbar-track { background: #0a0a12; }
-        .grid-container::-webkit-scrollbar-thumb { background: #d633ff; border-radius: 4px; }
-        
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 25px; }
-    
+
+        .hero {
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(180deg, #1a1a2e 0%, #0e0e16 100%);
+            border-bottom: 1px solid #333;
+        }
+
+        .hero h1 {
+            font-size: 2.5em;
+            margin: 0;
+            color: #d633ff;
+            text-shadow: 0 0 10px rgba(214, 51, 255, 0.5);
+        }
+
+        .hero p {
+            color: #aaa;
+            margin-top: 10px;
+            font-size: 1.1em;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .world-card {
+            background: #161625;
+            border: 1px solid #2a2a40;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+
+        .world-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+            border-color: #d633ff;
+        }
+
+        .card-img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            background: #000;
+            border-bottom: 1px solid #333;
+        }
+
+        .card-body {
+            padding: 15px;
+        }
+
+        .card-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #fff;
+            margin: 0 0 5px 0;
+        }
+
+        .card-meta {
+            font-size: 0.85em;
+            color: #888;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        .status-live {
+            background: #2ecc71;
+            box-shadow: 0 0 5px #2ecc71;
+        }
+
+        .status-draft {
+            background: #f39c12;
+        }
+
+        .btn-create {
+            background: #d633ff;
+            color: white;
+            padding: 10px 25px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 20px;
+            transition: 0.2s;
+        }
+
+        .btn-create:hover {
+            background: #a569bd;
+            transform: scale(1.05);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 50px;
+            color: #555;
+            grid-column: 1 / -1;
+        }
     </style>
 </head>
+
 <body>
-    <div class="top-bar">
-        <div class="logo">ECLAI v3.0 // DASHBOARD</div>
-        <div class="nav-group">
-            {% if user.is_authenticated %}
-                <span style="color:#aaa; font-size:0.8em; align-self:center; margin-right:10px;">👤 {{ user.username }}</span>
-                <form action="{% url 'logout' %}" method="post" style="display:inline;">
-                    {% csrf_token %}
-                    <button type="submit" class="nav-btn" style="background:#c0392b; border-color:#e74c3c;">🚪 Salir</button>
-                </form>
-            {% else %}
-                <a href="{% url 'login' %}" class="nav-btn" style="background:#27ae60; border-color:#2ecc71;">🔑 Entrar</a>
-            {% endif %}
-            <button class="nav-btn" onclick="location.reload()">🔄 Recargar</button>
-            <a href="{% url 'centro_control' %}" class="nav-btn special">🎛️ Gestión</a>
-        </div>
+
+    <div class="hero">
+        <h1>ECLAI UNIVERSE</h1>
+        <p>Sistema de Gestión de Realidades - v4.8</p>
+        <a href="#createModal" class="btn-create"
+            onclick="document.getElementById('createModal').style.display='flex'">+ NUEVO MUNDO</a>
+        <a href="{% url 'centro_control' %}" class="btn-create"
+            style="background:#333; border:1px solid #555; margin-left:10px;">🎛️ GESTIÓN</a>
     </div>
 
-    {% if pendientes %}
-    <div class="inbox-panel">
-        <strong style="color:#f1c40f;">⚠️ Tienes {{ pendientes|length }} tarea(s) pendiente(s)</strong>
-        {% for p in pendientes %}
-        <div class="task-item">
-            <span style="font-size:0.9em;"><strong>{{ p.world_name }}</strong>: v{{ p.version_num }}</span>
-            <a href="{% url 'revisar_version' p.id %}" style="color:#3498db; text-decoration:none; font-weight:bold;">REVISAR →</a>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    <div class="creation-bar">
-        <div style="font-weight:bold; color:#d633ff; white-space: nowrap;">BIG BANG:</div>
-        <form method="POST" style="display:flex; gap:10px; flex-grow:1;">
-            {% csrf_token %}
-            <input type="text" name="world_name" placeholder="Nombre del Nuevo Universo..." required autocomplete="off">
-            <input type="text" name="world_desc" placeholder="Idea base..." style="width: 30%;">
-            <button type="submit">⚡ CREAR</button>
-        </form>
-    </div>
-
-    
-    
-
-    <h2>UNIVERSO CONOCIDO</h2>
     <div class="grid-container">
-    <div class="grid">
         {% for m in mundos %}
-        <a href="{% url 'ver_mundo' m.id %}" class="card">
-            <div class="thumb">
+        <a href="{% url 'ver_mundo' m.public_id %}" style="text-decoration: none;">
+            <div class="world-card">
                 {% if m.has_img %}
-                    <img src="{% static 'persistence/img/'|add:m.img_file %}" alt="{{ m.name }}">
+                <img src="{% static 'persistence/img/'|add:m.img_file %}" class="card-img" alt="{{ m.name }}">
                 {% else %}
-                    <div class="thumb-placeholder">NO SIGNAL</div>
+                <div class="card-img"
+                    style="display:flex; align-items:center; justify-content:center; color:#333; font-size:3em;">🪐
+                </div>
                 {% endif %}
-            </div>
-            <div class="info">
-                <div class="code">J-ID: {{ m.id }}</div>
-                <div class="title">{{ m.name }}</div>
-                <div style="font-size:0.8em; color:#666;">{{ m.code }}</div>
+
+                <div class="card-body">
+                    <h3 class="card-title">{{ m.name }}</h3>
+                    <div class="card-meta">
+                        <span>
+                            {% if m.status == 'LIVE' %}
+                            <span class="status-dot status-live"></span> LIVE
+                            {% else %}
+                            <span class="status-dot status-draft"></span> DRAFT
+                            {% endif %}
+                        </span>
+                        <span style="font-family:monospace; color:#555;">{{ m.code }}</span>
+                    </div>
+                </div>
             </div>
         </a>
         {% empty %}
-        <div style="grid-column: 1/-1; text-align: center; color: #666; padding: 50px;">
-            El vacío reina en la existencia.
+        <div class="empty-state">
+            <h2>El vacío es absoluto.</h2>
+            <p>No existen mundos en este sector. Crea el primero.</p>
         </div>
         {% endfor %}
     </div>
+
+    <!-- MODAL CREAR -->
+    <div id="createModal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:100; justify-content:center; align-items:center;">
+        <div style="background:#161625; padding:30px; border-radius:10px; width:400px; border:1px solid #d633ff;">
+            <h2 style="margin-top:0; color:#d633ff;">Iniciar Génesis</h2>
+            <form method="POST">
+                {% csrf_token %}
+                <label style="display:block; margin-bottom:5px; color:#aaa;">Nombre del Mundo:</label>
+                <input type="text" name="world_name" required
+                    style="width:100%; padding:10px; background:#0a0a12; border:1px solid #444; color:#fff; border-radius:4px; margin-bottom:15px;">
+
+                <label style="display:block; margin-bottom:5px; color:#aaa;">Concepto Inicial:</label>
+                <textarea name="world_desc"
+                    style="width:100%; height:100px; padding:10px; background:#0a0a12; border:1px solid #444; color:#fff; border-radius:4px; margin-bottom:20px;"></textarea>
+
+                <div style="text-align:right;">
+                    <button type="button" onclick="document.getElementById('createModal').style.display='none'"
+                        style="background:transparent; border:1px solid #555; color:#fff; padding:8px 15px; border-radius:4px; cursor:pointer; margin-right:10px;">Cancelar</button>
+                    <button type="submit"
+                        style="background:#d633ff; border:none; color:#fff; padding:8px 20px; border-radius:4px; font-weight:bold; cursor:pointer;">🚀
+                        CREAR</button>
+                </div>
+            </form>
+        </div>
     </div>
+
 </body>
+
 </html>

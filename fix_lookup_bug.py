@@ -1,4 +1,11 @@
 import os
+
+# --- RUTA ---
+BASE_DIR = os.path.join('src', 'Infrastructure', 'DjangoFramework', 'persistence')
+PATH_VIEWS = os.path.join(BASE_DIR, 'views.py')
+
+# --- NUEVO CONTENIDO DE VIEWS.PY (Con resolve_jid arreglado) ---
+VIEWS_CODE = r'''import os
 import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -322,3 +329,12 @@ def mapa_arbol(request, public_id):
             tree_data.append({'name': node.name, 'public_id': pid, 'id_display': node.id, 'indent_px': depth * 30, 'is_root': node.id == root.id, 'status': node.status})
         return render(request, 'mapa_arbol.html', {'root_name': root.name, 'tree': tree_data})
     except: return redirect('ver_mundo', public_id=public_id)
+'''
+
+def run_fix_lookup():
+    with open(PATH_VIEWS, 'w', encoding='utf-8') as f:
+        f.write(VIEWS_CODE)
+    print("✅ views.py actualizado con lógica de búsqueda robusta.")
+
+if __name__ == "__main__":
+    run_fix_lookup()
