@@ -159,11 +159,9 @@
             </div>
             {% endif %}
 
-            <div>
-                <h3 class="text-accent font-bold tracking-wider text-sm uppercase mb-3 border-b border-gray-800 pb-1">Lore</h3>
-                <div class="bg-black/30 p-6 rounded-lg border-l-4 border-accent text-gray-300 leading-relaxed whitespace-pre-wrap font-serif text-lg">
-                    {{ description|default:"Sin descripción disponible." }}
-                </div>
+            <div class="prose prose-invert max-w-none mt-8">
+                <h3 class="text-white font-bold mb-2">Descripción</h3>
+                <div class="bg-gray-900/50 p-4 rounded-lg border border-gray-800 text-gray-300 leading-relaxed whitespace-pre-wrap">{{ description|default:"Sin descripción disponible." }}</div>
             </div>
         </div>
 
