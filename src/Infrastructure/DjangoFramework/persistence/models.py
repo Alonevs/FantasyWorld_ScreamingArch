@@ -83,7 +83,20 @@ class CaosNarrativeORM(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
+    current_version_number = models.IntegerField(default=1)
     class Meta: db_table = 'caos_narratives'; ordering = ['nid']
+
+class CaosNarrativeVersionORM(models.Model):
+    narrative = models.ForeignKey(CaosNarrativeORM, on_delete=models.CASCADE, related_name='versiones')
+    proposed_title = models.CharField(max_length=200)
+    proposed_content = models.TextField()
+    version_number = models.IntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=30, default="PENDING") # PENDING, APPROVED, REJECTED, LIVE, ARCHIVED
+    change_log = models.CharField(max_length=255, blank=True)
+    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    class Meta: db_table = 'caos_narrative_versions'; ordering = ['-version_number']
 
 class CaosEventLog(models.Model):
     id = models.AutoField(primary_key=True)
@@ -94,3 +107,14 @@ class CaosEventLog(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
 
     class Meta: db_table = 'caos_event_logs'; ordering = ['-timestamp']
+
+class CaosImageProposalORM(models.Model):
+    id = models.AutoField(primary_key=True)
+    world = models.ForeignKey(CaosWorldORM, on_delete=models.CASCADE, related_name='image_proposals')
+    image = models.ImageField(upload_to='temp_proposals/') # Temporary storage
+    title = models.CharField(max_length=150, blank=True)
+    status = models.CharField(max_length=30, default="PENDING") # PENDING, APPROVED, REJECTED
+    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta: db_table = 'caos_image_proposals'; ordering = ['-created_at']

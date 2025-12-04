@@ -7,7 +7,7 @@
         
         <form id="form-manual-upload" method="POST" action="{% url 'subir_imagen_manual' public_id %}" enctype="multipart/form-data" class="hidden">
             {% csrf_token %}
-            <input id="file-upload" type="file" name="imagen_manual" accept="image/*" onchange="openUploadModal(this)">
+            <input id="file-upload" type="file" name="imagen_manual" accept="image/*" multiple onchange="openUploadModal(this)">
             <input type="hidden" id="hidden-use-original" name="use_original_name">
             <input type="hidden" id="hidden-custom-name" name="custom_name">
         </form>

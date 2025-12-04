@@ -37,7 +37,7 @@ class CreateNarrativeUseCase:
             new_nid = self.repository.get_next_narrative_id(prefix)
             
             tipo_completo = map_tipos.get(tipo_codigo, 'LORE')
-            CaosNarrativeORM.objects.create(
+            narr = CaosNarrativeORM.objects.create(
                 nid=new_nid, 
                 world=world, 
                 titulo=f"Nuevo {tipo_completo} ({new_nid[-2:]})", 
@@ -46,4 +46,17 @@ class CreateNarrativeUseCase:
                 tipo=tipo_completo,
                 created_by=user
             )
+            
+            # Crear propuesta de versión inicial (v1)
+            from src.Infrastructure.DjangoFramework.persistence.models import CaosNarrativeVersionORM
+            CaosNarrativeVersionORM.objects.create(
+                narrative=narr,
+                proposed_title=narr.titulo,
+                proposed_content=narr.contenido,
+                version_number=1,
+                status='PENDING',
+                change_log="Creación inicial",
+                author=user
+            )
+            
             return new_nid

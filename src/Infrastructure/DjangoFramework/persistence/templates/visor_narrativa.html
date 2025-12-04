@@ -95,10 +95,16 @@
             <label>Contenido:</label>
             <textarea name="contenido">{{ narr.contenido }}</textarea>
             
+            <div style="background:#2a2a35; padding:15px; border-radius:5px; margin-bottom:15px; border:1px solid #444;">
+                <label style="color:#d633ff; font-weight:bold;">📝 Control de Versiones</label>
+                <p style="font-size:0.8em; color:#aaa; margin-top:0;">Describe brevemente por qué estás haciendo este cambio. Esto creará una propuesta de versión.</p>
+                <input type="text" name="change_reason" placeholder="Ej: Corregir ortografía, Añadir detalles sobre la batalla..." required style="width:100%; box-sizing:border-box;">
+            </div>
+
             <div class="toolbar">
                 <a href="{% url 'borrar_narrativa' narr.nid %}" onclick="return confirm('¿BORRAR PARA SIEMPRE?')" style="color:#e74c3c; margin-right:auto; align-self:center; cursor:pointer;">🗑️ Eliminar</a>
                 <button type="button" onclick="toggleEdit()" style="background:#555; color:white; border:none; padding:10px 20px; border-radius:4px; cursor:pointer;">Cancelar</button>
-                <button type="submit" class="btn-save">💾 GUARDAR CAMBIOS</button>
+                <button type="submit" class="btn-save" style="background: #d633ff;">🚀 PROPONER CAMBIO</button>
             </div>
         </form>
     </div>

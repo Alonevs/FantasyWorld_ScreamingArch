@@ -1,17 +1,24 @@
 from django.contrib import admin
 from django.urls import path, include
-from django.urls import include, path
 
-
-# Imports de tus nuevas vistas organizadas
-from src.Infrastructure.DjangoFramework.persistence.views.world_views import *
-from src.Infrastructure.DjangoFramework.persistence.views.dashboard_views import *
-from src.Infrastructure.DjangoFramework.persistence.views.media_views import *
-from src.Infrastructure.DjangoFramework.persistence.views.narrative_views import *
 from src.Infrastructure.DjangoFramework.persistence.views.world_views import (
     home, ver_mundo, editar_mundo, borrar_mundo, 
     toggle_lock, toggle_visibilidad, init_hemisferios, escanear_planeta,
-    mapa_arbol  # <--- ¡Asegúrate de que esta esté aquí!
+    mapa_arbol, comparar_version
+)
+from src.Infrastructure.DjangoFramework.persistence.views.dashboard_views import (
+    dashboard, aprobar_propuesta, rechazar_propuesta, publicar_version, 
+    restaurar_version, borrar_propuesta, borrar_propuestas_masivo,
+    aprobar_narrativa, rechazar_narrativa, publicar_narrativa, restaurar_narrativa, borrar_narrativa_version,
+    aprobar_imagen, rechazar_imagen, aprobar_imagenes_masivo
+)
+from src.Infrastructure.DjangoFramework.persistence.views.media_views import (
+    api_preview_foto, api_save_foto, api_update_image_metadata, 
+    subir_imagen_manual, set_cover_image, borrar_foto, generar_foto_extra
+)
+from src.Infrastructure.DjangoFramework.persistence.views.narrative_views import (
+    ver_narrativa_mundo, leer_narrativa, editar_narrativa, borrar_narrativa, 
+    crear_nueva_narrativa, crear_sub_narrativa
 )
 
 urlpatterns = [
@@ -36,8 +43,8 @@ urlpatterns = [
     path('borrar/<str:jid>/', borrar_mundo, name='borrar_mundo'),
     path('editar/<str:jid>/', editar_mundo, name='editar_mundo'),
     
-    # 🔒 BLOQUEO Y VISIBILIDAD (¡Aquí faltaba esto!)
-    path('lock/<str:jid>/', toggle_lock, name='toggle_lock'),        # <--- ¡ESTA FALTABA!
+    # 🔒 BLOQUEO Y VISIBILIDAD
+    path('lock/<str:jid>/', toggle_lock, name='toggle_lock'),
     path('toggle_visible/<str:jid>/', toggle_visibilidad, name='toggle_visibilidad'),
     
     # FOTOS Y MEDIA
@@ -51,7 +58,6 @@ urlpatterns = [
     # ==========================================
     # DASHBOARD Y CONTROL DE VERSIONES
     # ==========================================
-    # Nota: Usamos 'dashboard' como la principal. 'centro_control' es la antigua.
     path('control/', dashboard, name='dashboard'), 
     
     # Acciones de Propuestas (Aprobar/Rechazar)
@@ -62,9 +68,21 @@ urlpatterns = [
     path('propuesta/<int:version_id>/borrar/', borrar_propuesta, name='borrar_propuesta'),
     path('propuestas/borrar_masivo/', borrar_propuestas_masivo, name='borrar_propuestas_masivo'),
     
-    # Rutas legacy (por si acaso algún enlace viejo las usa)
+    # Rutas legacy
     path('revision/<int:version_id>/', comparar_version, name='revisar_version'),
     path('version/restaurar/<int:version_id>/', restaurar_version, name='restaurar_version'),
+
+    # Acciones de Narrativas
+    path('narrativa/propuesta/<int:id>/aprobar/', aprobar_narrativa, name='aprobar_narrativa'),
+    path('narrativa/propuesta/<int:id>/rechazar/', rechazar_narrativa, name='rechazar_narrativa'),
+    path('narrativa/version/<int:id>/publicar/', publicar_narrativa, name='publicar_narrativa'),
+    path('narrativa/version/<int:id>/restaurar/', restaurar_narrativa, name='restaurar_narrativa'),
+    path('narrativa/version/<int:id>/borrar/', borrar_narrativa_version, name='borrar_narrativa_version'),
+
+    # Acciones de Imágenes
+    path('imagen/propuesta/<int:id>/aprobar/', aprobar_imagen, name='aprobar_imagen'),
+    path('imagen/propuesta/<int:id>/rechazar/', rechazar_imagen, name='rechazar_imagen'),
+    path('imagenes/aprobar_masivo/', aprobar_imagenes_masivo, name='aprobar_imagenes_masivo'),
 
     # ==========================================
     # NARRATIVA
@@ -75,10 +93,9 @@ urlpatterns = [
     path('narrativa/<str:nid>/', leer_narrativa, name='leer_narrativa'),
     path('narrativa/editar/<str:nid>/', editar_narrativa, name='editar_narrativa'),
     path('narrativa/borrar/<str:nid>/', borrar_narrativa, name='borrar_narrativa'),
-      #Ruta de errores logs
+
+    # Ruta de errores logs
     path('__debug__/', include('debug_toolbar.urls')),
-
-
 
     # ==========================================
     # APIs (AJAX y Fetch)
@@ -87,4 +104,9 @@ urlpatterns = [
     path('api/save_foto/<str:jid>/', api_save_foto, name='api_save_foto'),
     path('api/update_meta/<str:jid>/', api_update_image_metadata, name='api_update_image_metadata'),
 ]
-    
+
+from django.conf import settings
+from django.conf.urls.static import static
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

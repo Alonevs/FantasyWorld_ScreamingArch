@@ -1,24 +1,21 @@
 import os
 import json
+import base64
+import io
+from PIL import Image
 from django.shortcuts import redirect
 from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
+from django.core.files.base import ContentFile
 
-from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosEventLog
+from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosEventLog, CaosImageProposalORM
 from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
 from src.WorldManagement.Caos.Application.generate_map import GenerateWorldMapUseCase
 from src.FantasyWorld.AI_Generation.Infrastructure.sd_service import StableDiffusionService
 
 def resolve_jid(identifier):
-    # Helper duplicated here or imported from world_views if circular import avoided.
-    # To avoid circular imports, I'll duplicate this small helper or import from a common util if I had one.
-    # Given the constraints, I will duplicate it to be safe and self-contained for now, or import from models if it was a static method.
-    # Better: Import from world_views might cause circular import if world_views imports this.
-    # world_views imports nothing from here. So I can import resolve_jid from world_views?
-    # No, world_views is a view file.
-    # I will duplicate it for safety as it is small.
     try:
         return CaosWorldORM.objects.get(public_id=identifier)
     except CaosWorldORM.DoesNotExist:
@@ -45,14 +42,63 @@ def api_preview_foto(request, jid):
 
 @csrf_exempt
 def api_save_foto(request, jid):
+    print(f"DEBUG: api_save_foto called for jid={jid}")
     try:
         w = resolve_jid(jid); real_jid = w.id if w else jid
+        print(f"DEBUG: Resolved world: {w}")
+        
         data = json.loads(request.body)
-        user = request.user.username if request.user.is_authenticated else "Anónimo"
-        DjangoCaosRepository().save_image(real_jid, data.get('image'), title=data.get('title'), username=user)
-        log_event(request.user, "UPLOAD_AI_PHOTO", real_jid, f"Title: {data.get('title')}")
-        return JsonResponse({'status': 'ok', 'success': True})
-    except Exception as e: return JsonResponse({'status': 'error', 'message': str(e)})
+        print("DEBUG: Request body loaded")
+        
+        user = request.user if request.user.is_authenticated else None
+        print(f"DEBUG: User: {user}")
+        
+        # Robust base64 decoding
+        img_str = data.get('image')
+        if not img_str:
+            print("DEBUG: No image data found")
+            return JsonResponse({'status': 'error', 'message': 'No image data'})
+            
+        if ';base64,' in img_str:
+            format, imgstr = img_str.split(';base64,') 
+        else:
+            imgstr = img_str
+        
+        print(f"DEBUG: Image string length: {len(imgstr)}")
+
+        # Convert to WebP
+        print("DEBUG: Decoding base64...")
+        image = Image.open(io.BytesIO(base64.b64decode(imgstr)))
+        print(f"DEBUG: Image opened: {image.format} {image.size}")
+        
+        output = io.BytesIO()
+        image.save(output, format='WEBP')
+        print("DEBUG: Image saved to WebP buffer")
+        
+        file_name = f"{data.get('title')}.webp"
+        image_data = ContentFile(output.getvalue(), name=file_name)
+        print(f"DEBUG: ContentFile created: {file_name}")
+
+        # Create Proposal
+        print("DEBUG: Creating CaosImageProposalORM...")
+        CaosImageProposalORM.objects.create(
+            world=w,
+            image=image_data,
+            title=data.get('title'),
+            author=user,
+            status='PENDING'
+        )
+        print("DEBUG: CaosImageProposalORM created")
+        
+        log_event(request.user, "PROPOSE_AI_PHOTO", real_jid, f"Title: {data.get('title')}")
+        print("DEBUG: Event logged")
+        
+        return JsonResponse({'status': 'ok', 'success': True, 'message': 'Imagen enviada a revisión (WebP).'})
+    except Exception as e:
+        print(f"DEBUG: Exception in api_save_foto: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'status': 'error', 'message': str(e)})
 
 @csrf_exempt
 def api_update_image_metadata(request, jid):
@@ -72,21 +118,35 @@ def subir_imagen_manual(request, jid):
     redirect_target = jid 
     if w and w.public_id: redirect_target = w.public_id
 
-    if request.method == 'POST' and request.FILES.get('imagen_manual'):
+    if request.method == 'POST' and request.FILES.getlist('imagen_manual'):
         try:
-            repo = DjangoCaosRepository()
             use_orig = request.POST.get('use_original_name') == 'true' or request.POST.get('use_original_name') == 'on'
-            custom = request.POST.get('custom_name')
-            title = request.POST.get('manual_title', 'Sin Título')
+            custom_base = request.POST.get('custom_name')
+            title_base = request.POST.get('manual_title', 'Sin Título')
             
-            final = title
-            if use_orig: final = request.FILES['imagen_manual'].name.split('.')[0]
-            elif custom: final = custom
+            files = request.FILES.getlist('imagen_manual')[:5] # Max 5
+            
+            for i, f in enumerate(files):
+                final = title_base
+                if len(files) > 1: final = f"{title_base} ({i+1})"
+                
+                if use_orig: final = f.name.split('.')[0]
+                elif custom_base: 
+                    final = custom_base
+                    if len(files) > 1: final = f"{custom_base}_{i+1}"
 
-            user = request.user.username if request.user.is_authenticated else "Anónimo"
-            repo.save_manual_file(real_jid, request.FILES['imagen_manual'], username=user, title=final)
-            log_event(request.user, "UPLOAD_MANUAL_PHOTO", real_jid, f"File: {final}")
-            messages.success(request, "✅ Imagen subida.")
+                user = request.user if request.user.is_authenticated else None
+                # Create Proposal
+                CaosImageProposalORM.objects.create(
+                    world=w,
+                    image=f,
+                    title=final,
+                    author=user,
+                    status='PENDING'
+                )
+                log_event(request.user, "PROPOSE_PHOTO", real_jid, f"File: {final}")
+            
+            messages.success(request, f"✨ {len(files)} imagen(es) enviada(s) a revisión. Aprobar en Dashboard.")
         except Exception as e: messages.error(request, f"Error: {e}")
     return redirect('ver_mundo', public_id=redirect_target)
 
@@ -97,10 +157,11 @@ def set_cover_image(request, jid, filename):
 def borrar_foto(request, jid, filename):
     try: 
         w=resolve_jid(jid); base=os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img', w.id)
-        if os.path.exists(os.path.join(base, filename)): os.remove(os.path.join(base, filename))
+        if os.path.exists(os.path.join(base, filename)): 
+            os.remove(os.path.join(base, filename))
+            log_event(request.user, "DELETE_PHOTO", w.id, f"File: {filename}")
         return redirect('ver_mundo', public_id=w.public_id)
     except: return redirect('home')
-# Función "placeholder" que faltaba
+
 def generar_foto_extra(request, jid):
-    # Por ahora solo redirige, igual que antes
     return redirect('ver_mundo', public_id=jid)

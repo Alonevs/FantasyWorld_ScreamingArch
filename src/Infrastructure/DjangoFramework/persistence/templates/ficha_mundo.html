@@ -156,7 +156,7 @@
                     
                     <form id="form-manual-upload" method="POST" action="{% url 'subir_imagen_manual' public_id %}" enctype="multipart/form-data" class="hidden">
                         {% csrf_token %}
-                        <input id="file-upload" type="file" name="imagen_manual" accept="image/*" onchange="openUploadModal(this)">
+                        <input id="file-upload" type="file" name="imagen_manual" accept="image/*" multiple onchange="openUploadModal(this)">
                         <input type="hidden" id="hidden-use-original" name="use_original_name">
                         <input type="hidden" id="hidden-custom-name" name="custom_name">
                     </form>
@@ -276,41 +276,13 @@
         </div>
     </div>
 
-    <div id="aiModal" class="fixed inset-0 bg-black/90 z-50 hidden items-center justify-center backdrop-blur-sm">
-        <div class="bg-card border border-accent/50 rounded-2xl p-8 max-w-md w-full text-center shadow-[0_0_50px_rgba(214,51,255,0.2)]">
-            <h2 class="text-2xl font-bold text-white mb-1">Generador Neural</h2>
-            <p class="text-xs text-gray-400 mb-6 uppercase tracking-widest">Stable Diffusion + Llama 3</p>
-            
-            <div id="ai-step-1">
-                <p class="text-gray-300 mb-6 text-sm">La IA leerá la descripción de este mundo y generará una visualización única.</p>
-                <button onclick="generatePreview()" class="w-full py-3 bg-accent hover:bg-accent-hover text-white font-bold rounded-lg mb-3 transition">✨ GENERAR AHORA</button>
-                <button onclick="closeAiModal()" class="text-gray-500 hover:text-white text-sm underline">Cancelar</button>
-            </div>
-
-            <div id="ai-step-loading" class="hidden py-8">
-                <div class="text-4xl animate-bounce mb-4">🔮</div>
-                <p class="text-accent font-bold animate-pulse">Soñando píxeles...</p>
-            </div>
-
-            <div id="ai-step-result" class="hidden">
-                <img id="ai-preview-img" class="w-full rounded-lg border border-gray-700 mb-4 shadow-xl">
-                <div class="text-left mb-4">
-                    <label class="text-xs text-gray-500 uppercase font-bold">Título</label>
-                    <input type="text" id="ai-img-title" placeholder="Ej: Paisaje Desolado..." class="w-full bg-black border border-gray-700 rounded p-2 mt-1 text-white focus:border-accent focus:outline-none">
-                </div>
-                <div class="flex gap-3">
-                    <button onclick="discardAiImage()" class="flex-1 py-2 bg-gray-800 hover:bg-red-900/50 text-gray-300 hover:text-red-200 rounded-lg border border-gray-700 transition">Descartar</button>
-                    <button onclick="saveAiImage()" class="flex-1 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg shadow-lg shadow-green-900/50 transition">💾 GUARDAR</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="uploadModal" class="fixed inset-0 bg-black/90 z-50 hidden items-center justify-center backdrop-blur-sm">
-        <div class="bg-card border border-gray-700 rounded-2xl p-8 max-w-md w-full text-center">
+    <div id="uploadModal" class="hidden fixed inset-0 bg-black/90 z-50 items-center justify-center backdrop-blur-sm">
+        <div class="bg-card border border-gray-700 rounded-2xl p-6 max-w-lg w-full shadow-2xl text-center">
             <h2 class="text-xl font-bold text-white mb-4">Confirmar Subida</h2>
             <div id="file-info" class="text-xs font-mono text-accent mb-2"></div>
-            <img id="preview-img" class="w-full h-48 object-contain bg-black rounded border border-gray-800 mb-4 hidden">
+            <!-- Previews Container -->
+            <div id="upload-previews" class="grid grid-cols-3 gap-2 mb-4 max-h-48 overflow-y-auto"></div>
+            <img id="preview-img" class="hidden"> <!-- Legacy support removed/hidden -->
             
             <div class="bg-gray-950 p-4 rounded-lg border border-gray-800 text-left mb-4">
                 <label class="flex items-center gap-2 mb-3 cursor-pointer group">
@@ -325,6 +297,43 @@
             <div class="flex gap-3 justify-center">
                 <button onclick="closeUploadModal()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded text-gray-300">Cancelar</button>
                 <button id="btn-confirm-upload" onclick="confirmUpload()" class="px-6 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded shadow-lg hidden">🚀 SUBIR</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="aiModal" class="hidden fixed inset-0 bg-black/90 z-50 items-center justify-center backdrop-blur-sm">
+        <div class="bg-card border border-purple-500/50 rounded-2xl p-6 max-w-lg w-full shadow-2xl">
+            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">🎨 Generador de Imágenes IA</h2>
+            
+            <!-- Step 1: Generate Options -->
+            <div id="ai-step-1">
+                <div class="mb-4">
+                    <label class="block text-xs text-gray-500 uppercase font-bold mb-1">Cantidad</label>
+                    <input type="number" id="batch-size" value="1" min="1" max="5" class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none">
+                </div>
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeAiModal()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700 transition">Cancelar</button>
+                    <button type="button" onclick="generateBatch()" class="flex-1 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg shadow-lg transition">✨ GENERAR</button>
+                </div>
+            </div>
+
+            <!-- Step Loading -->
+            <div id="ai-step-loading" class="hidden text-center py-8">
+                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mx-auto mb-4"></div>
+                <p id="loading-text" class="text-white text-lg font-bold">Generando...</p>
+                <p class="text-gray-500 text-sm mt-2">Esto puede tardar unos segundos.</p>
+            </div>
+
+            <!-- Step Result: Staging Area -->
+            <div id="ai-step-result" class="hidden">
+                <h3 class="text-sm text-gray-400 font-bold mb-2">Imágenes Generadas:</h3>
+                <div id="staging-area" class="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto p-2 bg-gray-950 border border-gray-800 rounded mb-4">
+                    <!-- Images will be rendered here -->
+                </div>
+                <div class="flex gap-3">
+                    <button type="button" onclick="discardAiImage()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700 transition">Descartar</button>
+                    <button type="button" onclick="saveBatch()" id="btn-submit-batch" class="flex-1 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg shadow-lg transition">💾 GUARDAR</button>
+                </div>
             </div>
         </div>
     </div>
@@ -385,77 +394,114 @@
         }
 
         // IA LOGIC
+        let generatedImages = []; // Array of {base64, title}
+
         function openAiModal() {
             document.getElementById('aiModal').classList.remove('hidden');
             document.getElementById('aiModal').classList.add('flex');
-            document.getElementById('ai-step-1').classList.remove('hidden');
-            document.getElementById('ai-step-loading').classList.add('hidden');
-            document.getElementById('ai-step-result').classList.add('hidden');
-            document.getElementById('ai-img-title').value = "";
+            resetAiModal();
         }
+
         function closeAiModal() {
             document.getElementById('aiModal').classList.add('hidden');
             document.getElementById('aiModal').classList.remove('flex');
         }
+
+        function resetAiModal() {
+            document.getElementById('ai-step-1').classList.remove('hidden');
+            document.getElementById('ai-step-loading').classList.add('hidden');
+            document.getElementById('ai-step-result').classList.add('hidden');
+            generatedImages = [];
+            renderStagingArea();
+        }
         
-        function generatePreview() {
+        async function generateBatch() {
+            const count = parseInt(document.getElementById('batch-size').value) || 1;
             document.getElementById('ai-step-1').classList.add('hidden');
             document.getElementById('ai-step-loading').classList.remove('hidden');
-            fetch("{% url 'api_preview_foto' jid %}")
-                .then(r => r.json())
-                .then(data => {
-                    document.getElementById('ai-step-loading').classList.add('hidden');
-                    if(data.status === 'ok') {
-                        currentBase64 = data.image;
-                        document.getElementById('ai-preview-img').src = "data:image/webp;base64," + data.image;
-                        document.getElementById('ai-step-result').classList.remove('hidden');
-                    } else alert("Error IA: " + data.message);
-                }).catch(e => { alert("Error conexión"); closeAiModal(); });
-        }
-        
-        function saveAiImage() {
-            const t = document.getElementById('ai-img-title').value || "Generado por IA";
-            if(!currentBase64) return;
-            fetch("{% url 'api_save_foto' jid %}", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token }}" },
-                body: JSON.stringify({ image: currentBase64, title: t })
-            }).then(r => r.json()).then(d => {
-                if(d.status === 'ok') location.reload();
-                else alert("Error: " + d.message);
-            });
-        }
-        function discardAiImage() { if(confirm("¿Descartar?")) openAiModal(); }
+            document.getElementById('loading-text').innerText = `Generando ${count} imagen(es)...`;
 
-        // UPLOAD LOGIC
-        function openUploadModal(input) {
-            if(!input.files[0]) return;
-            const f = input.files[0];
-            const modal = document.getElementById('uploadModal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
+            for(let i=0; i<count; i++) {
+                try {
+                    const r = await fetch("{% url 'api_preview_foto' jid %}");
+                    const d = await r.json();
+                    if(d.status === 'ok') {
+                        generatedImages.push({ base64: d.image, title: "" });
+                    }
+                } catch(e) { console.error(e); }
+            }
+
+            document.getElementById('ai-step-loading').classList.add('hidden');
+            document.getElementById('ai-step-result').classList.remove('hidden');
+            renderStagingArea();
+        }
+
+        function renderStagingArea() {
+            const container = document.getElementById('staging-area');
+            container.innerHTML = "";
             
-            document.getElementById('preview-img').src = URL.createObjectURL(f);
-            document.getElementById('preview-img').classList.remove('hidden');
-            document.getElementById('file-info').innerText = f.name;
+            if(generatedImages.length === 0) {
+                container.innerHTML = `<div class="text-gray-500 text-xs italic">No hay imágenes generadas.</div>`;
+                return;
+            }
+
+            generatedImages.forEach((img, idx) => {
+                const div = document.createElement('div');
+                div.className = "relative group border border-gray-700 rounded overflow-hidden";
+                div.innerHTML = `
+                    <img src="data:image/webp;base64,${img.base64}" class="w-full h-32 object-cover">
+                    <button onclick="removeImage(${idx})" class="absolute top-1 right-1 bg-red-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition shadow">✕</button>
+                    <input type="text" placeholder="Título..." class="w-full bg-black text-xs text-white p-1 border-t border-gray-700 focus:outline-none" value="${img.title}" onchange="updateTitle(${idx}, this.value)">
+                `;
+                container.appendChild(div);
+            });
             
-            // Reset
-            document.getElementById('chk-original-name').checked = false;
-            document.getElementById('inp-custom-name').value = f.name.split('.')[0];
-            toggleCustomName();
-            
-            // Scan fake
-            const st = document.getElementById('scan-status');
-            const btn = document.getElementById('btn-confirm-upload');
-            st.innerText = "⏳ ANALIZANDO..."; st.style.color = "#aaa"; btn.classList.add('hidden');
-            setTimeout(() => { st.innerText = "✅ SEGURO"; st.style.color = "#4ade80"; btn.classList.remove('hidden'); }, 800);
+            document.getElementById('btn-submit-batch').innerText = `💾 GUARDAR (${generatedImages.length})`;
+        }
+
+        function removeImage(idx) {
+            generatedImages.splice(idx, 1);
+            renderStagingArea();
+            if(generatedImages.length === 0) resetAiModal();
+        }
+
+        function updateTitle(idx, val) {
+            generatedImages[idx].title = val;
         }
         
-        function closeUploadModal() { 
-            const modal = document.getElementById('uploadModal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-            document.getElementById('file-upload').value=""; 
+        async function saveBatch() {
+            if(generatedImages.length === 0) return;
+            
+            const btn = document.getElementById('btn-submit-batch');
+            btn.disabled = true;
+
+            let successCount = 0;
+            let total = generatedImages.length;
+
+            for(let i=0; i<total; i++) {
+                const img = generatedImages[i];
+                btn.innerText = `Enviando ${i+1}/${total}...`;
+                try {
+                    const t = img.title || "Generado por IA";
+                    const response = await fetch("{% url 'api_save_foto' jid %}", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token }}" },
+                        body: JSON.stringify({ image: img.base64, title: t })
+                    });
+                    
+                    if (response.ok) {
+                        successCount++;
+                    } else {
+                        console.error(`Error saving image ${i+1}: ${response.status} ${response.statusText}`);
+                    }
+                } catch(e) { 
+                    console.error(`Exception saving image ${i+1}:`, e); 
+                }
+            }
+            
+            btn.innerText = "Finalizado";
+            alert(`✅ ${successCount}/${total} imágenes enviadas a revisión.`);
+            location.reload();
         }
         
         function toggleCustomName() {
@@ -469,6 +515,39 @@
             document.getElementById('hidden-use-original').value = document.getElementById('chk-original-name').checked ? 'true' : 'false';
             document.getElementById('hidden-custom-name').value = document.getElementById('inp-custom-name').value;
             document.getElementById('form-manual-upload').submit();
+        }
+        
+        function openUploadModal(input) {
+            if (input.files && input.files.length > 0) {
+                const modal = document.getElementById('uploadModal');
+                const previewContainer = document.getElementById('upload-previews');
+                const fileInfo = document.getElementById('file-info');
+                const btn = document.getElementById('btn-confirm-upload');
+                
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                btn.classList.remove('hidden');
+                
+                previewContainer.innerHTML = '';
+                fileInfo.innerText = `${input.files.length} archivo(s) seleccionado(s)`;
+                
+                Array.from(input.files).forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.className = "w-full h-24 object-cover rounded border border-gray-700";
+                        previewContainer.appendChild(img);
+                    }
+                    reader.readAsDataURL(file);
+                });
+            }
+        }
+        
+        function closeUploadModal() {
+            document.getElementById('uploadModal').classList.add('hidden');
+            document.getElementById('uploadModal').classList.remove('flex');
+            document.getElementById('file-upload').value = "";
         }
 
         // LIGHTBOX LOGIC

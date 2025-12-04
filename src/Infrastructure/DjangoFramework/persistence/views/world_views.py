@@ -76,7 +76,6 @@ def ver_mundo(request, public_id):
     repo = DjangoCaosRepository()
     w = resolve_jid(public_id)
     if not w: 
-        # Fallback de emergencia: si falla resolve, intentamos ID directo como string
         try: w = CaosWorldORM.objects.get(id=public_id)
         except: return render(request, '404.html', {"jid": public_id})
     
@@ -97,6 +96,9 @@ def ver_mundo(request, public_id):
                     except: pass
                     try: GenerateWorldMapUseCase(repo, StableDiffusionService()).execute_single(nid)
                     except: pass
+                
+                messages.success(request, f"✨ '{child_name}' creado. Se ha generado una propuesta v1 en el Dashboard.")
+                return redirect('dashboard')
             return redirect('ver_mundo', public_id=safe_pid)
 
     props = w.versiones.filter(status='PENDING').order_by('-created_at')
@@ -107,7 +109,6 @@ def ver_mundo(request, public_id):
     hijos = []
     for h in raw_hijos:
         h_pid = h.public_id if h.public_id else h.id
-        # Usamos J-ID para navegación interna
         hijos.append({'id': h.id, 'public_id': h.id, 'name': h.name, 'short': h.id[len(jid):], 'img':(get_world_images(h.id)[0]['url'] if get_world_images(h.id) else None)})
     
     imgs = get_world_images(jid)
@@ -142,7 +143,22 @@ def editar_mundo(request, jid):
     return redirect('home')
 
 def borrar_mundo(request, jid): 
-    try: CaosWorldORM.objects.get(id=jid).delete(); return redirect('home')
+    try: 
+        w = CaosWorldORM.objects.get(id=jid)
+        parent_id = jid[:-2]
+        
+        # Determine redirect target BEFORE deletion
+        redirect_target = 'home'
+        if len(parent_id) >= 2:
+            try:
+                p = CaosWorldORM.objects.get(id=parent_id)
+                redirect_target = p.public_id if p.public_id else p.id
+            except: pass
+            
+        w.delete()
+        
+        if redirect_target == 'home': return redirect('home')
+        return redirect('ver_mundo', public_id=redirect_target)
     except: return redirect('home')
 
 def toggle_visibilidad(request, jid):
