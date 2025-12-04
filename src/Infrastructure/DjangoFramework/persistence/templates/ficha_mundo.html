@@ -76,6 +76,7 @@
             </div>
             {% if not is_preview %}
             <div>
+                <button onclick="openEditModal()" class="p-2 bg-blue-900/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg transition border border-blue-900/50 mr-2" title="Editar">✏️</button>
                 <a href="{% url 'borrar_mundo' jid %}" onclick="return confirm('¿Borrar mundo?')" class="p-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg transition border border-red-900/50" title="Borrar">🗑️</a>
             </div>
             {% endif %}
@@ -198,6 +199,37 @@
         </div>
     </div>
 
+    <div id="editModal" class="fixed inset-0 bg-black/90 z-50 hidden items-center justify-center backdrop-blur-sm">
+        <div class="bg-card border border-gray-700 rounded-2xl p-8 max-w-md w-full shadow-2xl">
+            <h2 class="text-xl font-bold text-white mb-4">Editar Mundo</h2>
+            <form method="POST" action="{% url 'editar_mundo' jid %}">
+                {% csrf_token %}
+                <div class="mb-4">
+                    <label class="block text-xs text-gray-500 uppercase font-bold mb-1">Nombre</label>
+                    <input type="text" name="name" value="{{ name }}" class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-xs text-gray-500 uppercase font-bold mb-1">Descripción</label>
+                    <textarea name="description" rows="5" class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none">{{ description }}</textarea>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-xs text-gray-500 uppercase font-bold mb-1">Razón del cambio (Opcional)</label>
+                    <input type="text" name="reason" placeholder="Corrección, actualización..." class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none">
+                </div>
+                <div class="mb-6">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="use_ai_edit" class="accent-accent w-4 h-4">
+                        <span class="text-sm text-gray-400">Refinar descripción con IA</span>
+                    </label>
+                </div>
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeEditModal()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700 transition">Cancelar</button>
+                    <button type="submit" class="flex-1 py-2 bg-accent hover:bg-accent-hover text-white font-bold rounded-lg shadow-lg shadow-purple-900/50 transition">💾 GUARDAR</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div id="aiModal" class="fixed inset-0 bg-black/90 z-50 hidden items-center justify-center backdrop-blur-sm">
         <div class="bg-card border border-accent/50 rounded-2xl p-8 max-w-md w-full text-center shadow-[0_0_50px_rgba(214,51,255,0.2)]">
             <h2 class="text-2xl font-bold text-white mb-1">Generador Neural</h2>
@@ -295,6 +327,16 @@
         window.addEventListener('load', async () => {
             try { if(typeof nsfwjs !== 'undefined') nsfwModel = await nsfwjs.load(); } catch(e){}
         });
+
+        // EDIT LOGIC
+        function openEditModal() {
+            document.getElementById('editModal').classList.remove('hidden');
+            document.getElementById('editModal').classList.add('flex');
+        }
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+            document.getElementById('editModal').classList.remove('flex');
+        }
 
         // IA LOGIC
         function openAiModal() {
