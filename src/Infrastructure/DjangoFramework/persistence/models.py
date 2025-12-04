@@ -42,6 +42,11 @@ class CaosWorldORM(models.Model):
     current_author_name = models.CharField(max_length=150, default="Sistema", blank=True)
     born_in_epoch = models.ForeignKey(CaosEpochORM, on_delete=models.SET_NULL, null=True, blank=True, related_name='entities_born')
     died_in_epoch = models.ForeignKey(CaosEpochORM, on_delete=models.SET_NULL, null=True, blank=True, related_name='entities_died')
+    
+    @property
+    def is_locked(self):
+        return self.status == 'LOCKED'
+
     class Meta: db_table = 'caos_worlds'
 
 class CaosVersionORM(models.Model):

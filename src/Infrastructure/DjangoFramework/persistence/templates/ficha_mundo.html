@@ -71,7 +71,22 @@
                         <a href="{% url 'ver_mundo' b.id %}" class="{% if b.id == jid %}text-accent font-bold{% else %}hover:text-white{% endif %}">{{ b.label }}</a>
                     {% endfor %}
                 </div>
-                <h1 class="text-3xl lg:text-4xl font-bold text-white mb-2">{{ name }}</h1>
+                <h1 class="text-3xl lg:text-4xl font-bold text-white mb-2 flex items-center gap-3">
+                    {{ name }}
+                    {% if is_locked %}
+                        <span title="Bloqueado" class="text-xl">🔒</span>
+                    {% endif %}
+                    
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'toggle_visibilidad' jid %}" class="text-xs font-bold px-2 py-1 rounded border transition {% if visible %}bg-green-900/30 text-green-400 border-green-800 hover:bg-green-900/50{% else %}bg-red-900/30 text-red-400 border-red-800 hover:bg-red-900/50{% endif %}">
+                            {% if visible %}PÚBLICO{% else %}PRIVADO{% endif %}
+                        </a>
+                    {% else %}
+                        <span class="text-xs font-bold px-2 py-1 rounded border {% if visible %}bg-green-900/30 text-green-400 border-green-800{% else %}bg-red-900/30 text-red-400 border-red-800{% endif %}">
+                            {% if visible %}PÚBLICO{% else %}PRIVADO{% endif %}
+                        </span>
+                    {% endif %}
+                </h1>
                 <div class="text-xs font-mono text-gray-500 bg-black/30 px-2 py-1 rounded inline-block border border-gray-800">
                     J-ID: {{ jid }} <span class="text-gray-600 mx-2">|</span> CODE: <span class="text-accent">{{ public_id }}</span>
                 </div>

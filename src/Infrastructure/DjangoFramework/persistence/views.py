@@ -212,7 +212,7 @@ def ver_mundo(request, public_id):
         'status': w.status, 'version_live': w.current_version_number,
         'author_live': getattr(w, 'current_author_name', 'Sistema'),
         'created_at': w.created_at, 'updated_at': date_live,
-        'visible': w.visible_publico, 'code_entity': eclai_core.encode_eclai126(jid),
+        'visible': w.visible_publico, 'is_locked': w.is_locked, 'code_entity': eclai_core.encode_eclai126(jid),
         'nid_lore': w.id_lore, 'metadata': meta_str, 
         'metadata_obj': w.metadata, 'imagenes': imgs, 'hijos': hijos, 
         'breadcrumbs': generate_breadcrumbs(jid), 'propuestas': props, 'historial': historial
