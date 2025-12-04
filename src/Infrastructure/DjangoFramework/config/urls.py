@@ -1,5 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 
 from src.Infrastructure.DjangoFramework.persistence.views.world_views import (
     home, ver_mundo, editar_mundo, borrar_mundo, 
@@ -18,7 +20,7 @@ from src.Infrastructure.DjangoFramework.persistence.views.media_views import (
 )
 from src.Infrastructure.DjangoFramework.persistence.views.narrative_views import (
     ver_narrativa_mundo, leer_narrativa, editar_narrativa, borrar_narrativa, 
-    crear_nueva_narrativa, crear_sub_narrativa
+    crear_nueva_narrativa, crear_sub_narrativa, revisar_narrativa_version
 )
 
 urlpatterns = [
@@ -71,6 +73,7 @@ urlpatterns = [
     # Rutas legacy
     path('revision/<int:version_id>/', comparar_version, name='revisar_version'),
     path('version/restaurar/<int:version_id>/', restaurar_version, name='restaurar_version'),
+    path('narrativa/revision/<int:version_id>/', revisar_narrativa_version, name='revisar_narrativa_version'),
 
     # Acciones de Narrativas
     path('narrativa/propuesta/<int:id>/aprobar/', aprobar_narrativa, name='aprobar_narrativa'),
@@ -104,9 +107,6 @@ urlpatterns = [
     path('api/save_foto/<str:jid>/', api_save_foto, name='api_save_foto'),
     path('api/update_meta/<str:jid>/', api_update_image_metadata, name='api_update_image_metadata'),
 ]
-
-from django.conf import settings
-from django.conf.urls.static import static
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosNarrativeORM
+from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosNarrativeORM, CaosNarrativeVersionORM
 from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
 from src.WorldManagement.Caos.Application.update_narrative import UpdateNarrativeUseCase
 from src.WorldManagement.Caos.Application.delete_narrative import DeleteNarrativeUseCase
@@ -98,7 +98,41 @@ def borrar_narrativa(request, nid):
         
         DeleteNarrativeUseCase().execute(real_nid)
         return redirect('ver_narrativa_mundo', jid=w_pid)
-    except: return redirect('home')
+    except Exception as e:
+        print(f"Error: {e}")
+        messages.error(request, f"Error al borrar: {e}")
+        return redirect('home')
+
+def revisar_narrativa_version(request, version_id):
+    try:
+        v = CaosNarrativeVersionORM.objects.get(id=version_id)
+        
+        # Create a proxy object to mimic CaosNarrativeORM but with proposed data
+        class NarrativeProxy:
+            def __init__(self, version):
+                self.nid = version.narrative.nid
+                self.titulo = version.proposed_title
+                self.contenido = version.proposed_content
+                self.world = version.narrative.world
+                self.created_by = version.author
+                self.tipo = version.narrative.tipo
+                self.narrador = version.narrative.narrador
+                self.is_proposal = True
+                self.version_id = version.id
+        
+        narr_proxy = NarrativeProxy(v)
+        
+        # Reuse the same template
+        todas = CaosWorldORM.objects.all().order_by('id')
+        hijos = CaosNarrativeORM.objects.filter(nid__startswith=narr_proxy.nid).exclude(nid=narr_proxy.nid).order_by('nid')
+        
+        messages.info(request, f"👁️ Visualizando PROPUESTA v{v.version_number}. Esto no es la versión live.")
+        return render(request, 'visor_narrativa.html', {'narr': narr_proxy, 'todas_entidades': todas, 'capitulos': hijos, 'is_proposal': True})
+        
+    except Exception as e:
+        print(f"Error reviewing narrative version: {e}")
+        messages.error(request, f"Error al revisar versión: {e}")
+        return redirect('dashboard')
 
 def crear_nueva_narrativa(request, jid, tipo_codigo):
     try:

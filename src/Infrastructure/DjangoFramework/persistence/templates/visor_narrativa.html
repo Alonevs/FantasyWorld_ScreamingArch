@@ -32,10 +32,31 @@
 </head>
 <body>
 
+    {% if messages %}
+    <div id="toast-container" style="position:fixed; top:70px; left:50%; transform:translateX(-50%); z-index:9999; width: auto; max-width: 400px;">
+        {% for message in messages %}
+        <div style="padding: 10px 20px; margin-bottom: 10px; border-radius: 5px; color: #fff; font-weight: bold; text-align: center; font-size: 0.9em; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            {% if message.tags == 'success' %}background: #27ae60;{% elif message.tags == 'warning' %}background: #f39c12;{% elif message.tags == 'error' %}background: #c0392b;{% else %}background: #3498db;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    <script>
+        setTimeout(() => {
+            const el = document.getElementById('toast-container');
+            if(el) {
+                el.style.opacity = '0';
+                setTimeout(() => el.remove(), 500);
+            }
+        }, 4000);
+    </script>
+    {% endif %}
+
     <div class="nav">
         <div style="font-weight:bold; color:#d633ff;">{{ narr.world.name }}</div>
         <div>
-            <a href="{% url 'ver_narrativa_mundo' narr.world.id %}">⬅ Volver al Índice</a>
+            <button onclick="history.back()">⬅ Atrás</button>
+            <a href="{% url 'ver_narrativa_mundo' narr.world.id %}">📜 Índice</a>
             <button onclick="toggleEdit()">✏️ EDITAR</button>
         </div>
     </div>
