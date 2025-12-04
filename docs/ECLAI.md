@@ -1,90 +1,30 @@
-# 🆔 ECLAI v4.0 Specification
+# ECLAI: AI Integration Guide
 
-> **Enhanced Code for Logical and Architectural Identification**
-> *Versión 4.0 - Paradigma Espacial Puro*
+## 🤖 Overview
+**ECLAI** (Engine for Creative LLM & AI) is the module responsible for integrating Artificial Intelligence into FantasyWorld. It currently supports:
+-   **Text Generation**: Using LLMs (like Llama) to generate lore, descriptions, and narrative content.
+-   **Image Generation**: Using Stable Diffusion to visualize worlds, characters, and scenes.
 
-ECLAI es el sistema de identificación central del proyecto. A diferencia de los IDs autoincrementales tradicionales (1, 2, 3...), ECLAI utiliza **IDs semánticos y jerárquicos** que permiten conocer la ubicación exacta de una entidad en el multiverso solo mirando su código.
+## 🖼️ Image Generation Flow
 
----
+### 1. Generation
+The user provides a prompt (e.g., "A floating island with waterfalls"). The system sends this to the Stable Diffusion service (`sd_service.py`).
 
-## 1. Filosofía v4.0: Separación Espacio-Tiempo
+### 2. Staging Area
+Generated images are NOT immediately saved to the world. They are placed in a **Staging Area** (client-side or temporary storage). This allows the user to generate multiple options and pick the best one.
 
-En versiones anteriores (v3.0), el tiempo (Épocas) era parte de la jerarquía. En la v4.0 se ha desacoplado para permitir la persistencia de entidades a través del tiempo.
+### 3. Proposal
+When the user selects an image, it is submitted as a **Proposal**. It creates a `CaosImageProposal` (or similar mechanism linked to `CaosVersionORM`).
 
-* **J-ID (Espacial):** Define **QUÉ** es y **DÓNDE** está. Es inmutable. (Ej: El Planeta Tierra siempre es el mismo objeto físico).
-* **Epoch (Temporal):** Define **CUÁNDO** existe. Es un metadato relacional.
+### 4. Approval
+An admin (or the user themselves) reviews the proposal in the **Dashboard**.
+-   **Approve**: The image becomes the official cover/illustration for the entity.
+-   **Reject**: The image is discarded.
 
----
+## 🧠 Text Generation (Planned)
+Future updates will enhance the text generation capabilities:
+-   **Context Awareness**: The AI will be aware of the world's existing lore to generate consistent content.
+-   **Interactive Chat**: A "Wizard" mode to help users brainstorm ideas.
 
-## 2. J-ID (Jerarquía Espacial)
-
-El J-ID es un string numérico de longitud variable. Cada nivel añade **2 dígitos** al ID de su padre.
-
-### Algoritmo de Generación
-`ID_HIJO = ID_PADRE + DIGITOS_HIJO`
-
-### Tabla de Niveles (Revisión Espacial)
-
-| Nivel | Longitud | Nombre | Ejemplo | Significado |
-| :--- | :---: | :--- | :--- | :--- |
-| **1** | 2 | **Caos Prime** | `01` | La raíz de todo. |
-| **2** | 4 | **Abismo** | `0101` | Divisiones primordiales. |
-| **3** | 6 | **Realidad** | `010102` | Planos de existencia. |
-| **4** | 8 | **Galaxia** | `01010205` | Cúmulos estelares (*Antes era Época*). |
-| **5** | 10 | **Sistema** | `...01` | Sistema Solar/Estelar. |
-| **6** | 12 | **Planeta** | `...03` | Cuerpo celeste. |
-| **7** | 14 | **Hemisferio** | `...01` | División geográfica grande. |
-| **8** | 16 | **Continente** | `...04` | Masa de tierra. |
-| **9** | 18 | **Territorio** | `...02` | Reino / País. |
-| **...** | ... | ... | ... | ... |
-| **16** | 34 | **Entidad** | `...99` | Objeto/Ser específico (Nivel Atómico). |
-
----
-
-## 3. N-ID (Narrative ID)
-
-El **N-ID** conecta una entidad espacial (J-ID) con su contenido narrativo (Lore). Permite tener múltiples textos asociados a un mismo lugar.
-
-### Formato
-`[J-ID] + [TIPO] + [NUMERO] + [CAPITULO?]`
-
-### Tipos de Contenido
-| Código | Tipo | Descripción |
-| :---: | :--- | :--- |
-| **L** | Lore | Historia general, descripción, mitología. |
-| **H** | Historia | Narrativa secuencial (Novela/Cuento). Admite Capítulos (`C01`). |
-| **R** | Regla | Leyes físicas, mágicas o sistemas de juego. |
-| **E** | Evento | Sucesos históricos (Guerras, Cataclismos). |
-| **N** | NPC | Personajes no jugadores vinculados al lugar. |
-
-### Ejemplo
-* **Lugar:** `0101` (Abismo de Fuego).
-* **Lore:** `0101L01` (Descripción del Abismo).
-* **Evento:** `0101E05` (La Batalla de la Llama Eterna).
-
----
-
-## 4. Codificación (Base62)
-
-Para uso en URLs o referencias cortas, el sistema utiliza una codificación Base62 personalizada.
-
-* **Alfabeto:** `AEIOUaeiouBCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz0123456789`
-* **Objetivo:** Comprimir IDs largos en códigos legibles y cortos.
-
-### Conversión
-* **J-ID:** `01` -> **Code:** `OD9`
-* **J-ID:** `010103` -> **Code:** `2qX` (Ejemplo)
-
----
-
-## 5. Gestión Temporal (Épocas)
-
-El tiempo ya no está en el ID. Se gestiona mediante relaciones en la Base de Datos.
-
-* **Campo `born_in_epoch`:** Indica en qué Era se creó la entidad.
-* **Campo `died_in_epoch`:** (Opcional) Indica cuándo dejó de existir.
-
-**Ejemplo de Lógica:**
-Si estamos visualizando la **Época 5**, el sistema mostrará:
-1.  Entidades creadas en la Época 5.
-2.  Entidades creadas en Épocas 1-4 que **NO** hayan muerto antes de la 5.
+## 🛠️ Configuration
+AI settings are configured in `src/Infrastructure/DjangoFramework/config/settings.py`. You may need to provide API keys or local endpoints for the AI services.
