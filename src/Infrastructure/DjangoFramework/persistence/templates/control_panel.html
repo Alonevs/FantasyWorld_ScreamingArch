@@ -11,7 +11,7 @@
         .nav-btn { background: #333; color: #fff; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 0.9em; border: 1px solid #444; cursor: pointer; }
         .nav-btn:hover { background: #555; }
 
-        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; }
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 15px; }
         .column { background: #161625; border-radius: 10px; padding: 15px; border-top: 4px solid #555; }
         
         .col-pending { border-color: #f1c40f; }
@@ -49,6 +49,27 @@
         </div>
     </div>
 
+    {% if messages %}
+    <div id="msg-container" style="position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:9999; width: 80%; max-width: 600px;">
+        {% for message in messages %}
+        <div class="msg" style="padding: 15px; margin-bottom: 10px; border-radius: 5px; color: #fff; font-weight: bold; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            {% if message.tags == 'success' %}background: #27ae60;{% elif message.tags == 'warning' %}background: #f39c12;{% elif message.tags == 'error' %}background: #c0392b;{% else %}background: #3498db;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    <script>
+        setTimeout(function() {
+            var container = document.getElementById('msg-container');
+            if (container) {
+                container.style.transition = "opacity 0.5s ease";
+                container.style.opacity = "0";
+                setTimeout(function() { container.remove(); }, 500);
+            }
+        }, 2000);
+    </script>
+    {% endif %}
+
     <div class="dashboard-grid">
         <div class="column col-pending">
             <div class="col-header" style="color:#f1c40f;">🟠 Pendientes</div>
@@ -60,8 +81,8 @@
                 <div style="font-style:italic; color:#aaa; font-size:0.8em;">"{{ v.reason }}"</div>
                 <div class="actions">
                     <a href="{% url 'revisar_version' v.id %}" class="btn-small btn-rev" title="Revisar cambios">👁️</a>
-                    <a href="{% url 'aprobar_version' v.id %}" class="btn-small btn-ok">APROBAR</a>
-                    <a href="{% url 'rechazar_version' v.id %}" class="btn-small btn-no">RECHAZAR</a>
+                    <a href="{% url 'aprobar_propuesta' v.id %}" class="btn-small btn-ok">APROBAR</a>
+                    <a href="{% url 'rechazar_propuesta' v.id %}" class="btn-small btn-no">RECHAZAR</a>
                 </div>
             </div>
             {% empty %}<div style="text-align:center; color:#555;">Limpio.</div>{% endfor %}
@@ -91,7 +112,7 @@
                 <div class="v-title" style="text-decoration:line-through;">{{ v.proposed_name }}</div>
                 <div style="font-size:0.8em;">{{ v.reason }}</div>
             </div>
-            {% endfor %}
+            {% empty %}<div style="text-align:center; color:#555;">Limpio.</div>{% endfor %}
         </div>
 
         <div class="column col-archived">
@@ -101,8 +122,29 @@
                 <div class="v-meta"><span>v{{ v.version_num }}</span><span>{{ v.date|date:"d/m" }}</span></div>
                 <div class="v-title">{{ v.proposed_name }}</div>
                 <div style="font-size:0.7em; color:#666;">Obsolescencia programada</div>
+                <div class="actions">
+                    <a href="{% url 'revisar_version' v.id %}" class="btn-small btn-rev" title="Ver ficha">👁️</a>
+                </div>
             </div>
-            {% endfor %}
+            {% empty %}<div style="text-align:center; color:#555;">Vacío.</div>{% endfor %}
+        </div>
+
+        <div class="column" style="border-color: #d633ff;">
+            <div class="col-header" style="color:#d633ff;">📋 Event Log</div>
+            <div style="max-height: 600px; overflow-y: auto;">
+                {% for log in logs %}
+                <div class="v-card" style="border-left: 2px solid #d633ff;">
+                    <div class="v-meta">
+                        <span style="color: #d633ff;">{{ log.action }}</span>
+                        <span>{{ log.timestamp|date:"H:i:s" }}</span>
+                    </div>
+                    <div style="font-size: 0.8em; color: #ccc;">{{ log.details }}</div>
+                    <div class="v-author" style="margin-top:4px;">👤 {{ log.user.username|default:"Anónimo" }}</div>
+                </div>
+                {% empty %}
+                <div style="text-align:center; color:#555;">Sin actividad reciente.</div>
+                {% endfor %}
+            </div>
         </div>
     </div>
 </body>

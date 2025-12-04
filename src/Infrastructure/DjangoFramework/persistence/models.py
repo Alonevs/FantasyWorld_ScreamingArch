@@ -79,3 +79,13 @@ class CaosNarrativeORM(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
     class Meta: db_table = 'caos_narratives'; ordering = ['nid']
+
+class CaosEventLog(models.Model):
+    id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    action = models.CharField(max_length=100) # e.g., "UPLOAD_PHOTO", "EDIT_WORLD"
+    target_id = models.CharField(max_length=100, null=True, blank=True) # JID or NID
+    details = models.TextField(blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta: db_table = 'caos_event_logs'; ordering = ['-timestamp']

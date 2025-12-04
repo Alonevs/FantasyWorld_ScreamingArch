@@ -7,7 +7,92 @@ from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosVersionORM, CaosNarrativeORM
+from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosVersionORM, CaosNarrativeORM, CaosEventLog
+
+def log_event(user, action, target_id, details=""):
+    try:
+        u = user if user.is_authenticated else None
+        CaosEventLog.objects.create(user=u, action=action, target_id=target_id, details=details)
+    except Exception as e: print(f"Log Error: {e}")
+
+# ... (Previous imports) ...
+
+# ... (Inside views) ...
+
+@csrf_exempt
+def api_save_foto(request, jid):
+    try:
+        w = resolve_jid(jid); real_jid = w.id if w else jid
+        data = json.loads(request.body)
+        user = request.user.username if request.user.is_authenticated else "Anónimo"
+        DjangoCaosRepository().save_image(real_jid, data.get('image'), title=data.get('title'), username=user)
+        log_event(request.user, "UPLOAD_AI_PHOTO", real_jid, f"Title: {data.get('title')}")
+        return JsonResponse({'status': 'ok', 'success': True})
+    except Exception as e: return JsonResponse({'status': 'error', 'message': str(e)})
+
+def subir_imagen_manual(request, jid):
+    w = resolve_jid(jid)
+    real_jid = w.id if w else jid
+    redirect_target = jid 
+
+    if request.method == 'POST' and request.FILES.get('imagen_manual'):
+        try:
+            repo = DjangoCaosRepository()
+            use_orig = request.POST.get('use_original_name') == 'true' or request.POST.get('use_original_name') == 'on'
+            custom = request.POST.get('custom_name')
+            title = request.POST.get('manual_title', 'Sin Título')
+            
+            final = title
+            if use_orig: final = request.FILES['imagen_manual'].name.split('.')[0]
+            elif custom: final = custom
+
+            user = request.user.username if request.user.is_authenticated else "Anónimo"
+            repo.save_manual_file(real_jid, request.FILES['imagen_manual'], username=user, title=final)
+            log_event(request.user, "UPLOAD_MANUAL_PHOTO", real_jid, f"File: {final}")
+            messages.success(request, "✅ Imagen subida.")
+        except Exception as e: messages.error(request, f"Error: {e}")
+    return redirect('ver_mundo', public_id=redirect_target)
+
+def editar_mundo(request, jid):
+    if request.method == 'POST':
+        try:
+            w = resolve_jid(jid); real_jid = w.id if w else jid
+            desc = request.POST.get('description')
+            if request.POST.get('use_ai_edit') == 'on':
+                try: desc = Llama3Service().generate_description(f"Nombre: {request.POST.get('name')}. Concepto: {desc}") or desc
+                except: pass
+            ProposeChangeUseCase().execute(real_jid, request.POST.get('name'), desc, request.POST.get('reason'), get_current_user(request))
+            log_event(request.user, "PROPOSE_CHANGE", real_jid, f"Reason: {request.POST.get('reason')}")
+            return redirect('ver_mundo', public_id=w.public_id if w.public_id else w.id)
+        except: return redirect('home')
+    return redirect('home')
+
+def centro_control(request):
+    pendientes = CaosVersionORM.objects.filter(status='PENDING').order_by('-created_at')
+    aprobados = CaosVersionORM.objects.filter(status='APPROVED').order_by('-created_at')
+    rechazados = CaosVersionORM.objects.filter(status='REJECTED').order_by('-created_at')[:10]
+    archivados = CaosVersionORM.objects.filter(status='ARCHIVED').order_by('-created_at')[:10]
+    logs = CaosEventLog.objects.all()[:20] # Last 20 events
+    
+    def map_v(v):
+        return {
+            'id': v.id,
+            'version_num': v.version_number,
+            'proposed_name': v.proposed_name,
+            'author': v.author.username if v.author else 'Sistema',
+            'reason': v.change_log,
+            'date': v.created_at,
+            'nivel_label': 'Mundo'
+        }
+
+    context = {
+        'pendientes': [map_v(v) for v in pendientes],
+        'aprobados': [map_v(v) for v in aprobados],
+        'rechazados': [map_v(v) for v in rechazados],
+        'archivados': [map_v(v) for v in archivados],
+        'logs': logs
+    }
+    return render(request, 'control_panel.html', context)
 from src.Shared.Domain import eclai_core
 from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
 # Casos de uso
@@ -151,6 +236,7 @@ def api_save_foto(request, jid):
         data = json.loads(request.body)
         user = request.user.username if request.user.is_authenticated else "Anónimo"
         DjangoCaosRepository().save_image(real_jid, data.get('image'), title=data.get('title'), username=user)
+        log_event(request.user, "UPLOAD_AI_PHOTO", real_jid, f"Title: {data.get('title')}")
         return JsonResponse({'status': 'ok', 'success': True})
     except Exception as e: return JsonResponse({'status': 'error', 'message': str(e)})
 
@@ -169,7 +255,6 @@ def api_update_image_metadata(request, jid):
 def subir_imagen_manual(request, jid):
     w = resolve_jid(jid)
     real_jid = w.id if w else jid
-    # Redirigimos al mismo ID que recibimos
     redirect_target = jid 
 
     if request.method == 'POST' and request.FILES.get('imagen_manual'):
@@ -185,6 +270,7 @@ def subir_imagen_manual(request, jid):
 
             user = request.user.username if request.user.is_authenticated else "Anónimo"
             repo.save_manual_file(real_jid, request.FILES['imagen_manual'], username=user, title=final)
+            log_event(request.user, "UPLOAD_MANUAL_PHOTO", real_jid, f"File: {final}")
             messages.success(request, "✅ Imagen subida.")
         except Exception as e: messages.error(request, f"Error: {e}")
     return redirect('ver_mundo', public_id=redirect_target)
@@ -293,22 +379,129 @@ def editar_mundo(request, jid):
                 try: desc = Llama3Service().generate_description(f"Nombre: {request.POST.get('name')}. Concepto: {desc}") or desc
                 except: pass
             ProposeChangeUseCase().execute(real_jid, request.POST.get('name'), desc, request.POST.get('reason'), get_current_user(request))
+            log_event(request.user, "PROPOSE_CHANGE", real_jid, f"Reason: {request.POST.get('reason')}")
             return redirect('ver_mundo', public_id=w.public_id if w.public_id else w.id)
         except: return redirect('home')
     return redirect('home')
 def borrar_mundo(request, jid): 
     try: CaosWorldORM.objects.get(id=jid).delete(); return redirect('home')
     except: return redirect('home')
-def centro_control(request): return render(request, 'control_panel.html', {})
-def revisar_version(request, version_id): return redirect('home')
+def centro_control(request):
+    pendientes = CaosVersionORM.objects.filter(status='PENDING').order_by('-created_at')
+    aprobados = CaosVersionORM.objects.filter(status='APPROVED').order_by('-created_at')
+    rechazados = CaosVersionORM.objects.filter(status='REJECTED').order_by('-created_at')[:10]
+    archivados = CaosVersionORM.objects.filter(status='ARCHIVED').order_by('-created_at')[:10]
+    logs = CaosEventLog.objects.all()[:20] # Last 20 events
+    
+    def map_v(v):
+        return {
+            'id': v.id,
+            'version_num': v.version_number,
+            'proposed_name': v.proposed_name,
+            'author': v.author.username if v.author else 'Sistema',
+            'reason': v.change_log,
+            'date': v.created_at,
+            'nivel_label': 'Mundo'
+        }
+
+    context = {
+        'pendientes': [map_v(v) for v in pendientes],
+        'aprobados': [map_v(v) for v in aprobados],
+        'rechazados': [map_v(v) for v in rechazados],
+        'archivados': [map_v(v) for v in archivados],
+        'logs': logs
+    }
+    return render(request, 'control_panel.html', context)
+def revisar_version(request, version_id):
+    try:
+        v = CaosVersionORM.objects.get(id=version_id)
+        w = v.world
+        # Renderizamos la ficha pero con los datos de la versión
+        jid = w.id
+        safe_pid = w.public_id if w.public_id else jid
+        
+        imgs = get_world_images(jid)
+        meta_str = json.dumps(w.metadata, indent=2) if w.metadata else "{}"
+        
+        context = {
+            'name': v.proposed_name, # DATOS DE LA VERSIÓN
+            'description': v.proposed_description, # DATOS DE LA VERSIÓN
+            'jid': jid, 'public_id': safe_pid,
+            'status': f"PREVIEW v{v.version_number} ({v.status})",
+            'version_live': w.current_version_number,
+            'author_live': v.author.username if v.author else "Desconocido",
+            'created_at': v.created_at, 'updated_at': v.created_at,
+            'visible': False, 'code_entity': eclai_core.encode_eclai126(jid),
+            'nid_lore': w.id_lore, 'metadata': meta_str, 
+            'metadata_obj': w.metadata, 'imagenes': imgs, 'hijos': [], 
+            'breadcrumbs': generate_breadcrumbs(jid), 
+            'is_preview': True, 
+            'preview_version_id': v.id
+        }
+        messages.info(request, f"👀 Viendo PREVISUALIZACIÓN de versión {v.version_number}")
+        return render(request, 'ficha_mundo.html', context)
+    except Exception as e: 
+        print(e)
+        return redirect('home')
 def init_hemisferios(request, jid):
     try: w=resolve_jid(jid); InitializeHemispheresUseCase(DjangoCaosRepository()).execute(w.id); return redirect('ver_mundo', public_id=w.public_id)
     except: return redirect('home')
 def generar_foto_extra(request, jid): return redirect('ver_mundo', public_id=jid)
 def escanear_planeta(request, jid): return redirect('ver_mundo', public_id=jid)
-def aprobar_version(request, version_id): return redirect('home')
-def rechazar_version(request, version_id): return redirect('home')
-def publicar_version(request, version_id): return redirect('home')
+def dashboard(request):
+    propuestas = CaosVersionORM.objects.filter(status='PENDING').order_by('-created_at')
+    return render(request, 'dashboard.html', {'propuestas': propuestas})
+
+def aprobar_propuesta(request, version_id):
+    try:
+        # 1. Aprobar (Internal Approval) - PENDING -> APPROVED
+        ApproveVersionUseCase().execute(version_id)
+        
+        v = CaosVersionORM.objects.get(id=version_id)
+        messages.success(request, f"✅ Propuesta v{v.version_number} de '{v.proposed_name}' APROBADA (Lista para Live).")
+        return redirect('centro_control')
+    except Exception as e:
+        messages.error(request, f"Error: {str(e)}")
+        return redirect('centro_control')
+
+def rechazar_propuesta(request, version_id):
+    try:
+        RejectVersionUseCase().execute(version_id)
+        messages.warning(request, "❌ Propuesta rechazada.")
+        return redirect('centro_control')
+    except Exception as e:
+        messages.error(request, f"Error: {str(e)}")
+        return redirect('centro_control')
+
+def publicar_version(request, version_id):
+    try:
+        PublishToLiveVersionUseCase().execute(version_id)
+        v = CaosVersionORM.objects.get(id=version_id)
+        messages.success(request, f"🚀 Versión {v.version_number} PUBLICADA LIVE.")
+        return redirect('ver_mundo', public_id=v.world.public_id if v.world.public_id else v.world.id)
+    except Exception as e:
+        messages.error(request, str(e))
+        return redirect('home')
+
+def aprobar_version(request, version_id):
+    try:
+        ApproveVersionUseCase().execute(version_id)
+        v = CaosVersionORM.objects.get(id=version_id)
+        messages.success(request, f"✅ Versión {v.version_number} aprobada.")
+        return redirect('ver_mundo', public_id=v.world.public_id if v.world.public_id else v.world.id)
+    except Exception as e:
+        messages.error(request, str(e))
+        return redirect('home')
+
+def rechazar_version(request, version_id):
+    try:
+        RejectVersionUseCase().execute(version_id)
+        v = CaosVersionORM.objects.get(id=version_id)
+        messages.warning(request, f"❌ Versión {v.version_number} rechazada.")
+        return redirect('ver_mundo', public_id=v.world.public_id if v.world.public_id else v.world.id)
+    except Exception as e:
+        messages.error(request, str(e))
+        return redirect('home')
 def mapa_arbol(request, public_id):
     try:
         root = resolve_jid(public_id)

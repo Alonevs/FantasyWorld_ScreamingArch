@@ -10,6 +10,16 @@ class PublishToLiveVersionUseCase:
         if version.status != "APPROVED":
             raise Exception("Solo se pueden publicar versiones APROBADAS.")
 
+        # 0. ARQUIVAR VERSIÓN LIVE ANTERIOR
+        try:
+            old_live = CaosVersionORM.objects.filter(world=version.world, status='LIVE').exclude(id=version.id)
+            for old in old_live:
+                old.status = 'ARCHIVED'
+                old.save()
+                print(f" 📦 Versión v{old.version_number} archivada.")
+        except Exception as e:
+            print(f"Error archivando versión anterior: {e}")
+
         # 1. APLICAR AL LIVE
         world = version.world
         world.name = version.proposed_name

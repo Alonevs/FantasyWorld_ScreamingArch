@@ -27,6 +27,11 @@ urlpatterns = [
     path('subir_foto/<str:jid>/', subir_imagen_manual, name='subir_imagen_manual'),
 
     # Versionado
+    # Versionado
+    path('control/dashboard/', dashboard, name='dashboard'),
+    path('propuesta/<int:version_id>/aprobar/', aprobar_propuesta, name='aprobar_propuesta'),
+    path('propuesta/<int:version_id>/rechazar/', rechazar_propuesta, name='rechazar_propuesta'),
+    
     path('revision/<int:version_id>/', revisar_version, name='revisar_version'),
     path('aprobar/<int:version_id>/', aprobar_version, name='aprobar_version'),
     path('rechazar/<int:version_id>/', rechazar_version, name='rechazar_version'),
