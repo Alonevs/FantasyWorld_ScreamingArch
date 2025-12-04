@@ -24,13 +24,23 @@
 <body class="bg-dark text-gray-200 font-sans p-4 lg:p-8 min-h-screen">
 
     {% if messages %}
-    <div class="fixed top-5 right-5 z-50 w-80 space-y-2">
+    <div id="toast-container" class="fixed top-10 left-1/2 -translate-x-1/2 z-50 w-auto min-w-[300px] space-y-2 pointer-events-none transition-opacity duration-500">
         {% for message in messages %}
-        <div class="p-4 rounded-lg shadow-lg font-bold text-white {% if message.tags == 'success' %}bg-green-600{% else %}bg-red-600{% endif %}">
+        <div class="p-4 rounded-lg shadow-2xl font-bold text-white text-center pointer-events-auto backdrop-blur-md border border-white/20 
+            {% if message.tags == 'success' %}bg-green-600/90{% elif 'info' in message.tags %}bg-blue-600/90{% else %}bg-red-600/90{% endif %}">
             {{ message }}
         </div>
         {% endfor %}
     </div>
+    <script>
+        setTimeout(() => {
+            const el = document.getElementById('toast-container');
+            if(el) {
+                el.style.opacity = '0';
+                setTimeout(() => el.remove(), 500);
+            }
+        }, 2000);
+    </script>
     {% endif %}
 
     <div class="flex justify-between items-center mb-6 bg-gray-900/80 p-4 rounded-xl border border-gray-800 backdrop-blur-md">
@@ -42,45 +52,226 @@
         </div>
     </div>
 
-    <div class="max-w-7xl mx-auto">
-        <h1 class="text-3xl font-bold text-white mb-6">⚡ Propuestas Pendientes</h1>
+    <div class="max-w-7xl mx-auto pb-24"> <!-- Added padding bottom for floating bar -->
+        
+        <form id="bulk-delete-form" method="POST" action="{% url 'borrar_propuestas_masivo' %}">
+            {% csrf_token %}
+            
+            <!-- Floating Action Bar -->
+            <div id="floating-bar" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-red-900/90 backdrop-blur-md border border-red-700 px-6 py-3 rounded-full shadow-2xl z-40 flex items-center gap-4 transition-transform duration-300 translate-y-32">
+                <span class="text-white font-bold text-sm"><span id="selected-count">0</span> seleccionados</span>
+                <button type="submit" class="bg-red-600 hover:bg-red-500 text-white font-bold px-4 py-1.5 rounded-full text-sm transition shadow-lg" onclick="return confirm('¿Estás seguro de borrar los elementos seleccionados? Esta acción es irreversible.')">
+                    🗑️ BORRAR SELECCIONADOS
+                </button>
+            </div>
 
-        {% if propuestas %}
-        <div class="grid gap-4">
-            {% for p in propuestas %}
-            <div class="bg-card border border-gray-800 p-6 rounded-xl shadow-lg flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-                <div class="flex-grow">
-                    <div class="flex items-center gap-3 mb-1">
-                        <span class="bg-yellow-900/30 text-yellow-500 text-xs font-bold px-2 py-1 rounded border border-yellow-800">v{{ p.version_number }}</span>
-                        <h2 class="text-xl font-bold text-white">{{ p.proposed_name }}</h2>
-                        <span class="text-gray-500 text-sm">para <a href="{% url 'ver_mundo' p.world.public_id|default:p.world.id %}" class="text-accent hover:underline">{{ p.world.name }}</a></span>
+            <!-- PENDIENTES -->
+            <h1 class="text-3xl font-bold text-white mb-6 flex justify-between items-center">
+                <span>⚡ Propuestas Pendientes</span>
+                <button type="button" onclick="toggleSelectSection('pending-list')" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded border border-gray-700 transition">Seleccionar Todo</button>
+            </h1>
+    
+            {% if propuestas %}
+            <div id="pending-list" class="grid gap-4">
+                {% for p in propuestas %}
+                <div class="bg-card border border-gray-800 p-6 rounded-xl shadow-lg flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 relative group">
+                    <!-- Checkbox -->
+                    <div class="absolute top-4 right-4 lg:static lg:mr-2">
+                        <input type="checkbox" name="selected_ids" value="{{ p.id }}" class="w-5 h-5 accent-red-600 cursor-pointer item-checkbox" onchange="updateFloatingBar()">
                     </div>
-                    <p class="text-gray-400 text-sm mb-2 line-clamp-2">{{ p.proposed_description }}</p>
-                    <div class="flex gap-4 text-xs text-gray-500 font-mono">
-                        <span>👤 {{ p.author.username|default:"Sistema" }}</span>
-                        <span>📅 {{ p.created_at|date:"d/m/Y H:i" }}</span>
+
+                    <div class="flex-grow">
+                        <div class="flex items-center gap-3 mb-1">
+                            <span class="bg-yellow-900/30 text-yellow-500 text-xs font-bold px-2 py-1 rounded border border-yellow-800">v{{ p.version_number }}</span>
+                            <h2 class="text-xl font-bold text-white">{{ p.proposed_name }}</h2>
+                            <span class="text-gray-500 text-sm">para <a href="{% url 'ver_mundo' p.world.public_id|default:p.world.id %}" class="text-accent hover:underline">{{ p.world.name }}</a></span>
+                        </div>
+                        <p class="text-gray-400 text-sm mb-2 line-clamp-2">{{ p.proposed_description }}</p>
+                        <div class="flex gap-4 text-xs text-gray-500 font-mono">
+                            <span>👤 {{ p.author.username|default:"Sistema" }}</span>
+                            <span>📅 {{ p.created_at|date:"d/m/Y H:i" }}</span>
+                        </div>
                         {% if p.change_log %}
-                        <span class="text-gray-400 italic">"{{ p.change_log }}"</span>
+                        <div class="mt-2 text-sm text-gray-300 bg-gray-900/50 p-2 rounded border border-gray-700">
+                            <span class="text-xs text-gray-500 font-bold uppercase block mb-1">Razón del cambio:</span>
+                            "{{ p.change_log }}"
+                        </div>
                         {% endif %}
                     </div>
+                    
+                    <div class="flex gap-3 shrink-0">
+                        <a href="{% url 'revisar_version' p.id %}" class="px-4 py-2 bg-blue-900/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg border border-blue-900/50 transition font-bold">👁️ Revisar</a>
+                        <a href="{% url 'aprobar_propuesta' p.id %}" class="px-4 py-2 bg-green-900/20 hover:bg-green-600 text-green-400 hover:text-white rounded-lg border border-green-900/50 transition font-bold shadow-lg shadow-green-900/20">✅ Aprobar</a>
+                        <a href="{% url 'rechazar_propuesta' p.id %}" class="px-4 py-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg border border-red-900/50 transition font-bold" onclick="return confirm('¿Rechazar esta propuesta?')">✕ Rechazar</a>
+                        <a href="{% url 'borrar_propuesta' p.id %}" class="px-4 py-2 bg-gray-800 hover:bg-red-600 text-gray-400 hover:text-white rounded-lg border border-gray-700 transition font-bold" onclick="return confirm('¿BORRAR DEFINITIVAMENTE? No se podrá recuperar.')">🗑️</a>
+                    </div>
                 </div>
-                
-                <div class="flex gap-3 shrink-0">
-                    <a href="{% url 'revisar_version' p.id %}" class="px-4 py-2 bg-blue-900/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg border border-blue-900/50 transition font-bold">👁️ Revisar</a>
-                    <a href="{% url 'aprobar_propuesta' p.id %}" class="px-4 py-2 bg-green-900/20 hover:bg-green-600 text-green-400 hover:text-white rounded-lg border border-green-900/50 transition font-bold shadow-lg shadow-green-900/20">✅ Aprobar</a>
-                    <a href="{% url 'rechazar_propuesta' p.id %}" class="px-4 py-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg border border-red-900/50 transition font-bold" onclick="return confirm('¿Rechazar esta propuesta?')">✕ Rechazar</a>
-                </div>
+                {% endfor %}
             </div>
-            {% endfor %}
-        </div>
-        {% else %}
-        <div class="text-center py-20 bg-card border border-dashed border-gray-800 rounded-xl">
-            <div class="text-6xl mb-4">🎉</div>
-            <h3 class="text-xl font-bold text-white mb-2">Todo al día</h3>
-            <p class="text-gray-500">No hay propuestas pendientes de revisión.</p>
-        </div>
-        {% endif %}
+            {% else %}
+            <div class="text-center py-20 bg-card border border-dashed border-gray-800 rounded-xl">
+                <div class="text-6xl mb-4">🎉</div>
+                <h3 class="text-xl font-bold text-white mb-2">Todo al día</h3>
+                <p class="text-gray-500">No hay propuestas pendientes de revisión.</p>
+            </div>
+            {% endif %}
+    
+            <!-- APROBADAS -->
+            <h2 class="text-2xl font-bold text-green-400 mt-12 mb-4 flex justify-between items-center">
+                <span>✅ Aprobadas (Listas para Live)</span>
+                <button type="button" onclick="toggleSelectSection('approved-list')" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded border border-gray-700 transition">Seleccionar Todo</button>
+            </h2>
+            {% if aprobadas %}
+            <div id="approved-list" class="grid gap-4">
+                {% for p in aprobadas %}
+                <div class="bg-card border border-green-900/30 p-6 rounded-xl shadow-lg flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 opacity-75 hover:opacity-100 transition relative">
+                     <!-- Checkbox -->
+                     <div class="absolute top-4 right-4 lg:static lg:mr-2">
+                        <input type="checkbox" name="selected_ids" value="{{ p.id }}" class="w-5 h-5 accent-red-600 cursor-pointer item-checkbox" onchange="updateFloatingBar()">
+                    </div>
+
+                    <div class="flex-grow">
+                        <div class="flex items-center gap-3 mb-1">
+                            <span class="bg-green-900/30 text-green-500 text-xs font-bold px-2 py-1 rounded border border-green-800">v{{ p.version_number }}</span>
+                            <h2 class="text-xl font-bold text-white">{{ p.proposed_name }}</h2>
+                            <span class="text-gray-500 text-sm">para <a href="{% url 'ver_mundo' p.world.public_id|default:p.world.id %}" class="text-accent hover:underline">{{ p.world.name }}</a></span>
+                        </div>
+                        <p class="text-gray-400 text-sm mb-2 line-clamp-2">{{ p.proposed_description }}</p>
+                        <div class="flex gap-4 text-xs text-gray-500 font-mono">
+                            <span>👤 {{ p.author.username|default:"Sistema" }}</span>
+                            <span>📅 {{ p.created_at|date:"d/m/Y H:i" }}</span>
+                        </div>
+                        {% if p.change_log %}
+                        <div class="mt-2 text-sm text-gray-300 bg-gray-900/50 p-2 rounded border border-gray-700">
+                            <span class="text-xs text-gray-500 font-bold uppercase block mb-1">Razón del cambio:</span>
+                            "{{ p.change_log }}"
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="flex gap-3 shrink-0">
+                        <a href="{% url 'revisar_version' p.id %}" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700 transition font-bold text-sm">👁️ Ver</a>
+                        <a href="{% url 'publicar_version' p.id %}" class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg shadow-lg shadow-green-900/50 transition font-bold flex items-center gap-2" onclick="return confirm('¿PUBLICAR esta versión a LIVE? Esto sobreescribirá los datos actuales.')">
+                            🚀 PUBLICAR
+                        </a>
+                        <a href="{% url 'borrar_propuesta' p.id %}" class="px-4 py-2 bg-gray-800 hover:bg-red-600 text-gray-400 hover:text-white rounded-lg border border-gray-700 transition font-bold" onclick="return confirm('¿BORRAR DEFINITIVAMENTE? No se podrá recuperar.')">🗑️</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-gray-600 italic">No hay propuestas aprobadas pendientes de publicación.</p>
+            {% endif %}
+    
+            <!-- RECHAZADAS -->
+            <h2 class="text-2xl font-bold text-red-400 mt-12 mb-4 flex justify-between items-center">
+                <span>❌ Rechazadas (Últimas 10)</span>
+                <button type="button" onclick="toggleSelectSection('rejected-list')" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded border border-gray-700 transition">Seleccionar Todo</button>
+            </h2>
+            {% if rechazadas %}
+            <div id="rejected-list" class="grid gap-4 opacity-60 hover:opacity-100 transition">
+                {% for p in rechazadas %}
+                <div class="bg-card border border-red-900/20 p-4 rounded-xl flex flex-col lg:flex-row justify-between items-center gap-4 grayscale hover:grayscale-0 transition relative">
+                    <!-- Checkbox -->
+                    <div class="absolute top-4 right-4 lg:static lg:mr-2">
+                        <input type="checkbox" name="selected_ids" value="{{ p.id }}" class="w-5 h-5 accent-red-600 cursor-pointer item-checkbox" onchange="updateFloatingBar()">
+                    </div>
+
+                    <div class="flex-grow">
+                        <div class="flex items-center gap-3">
+                            <span class="text-red-500 text-xs font-bold">v{{ p.version_number }}</span>
+                            <h3 class="text-lg font-bold text-gray-300">{{ p.proposed_name }}</h3>
+                            <span class="text-gray-600 text-sm">para {{ p.world.name }}</span>
+                        </div>
+                        <p class="text-gray-500 text-xs mt-1">Rechazado el {{ p.created_at|date:"d/m/Y" }}</p>
+                        {% if p.change_log %}
+                        <div class="mt-2 text-sm text-gray-400 bg-gray-900/30 p-2 rounded border border-red-900/20">
+                            <span class="text-[10px] text-red-500 font-bold uppercase block mb-1">Razón:</span>
+                            "{{ p.change_log }}"
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="flex gap-2">
+                        <a href="{% url 'revisar_version' p.id %}" class="text-xs text-gray-500 hover:text-white underline">Ver detalles</a>
+                        <a href="{% url 'borrar_propuesta' p.id %}" class="text-xs text-red-500 hover:text-red-400 font-bold border border-red-900/50 px-2 py-1 rounded hover:bg-red-900/20" onclick="return confirm('¿BORRAR DEFINITIVAMENTE?')">🗑️ Borrar</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-gray-600 italic">No hay propuestas rechazadas recientes.</p>
+            {% endif %}
+    
+            <!-- ARCHIVADAS (HISTORIAL) -->
+            <h2 class="text-2xl font-bold text-gray-500 mt-12 mb-4 flex justify-between items-center">
+                <span>📜 Historial (Versiones Archivadas)</span>
+                <button type="button" onclick="toggleSelectSection('archived-list')" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded border border-gray-700 transition">Seleccionar Todo</button>
+            </h2>
+            {% if archivadas %}
+            <div id="archived-list" class="grid gap-4 opacity-50 hover:opacity-100 transition">
+                {% for p in archivadas %}
+                <div class="bg-card border border-gray-800 p-4 rounded-xl flex flex-col lg:flex-row justify-between items-center gap-4 relative">
+                    <!-- Checkbox -->
+                    <div class="absolute top-4 right-4 lg:static lg:mr-2">
+                        <input type="checkbox" name="selected_ids" value="{{ p.id }}" class="w-5 h-5 accent-red-600 cursor-pointer item-checkbox" onchange="updateFloatingBar()">
+                    </div>
+
+                    <div class="flex-grow">
+                        <div class="flex items-center gap-3">
+                            <span class="bg-gray-800 text-gray-400 text-xs font-bold px-2 py-1 rounded border border-gray-700">v{{ p.version_number }}</span>
+                            <h3 class="text-lg font-bold text-gray-300">{{ p.proposed_name }}</h3>
+                            <span class="text-gray-600 text-sm">para {{ p.world.name }}</span>
+                        </div>
+                        <p class="text-gray-500 text-xs mt-1">Archivado el {{ p.created_at|date:"d/m/Y" }}</p>
+                        {% if p.change_log %}
+                        <div class="mt-2 text-sm text-gray-500 bg-gray-900/30 p-2 rounded border border-gray-800">
+                            <span class="text-[10px] text-gray-600 font-bold uppercase block mb-1">Razón:</span>
+                            "{{ p.change_log }}"
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="flex gap-2">
+                        <a href="{% url 'revisar_version' p.id %}" class="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded border border-gray-700 text-xs font-bold">👁️ Ver</a>
+                        <a href="{% url 'restaurar_version' p.id %}" class="px-3 py-1 bg-yellow-900/20 hover:bg-yellow-600 text-yellow-500 hover:text-white rounded border border-yellow-900/50 text-xs font-bold transition" onclick="return confirm('¿RESTAURAR esta versión? Se creará una nueva propuesta basada en ella.')">
+                            🔄 Restaurar
+                        </a>
+                        <a href="{% url 'borrar_propuesta' p.id %}" class="px-3 py-1 bg-gray-800 hover:bg-red-600 text-gray-400 hover:text-white rounded border border-gray-700 text-xs font-bold transition" onclick="return confirm('¿BORRAR DEFINITIVAMENTE?')">🗑️</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-gray-600 italic">No hay historial de versiones archivadas.</p>
+            {% endif %}
+        </form>
     </div>
+
+    <script>
+        function updateFloatingBar() {
+            const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+            const bar = document.getElementById('floating-bar');
+            document.getElementById('selected-count').innerText = checkboxes.length;
+            
+            if(checkboxes.length > 0) {
+                bar.classList.remove('translate-y-32');
+            } else {
+                bar.classList.add('translate-y-32');
+            }
+        }
+
+        function toggleSelectSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            if (!section) return;
+            
+            const checkboxes = section.querySelectorAll('.item-checkbox');
+            // Check if all are currently checked to toggle
+            const allChecked = Array.from(checkboxes).every(c => c.checked);
+            
+            checkboxes.forEach(c => c.checked = !allChecked);
+            updateFloatingBar();
+        }
+    </script>
 
 </body>
 </html>

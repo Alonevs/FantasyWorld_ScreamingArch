@@ -130,12 +130,32 @@
 
 <body>
 
+    {% if messages %}
+    <div id="toast-container" style="position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:100; min-width:300px; text-align:center; pointer-events:none; transition:opacity 0.5s;">
+        {% for message in messages %}
+        <div style="padding:15px; border-radius:8px; font-weight:bold; color:white; margin-bottom:10px; pointer-events:auto; box-shadow:0 10px 25px rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.2); backdrop-filter:blur(10px);
+            {% if message.tags == 'success' %}background:rgba(46, 204, 113, 0.9);{% else %}background:rgba(231, 76, 60, 0.9);{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    <script>
+        setTimeout(() => {
+            const el = document.getElementById('toast-container');
+            if(el) {
+                el.style.opacity = '0';
+                setTimeout(() => el.remove(), 500);
+            }
+        }, 2000);
+    </script>
+    {% endif %}
+
     <div class="hero">
         <h1>ECLAI UNIVERSE</h1>
         <p>Sistema de Gestión de Realidades - v4.8</p>
         <a href="#createModal" class="btn-create"
             onclick="document.getElementById('createModal').style.display='flex'">+ NUEVO MUNDO</a>
-        <a href="{% url 'centro_control' %}" class="btn-create"
+        <a href="{% url 'dashboard' %}" class="btn-create"
             style="background:#333; border:1px solid #555; margin-left:10px;">🎛️ GESTIÓN</a>
     </div>
 

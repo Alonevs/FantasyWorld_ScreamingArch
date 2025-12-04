@@ -4,24 +4,21 @@ from src.WorldManagement.Caos.Application.propose_change import ProposeChangeUse
 class RestoreVersionUseCase:
     def execute(self, version_id: int, user):
         try:
-            # 1. Recuperamos la versión antigua (la copia de seguridad)
+            # 1. Recuperamos la versión antigua
             target_version = CaosVersionORM.objects.get(id=version_id)
-            world = target_version.world
             
-            # 2. Preparamos la razón del cambio automática
-            reason = f"ROLLBACK: Restauración forzada desde la versión {target_version.version_number}"
+            # 2. "Revivimos" la versión existente en lugar de crear una copia
+            # Esto mantiene el número de versión original (ej: v29)
+            target_version.status = 'PENDING'
             
-            # 3. Usamos el mecanismo de propuesta existente para crear una nueva versión
-            # que sea idéntica a la antigua. ¡Reutilizamos lógica!
-            ProposeChangeUseCase().execute(
-                world_id=world.id,
-                new_name=target_version.proposed_name,
-                new_desc=target_version.proposed_description,
-                reason=reason,
-                user=user
-            )
+            # 3. Actualizamos el log y el autor de la restauración
+            # Usamos el formato solicitado por el usuario
+            target_version.change_log = f"ROLLBACK: Restauración forzada desde la versión {target_version.version_number}"
+            target_version.author = user
             
-            print(f" ⏪ Restauración iniciada: v{target_version.version_number} copiada a nueva propuesta.")
+            target_version.save()
+            
+            print(f" ⏪ Restauración completada: v{target_version.version_number} vuelve a estado PENDING.")
             
         except CaosVersionORM.DoesNotExist:
             raise Exception("Versión no encontrada.")

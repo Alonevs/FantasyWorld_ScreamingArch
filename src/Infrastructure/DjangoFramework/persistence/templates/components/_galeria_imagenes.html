@@ -1,0 +1,33 @@
+<div class="flex justify-between items-end mb-4 border-b border-gray-800 pb-2">
+    <h3 class="text-accent font-bold tracking-wider text-sm uppercase">Visual Database</h3>
+    {% if not is_preview %}
+    <div class="flex gap-2">
+        <button onclick="openAiModal()" class="px-3 py-1 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded transition shadow-lg shadow-purple-900/20">🎨 IA GENERATOR</button>
+        <button onclick="document.getElementById('file-upload').click()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold rounded transition">📎 SUBIR</button>
+        
+        <form id="form-manual-upload" method="POST" action="{% url 'subir_imagen_manual' public_id %}" enctype="multipart/form-data" class="hidden">
+            {% csrf_token %}
+            <input id="file-upload" type="file" name="imagen_manual" accept="image/*" onchange="openUploadModal(this)">
+            <input type="hidden" id="hidden-use-original" name="use_original_name">
+            <input type="hidden" id="hidden-custom-name" name="custom_name">
+        </form>
+    </div>
+    {% endif %}
+</div>
+
+<div class="flex gap-4 overflow-x-auto pb-4 mb-8 snap-x">
+    {% for img in imagenes %}
+    <div class="snap-start shrink-0 relative group w-40 h-56">
+        <div class="w-full h-full rounded-lg overflow-hidden border border-gray-700 cursor-pointer hover:border-accent transition shadow-lg bg-black" onclick="openLightbox('{% static '/persistence/img/'|add:img.url %}', '{{ img.filename }}')">
+            <img src="{% static 'persistence/img/'|add:img.url %}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500 opacity-90 group-hover:opacity-100">
+        </div>
+        {% if not is_preview %}
+        <a href="{% url 'borrar_foto' jid img.filename %}" class="absolute top-1 right-1 bg-red-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition hover:bg-red-500 shadow-lg" onclick="event.stopPropagation(); return confirm('¿Borrar?')">✕</a>
+        {% endif %}
+    </div>
+    {% empty %}
+    <div class="w-full py-12 border-2 border-dashed border-gray-800 rounded-lg text-center text-gray-600 text-sm bg-black/20">
+        🌑 Sin registros visuales.
+    </div>
+    {% endfor %}
+</div>

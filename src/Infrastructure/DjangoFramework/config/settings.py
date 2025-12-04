@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'tailwind',
     'theme',
     'django_browser_reload',
+    'debug_toolbar',
     'src.Infrastructure.DjangoFramework.persistence.apps.PersistenceConfig',
 ]
 
@@ -137,3 +138,33 @@ INTERNAL_IPS = [
 ]
 
 NPM_BIN_PATH = r"C:\Program Files\nodejs\npm.cmd"
+
+# CONFIGURACIÓN DE LOGS
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'ERROR', # Solo guarda errores graves
+            'class': 'logging.FileHandler',
+            'filename': 'errores_django.log', # Nombre del archivo
+            'formatter': 'verbose',
+        },
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file', 'console'], # Escribe en archivo Y en pantalla
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
+}
