@@ -56,10 +56,10 @@ def home(request):
     if request.method == 'POST':
         repo = DjangoCaosRepository()
         jid = CreateWorldUseCase(repo).execute(request.POST.get('world_name'), request.POST.get('world_desc'))
-        try: w = CaosWorldORM.objects.get(id=jid); return redirect('ver_mundo', public_id=w.public_id)
-        except: return redirect('ver_mundo', public_id=jid)
+        messages.success(request, "✨ Mundo propuesto. Ve al Dashboard para aprobarlo.")
+        return redirect('dashboard')
     
-    ms = CaosWorldORM.objects.filter(id__regex=r'^..$').order_by('id')
+    ms = CaosWorldORM.objects.filter(id__regex=r'^..$').exclude(status='DRAFT').order_by('id')
     l = []
     for m in ms:
         imgs = get_world_images(m.id)
@@ -94,10 +94,12 @@ def ver_mundo(request, public_id):
             new_id = uc.execute(parent_id=jid, name=c_name, description=c_desc, reason=reason, generate_image=use_ai)
             
             try:
-                new_w = CaosWorldORM.objects.get(id=new_id)
-                return redirect('ver_mundo', public_id=new_w.public_id if new_w.public_id else new_id)
+                # new_w = CaosWorldORM.objects.get(id=new_id)
+                # return redirect('ver_mundo', public_id=new_w.public_id if new_w.public_id else new_id)
+                messages.success(request, "✨ Entorno propuesto (y su imagen). Ve al Dashboard para aprobarlo.")
+                return redirect('dashboard')
             except:
-                return redirect('ver_mundo', public_id=safe_pid)
+                return redirect('dashboard')
 
     # 2. Handle GET (Display) via Use Case
     context = GetWorldDetailsUseCase(repo).execute(public_id, request.user)
@@ -124,21 +126,28 @@ def editar_mundo(request, jid):
 def borrar_mundo(request, jid): 
     try: 
         w = CaosWorldORM.objects.get(id=jid)
-        parent_id = jid[:-2]
         
-        # Determine redirect target BEFORE deletion
-        redirect_target = 'home'
-        if len(parent_id) >= 2:
-            try:
-                p = CaosWorldORM.objects.get(id=parent_id)
-                redirect_target = p.public_id if p.public_id else p.id
-            except: pass
-            
-        w.delete()
+        # Determine next version number
+        last_v = w.versiones.order_by('-version_number').first()
+        next_v = (last_v.version_number + 1) if last_v else 1
         
-        if redirect_target == 'home': return redirect('home')
-        return redirect('ver_mundo', public_id=redirect_target)
-    except: return redirect('home')
+        # Create DELETE Proposal
+        CaosVersionORM.objects.create(
+            world=w,
+            proposed_name=w.name,
+            proposed_description=w.description,
+            version_number=next_v,
+            status='PENDING',
+            change_log="Solicitud de Eliminación",
+            cambios={'action': 'DELETE'},
+            author=get_current_user(request)
+        )
+        
+        messages.warning(request, "🗑️ Solicitud de eliminación creada. Ve al Dashboard para confirmar.")
+        return redirect('dashboard')
+    except Exception as e: 
+        print(f"Error requesting delete: {e}")
+        return redirect('home')
 
 def toggle_visibilidad(request, jid):
     try: 

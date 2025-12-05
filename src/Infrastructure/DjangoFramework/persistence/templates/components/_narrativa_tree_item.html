@@ -1,0 +1,48 @@
+<div class="narrative-item" style="margin-bottom: 5px;">
+    <!-- Main Card -->
+    <!-- Interaction: Arrow Click = Toggle. Body Click = Navigate. -->
+    <div onclick="navigateToNarrative('{% url 'leer_narrativa' node.nid %}')" 
+         class="lore-card" 
+         id="card-{{ node.nid }}"
+         style="margin-bottom: 5px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; {% if node.tipo == 'CAPITULO' %}border-left: 3px solid #d633ff; background: #16161f;{% endif %}">
+        
+        <div style="display:flex; align-items:center; width: 100%;">
+            {% if node.tipo == 'CAPITULO' %}
+                <span style="color:#666; margin-right:10px; font-family:monospace;">↳</span>
+            {% endif %}
+            
+            <!-- Chevron for expand/collapse indication -->
+            {% if node.children %}
+                <span id="chevron-{{ node.nid }}" 
+                      onclick="toggleNarrative(event, '{{ node.nid }}', true)"
+                      style="margin-right: 10px; color: #888; transition: transform 0.2s; display: inline-block; cursor: pointer; padding: 5px;">▶</span>
+            {% else %}
+                <span style="display:inline-block; width: 15px; margin-right: 10px;"></span> 
+            {% endif %}
+
+            <div style="flex-grow: 1; display:flex; align-items:center;">
+                <span class="tag" style="min-width:60px; text-align:center;">{{ node.nid }}</span>
+                <span class="lore-title" style="word-break: break-all;">{{ node.titulo }}</span>
+                {% if node.status == 'DRAFT' or node.current_version_number == 0 %}
+                    <span style="color:#f39c12; font-size:0.7em; margin-left:10px; border:1px solid #f39c12; padding:2px 4px; border-radius:3px;">BORRADOR</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <span class="lore-meta">
+            {{ node.tipo }}
+            {% if node.children %}
+                <span style="background:#333; color:white; padding:2px 6px; border-radius:10px; font-size:0.8em; margin-left:10px;">{{ node.children|length }}</span>
+            {% endif %}
+        </span>
+    </div>
+
+    <!-- Children Container (Hidden by default if has children) -->
+    {% if node.children %}
+        <div id="children-{{ node.nid }}" class="narrative-children" style="display: none; margin-left: 25px; padding-left: 10px; border-left: 1px dashed #333;">
+            {% for child in node.children %}
+                {% include "components/_narrativa_tree_item.html" with node=child %}
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>

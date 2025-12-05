@@ -20,7 +20,8 @@ from src.Infrastructure.DjangoFramework.persistence.views.media_views import (
 )
 from src.Infrastructure.DjangoFramework.persistence.views.narrative_views import (
     ver_narrativa_mundo, leer_narrativa, editar_narrativa, borrar_narrativa, 
-    crear_nueva_narrativa, crear_sub_narrativa, revisar_narrativa_version
+    crear_nueva_narrativa, crear_sub_narrativa, revisar_narrativa_version,
+    pre_crear_root, pre_crear_child
 )
 
 urlpatterns = [
@@ -94,6 +95,8 @@ urlpatterns = [
     path('narrativa/indice/<str:jid>/', ver_narrativa_mundo, name='ver_narrativa_mundo'),
     path('narrativa/crear/<str:jid>/<str:tipo_codigo>/', crear_nueva_narrativa, name='crear_narrativa'),
     path('narrativa/subcrear/<str:parent_nid>/<str:tipo_codigo>/', crear_sub_narrativa, name='crear_sub_narrativa'),
+    path('narrativa/nuevo_root/<str:jid>/<str:tipo_codigo>/', pre_crear_root, name='pre_crear_root'),
+    path('narrativa/nuevo_child/<str:parent_nid>/<str:tipo_codigo>/', pre_crear_child, name='pre_crear_child'),
     path('narrativa/<str:nid>/', leer_narrativa, name='leer_narrativa'),
     path('narrativa/editar/<str:nid>/', editar_narrativa, name='editar_narrativa'),
     path('narrativa/borrar/<str:nid>/', borrar_narrativa, name='borrar_narrativa'),

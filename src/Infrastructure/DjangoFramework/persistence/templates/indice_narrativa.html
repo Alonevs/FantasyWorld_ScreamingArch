@@ -46,25 +46,20 @@
             
             {% if lores %}
                 <h2>📜 Lores & Fundamentos</h2>
-                {% for l in lores %}
-                    <a href="{% url 'leer_narrativa' l.nid %}" class="lore-card">
-                        <div>
-                            <span class="tag">{{ l.nid }}</span>
-                            <span class="lore-title">{{ l.titulo }}</span>
-                        </div>
-                        <span class="lore-meta">Leer ➔</span>
-                    </a>
-                {% endfor %}
+                <div class="narrative-tree">
+                    {% for l in lores %}
+                        {% include "components/_narrativa_tree_item.html" with node=l %}
+                    {% endfor %}
+                </div>
             {% endif %}
 
             {% if historias %}
-                <h2>📖 Historias</h2>
-                {% for h in historias %}
-                <a href="{% url 'leer_narrativa' h.nid %}" class="lore-card">
-                    <div><span class="tag">{{ h.nid }}</span> <span class="lore-title">{{ h.titulo }}</span></div>
-                    <span class="lore-meta">Leer ➔</span>
-                </a>
-                {% endfor %}
+                <h2>📖 Historias & Capítulos</h2>
+                <div class="narrative-tree">
+                    {% for h in historias %}
+                        {% include "components/_narrativa_tree_item.html" with node=h %}
+                    {% endfor %}
+                </div>
             {% endif %}
 
             {% if not lores and not historias %}
@@ -73,53 +68,43 @@
         </div>
 
         <div class="sidebar">
-            <h3 style="margin-top:0; color:#fff;">Acciones</h3>
-            <button onclick="openModal()" class="btn-create">✍️ ESCRIBIR NUEVO</button>
+            <h3 style="margin-top:0; color:#fff;">Crear Rápido</h3>
+            
+            <a href="{% url 'pre_crear_root' world.id 'L' %}" class="btn-create" style="background:#8e44ad; text-align:center; display:block; margin-bottom:5px; text-decoration:none;">+ 📜 LORE</a>
+            <a href="{% url 'pre_crear_root' world.id 'H' %}" class="btn-create" style="background:#2980b9; text-align:center; display:block; margin-bottom:5px; text-decoration:none;">+ 📖 HISTORIA</a>
+            <a href="{% url 'pre_crear_root' world.id 'M' %}" class="btn-create" style="background:#d35400; text-align:center; display:block; margin-bottom:5px; text-decoration:none;">+ 🕯️ LEYENDA</a>
+            <a href="{% url 'pre_crear_root' world.id 'R' %}" class="btn-create" style="background:#7f8c8d; text-align:center; display:block; margin-bottom:5px; text-decoration:none;">+ ⚖️ REGLA</a>
         </div>
     </div>
 
-    <!-- Creation Modal -->
-    <div id="createModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; justify-content:center; align-items:center;">
-        <div style="background:#1f1f2e; padding:30px; border-radius:10px; width:500px; border:1px solid #d633ff; box-shadow:0 0 30px rgba(214, 51, 255, 0.3);">
-            <h2 style="margin-top:0; color:#d633ff;">Nueva Narrativa</h2>
-            <form method="POST" action="{% url 'crear_narrativa' world.id 'placeholder' %}" id="createForm" onsubmit="document.getElementById('btn-submit-create').disabled=true; document.getElementById('btn-submit-create').innerText='⏳ Creando...';">
-                {% csrf_token %}
-                
-                <label style="color:#aaa; font-size:0.9em;">Título:</label>
-                <input type="text" name="title" placeholder="Ej: La Caída del Rey..." required style="margin-bottom:15px;">
-                
-                <label style="color:#aaa; font-size:0.9em;">Tipo:</label>
-                <select id="typeSelector" onchange="updateAction()" style="margin-bottom:15px;">
-                    <option value="LORE">📜 Lore / Enciclopedia</option>
-                    <option value="HISTORIA">📖 Historia / Trama</option>
-                    <option value="LEYENDA">🕯️ Leyenda</option>
-                    <option value="REGLA">⚖️ Regla / Sistema</option>
-                </select>
-
-                <label style="color:#aaa; font-size:0.9em;">Contenido Inicial (Borrador):</label>
-                <textarea name="content" rows="5" style="width:100%; background:#0a0a12; border:1px solid #444; color:#ccc; padding:10px; box-sizing:border-box; resize:none; margin-bottom:20px;" placeholder="Escribe aquí tu primera idea..."></textarea>
-
-                <div style="display:flex; justify-content:flex-end; gap:10px;">
-                    <button type="button" onclick="closeModal()" style="background:#444; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">Cancelar</button>
-                    <button type="submit" id="btn-submit-create" style="background:#d633ff; color:white; border:none; padding:10px 20px; border-radius:5px; font-weight:bold; cursor:pointer;">🚀 CREAR & EDITAR</button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <!-- Removed Creation Modal -->
 
     <script>
-        function openModal() {
-            document.getElementById('createModal').style.display = 'flex';
-            updateAction();
+        // Tree Interaction Logic
+        // Tree Interaction Logic
+        function toggleNarrative(event, nid, hasChildren) {
+            // Prevent event from bubbling so clicking arrow doesn't trigger card navigation
+            event.stopPropagation(); 
+
+            // Only toggle if there are children
+            if (!hasChildren) return;
+
+            const childrenDiv = document.getElementById('children-' + nid);
+            const chevron = document.getElementById('chevron-' + nid);
+
+            if (childrenDiv.style.display === 'none') {
+                // Expand
+                childrenDiv.style.display = 'block';
+                if(chevron) chevron.style.transform = 'rotate(90deg)';
+            } else {
+                // Collapse
+                childrenDiv.style.display = 'none';
+                if(chevron) chevron.style.transform = 'rotate(0deg)';
+            }
         }
-        function closeModal() {
-            document.getElementById('createModal').style.display = 'none';
-        }
-        function updateAction() {
-            const type = document.getElementById('typeSelector').value;
-            const form = document.getElementById('createForm');
-            let base = "{% url 'crear_narrativa' world.id 'placeholder' %}";
-            form.action = base.replace('placeholder', type);
+
+        function navigateToNarrative(url) {
+            window.location.href = url;
         }
     </script>
 </body>

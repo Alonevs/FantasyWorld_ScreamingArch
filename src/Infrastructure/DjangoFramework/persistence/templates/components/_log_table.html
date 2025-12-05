@@ -1,0 +1,41 @@
+<table class="w-full text-left text-sm text-gray-400">
+    <thead class="bg-gray-900/50 text-gray-200 uppercase font-bold text-xs">
+        <tr>
+            <th class="px-6 py-3">Usuario</th>
+            <th class="px-6 py-3">Acción</th>
+            <th class="px-6 py-3">Detalles</th>
+            <th class="px-6 py-3">Fecha</th>
+        </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-800">
+        {% for log in logs %}
+        <tr class="hover:bg-white/5 transition">
+            <td class="px-6 py-3 font-bold text-white">
+                {{ log.user.username|default:"Anónimo" }}
+            </td>
+            <td class="px-6 py-3">
+                <span class="px-2 py-1 rounded text-xs font-bold border 
+                    {% if 'UPLOAD' in log.action %}bg-purple-900/30 text-purple-400 border-purple-800
+                    {% elif 'DELETE' in log.action %}bg-red-900/30 text-red-400 border-red-800
+                    {% elif 'PROPOSE' in log.action %}bg-yellow-900/30 text-yellow-500 border-yellow-800
+                    {% elif color == 'blue' %}bg-blue-900/30 text-blue-400 border-blue-800
+                    {% elif color == 'purple' %}bg-purple-900/30 text-purple-400 border-purple-800
+                    {% elif color == 'pink' %}bg-pink-900/30 text-pink-400 border-pink-800
+                    {% else %}bg-gray-800 text-gray-300 border-gray-700{% endif %}">
+                    {{ log.action }}
+                </span>
+            </td>
+            <td class="px-6 py-3 text-gray-300 font-mono text-xs">
+                {{ log.details|truncatechars:80 }}
+            </td>
+            <td class="px-6 py-3">
+                {{ log.timestamp|date:"d/m/Y H:i" }}
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4" class="px-6 py-8 text-center italic text-gray-600">No hay actividad registrada en esta categoría.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

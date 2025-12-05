@@ -137,16 +137,23 @@
             {% if pending %}
             <div id="pending-list" class="grid gap-4">
                 {% for item in pending %}
-                <div class="bg-card border {% if item.type == 'WORLD' %}border-blue-900/30{% else %}border-purple-900/30{% endif %} p-6 rounded-xl shadow-lg flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 relative group">
+                <div class="bg-card border {% if item.cambios.action == 'DELETE' or item.action == 'DELETE' %}border-red-600 bg-red-900/10{% elif item.type == 'WORLD' %}border-blue-900/30{% else %}border-purple-900/30{% endif %} p-6 rounded-xl shadow-lg flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 relative group">
+                    
+                    {% if item.cambios.action == 'DELETE' or item.action == 'DELETE' %}
+                        <div class="absolute -top-3 left-6 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg z-20">
+                            🗑️ SOLICITUD DE ELIMINACIÓN
+                        </div>
+                    {% endif %}
+
                     <!-- Checkbox -->
                     <div class="absolute top-4 right-4 lg:static lg:mr-2">
                         <input type="checkbox" name="{% if item.type == 'WORLD' %}selected_ids{% else %}selected_narr_ids{% endif %}" value="{{ item.id }}" class="w-5 h-5 accent-red-600 cursor-pointer item-checkbox" onchange="updateFloatingBar()">
                     </div>
 
-                    <div class="flex-grow">
-                        <div class="flex items-center gap-3 mb-1">
+                    <div class="flex-grow min-w-0">
+                        <div class="flex items-center gap-3 mb-1 flex-wrap">
                             <span class="bg-yellow-900/30 text-yellow-500 text-xs font-bold px-2 py-1 rounded border border-yellow-800">v{{ item.version_number }}</span>
-                            <h2 class="text-xl font-bold text-white">{{ item.target_name }}</h2>
+                            <h2 class="text-xl font-bold text-white break-all">{{ item.target_name }}</h2>
                             
                             {% if item.type == 'WORLD' %}
                                 <span class="text-gray-500 text-sm">para <a href="{% url 'ver_mundo' item.target_link %}" class="text-accent hover:underline">{{ item.world.name }}</a></span>
@@ -156,7 +163,7 @@
                                 <span class="text-xs bg-purple-900/30 text-purple-400 px-2 py-0.5 rounded border border-purple-800">{{ item.type_label }}</span>
                             {% endif %}
                         </div>
-                        <p class="text-gray-400 text-sm mb-2 line-clamp-2">{{ item.target_desc|striptags|truncatewords:20 }}</p>
+                        <p class="text-gray-400 text-sm mb-2 line-clamp-2 break-words">{{ item.target_desc|striptags|truncatewords:20 }}</p>
                         <div class="flex gap-4 text-xs text-gray-500 font-mono">
                             <span>👤 {{ item.author.username|default:"Sistema" }}</span>
                             <span>📅 {{ item.created_at|date:"d/m/Y H:i" }}</span>
@@ -201,16 +208,22 @@
             {% if approved %}
             <div id="approved-list" class="grid gap-4">
                 {% for item in approved %}
-                <div class="bg-card border border-green-900/30 p-6 rounded-xl shadow-lg flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 opacity-75 hover:opacity-100 transition relative">
+                <div class="bg-card border {% if item.cambios.action == 'DELETE' or item.action == 'DELETE' %}border-red-600 bg-red-900/10{% else %}border-green-900/30{% endif %} p-6 rounded-xl shadow-lg flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 opacity-75 hover:opacity-100 transition relative">
+                    
+                     {% if item.cambios.action == 'DELETE' or item.action == 'DELETE' %}
+                        <div class="absolute -top-3 left-6 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg z-20">
+                            🗑️ LÍO PARA ELIMINAR (PUBLICAR PARA BORRAR)
+                        </div>
+                    {% endif %}
                      <!-- Checkbox -->
                      <div class="absolute top-4 right-4 lg:static lg:mr-2">
                         <input type="checkbox" name="{% if item.type == 'WORLD' %}selected_ids{% else %}selected_narr_ids{% endif %}" value="{{ item.id }}" class="w-5 h-5 accent-red-600 cursor-pointer item-checkbox" onchange="updateFloatingBar()">
                     </div>
 
-                    <div class="flex-grow">
-                        <div class="flex items-center gap-3 mb-1">
+                    <div class="flex-grow min-w-0">
+                        <div class="flex items-center gap-3 mb-1 flex-wrap">
                             <span class="bg-green-900/30 text-green-500 text-xs font-bold px-2 py-1 rounded border border-green-800">v{{ item.version_number }}</span>
-                            <h2 class="text-xl font-bold text-white">{{ item.target_name }}</h2>
+                            <h2 class="text-xl font-bold text-white break-all">{{ item.target_name }}</h2>
                             {% if item.type == 'WORLD' %}
                                 <span class="text-gray-500 text-sm">para <a href="{% url 'ver_mundo' item.target_link %}" class="text-accent hover:underline">{{ item.world.name }}</a></span>
                                 <span class="text-xs bg-blue-900/30 text-blue-400 px-2 py-0.5 rounded border border-blue-800">{{ item.type_label }}</span>
@@ -219,7 +232,7 @@
                                 <span class="text-xs bg-purple-900/30 text-purple-400 px-2 py-0.5 rounded border border-purple-800">{{ item.type_label }}</span>
                             {% endif %}
                         </div>
-                        <p class="text-gray-400 text-sm mb-2 line-clamp-2">{{ item.target_desc|striptags|truncatewords:20 }}</p>
+                        <p class="text-gray-400 text-sm mb-2 line-clamp-2 break-words">{{ item.target_desc|striptags|truncatewords:20 }}</p>
                         <div class="flex gap-4 text-xs text-gray-500 font-mono">
                             <span>👤 {{ item.author.username|default:"Sistema" }}</span>
                             <span>📅 {{ item.created_at|date:"d/m/Y H:i" }}</span>
@@ -268,10 +281,10 @@
                         <input type="checkbox" name="{% if item.type == 'WORLD' %}selected_ids{% else %}selected_narr_ids{% endif %}" value="{{ item.id }}" class="w-5 h-5 accent-red-600 cursor-pointer item-checkbox" onchange="updateFloatingBar()">
                     </div>
 
-                    <div class="flex-grow">
-                        <div class="flex items-center gap-3">
+                    <div class="flex-grow min-w-0">
+                        <div class="flex items-center gap-3 flex-wrap">
                             <span class="text-red-500 text-xs font-bold">v{{ item.version_number }}</span>
-                            <h3 class="text-lg font-bold text-gray-300">{{ item.target_name }}</h3>
+                            <h3 class="text-lg font-bold text-gray-300 break-all">{{ item.target_name }}</h3>
                             {% if item.type == 'WORLD' %}
                                 <span class="text-gray-600 text-sm">para {{ item.world.name }}</span>
                                 <span class="text-xs bg-blue-900/30 text-blue-400 px-2 py-0.5 rounded border border-blue-800">{{ item.type_label }}</span>
@@ -318,10 +331,10 @@
                         <input type="checkbox" name="{% if item.type == 'WORLD' %}selected_ids{% else %}selected_narr_ids{% endif %}" value="{{ item.id }}" class="w-5 h-5 accent-red-600 cursor-pointer item-checkbox" onchange="updateFloatingBar()">
                     </div>
 
-                    <div class="flex-grow">
-                        <div class="flex items-center gap-3">
+                    <div class="flex-grow min-w-0">
+                        <div class="flex items-center gap-3 flex-wrap">
                             <span class="bg-gray-800 text-gray-400 text-xs font-bold px-2 py-1 rounded border border-gray-700">v{{ item.version_number }}</span>
-                            <h3 class="text-lg font-bold text-gray-300">{{ item.target_name }}</h3>
+                            <h3 class="text-lg font-bold text-gray-300 break-all">{{ item.target_name }}</h3>
                             {% if item.type == 'WORLD' %}
                                 <span class="text-gray-600 text-sm">para {{ item.world.name }}</span>
                                 <span class="text-xs bg-blue-900/30 text-blue-400 px-2 py-0.5 rounded border border-blue-800">{{ item.type_label }}</span>
@@ -362,45 +375,51 @@
             {% endif %}
             <!-- EVENT LOG (AUDIT) -->
             <h2 class="text-2xl font-bold text-blue-400 mt-12 mb-4">📋 Registro de Actividad (Audit Log)</h2>
-            <div class="bg-card border border-blue-900/30 rounded-xl overflow-hidden shadow-lg">
-                <table class="w-full text-left text-sm text-gray-400">
-                    <thead class="bg-gray-900/50 text-gray-200 uppercase font-bold text-xs">
-                        <tr>
-                            <th class="px-6 py-3">Usuario</th>
-                            <th class="px-6 py-3">Acción</th>
-                            <th class="px-6 py-3">Detalles</th>
-                            <th class="px-6 py-3">Fecha</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-800">
-                        {% for log in logs %}
-                        <tr class="hover:bg-white/5 transition">
-                            <td class="px-6 py-3 font-bold text-white">
-                                {{ log.user.username|default:"Anónimo" }}
-                            </td>
-                            <td class="px-6 py-3">
-                                <span class="px-2 py-1 rounded text-xs font-bold border 
-                                    {% if 'UPLOAD' in log.action %}bg-purple-900/30 text-purple-400 border-purple-800
-                                    {% elif 'DELETE' in log.action %}bg-red-900/30 text-red-400 border-red-800
-                                    {% elif 'PROPOSE' in log.action %}bg-yellow-900/30 text-yellow-500 border-yellow-800
-                                    {% else %}bg-gray-800 text-gray-300 border-gray-700{% endif %}">
-                                    {{ log.action }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-3 text-gray-300 font-mono text-xs">
-                                {{ log.details|truncatechars:50 }}
-                            </td>
-                            <td class="px-6 py-3">
-                                {{ log.timestamp|date:"d/m/Y H:i:s" }}
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="4" class="px-6 py-8 text-center italic text-gray-600">No hay actividad registrada.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            
+            <div class="space-y-4">
+                <!-- WORLD LOGS -->
+                <details class="group bg-card border border-blue-900/30 rounded-xl overflow-hidden shadow-lg" open>
+                    <summary class="flex justify-between items-center p-4 cursor-pointer bg-blue-900/20 hover:bg-blue-900/30 transition list-none">
+                        <span class="font-bold text-blue-200 flex items-center gap-2">🌍 Cambios en MUNDOS <span class="text-xs bg-blue-900 text-blue-300 px-2 rounded-full">{{ logs_world|length }}</span></span>
+                        <span class="text-blue-400 transform group-open:rotate-180 transition">▼</span>
+                    </summary>
+                    <div class="overflow-x-auto">
+                        {% include "components/_log_table.html" with logs=logs_world color="blue" %}
+                    </div>
+                </details>
+
+                <!-- NARRATIVE LOGS -->
+                <details class="group bg-card border border-purple-900/30 rounded-xl overflow-hidden shadow-lg">
+                    <summary class="flex justify-between items-center p-4 cursor-pointer bg-purple-900/20 hover:bg-purple-900/30 transition list-none">
+                        <span class="font-bold text-purple-200 flex items-center gap-2">📖 Cambios en NARRATIVAS <span class="text-xs bg-purple-900 text-purple-300 px-2 rounded-full">{{ logs_narrative|length }}</span></span>
+                        <span class="text-purple-400 transform group-open:rotate-180 transition">▼</span>
+                    </summary>
+                    <div class="overflow-x-auto">
+                        {% include "components/_log_table.html" with logs=logs_narrative color="purple" %}
+                    </div>
+                </details>
+
+                <!-- IMAGE LOGS -->
+                <details class="group bg-card border border-pink-900/30 rounded-xl overflow-hidden shadow-lg">
+                    <summary class="flex justify-between items-center p-4 cursor-pointer bg-pink-900/20 hover:bg-pink-900/30 transition list-none">
+                        <span class="font-bold text-pink-200 flex items-center gap-2">🖼️ Cambios en IMÁGENES <span class="text-xs bg-pink-900 text-pink-300 px-2 rounded-full">{{ logs_image|length }}</span></span>
+                        <span class="text-pink-400 transform group-open:rotate-180 transition">▼</span>
+                    </summary>
+                    <div class="overflow-x-auto">
+                        {% include "components/_log_table.html" with logs=logs_image color="pink" %}
+                    </div>
+                </details>
+
+                <!-- OTHER LOGS -->
+                <details class="group bg-card border border-gray-800 rounded-xl overflow-hidden shadow-lg">
+                    <summary class="flex justify-between items-center p-4 cursor-pointer bg-gray-900/50 hover:bg-gray-800 transition list-none">
+                        <span class="font-bold text-gray-400 flex items-center gap-2">⚙️ Otros Eventos <span class="text-xs bg-gray-800 text-gray-300 px-2 rounded-full">{{ logs_other|length }}</span></span>
+                        <span class="text-gray-500 transform group-open:rotate-180 transition">▼</span>
+                    </summary>
+                    <div class="overflow-x-auto">
+                        {% include "components/_log_table.html" with logs=logs_other color="gray" %}
+                    </div>
+                </details>
             </div>
 
         </form>

@@ -31,9 +31,9 @@ class GetWorldDetailsUseCase:
         len_h = len(jid) + 2
         raw_hijos = CaosWorldORM.objects.filter(id__startswith=jid, id__regex=r'^.{'+str(len_h)+r'}$').order_by('id')
         
-        # Filter DRAFTs for non-admin users
-        if user and not user.is_superuser:
-            raw_hijos = raw_hijos.exclude(status='DRAFT')
+        # Filter DRAFTs to ensure Live view only shows approved items
+        # if user and not user.is_superuser: (Removed user check to enforce strict view)
+        raw_hijos = raw_hijos.exclude(status='DRAFT')
         
         # Helper for images (this logic is currently in utils, we can import it or replicate)
         from src.Infrastructure.DjangoFramework.persistence.utils import get_world_images, generate_breadcrumbs

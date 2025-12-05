@@ -20,7 +20,13 @@ class PublishToLiveVersionUseCase:
         except Exception as e:
             print(f"Error archivando versión anterior: {e}")
 
-        # 1. APLICAR AL LIVE
+        # 0.5 CHECK FOR DELETE ACTION
+        if version.cambios and version.cambios.get('action') == 'DELETE':
+            print(f" 🗑️ Ejecutando eliminación de mundo '{version.world.name}' (v{version.version_number})")
+            version.world.delete()
+            return
+
+        # 1. APLICAR AL LIVE (Normal Update)
         world = version.world
         world.name = version.proposed_name
         world.description = version.proposed_description

@@ -81,20 +81,9 @@ class CreateChildWorldUseCase:
                     
                     # Auto-approve logic for initial creation
                     status = 'PENDING'
-                    if hasattr(self.repository, 'save_manual_file'):
-                        try:
-                            # We need to reset the stream for Image.open inside save_manual_file
-                            image_data.seek(0)
-                            self.repository.save_manual_file(
-                                jid=w_orm.id, 
-                                uploaded_file=image_data, 
-                                username="AI_Genesis", 
-                                title=f"Arte Inicial: {name}"
-                            )
-                            status = 'APPROVED'
-                            print(f"    ✅ Imagen auto-aprobada y guardada en disco.")
-                        except Exception as e:
-                            print(f"    ⚠️ Falló auto-aprobación de imagen: {e}")
+                    # Auto-approve logic DISABLED for Strict Approval Flow
+                    status = 'PENDING'
+                    # (Code removed: save_manual_file)
 
                     CaosImageProposalORM.objects.create(
                         world=w_orm,

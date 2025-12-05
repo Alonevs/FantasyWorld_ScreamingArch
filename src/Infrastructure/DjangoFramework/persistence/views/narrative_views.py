@@ -110,31 +110,115 @@ def borrar_narrativa(request, nid):
         messages.error(request, f"Error al borrar: {e}")
         return redirect('home')
 
+class NarrativeProxy:
+    def __init__(self, nid, title, content, world, tipo, author, narrador="..."):
+        self.nid = nid
+        self.titulo = title
+        self.contenido = content
+        self.world = world
+        self.tipo = tipo
+        self.narrador = narrador
+        self.created_by = author
+        self.current_version_number = 0
+        self.is_draft = True
+        self.version_id = 0 # Dummy
+
+def get_full_type(code):
+    m = {'L':'LORE', 'H':'HISTORIA', 'C':'CAPITULO', 'E':'EVENTO', 'M':'LEYENDA', 'R':'REGLA', 'B':'BESTIARIO'}
+    return m.get(code.upper(), 'LORE')
+
+def pre_crear_root(request, jid, tipo_codigo):
+    try:
+        repo = DjangoCaosRepository()
+        w_domain = resolve_world_id(repo, jid)
+        w = CaosWorldORM.objects.get(id=w_domain.id.value)
+        
+        full_type = get_full_type(tipo_codigo)
+        
+        mock = NarrativeProxy(
+            nid="NEW",
+            title="Nuevo Documento",
+            content="",
+            world=w,
+            tipo=full_type,
+            author=request.user if request.user.is_authenticated else None
+        )
+        
+        todas = CaosWorldORM.objects.all().order_by('id')
+        
+        return render(request, 'visor_narrativa.html', {
+            'narr': mock,
+            'todas_entidades': todas,
+            'published_chapters': [],
+            'is_creation_mode': True,
+            'target_jid': jid,      # For Form Action
+            'target_type': tipo_codigo # For Form Action
+        })
+    except Exception as e:
+        print(f"Error pre-creating root: {e}")
+        return redirect('home')
+
+def pre_crear_child(request, parent_nid, tipo_codigo):
+    try:
+        try: p = CaosNarrativeORM.objects.get(public_id=parent_nid)
+        except: p = CaosNarrativeORM.objects.get(nid=parent_nid)
+        
+        full_type = get_full_type(tipo_codigo)
+        
+        mock = NarrativeProxy(
+            nid="NEW_CHILD",
+            title="Nuevo Capítulo",
+            content="",
+            world=p.world,
+            tipo=full_type,
+            author=request.user if request.user.is_authenticated else None,
+            narrador=p.narrador
+        )
+        
+        todas = CaosWorldORM.objects.all().order_by('id')
+        
+        return render(request, 'visor_narrativa.html', {
+            'narr': mock,
+            'todas_entidades': todas,
+            'published_chapters': [],
+            'is_creation_mode': True,
+            'is_child_mode': True,
+            'target_parent': parent_nid, # For Form Action
+            'target_type': tipo_codigo
+        })
+    except Exception as e:
+        print(f"Error pre-creating child: {e}")
+        return redirect('home')
+
 def revisar_narrativa_version(request, version_id):
     try:
         v = CaosNarrativeVersionORM.objects.get(id=version_id)
         
-        # Create a proxy object to mimic CaosNarrativeORM but with proposed data
-        class NarrativeProxy:
-            def __init__(self, version):
-                self.nid = version.narrative.nid
-                self.titulo = version.proposed_title
-                self.contenido = version.proposed_content
-                self.world = version.narrative.world
-                self.created_by = version.author
-                self.tipo = version.narrative.tipo
-                self.narrador = version.narrative.narrador
-                self.is_proposal = True
-                self.version_id = version.id
-        
-        narr_proxy = NarrativeProxy(v)
+        # Use global Proxy logic with Version data
+        narr_proxy = NarrativeProxy(
+            nid=v.narrative.nid,
+            title=v.proposed_title,
+            content=v.proposed_content,
+            world=v.narrative.world,
+            tipo=v.narrative.tipo,
+            author=v.author,
+            narrador=v.narrative.narrador
+        )
+        narr_proxy.version_id = v.id
+        narr_proxy.is_proposal = True
         
         # Reuse the same template
         todas = CaosWorldORM.objects.all().order_by('id')
         hijos = CaosNarrativeORM.objects.filter(nid__startswith=narr_proxy.nid).exclude(nid=narr_proxy.nid).order_by('nid')
+        published_chapters = hijos.filter(current_version_number__gt=0)
         
         messages.info(request, f"👁️ Visualizando PROPUESTA v{v.version_number}. Esto no es la versión live.")
-        return render(request, 'visor_narrativa.html', {'narr': narr_proxy, 'todas_entidades': todas, 'capitulos': hijos, 'is_proposal': True})
+        return render(request, 'visor_narrativa.html', {
+            'narr': narr_proxy, 
+            'todas_entidades': todas, 
+            'published_chapters': published_chapters, 
+            'is_proposal': True
+        })
         
     except Exception as e:
         print(f"Error reviewing narrative version: {e}")
@@ -157,14 +241,12 @@ def crear_nueva_narrativa(request, jid, tipo_codigo):
             tipo_codigo=tipo_codigo, 
             user=user,
             title=title,
-            content=content
+            content=content,
+            # publish_immediately=False (Default) -> Crea V0 Pendiente
         )
         
-        messages.success(request, "✨ Narrativa creada. Editando borrador...")
-        # Redirect to read view with edit mode enabled
-        try: n = CaosNarrativeORM.objects.get(nid=new_nid); redir_id = n.public_id if n.public_id else new_nid
-        except: redir_id = new_nid
-        return redirect(f"/narrativa/{redir_id}/?edit=true")
+        messages.success(request, "✨ Propuesta creada. Apruebala en el Dashboard para publicarla.")
+        return redirect('dashboard')
     except Exception as e: 
         print(f"Error creating narrative: {e}")
         return redirect('ver_mundo', public_id=jid)
@@ -173,7 +255,7 @@ def crear_sub_narrativa(request, parent_nid, tipo_codigo):
     try:
         repo = DjangoCaosRepository()
         try: p = CaosNarrativeORM.objects.get(public_id=parent_nid); real_parent = p.nid
-        except: real_parent = parent_nid
+        except: p = CaosNarrativeORM.objects.get(nid=parent_nid); real_parent = parent_nid
         user = request.user if request.user.is_authenticated else None
         
         # Extract POST data
@@ -186,13 +268,12 @@ def crear_sub_narrativa(request, parent_nid, tipo_codigo):
             parent_nid=real_parent, 
             user=user,
             title=title,
-            content=content
+            content=content,
+            # publish_immediately=False (Default) -> Crea V0 Pendiente
         )
         
-        messages.success(request, "✨ Sub-capítulo creado. Editando borrador...")
-        try: new_n = CaosNarrativeORM.objects.get(nid=new_nid); redir_id = new_n.public_id if new_n.public_id else new_nid
-        except: redir_id = new_nid
-        return redirect(f"/narrativa/{redir_id}/?edit=true")
+        messages.success(request, "✨ Propuesta creada. Apruebala en el Dashboard para publicarla.")
+        return redirect('dashboard')
     except Exception as e: 
         print(f"Error creating sub-narrative: {e}")
         return redirect('leer_narrativa', nid=parent_nid)
