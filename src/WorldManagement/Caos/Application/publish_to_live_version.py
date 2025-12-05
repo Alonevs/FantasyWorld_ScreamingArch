@@ -26,6 +26,23 @@ class PublishToLiveVersionUseCase:
             version.world.delete()
             return
 
+        # 0.6 CHECK FOR SET_COVER ACTION
+        if version.cambios and version.cambios.get('action') == 'SET_COVER':
+            version.world.metadata['cover_image'] = version.cambios['cover_image']
+            version.world.save()
+            version.status = "LIVE"
+            version.save()
+             # Cleanup logic (optional, but good to archive pending if any)
+            print(f" 📸 Portada actualizada para mundo '{version.world.name}' (v{version.version_number})")
+        # 0.7 CHECK FOR VISIBILITY ACTION
+        if version.cambios and version.cambios.get('action') == 'TOGGLE_VISIBILITY':
+            version.world.visible_publico = version.cambios.get('target_visibility', False)
+            version.world.save()
+            version.status = "LIVE"
+            version.save()
+            print(f" 👁️ Visibilidad actualizada para mundo '{version.world.name}'")
+            return
+
         # 1. APLICAR AL LIVE (Normal Update)
         world = version.world
         world.name = version.proposed_name

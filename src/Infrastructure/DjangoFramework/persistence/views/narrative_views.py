@@ -55,31 +55,18 @@ def editar_narrativa(request, nid):
             try: n_obj = CaosNarrativeORM.objects.get(public_id=nid)
             except: n_obj = CaosNarrativeORM.objects.get(nid=nid)
             
-            # Si hay una razón de cambio, es una PROPUESTA
-            change_reason = request.POST.get('change_reason')
+            # ENFORCE PROPOSAL FOR ALL EDITS
+            change_reason = request.POST.get('change_reason', 'Edición estándar')
             
-            if change_reason:
-                ProposeNarrativeChangeUseCase().execute(
-                    narrative_id=n_obj.nid,
-                    new_title=request.POST.get('titulo'),
-                    new_content=request.POST.get('contenido'),
-                    reason=change_reason,
-                    user=request.user if request.user.is_authenticated else None
-                )
-                messages.success(request, "📝 Propuesta de cambio enviada para revisión.")
-                return redirect('dashboard')
-            else:
-                # Edición directa (Legacy / Admin bypass si se quisiera)
-                UpdateNarrativeUseCase().execute(
-                    nid=n_obj.nid,
-                    titulo=request.POST.get('titulo'),
-                    contenido=request.POST.get('contenido'),
-                    narrador=request.POST.get('narrador'),
-                    tipo=request.POST.get('tipo'),
-                    menciones_ids=request.POST.getlist('menciones')
-                )
-                messages.success(request, "Narrativa guardada directamente.")
-                return redirect('leer_narrativa', nid=nid)
+            ProposeNarrativeChangeUseCase().execute(
+                narrative_id=n_obj.nid,
+                new_title=request.POST.get('titulo'),
+                new_content=request.POST.get('contenido'),
+                reason=change_reason,
+                user=request.user if request.user.is_authenticated else None
+            )
+            messages.success(request, "📝 Propuesta de cambio enviada para revisión.")
+            return redirect('dashboard')
 
         except Exception as e: 
             print(f"Error: {e}")

@@ -41,6 +41,13 @@ def dashboard(request):
         x.type_label = '🌍 MUNDO'
         x.target_name = x.proposed_name
         x.target_desc = x.proposed_description
+        
+        if x.cambios.get('action') == 'SET_COVER':
+            x.target_desc = f"📸 Cambio de portada a: {x.cambios.get('cover_image')}"
+        elif x.cambios.get('action') == 'TOGGLE_VISIBILITY':
+            vis = x.cambios.get('target_visibility')
+            x.target_desc = f"👁️ Cambiar a: {'PÚBLICO' if vis else 'PRIVADO'}"
+            
         x.target_link = x.world.public_id if x.world.public_id else x.world.id
     
     for x in n_pending + n_approved + n_rejected + n_archived:

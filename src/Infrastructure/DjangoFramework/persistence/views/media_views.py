@@ -10,7 +10,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.core.files.base import ContentFile
 
-from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosEventLog, CaosImageProposalORM
+from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosEventLog, CaosImageProposalORM, CaosVersionORM
 from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
 from src.WorldManagement.Caos.Application.generate_map import GenerateWorldMapUseCase
 from src.FantasyWorld.AI_Generation.Infrastructure.sd_service import StableDiffusionService
@@ -153,8 +153,30 @@ def subir_imagen_manual(request, jid):
     return redirect('ver_mundo', public_id=redirect_target)
 
 def set_cover_image(request, jid, filename):
-    try: w=resolve_jid(jid); w.metadata['cover_image']=filename; w.save(); return redirect('ver_mundo', public_id=w.public_id)
-    except: return redirect('home')
+    try:
+        w = resolve_jid(jid)
+        real_jid = w.id if w else jid
+        
+        # Calculate next version
+        next_v = CaosVersionORM.objects.filter(world=w).count() + 1
+        
+        CaosVersionORM.objects.create(
+            world=w,
+            proposed_name=w.name,
+            proposed_description=w.description,
+            version_number=next_v,
+            status='PENDING',
+            change_log=f"Propuesta de Portada: {filename}",
+            cambios={'action': 'SET_COVER', 'cover_image': filename},
+            author=request.user if request.user.is_authenticated else None
+        )
+        
+        log_event(request.user, "PROPOSE_COVER", real_jid, f"Proposed cover: {filename}")
+        messages.success(request, "📸 Propuesta de portada creada. Revisa el Dashboard.")
+        return redirect('dashboard')
+    except Exception as e:
+        messages.error(request, f"Error proponiendo portada: {e}")
+        return redirect('ver_mundo', public_id=jid)
 
 def borrar_foto(request, jid, filename):
     try: 

@@ -152,12 +152,29 @@ def borrar_mundo(request, jid):
 def toggle_visibilidad(request, jid):
     try: 
         repo = DjangoCaosRepository()
-        ToggleWorldVisibilityUseCase(repo).execute(jid)
-        # Redirect logic needs to find the public_id again or use the one returned
-        w = resolve_world_id(repo, jid)
-        w_orm = CaosWorldORM.objects.get(id=w.id.value)
-        return redirect('ver_mundo', public_id=w_orm.public_id if w_orm.public_id else w_orm.id)
-    except: return redirect('home')
+        w_domain = resolve_world_id(repo, jid)
+        w = CaosWorldORM.objects.get(id=w_domain.id.value)
+        
+        next_v = CaosVersionORM.objects.filter(world=w).count() + 1
+        current_vis = w.visible_publico
+        target_vis = not current_vis
+        
+        CaosVersionORM.objects.create(
+            world=w,
+            proposed_name=w.name,
+            proposed_description=w.description,
+            version_number=next_v,
+            status='PENDING',
+            change_log=f"Solicitud cambio visibilidad: {'PÚBLICO' if target_vis else 'PRIVADO'}",
+            cambios={'action': 'TOGGLE_VISIBILITY', 'target_visibility': target_vis},
+            author=get_current_user(request)
+        )
+        
+        messages.success(request, "👁️ Solicitud de cambio de visibilidad creada.")
+        return redirect('dashboard')
+    except Exception as e: 
+        print(f"Error toggling visibility: {e}")
+        return redirect('home')
 
 def restaurar_version(request, version_id):
     try:

@@ -53,7 +53,7 @@ Detailed documentation is available in the `docs/` directory:
 ## 🛠️ Key Features
 -   **World Management**: Create and visualize worlds (Tree Map, Hemispheres).
 -   **Narrative Engine**: Write and organize lore, history, and chapters.
--   **Versioning System**: Robust proposal and approval workflow for all content changes.
+-   **Versioning System**: Robust proposal and approval workflow. All changes (Create, Edit, Delete) must be approved in the Dashboard before going live.
 -   **AI Power**: Generate images for your world using integrated AI models.
 
 ## 🤝 Contributing
