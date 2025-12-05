@@ -86,7 +86,8 @@ def api_save_foto(request, jid):
             image=image_data,
             title=data.get('title'),
             author=user,
-            status='PENDING'
+            status='PENDING',
+            action='ADD'
         )
         print("DEBUG: CaosImageProposalORM created")
         
@@ -142,7 +143,8 @@ def subir_imagen_manual(request, jid):
                     image=f,
                     title=final,
                     author=user,
-                    status='PENDING'
+                    status='PENDING',
+                    action='ADD'
                 )
                 log_event(request.user, "PROPOSE_PHOTO", real_jid, f"File: {final}")
             
@@ -156,12 +158,24 @@ def set_cover_image(request, jid, filename):
 
 def borrar_foto(request, jid, filename):
     try: 
-        w=resolve_jid(jid); base=os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img', w.id)
-        if os.path.exists(os.path.join(base, filename)): 
-            os.remove(os.path.join(base, filename))
-            log_event(request.user, "DELETE_PHOTO", w.id, f"File: {filename}")
-        return redirect('ver_mundo', public_id=w.public_id)
-    except: return redirect('home')
+        w = resolve_jid(jid)
+        real_jid = w.id if w else jid
+        
+        # Create Deletion Proposal
+        CaosImageProposalORM.objects.create(
+            world=w,
+            title=f"Borrar: {filename}",
+            target_filename=filename,
+            action='DELETE',
+            status='PENDING',
+            author=request.user if request.user.is_authenticated else None
+        )
+        
+        messages.info(request, "🗑️ Borrado pendiente de aprobación.")
+        return redirect('ver_mundo', public_id=w.public_id if w.public_id else w.id)
+    except Exception as e:
+        print(f"Error borrar_foto: {e}")
+        return redirect('home')
 
 def generar_foto_extra(request, jid):
     return redirect('ver_mundo', public_id=jid)

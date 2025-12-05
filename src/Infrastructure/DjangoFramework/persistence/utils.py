@@ -42,9 +42,25 @@ def get_world_images(jid):
     if not os.path.exists(target):
         for d in os.listdir(base):
             if d.startswith(f"{jid}_"): target = os.path.join(base, d); break
+    
+    # Fetch metadata from DB
+    try:
+        w = CaosWorldORM.objects.get(id=jid)
+        gallery_log = w.metadata.get('gallery_log', {}) if w.metadata else {}
+    except:
+        gallery_log = {}
+
     imgs = []
     if os.path.exists(target):
         dname = os.path.basename(target)
         for f in sorted(os.listdir(target)):
-            if f.lower().endswith(('.png', '.webp', '.jpg')): imgs.append({'url': f'{dname}/{f}', 'filename': f})
+            if f.lower().endswith(('.png', '.webp', '.jpg')): 
+                meta = gallery_log.get(f, {})
+                imgs.append({
+                    'url': f'{dname}/{f}', 
+                    'filename': f,
+                    'author': meta.get('uploader', 'Sistema'),
+                    'date': meta.get('date', ''),
+                    'title': meta.get('title', '')
+                })
     return imgs

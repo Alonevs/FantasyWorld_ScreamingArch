@@ -12,7 +12,7 @@ from src.Infrastructure.DjangoFramework.persistence.views.dashboard_views import
     dashboard, aprobar_propuesta, rechazar_propuesta, publicar_version, 
     restaurar_version, borrar_propuesta, borrar_propuestas_masivo,
     aprobar_narrativa, rechazar_narrativa, publicar_narrativa, restaurar_narrativa, borrar_narrativa_version,
-    aprobar_imagen, rechazar_imagen, aprobar_imagenes_masivo
+    aprobar_imagen, rechazar_imagen, aprobar_propuestas_masivo
 )
 from src.Infrastructure.DjangoFramework.persistence.views.media_views import (
     api_preview_foto, api_save_foto, api_update_image_metadata, 
@@ -69,6 +69,7 @@ urlpatterns = [
     path('version/<int:version_id>/publicar/', publicar_version, name='publicar_version'),
     path('propuesta/<int:version_id>/borrar/', borrar_propuesta, name='borrar_propuesta'),
     path('propuestas/borrar_masivo/', borrar_propuestas_masivo, name='borrar_propuestas_masivo'),
+    path('propuestas/aprobar_masivo/', aprobar_propuestas_masivo, name='aprobar_propuestas_masivo'),
     
     # Rutas legacy
     path('revision/<int:version_id>/', comparar_version, name='revisar_version'),
@@ -85,7 +86,7 @@ urlpatterns = [
     # Acciones de Imágenes
     path('imagen/propuesta/<int:id>/aprobar/', aprobar_imagen, name='aprobar_imagen'),
     path('imagen/propuesta/<int:id>/rechazar/', rechazar_imagen, name='rechazar_imagen'),
-    path('imagenes/aprobar_masivo/', aprobar_imagenes_masivo, name='aprobar_imagenes_masivo'),
+    # path('imagenes/aprobar_masivo/', aprobar_imagenes_masivo, name='aprobar_imagenes_masivo'), # DEPRECATED
 
     # ==========================================
     # NARRATIVA

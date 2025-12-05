@@ -9,6 +9,13 @@ class RejectNarrativeVersionUseCase:
             
             version.status = 'REJECTED'
             version.save()
+            
+            # If the rejected version was a CREATION proposal (ADD), delete the parent narrative
+            # because it was never approved to exist.
+            if version.action == 'ADD':
+                print(f" 🗑️ Rechazo de creación: Eliminando narrativa {version.narrative.nid}")
+                version.narrative.delete()
+            
             print(f" ❌ Versión narrativa v{version.version_number} RECHAZADA.")
         except CaosNarrativeVersionORM.DoesNotExist:
             raise Exception("Versión narrativa no encontrada.")

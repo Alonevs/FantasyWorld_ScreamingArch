@@ -2,6 +2,7 @@ import os
 import base64
 import io
 import time
+from typing import List, Optional
 from datetime import datetime
 from PIL import Image
 from django.conf import settings
@@ -19,18 +20,28 @@ class DjangoCaosRepository(CaosRepository):
     
     def save(self, world: CaosWorld):
         status_str = world.status.value if hasattr(world.status, 'value') else world.status
+        
+        # Handle Locking Logic mapping to Status
+        if world.is_locked:
+            status_str = 'LOCKED'
+        elif status_str == 'LOCKED':
+            # If unlocked but status says LOCKED, revert to DRAFT
+            status_str = 'DRAFT'
+
         CaosWorldORM.objects.update_or_create(
             id=world.id.value,
             defaults={
                 'name': world.name,
                 'description': world.lore_description,
                 'status': status_str,
-                'metadata': world.metadata
+                'metadata': world.metadata,
+                'visible_publico': world.is_public
+                # Removed 'is_locked' as it is a property, not a field
             }
         )
         print(f" 💾 [DB] Guardado: {world.name}")
 
-    def find_by_id(self, world_id):
+    def find_by_id(self, world_id) -> Optional[CaosWorld]:
         val = world_id.value if hasattr(world_id, 'value') else world_id
         try:
             orm_obj = CaosWorldORM.objects.get(id=val)
@@ -39,10 +50,44 @@ class DjangoCaosRepository(CaosRepository):
                 name=orm_obj.name,
                 lore_description=orm_obj.description,
                 status=getattr(VersionStatus, orm_obj.status, VersionStatus.DRAFT),
-                metadata=orm_obj.metadata or {}
+                metadata=orm_obj.metadata or {},
+                is_public=orm_obj.visible_publico,
+                is_locked=orm_obj.is_locked
             )
         except CaosWorldORM.DoesNotExist:
             return None
+
+    def get_by_public_id(self, public_id: str) -> Optional[CaosWorld]:
+        try:
+            orm_obj = CaosWorldORM.objects.get(public_id=public_id)
+            return CaosWorld(
+                id=WorldID(str(orm_obj.id)),
+                name=orm_obj.name,
+                lore_description=orm_obj.description,
+                status=getattr(VersionStatus, orm_obj.status, VersionStatus.DRAFT),
+                metadata=orm_obj.metadata or {},
+                is_public=orm_obj.visible_publico,
+                is_locked=orm_obj.is_locked
+            )
+        except CaosWorldORM.DoesNotExist:
+            return None
+
+    def find_descendants(self, root_id: WorldID) -> List[CaosWorld]:
+        root_val = root_id.value if hasattr(root_id, 'value') else root_id
+        # Filter by startswith and order by ID to maintain hierarchy
+        orm_objs = CaosWorldORM.objects.filter(id__startswith=root_val).order_by('id')
+        results = []
+        for obj in orm_objs:
+            results.append(CaosWorld(
+                id=WorldID(str(obj.id)),
+                name=obj.name,
+                lore_description=obj.description,
+                status=getattr(VersionStatus, obj.status, VersionStatus.DRAFT),
+                metadata=obj.metadata or {},
+                is_public=obj.visible_publico,
+                is_locked=obj.is_locked
+            ))
+        return results
 
     def save_creature(self, creature: Creature):
         CaosWorldORM.objects.update_or_create(
@@ -86,7 +131,6 @@ class DjangoCaosRepository(CaosRepository):
         except Exception as e:
             print(f"⚠️ Error auditoría: {e}")
 
-    # --- MÉTODO QUE FALTABA ---
     def update_image_metadata(self, jid, filename, new_title):
         try:
             world = CaosWorldORM.objects.get(id=jid)
@@ -103,7 +147,6 @@ class DjangoCaosRepository(CaosRepository):
         except Exception as e:
             print(f"⚠️ Error actualizando metadata: {e}")
             return False
-    # --------------------------
 
     def save_image(self, jid, base64_data, title=None, username="AI System"):
         if not base64_data: return None

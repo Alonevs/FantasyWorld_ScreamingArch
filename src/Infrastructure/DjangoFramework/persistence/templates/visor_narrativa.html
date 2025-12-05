@@ -62,6 +62,18 @@
     </div>
 
     <div class="paper">
+        {% if is_proposal %}
+            <div style="background:#d633ff; color:white; padding:10px; border-radius:5px; margin-bottom:20px; font-weight:bold; text-align:center;">
+                👁️ ESTÁS VIENDO UNA PROPUESTA (v{{ narr.version_id }})
+            </div>
+        {% endif %}
+        
+        {% if narr.is_draft %}
+            <div style="background:#ff9800; color:black; padding:10px; border-radius:5px; margin-bottom:20px; font-weight:bold; text-align:center;">
+                🚧 MODO BORRADOR (Pendiente de Aprobación)
+            </div>
+        {% endif %}
+
         <div class="meta">
             <span>REF: {{ narr.nid }}</span>
             <span>AUTOR: {{ narr.created_by.username|default:"Sistema" }}</span>
@@ -72,10 +84,11 @@
         <div class="content">{{ narr.contenido|default:"(Escribe aquí tu historia...)" }}</div>
     </div>
 
-    {% if capitulos %}
+    {% if published_chapters %}
     <div class="children-section">
         <h3 style="font-family: 'Segoe UI', sans-serif; color: #888;">CONTINUACIÓN / SUB-CAPÍTULOS</h3>
-        {% for c in capitulos %}
+        
+        {% for c in published_chapters %}
             <a href="{% url 'leer_narrativa' c.nid %}" class="child-card">
                 <strong>{{ c.titulo }}</strong> <span style="font-size:0.8em; float:right;">{{ c.tipo }}</span>
             </a>
@@ -84,10 +97,28 @@
     {% endif %}
     
     <div class="children-section" style="text-align:center; margin-top:20px;">
-        <form method="POST" action="{% url 'crear_sub_narrativa' narr.nid 'CAPITULO' %}">
-            {% csrf_token %}
-            <button type="submit" style="background:#333; color:#888; border:1px dashed #444; padding:10px 20px; cursor:pointer;">+ AÑADIR SUB-CAPÍTULO</button>
-        </form>
+        <button onclick="openSubModal()" style="background:#333; color:#888; border:1px dashed #444; padding:10px 20px; cursor:pointer;">+ AÑADIR SUB-CAPÍTULO</button>
+    </div>
+
+    <!-- Sub-Chapter Creation Modal -->
+    <div id="subModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; justify-content:center; align-items:center;">
+        <div style="background:#1f1f2e; padding:30px; border-radius:10px; width:500px; border:1px solid #d633ff; box-shadow:0 0 30px rgba(214, 51, 255, 0.3);">
+            <h2 style="margin-top:0; color:#d633ff;">Nuevo Sub-Capítulo</h2>
+            <form method="POST" action="{% url 'crear_sub_narrativa' narr.nid 'CAPITULO' %}" id="subCreateForm" onsubmit="document.getElementById('btn-submit-sub').disabled=true; document.getElementById('btn-submit-sub').innerText='⏳ Creando...';">
+                {% csrf_token %}
+                
+                <label style="color:#aaa; font-size:0.9em;">Título:</label>
+                <input type="text" name="title" placeholder="Ej: El Encuentro..." required style="margin-bottom:15px; width:100%;">
+                
+                <label style="color:#aaa; font-size:0.9em;">Contenido Inicial (Borrador):</label>
+                <textarea name="content" rows="5" style="width:100%; background:#0a0a12; border:1px solid #444; color:#ccc; padding:10px; box-sizing:border-box; resize:none; margin-bottom:20px;" placeholder="Escribe aquí tu primera idea..."></textarea>
+
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" onclick="closeSubModal()" style="background:#444; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">Cancelar</button>
+                    <button type="submit" id="btn-submit-sub" style="background:#d633ff; color:white; border:none; padding:10px 20px; border-radius:5px; font-weight:bold; cursor:pointer;">🚀 CREAR</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <div id="editor" class="edit-overlay">
@@ -134,6 +165,19 @@
         function toggleEdit() {
             const el = document.getElementById('editor');
             el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+        }
+        
+        function openSubModal() {
+            document.getElementById('subModal').style.display = 'flex';
+        }
+        function closeSubModal() {
+            document.getElementById('subModal').style.display = 'none';
+        }
+
+        // Auto-open if ?edit=true
+        const urlParams = new URLSearchParams(window.location.search);
+        if(urlParams.get('edit') === 'true') {
+            toggleEdit();
         }
     </script>
 

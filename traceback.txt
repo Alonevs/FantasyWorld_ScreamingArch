@@ -1,0 +1,49 @@
+Traceback (most recent call last):
+  File "C:\Users\xico0\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 511, in parse
+    compile_func = self.tags[command]
+                   ~~~~~~~~~^^^^^^^^^
+KeyError: 'endif'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\FantasyWorld_ScreamingArch\debug_view.py", line 20, in debug
+    response = ver_mundo(request, public_id='JhZCO1vxI7')
+  File "D:\FantasyWorld_ScreamingArch\src\Infrastructure\DjangoFramework\persistence\views\world_views.py", line 125, in ver_mundo
+    return render(request, 'ficha_mundo.html', context)
+  File "C:\Users\xico0\AppData\Roaming\Python\Python314\site-packages\django\shortcuts.py", line 25, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+  File "C:\Users\xico0\AppData\Roaming\Python\Python314\site-packages\django\template\loader.py", line 61, in render_to_string
+    template = get_template(template_name, using=using)
+  File "C:\Users\xico0\AppData\Roaming\Python\Python314\site-packages\django\template\loader.py", line 15, in get_template
+    return engine.get_template(template_name)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\xico0\AppData\Roaming\Python\Python314\site-packages\django\template\backends\django.py", line 79, in get_template
+    return Template(self.engine.get_template(template_name), self)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\xico0\AppData\Roaming\Python\Python314\site-packages\django\template\engine.py", line 177, in get_template
+    template, origin = self.find_template(template_name)
+                       ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\xico0\AppData\Roaming\Python\Python314\site-packages\django\template\engine.py", line 159, in find_template
+    template = loader.get_template(name, skip=skip)
+  File "C:\Users\xico0\AppData\Roaming\Python\Python314\site-packages\django\template\loaders\cached.py", line 57, in get_template
+    template = super().get_template(template_name, skip)
+  File "C:\Users\xico0\AppData\Roaming\Python\Python314\site-packages\django\template\loaders\base.py", line 28, in get_template
+    return Template(
+        contents,
+    ...<2 lines>...
+        self.engine,
+    )
+  File "C:\Users\xico0\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 155, in __init__
+    self.nodelist = self.compile_nodelist()
+                    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\xico0\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 197, in compile_nodelist
+    nodelist = parser.parse()
+  File "C:\Users\xico0\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 513, in parse
+    self.invalid_block_tag(token, command, parse_until)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\xico0\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 578, in invalid_block_tag
+    raise self.error(
+    ...<3 lines>...
+    )
+django.template.exceptions.TemplateSyntaxError: Invalid block tag on line 33: 'endif'. Did you forget to register or load this tag?

@@ -20,6 +20,8 @@ class CaosWorld:
     created_at: datetime = field(default_factory=datetime.now)
     # [NUEVO] Campo Metadata para JSONB (Planetas, Criaturas, etc.)
     metadata: Dict[str, Any] = field(default_factory=dict)
+    is_public: bool = False
+    is_locked: bool = False
 
     def publish(self):
         self.status = VersionStatus.LIVE

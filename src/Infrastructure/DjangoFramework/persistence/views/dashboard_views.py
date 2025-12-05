@@ -1,5 +1,7 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
+from django.conf import settings
+import os
 from src.Infrastructure.DjangoFramework.persistence.models import CaosVersionORM, CaosEventLog, CaosNarrativeVersionORM, CaosImageProposalORM
 from src.WorldManagement.Caos.Application.approve_version import ApproveVersionUseCase
 from src.WorldManagement.Caos.Application.reject_version import RejectVersionUseCase
@@ -155,41 +157,103 @@ def borrar_propuestas_masivo(request):
             messages.error(request, f"Error al borrar masivamente: {str(e)}")
     return redirect('dashboard')
 
-def aprobar_imagenes_masivo(request):
+def aprobar_propuestas_masivo(request):
     if request.method == 'POST':
         try:
+            # Worlds
+            ids = request.POST.getlist('selected_ids')
+            # Narratives
+            narr_ids = request.POST.getlist('selected_narr_ids')
+            # Images
             img_ids = request.POST.getlist('selected_img_ids')
-            if not img_ids:
-                messages.warning(request, "No has seleccionado imágenes para aprobar.")
-                return redirect('dashboard')
-            
-            from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
-            repo = DjangoCaosRepository()
-            
-            props = CaosImageProposalORM.objects.filter(id__in=img_ids)
-            count = 0
-            for prop in props:
-                try:
-                    user_name = prop.author.username if prop.author else "Anónimo"
-                    repo.save_manual_file(prop.world.id, prop.image, username=user_name, title=prop.title)
-                    prop.status = 'APPROVED'
-                    prop.save()
-                    count += 1
-                except Exception as e:
-                    print(f"Error approving image {prop.id}: {e}")
-            
-            messages.success(request, f"✅ {count} imágenes aprobadas y publicadas.")
+
+            count_w = 0
+            count_n = 0
+            count_i = 0
+
+            # 1. Approve Worlds
+            if ids:
+                for wid in ids:
+                    try:
+                        ApproveVersionUseCase().execute(wid)
+                        count_w += 1
+                    except Exception as e:
+                        print(f"Error approving world {wid}: {e}")
+
+            # 2. Approve Narratives
+            if narr_ids:
+                for nid in narr_ids:
+                    try:
+                        # Check if it's a DELETE action
+                        v = CaosNarrativeVersionORM.objects.get(id=nid)
+                        if v.action == 'DELETE':
+                            v.narrative.delete()
+                            count_n += 1
+                        else:
+                            ApproveNarrativeVersionUseCase().execute(nid)
+                            # Auto-Publish to Live
+                            PublishNarrativeToLiveUseCase().execute(nid)
+                            count_n += 1
+                    except Exception as e:
+                        print(f"Error approving narrative {nid}: {e}")
+
+            # 3. Approve Images
+            if img_ids:
+                from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
+                repo = DjangoCaosRepository()
+                props = CaosImageProposalORM.objects.filter(id__in=img_ids)
+                for prop in props:
+                    try:
+                        if prop.action == 'DELETE':
+                            # Handle Deletion
+                            base = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img', prop.world.id)
+                            target = os.path.join(base, prop.target_filename)
+                            if os.path.exists(target):
+                                os.remove(target)
+                            prop.status = 'APPROVED'
+                            prop.save()
+                            count_i += 1
+                        else:
+                            # Handle Addition
+                            user_name = prop.author.username if prop.author else "Anónimo"
+                            repo.save_manual_file(prop.world.id, prop.image, username=user_name, title=prop.title)
+                            prop.status = 'APPROVED'
+                            prop.save()
+                            count_i += 1
+                    except Exception as e:
+                        print(f"Error approving image {prop.id}: {e}")
+
+            total = count_w + count_n + count_i
+            if total > 0:
+                messages.success(request, f"✅ Se han aprobado {total} elementos ({count_w} Mundos, {count_n} Narrativas, {count_i} Imágenes).")
+            else:
+                messages.warning(request, "No has seleccionado nada para aprobar.")
+                
         except Exception as e:
-            messages.error(request, f"Error masivo: {str(e)}")
+            messages.error(request, f"Error al aprobar masivamente: {str(e)}")
     return redirect('dashboard')
 
 # --- NARRATIVE ACTIONS ---
 
 def aprobar_narrativa(request, id):
     try:
-        ApproveNarrativeVersionUseCase().execute(id)
         v = CaosNarrativeVersionORM.objects.get(id=id)
-        messages.success(request, f"✅ Narrativa v{v.version_number} '{v.proposed_title}' APROBADA.")
+        
+        if v.action == 'DELETE':
+            # Handle Deletion
+            narr = v.narrative
+            title = narr.titulo
+            narr.delete() # This cascades and deletes versions too usually, or we might want to keep them archived?
+            # If we delete the narrative, the version might be deleted if on_delete=CASCADE.
+            # Let's assume we want to delete it.
+            messages.success(request, f"🗑️ Narrativa '{title}' eliminada definitivamente.")
+        else:
+            # Handle Add/Edit
+            ApproveNarrativeVersionUseCase().execute(id)
+            # Auto-Publish to Live
+            PublishNarrativeToLiveUseCase().execute(id)
+            messages.success(request, f"✅ Narrativa v{v.version_number} '{v.proposed_title}' APROBADA y PUBLICADA LIVE.")
+            
         return redirect('dashboard')
     except Exception as e:
         messages.error(request, f"Error: {str(e)}")
@@ -239,17 +303,29 @@ def borrar_narrativa_version(request, id):
 def aprobar_imagen(request, id):
     try:
         prop = CaosImageProposalORM.objects.get(id=id)
-        # Move logic: Save to final repo
         from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
         repo = DjangoCaosRepository()
         
-        user_name = prop.author.username if prop.author else "Anónimo"
-        repo.save_manual_file(prop.world.id, prop.image, username=user_name, title=prop.title)
-        
-        prop.status = 'APPROVED'
-        prop.save()
-        
-        messages.success(request, f"✅ Imagen '{prop.title}' APROBADA y publicada.")
+        if prop.action == 'DELETE':
+            # Handle Deletion
+            base = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img', prop.world.id)
+            target = os.path.join(base, prop.target_filename)
+            if os.path.exists(target):
+                os.remove(target)
+                print(f" 🗑️ [Dashboard] Imagen borrada: {prop.target_filename}")
+            prop.status = 'APPROVED'
+            prop.save()
+            messages.success(request, f"🗑️ Imagen '{prop.target_filename}' borrada definitivamente.")
+            
+        else:
+            # Handle Addition (Default)
+            user_name = prop.author.username if prop.author else "Anónimo"
+            repo.save_manual_file(prop.world.id, prop.image, username=user_name, title=prop.title)
+            
+            prop.status = 'APPROVED'
+            prop.save()
+            messages.success(request, f"✅ Imagen '{prop.title}' APROBADA y publicada.")
+            
         return redirect('dashboard')
     except Exception as e:
         messages.error(request, f"Error al aprobar imagen: {str(e)}")

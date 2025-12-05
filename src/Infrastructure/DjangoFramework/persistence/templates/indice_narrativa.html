@@ -73,30 +73,54 @@
         </div>
 
         <div class="sidebar">
-            <h3 style="margin-top:0; color:#fff;">Escribir Nuevo</h3>
-            <form method="POST" action="{% url 'crear_narrativa' world.id 'placeholder' %}" id="createForm">
+            <h3 style="margin-top:0; color:#fff;">Acciones</h3>
+            <button onclick="openModal()" class="btn-create">✍️ ESCRIBIR NUEVO</button>
+        </div>
+    </div>
+
+    <!-- Creation Modal -->
+    <div id="createModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; justify-content:center; align-items:center;">
+        <div style="background:#1f1f2e; padding:30px; border-radius:10px; width:500px; border:1px solid #d633ff; box-shadow:0 0 30px rgba(214, 51, 255, 0.3);">
+            <h2 style="margin-top:0; color:#d633ff;">Nueva Narrativa</h2>
+            <form method="POST" action="{% url 'crear_narrativa' world.id 'placeholder' %}" id="createForm" onsubmit="document.getElementById('btn-submit-create').disabled=true; document.getElementById('btn-submit-create').innerText='⏳ Creando...';">
                 {% csrf_token %}
-                <label style="font-size:0.9em; color:#aaa;">Tipo de Documento:</label>
-                <select id="typeSelector" onchange="updateAction()">
+                
+                <label style="color:#aaa; font-size:0.9em;">Título:</label>
+                <input type="text" name="title" placeholder="Ej: La Caída del Rey..." required style="margin-bottom:15px;">
+                
+                <label style="color:#aaa; font-size:0.9em;">Tipo:</label>
+                <select id="typeSelector" onchange="updateAction()" style="margin-bottom:15px;">
                     <option value="LORE">📜 Lore / Enciclopedia</option>
                     <option value="HISTORIA">📖 Historia / Trama</option>
                     <option value="LEYENDA">🕯️ Leyenda</option>
                     <option value="REGLA">⚖️ Regla / Sistema</option>
                 </select>
-                <button type="submit" class="btn-create">✍️ CREAR</button>
+
+                <label style="color:#aaa; font-size:0.9em;">Contenido Inicial (Borrador):</label>
+                <textarea name="content" rows="5" style="width:100%; background:#0a0a12; border:1px solid #444; color:#ccc; padding:10px; box-sizing:border-box; resize:none; margin-bottom:20px;" placeholder="Escribe aquí tu primera idea..."></textarea>
+
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" onclick="closeModal()" style="background:#444; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">Cancelar</button>
+                    <button type="submit" id="btn-submit-create" style="background:#d633ff; color:white; border:none; padding:10px 20px; border-radius:5px; font-weight:bold; cursor:pointer;">🚀 CREAR & EDITAR</button>
+                </div>
             </form>
-            
-            <script>
-                function updateAction() {
-                    const type = document.getElementById('typeSelector').value;
-                    const form = document.getElementById('createForm');
-                    // Usamos world.id (J-ID)
-                    let base = "{% url 'crear_narrativa' world.id 'placeholder' %}";
-                    form.action = base.replace('placeholder', type);
-                }
-                updateAction(); // Init
-            </script>
         </div>
     </div>
+
+    <script>
+        function openModal() {
+            document.getElementById('createModal').style.display = 'flex';
+            updateAction();
+        }
+        function closeModal() {
+            document.getElementById('createModal').style.display = 'none';
+        }
+        function updateAction() {
+            const type = document.getElementById('typeSelector').value;
+            const form = document.getElementById('createForm');
+            let base = "{% url 'crear_narrativa' world.id 'placeholder' %}";
+            form.action = base.replace('placeholder', type);
+        }
+    </script>
 </body>
 </html>

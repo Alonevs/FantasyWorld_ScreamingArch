@@ -16,3 +16,4 @@ nanoid==2.0.0           # Generador de IDs públicos (NanoID)
 # --- FRONTEND ---
 django-tailwind==3.8.0  # Integración con Tailwind CSS
 django-browser-reload==1.12.1 # Recarga automática del navegador
+django-debug-toolbar==4.3.0 # Debug Toolbar

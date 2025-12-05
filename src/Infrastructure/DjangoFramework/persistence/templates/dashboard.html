@@ -61,8 +61,8 @@
             <div id="floating-bar" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900/95 backdrop-blur-md border border-gray-700 px-6 py-3 rounded-full shadow-2xl z-40 flex items-center gap-4 transition-transform duration-300 translate-y-32">
                 <span class="text-white font-bold text-sm"><span id="selected-count">0</span> seleccionados</span>
                 
-                <button type="submit" formaction="{% url 'aprobar_imagenes_masivo' %}" class="bg-green-600 hover:bg-green-500 text-white font-bold px-4 py-1.5 rounded-full text-sm transition shadow-lg flex items-center gap-2">
-                    ✅ APROBAR IMÁGENES
+                <button type="submit" formaction="{% url 'aprobar_propuestas_masivo' %}" class="bg-green-600 hover:bg-green-500 text-white font-bold px-4 py-1.5 rounded-full text-sm transition shadow-lg flex items-center gap-2">
+                    ✅ APROBAR SELECCIONADOS
                 </button>
                 
                 <button type="submit" formaction="{% url 'borrar_propuestas_masivo' %}" class="bg-red-600 hover:bg-red-500 text-white font-bold px-4 py-1.5 rounded-full text-sm transition shadow-lg flex items-center gap-2" onclick="return confirm('¿Estás seguro de borrar los elementos seleccionados? Esta acción es irreversible.')">
@@ -85,9 +85,31 @@
                     </div>
 
                     <div class="h-48 overflow-hidden bg-black relative">
-                        <img src="{{ img.image.url }}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition">
+                        {% if img.image %}
+                            <!-- ADDITION PROPOSAL -->
+                            <img src="{{ img.image.url }}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition">
+                        {% elif img.action == 'DELETE' %}
+                            <!-- DELETION PROPOSAL (Construct URL to existing file) -->
+                            <div class="relative w-full h-full">
+                                <img src="/static/persistence/img/{{ img.world.id }}/{{ img.target_filename }}" class="w-full h-full object-cover opacity-50 grayscale group-hover:grayscale-0 transition">
+                                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                    <span class="text-6xl drop-shadow-lg">🗑️</span>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="w-full h-full flex items-center justify-center bg-red-900/20 text-red-500 font-bold text-4xl">
+                                ?
+                            </div>
+                        {% endif %}
+                        
                         <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                            <span class="text-xs text-white font-bold">{{ img.title }}</span>
+                            <span class="text-xs text-white font-bold">
+                                {% if img.action == 'DELETE' %}
+                                    🗑️ BORRAR: {{ img.target_filename }}
+                                {% else %}
+                                    {{ img.title }}
+                                {% endif %}
+                            </span>
                         </div>
                     </div>
                     <div class="p-4">

@@ -5,27 +5,29 @@ from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaos
 from src.WorldManagement.Caos.Application.update_narrative import UpdateNarrativeUseCase
 from src.WorldManagement.Caos.Application.delete_narrative import DeleteNarrativeUseCase
 from src.WorldManagement.Caos.Application.create_narrative import CreateNarrativeUseCase
+from src.WorldManagement.Caos.Application.propose_narrative_change import ProposeNarrativeChangeUseCase
+from src.WorldManagement.Caos.Application.common import resolve_world_id
+from src.WorldManagement.Caos.Application.get_narrative_details import GetNarrativeDetailsUseCase
+from src.WorldManagement.Caos.Application.get_world_narratives import GetWorldNarrativesUseCase
 
 def resolve_jid(identifier):
-    try:
-        return CaosWorldORM.objects.get(public_id=identifier)
-    except CaosWorldORM.DoesNotExist:
-        pass 
-    try:
-        return CaosWorldORM.objects.get(id=identifier)
-    except CaosWorldORM.DoesNotExist:
-        return None
+    repo = DjangoCaosRepository()
+    w = resolve_world_id(repo, identifier)
+    if w:
+        try: return CaosWorldORM.objects.get(id=w.id.value)
+        except: return None
+    return None
 
 def ver_narrativa_mundo(request, jid):
     try: 
-        w = resolve_jid(jid)
-        if not w: 
+        repo = DjangoCaosRepository()
+        context = GetWorldNarrativesUseCase(repo).execute(jid, request.user)
+        
+        if not context: 
             print(f"❌ Mundo no encontrado para JID: {jid}")
             messages.error(request, f"Mundo no encontrado: {jid}")
             return redirect('home')
         
-        docs = w.narrativas.exclude(tipo='CAPITULO')
-        context = {'world': w, 'lores': docs.filter(tipo='LORE'), 'historias': docs.filter(tipo='HISTORIA'), 'eventos': docs.filter(tipo='EVENTO'), 'leyendas': docs.filter(tipo='LEYENDA'), 'reglas': docs.filter(tipo='REGLA'), 'bestiario': docs.filter(tipo='BESTIARIO')}
         return render(request, 'indice_narrativa.html', context)
     except Exception as e: 
         print(f"❌ Error en ver_narrativa_mundo: {e}")
@@ -34,24 +36,18 @@ def ver_narrativa_mundo(request, jid):
 
 def leer_narrativa(request, nid):
     try:
-        # Intentar buscar por public_id primero si parece un NanoID (10-12 chars)
-        if len(nid) <= 12 and ('-' in nid or '_' in nid):
-             try:
-                 narr = CaosNarrativeORM.objects.get(public_id=nid)
-             except CaosNarrativeORM.DoesNotExist:
-                 narr = CaosNarrativeORM.objects.get(nid=nid)
-        else:
-             narr = CaosNarrativeORM.objects.get(nid=nid)
+        repo = DjangoCaosRepository()
+        context = GetNarrativeDetailsUseCase(repo).execute(nid, request.user)
+        
+        if not context:
+            messages.error(request, f"No se encontró la narrativa: {nid}")
+            return redirect('home')
+
+        return render(request, 'visor_narrativa.html', context)
     except Exception as e:
         print(f"❌ Error al leer narrativa '{nid}': {e}")
-        messages.error(request, f"No se encontró la narrativa: {nid}")
+        messages.error(request, f"Error interno al leer narrativa: {nid}")
         return redirect('home')
-    
-    todas = CaosWorldORM.objects.all().order_by('id')
-    hijos = CaosNarrativeORM.objects.filter(nid__startswith=narr.nid).exclude(nid=narr.nid).order_by('nid')
-    return render(request, 'visor_narrativa.html', {'narr': narr, 'todas_entidades': todas, 'capitulos': hijos})
-
-from src.WorldManagement.Caos.Application.propose_narrative_change import ProposeNarrativeChangeUseCase
 
 def editar_narrativa(request, nid):
     if request.method == 'POST':
@@ -74,7 +70,6 @@ def editar_narrativa(request, nid):
                 return redirect('dashboard')
             else:
                 # Edición directa (Legacy / Admin bypass si se quisiera)
-                # Por ahora mantenemos esto si no se envía reason, pero el UI forzará reason
                 UpdateNarrativeUseCase().execute(
                     nid=n_obj.nid,
                     titulo=request.POST.get('titulo'),
@@ -96,7 +91,19 @@ def borrar_narrativa(request, nid):
         try: n = CaosNarrativeORM.objects.get(public_id=nid); real_nid = n.nid; w_pid = n.world.public_id
         except: n = CaosNarrativeORM.objects.get(nid=nid); real_nid = nid; w_pid = n.world.id
         
-        DeleteNarrativeUseCase().execute(real_nid)
+        # Create Deletion Proposal (Version)
+        CaosNarrativeVersionORM.objects.create(
+            narrative=n,
+            proposed_title=f"BORRAR: {n.titulo}",
+            proposed_content="Solicitud de borrado.",
+            version_number=n.current_version_number + 1,
+            status='PENDING',
+            action='DELETE',
+            change_log="Solicitud de eliminación",
+            author=request.user if request.user.is_authenticated else None
+        )
+        
+        messages.info(request, "🗑️ Solicitud de borrado enviada al Dashboard.")
         return redirect('ver_narrativa_mundo', jid=w_pid)
     except Exception as e:
         print(f"Error: {e}")
@@ -140,10 +147,24 @@ def crear_nueva_narrativa(request, jid, tipo_codigo):
         w = resolve_jid(jid)
         real_jid = w.id if w else jid
         user = request.user if request.user.is_authenticated else None
-        new_nid = CreateNarrativeUseCase(repo).execute(world_id=real_jid, tipo_codigo=tipo_codigo, user=user)
         
-        messages.success(request, "✨ Nueva narrativa creada. Se ha generado una propuesta v1 en el Dashboard.")
-        return redirect('dashboard')
+        # Extract POST data
+        title = request.POST.get('title')
+        content = request.POST.get('content')
+        
+        new_nid = CreateNarrativeUseCase(repo).execute(
+            world_id=real_jid, 
+            tipo_codigo=tipo_codigo, 
+            user=user,
+            title=title,
+            content=content
+        )
+        
+        messages.success(request, "✨ Narrativa creada. Editando borrador...")
+        # Redirect to read view with edit mode enabled
+        try: n = CaosNarrativeORM.objects.get(nid=new_nid); redir_id = n.public_id if n.public_id else new_nid
+        except: redir_id = new_nid
+        return redirect(f"/narrativa/{redir_id}/?edit=true")
     except Exception as e: 
         print(f"Error creating narrative: {e}")
         return redirect('ver_mundo', public_id=jid)
@@ -154,8 +175,24 @@ def crear_sub_narrativa(request, parent_nid, tipo_codigo):
         try: p = CaosNarrativeORM.objects.get(public_id=parent_nid); real_parent = p.nid
         except: real_parent = parent_nid
         user = request.user if request.user.is_authenticated else None
-        new_nid = CreateNarrativeUseCase(repo).execute(world_id=None, tipo_codigo=tipo_codigo, parent_nid=real_parent, user=user)
+        
+        # Extract POST data
+        title = request.POST.get('title')
+        content = request.POST.get('content')
+
+        new_nid = CreateNarrativeUseCase(repo).execute(
+            world_id=None, 
+            tipo_codigo=tipo_codigo, 
+            parent_nid=real_parent, 
+            user=user,
+            title=title,
+            content=content
+        )
+        
+        messages.success(request, "✨ Sub-capítulo creado. Editando borrador...")
         try: new_n = CaosNarrativeORM.objects.get(nid=new_nid); redir_id = new_n.public_id if new_n.public_id else new_nid
         except: redir_id = new_nid
-        return redirect('leer_narrativa', nid=redir_id)
-    except: return redirect('leer_narrativa', nid=parent_nid)
+        return redirect(f"/narrativa/{redir_id}/?edit=true")
+    except Exception as e: 
+        print(f"Error creating sub-narrative: {e}")
+        return redirect('leer_narrativa', nid=parent_nid)

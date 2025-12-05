@@ -18,6 +18,11 @@ from src.WorldManagement.Caos.Application.generate_map import GenerateWorldMapUs
 from src.WorldManagement.Caos.Application.generate_creature_usecase import GenerateCreatureUseCase
 from src.WorldManagement.Caos.Application.initialize_hemispheres import InitializeHemispheresUseCase
 from src.WorldManagement.Caos.Application.restore_version import RestoreVersionUseCase
+from src.WorldManagement.Caos.Application.common import resolve_world_id
+from src.WorldManagement.Caos.Application.toggle_visibility import ToggleWorldVisibilityUseCase
+from src.WorldManagement.Caos.Application.toggle_lock import ToggleWorldLockUseCase
+from src.WorldManagement.Caos.Application.get_world_tree import GetWorldTreeUseCase
+from src.WorldManagement.Caos.Application.get_world_details import GetWorldDetailsUseCase
 from src.FantasyWorld.AI_Generation.Infrastructure.sd_service import StableDiffusionService
 from src.FantasyWorld.AI_Generation.Infrastructure.llama_service import Llama3Service
 from src.Infrastructure.DjangoFramework.persistence.utils import generate_breadcrumbs, get_world_images
@@ -37,19 +42,15 @@ def get_current_user(request):
 def resolve_jid(identifier):
     """
     RESOLUCIÓN ROBUSTA DE IDs:
-    No adivinamos por el formato. Probamos ambas llaves.
+    Delegamos en la utilidad compartida de Application Layer.
     """
-    # 1. Intentar como Public ID (NanoID) - Prioridad Alta (URLs externas)
-    try:
-        return CaosWorldORM.objects.get(public_id=identifier)
-    except CaosWorldORM.DoesNotExist:
-        pass 
-
-    # 2. Intentar como J-ID (Interno) - Prioridad Baja (URLs internas/admin)
-    try:
-        return CaosWorldORM.objects.get(id=identifier)
-    except CaosWorldORM.DoesNotExist:
-        return None
+    repo = DjangoCaosRepository()
+    w = resolve_world_id(repo, identifier)
+    if w:
+        # Return ORM object for compatibility with existing views that expect it
+        try: return CaosWorldORM.objects.get(id=w.id.value)
+        except: return None
+    return None
 
 def home(request):
     if request.method == 'POST':
@@ -74,58 +75,36 @@ def home(request):
 
 def ver_mundo(request, public_id):
     repo = DjangoCaosRepository()
-    w = resolve_jid(public_id)
-    if not w: 
-        try: w = CaosWorldORM.objects.get(id=public_id)
-        except: return render(request, '404.html', {"jid": public_id})
     
-    jid = w.id
-    safe_pid = w.public_id if w.public_id else jid
-
+    # 1. Handle POST (Creation)
     if request.method == 'POST':
-        if 'edit_mode' in request.POST: return editar_mundo(request, jid)
-        child_name = request.POST.get('child_name')
-        if child_name:
-            if request.POST.get('child_type') == 'ENTITY' and request.POST.get('use_ai') == 'on':
-                try: GenerateCreatureUseCase(repo, Llama3Service(), StableDiffusionService()).execute(jid)
-                except: pass
-            else:
-                nid = CreateChildWorldUseCase(repo).execute(jid, child_name, request.POST.get('child_desc'))
-                if request.POST.get('use_ai') == 'on':
-                    try: GenerateWorldLoreUseCase(repo, Llama3Service()).execute(nid)
-                    except: pass
-                    try: GenerateWorldMapUseCase(repo, StableDiffusionService()).execute_single(nid)
-                    except: pass
-                
-                messages.success(request, f"✨ '{child_name}' creado. Se ha generado una propuesta v1 en el Dashboard.")
-                return redirect('dashboard')
-            return redirect('ver_mundo', public_id=safe_pid)
+        # Resolve ID for parent (needed for creation)
+        w = resolve_jid(public_id)
+        if not w: return redirect('home') # Should handle better
+        jid = w.id
+        safe_pid = w.public_id if w.public_id else jid
 
-    props = w.versiones.filter(status='PENDING').order_by('-created_at')
-    historial = w.versiones.exclude(status='PENDING').order_by('-version_number')[:10]
-    
-    len_h = len(jid)+2 if len(jid)<32 else len(jid)+4
-    raw_hijos = CaosWorldORM.objects.filter(id__startswith=jid, id__regex=r'^.{'+str(len_h)+r'}$').order_by('id')
-    hijos = []
-    for h in raw_hijos:
-        h_pid = h.public_id if h.public_id else h.id
-        hijos.append({'id': h.id, 'public_id': h.id, 'name': h.name, 'short': h.id[len(jid):], 'img':(get_world_images(h.id)[0]['url'] if get_world_images(h.id) else None)})
-    
-    imgs = get_world_images(jid)
-    meta_str = json.dumps(w.metadata, indent=2) if w.metadata else "{}"
-    last_live = w.versiones.filter(status='LIVE').order_by('-created_at').first()
-    date_live = last_live.created_at if last_live else w.created_at
+        c_name = request.POST.get('child_name')
+        if c_name:
+            c_desc = request.POST.get('child_desc', "")
+            reason = request.POST.get('reason', "Creación vía Wizard")
+            use_ai = request.POST.get('use_ai_gen') == 'on'
+            
+            uc = CreateChildWorldUseCase(repo)
+            new_id = uc.execute(parent_id=jid, name=c_name, description=c_desc, reason=reason, generate_image=use_ai)
+            
+            try:
+                new_w = CaosWorldORM.objects.get(id=new_id)
+                return redirect('ver_mundo', public_id=new_w.public_id if new_w.public_id else new_id)
+            except:
+                return redirect('ver_mundo', public_id=safe_pid)
 
-    context = {
-        'name': w.name, 'description': w.description, 'jid': jid, 'public_id': safe_pid,
-        'status': w.status, 'version_live': w.current_version_number,
-        'author_live': getattr(w, 'current_author_name', 'Sistema'),
-        'created_at': w.created_at, 'updated_at': date_live,
-        'visible': w.visible_publico, 'is_locked': w.is_locked, 'code_entity': eclai_core.encode_eclai126(jid),
-        'nid_lore': w.id_lore, 'metadata': meta_str, 
-        'metadata_obj': w.metadata, 'imagenes': imgs, 'hijos': hijos, 
-        'breadcrumbs': generate_breadcrumbs(jid), 'propuestas': props, 'historial': historial
-    }
+    # 2. Handle GET (Display) via Use Case
+    context = GetWorldDetailsUseCase(repo).execute(public_id, request.user)
+    
+    if not context:
+        return render(request, '404.html', {"jid": public_id})
+
     return render(request, 'ficha_mundo.html', context)
 
 def editar_mundo(request, jid):
@@ -162,7 +141,13 @@ def borrar_mundo(request, jid):
     except: return redirect('home')
 
 def toggle_visibilidad(request, jid):
-    try: w=resolve_jid(jid); w.visible_publico=not w.visible_publico; w.save(); return redirect('ver_mundo', public_id=w.public_id)
+    try: 
+        repo = DjangoCaosRepository()
+        ToggleWorldVisibilityUseCase(repo).execute(jid)
+        # Redirect logic needs to find the public_id again or use the one returned
+        w = resolve_world_id(repo, jid)
+        w_orm = CaosWorldORM.objects.get(id=w.id.value)
+        return redirect('ver_mundo', public_id=w_orm.public_id if w_orm.public_id else w_orm.id)
     except: return redirect('home')
 
 def restaurar_version(request, version_id):
@@ -213,41 +198,22 @@ def escanear_planeta(request, jid): return redirect('ver_mundo', public_id=jid)
 
 def mapa_arbol(request, public_id):
     try:
-        root = resolve_jid(public_id)
-        if not root: return redirect('home')
-        nodes = CaosWorldORM.objects.filter(id__startswith=root.id).order_by('id')
-        tree_data = []
-        base_len = len(root.id)
-        for node in nodes:
-            depth = (len(node.id) - base_len) // 2
-            pid = node.public_id if node.public_id else node.id
-            tree_data.append({'name': node.name, 'public_id': pid, 'id_display': node.id, 'indent_px': depth * 30, 'is_root': node.id == root.id, 'status': node.status})
-        return render(request, 'mapa_arbol.html', {'root_name': root.name, 'tree': tree_data})
+        repo = DjangoCaosRepository()
+        result = GetWorldTreeUseCase(repo).execute(public_id)
+        if not result: return redirect('home')
+        return render(request, 'mapa_arbol.html', result)
     except: return redirect('ver_mundo', public_id=public_id)
 
 def toggle_lock(request, jid):
-    """
-    Función para bloquear/desbloquear un mundo (Solo Superadmin).
-    """
-    # 1. Seguridad: Si no eres el jefe, te echa
     if not request.user.is_superuser:
         return redirect('ver_mundo', public_id=jid)
-
-    # 2. Buscar el mundo
-    w = resolve_jid(jid)
-    if not w:
-        return redirect('home')
-
-    # 3. Cambiar el estado
-    if w.status == 'LOCKED':
-        w.status = 'DRAFT' # Desbloqueamos a DRAFT por defecto
-        messages.success(request, "🔓 Mundo desbloqueado.")
-    else:
-        w.status = 'LOCKED'
-        messages.warning(request, "🔒 Mundo BLOQUEADO.")
     
-    w.save()
-
-    # 4. Volver a la ficha
-    pid = w.public_id if w.public_id else w.id
-    return redirect('ver_mundo', public_id=pid)
+    try:
+        repo = DjangoCaosRepository()
+        ToggleWorldLockUseCase(repo).execute(jid)
+        w = resolve_world_id(repo, jid)
+        w_orm = CaosWorldORM.objects.get(id=w.id.value)
+        if w_orm.is_locked: messages.warning(request, "🔒 Mundo BLOQUEADO.")
+        else: messages.success(request, "🔓 Mundo desbloqueado.")
+        return redirect('ver_mundo', public_id=w_orm.public_id if w_orm.public_id else w_orm.id)
+    except: return redirect('home')

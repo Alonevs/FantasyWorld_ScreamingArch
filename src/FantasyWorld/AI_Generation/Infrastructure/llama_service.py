@@ -31,8 +31,18 @@ class Llama3Service(LoreGenerator):
             return {}
 
     def generate_description(self, prompt: str) -> str:
-        full_prompt = f"### Instruction:\nDescribe visualmente en español (max 3 frases): \"{prompt}\"\n### Response:\n"
-        return self._call_api(full_prompt, max_tokens=150, temperature=0.6)
+        full_prompt = f"### Instruction:\nDescribe visualmente en español (max 3 frases) el siguiente lugar o concepto: \"{prompt}\".\nNO uses Markdown. NO incluyas imágenes ni enlaces. Solo texto plano.\n### Response:\n"
+        response = self._call_api(full_prompt, max_tokens=150, temperature=0.6)
+        
+        # Sanitize output
+        # Remove markdown images ![...]
+        response = re.sub(r'!\[.*?\]\(.*?\)', '', response)
+        # Remove markdown links [text](url) - keep text? No, usually garbage.
+        response = re.sub(r'\[.*?\]\(.*?\)', '', response)
+        # Remove raw URLs
+        response = re.sub(r'http\S+', '', response)
+        
+        return response.strip()
 
     def generate_sd_prompt(self, name: str, description: str) -> str:
         # --- TRADUCTOR VISUAL (ESP -> ING) ---

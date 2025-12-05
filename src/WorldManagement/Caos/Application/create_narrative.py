@@ -5,13 +5,16 @@ class CreateNarrativeUseCase:
     def __init__(self, repository: CaosRepository):
         self.repository = repository
 
-    def execute(self, world_id: str, tipo_codigo: str, parent_nid: str = None, user = None) -> str:
+    def execute(self, world_id: str, tipo_codigo: str, parent_nid: str = None, user = None, title: str = None, content: str = None) -> str:
         """
         Crea una nueva narrativa o sub-narrativa (capítulo).
         Retorna el NID de la nueva narrativa.
         """
         map_tipos = {'L':'LORE', 'H':'HISTORIA', 'C':'CAPITULO', 'E':'EVENTO', 'M':'LEYENDA', 'R':'REGLA', 'B':'BESTIARIO'}
         
+        final_title = title if title else f"Nuevo Documento"
+        final_content = content if content else "..."
+
         if parent_nid:
             # Es una sub-narrativa (Capítulo)
             padre = CaosNarrativeORM.objects.get(nid=parent_nid)
@@ -19,15 +22,29 @@ class CreateNarrativeUseCase:
             new_nid = self.repository.get_next_narrative_id(prefix)
             
             tipo_completo = 'CAPITULO'
-            # TODO: Mover creación de ORM al repositorio en el futuro
+            # Create with PLACEHOLDER content and version 0
             CaosNarrativeORM.objects.create(
                 nid=new_nid, 
                 world=padre.world, 
-                titulo=f"Nuevo Capítulo ({new_nid[-2:]})", 
-                contenido="...", 
+                titulo=f"Borrador: {final_title}", 
+                contenido="Contenido pendiente de aprobación...", 
                 narrador=padre.narrador, 
                 tipo=tipo_completo,
-                created_by=user
+                created_by=user,
+                current_version_number=0 # Indicates Draft/Pending
+            )
+            
+            # Create Proposal V1 with REAL content
+            from src.Infrastructure.DjangoFramework.persistence.models import CaosNarrativeVersionORM
+            CaosNarrativeVersionORM.objects.create(
+                narrative_id=new_nid,
+                proposed_title=final_title,
+                proposed_content=final_content,
+                version_number=1,
+                status='PENDING',
+                action='ADD',
+                change_log="Creación inicial",
+                author=user
             )
             return new_nid
         else:
@@ -37,24 +54,28 @@ class CreateNarrativeUseCase:
             new_nid = self.repository.get_next_narrative_id(prefix)
             
             tipo_completo = map_tipos.get(tipo_codigo, 'LORE')
+            
+            # Create with PLACEHOLDER content and version 0
             narr = CaosNarrativeORM.objects.create(
                 nid=new_nid, 
                 world=world, 
-                titulo=f"Nuevo {tipo_completo} ({new_nid[-2:]})", 
-                contenido="...", 
+                titulo=f"Borrador: {final_title}", 
+                contenido="Contenido pendiente de aprobación...", 
                 narrador="???", 
                 tipo=tipo_completo,
-                created_by=user
+                created_by=user,
+                current_version_number=0 # Indicates Draft/Pending
             )
             
-            # Crear propuesta de versión inicial (v1)
+            # Create Proposal V1 with REAL content
             from src.Infrastructure.DjangoFramework.persistence.models import CaosNarrativeVersionORM
             CaosNarrativeVersionORM.objects.create(
                 narrative=narr,
-                proposed_title=narr.titulo,
-                proposed_content=narr.contenido,
+                proposed_title=final_title,
+                proposed_content=final_content,
                 version_number=1,
                 status='PENDING',
+                action='ADD',
                 change_log="Creación inicial",
                 author=user
             )

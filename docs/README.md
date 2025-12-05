@@ -36,5 +36,10 @@ python src/Infrastructure/DjangoFramework/manage.py test src.Infrastructure.Djan
 -   **Imports**: Sort imports using `isort` or similar.
 -   **Architecture**: STRICTLY follow the Screaming Architecture. Do not import Django models directly into the Domain layer.
 
+## 📚 Documentation Index
+-   [Architecture Guide](ARCHITECTURE.md): Screaming Architecture principles and directory structure.
+-   [AI Integration (ECLAI)](ECLAI.md): Details on the AI module for text and image generation.
+-   [Narrative Workflow](NARRATIVE_WORKFLOW.md): Rules for creation, approval, and visibility of narratives.
+
 ## 🚀 Deployment
 (Add deployment instructions here, e.g., Docker, Gunicorn, Nginx)
