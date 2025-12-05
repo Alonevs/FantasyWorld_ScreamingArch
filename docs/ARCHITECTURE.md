@@ -33,4 +33,5 @@ This directory contains the **Infrastructure** layer specific to Django.
 ## 🧩 Key Patterns
 -   **Repository Pattern**: Decouples the domain from the database. We use `CaosRepository` (interface) and `DjangoCaosRepository` (implementation).
 -   **Versioning**: We use a "Draft/Live" system. Changes are saved as `CaosVersionORM` (proposals) and must be approved to become "Live" data.
+-   **Strict Approval Mode**: All modifications (Content, Metadata, Visibility) generate proposals (`CaosVersionORM`). Direct writes to Live entities are blocked in the Application layer.
 -   **NanoIDs**: We are transitioning to NanoIDs for public-facing URLs to avoid exposing database auto-increment IDs.

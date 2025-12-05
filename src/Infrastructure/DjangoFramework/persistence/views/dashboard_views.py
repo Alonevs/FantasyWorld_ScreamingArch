@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.conf import settings
 import os
-from src.Infrastructure.DjangoFramework.persistence.models import CaosVersionORM, CaosEventLog, CaosNarrativeVersionORM, CaosImageProposalORM
+from src.Infrastructure.DjangoFramework.persistence.models import CaosVersionORM, CaosEventLog, CaosNarrativeVersionORM, CaosImageProposalORM, CaosWorldORM, CaosNarrativeORM
 from src.WorldManagement.Caos.Application.approve_version import ApproveVersionUseCase
 from src.WorldManagement.Caos.Application.reject_version import RejectVersionUseCase
 from src.WorldManagement.Caos.Application.publish_to_live_version import PublishToLiveVersionUseCase
@@ -35,12 +35,24 @@ def dashboard(request):
     n_rejected = list(CaosNarrativeVersionORM.objects.filter(status='REJECTED').order_by('-created_at')[:10])
     n_archived = list(CaosNarrativeVersionORM.objects.filter(status='ARCHIVED').order_by('-created_at')[:20])
 
+    # 2.5 Pre-fetch Context Data for Performance
+    all_worlds = {w.id: w.name for w in CaosWorldORM.objects.all()}
+    # Dictionary for narratives might be heavy, fetching on demand or optimizing later
+    
     # 3. Tag items
     for x in w_pending + w_approved + w_rejected + w_archived:
         x.type = 'WORLD'
         x.type_label = '🌍 MUNDO'
         x.target_name = x.proposed_name
         x.target_desc = x.proposed_description
+        
+        # Determine World Parent Context
+        wid = x.world.id
+        x.parent_context = "Raíz (Universo)"
+        if len(wid) > 2:
+            pid = wid[:-2]
+            pname = all_worlds.get(pid, "Desconocido")
+            x.parent_context = f"Orbitando: {pname}"
         
         if x.cambios.get('action') == 'SET_COVER':
             x.target_desc = f"📸 Cambio de portada a: {x.cambios.get('cover_image')}"
@@ -56,6 +68,21 @@ def dashboard(request):
         x.target_name = x.proposed_title
         x.target_desc = x.proposed_content
         x.target_link = x.narrative.nid
+        
+        # Determine Narrative Context
+        wname = x.narrative.world.name
+        x.parent_context = f"Mundo: {wname}"
+        
+        # Try to find parent narrative title if it's a sub-chapter/node
+        nid = x.narrative.nid
+        if '.' in nid:
+            try:
+                parent_nid = nid.rsplit('.', 1)[0]
+                # Optimizable: fetch only needed
+                parent_n = CaosNarrativeORM.objects.filter(nid=parent_nid).first()
+                if parent_n:
+                    x.parent_context = f"Mundo: {wname} > {parent_n.titulo}"
+            except: pass
 
     # 4. Merge and Sort
     pending = sorted(w_pending + n_pending, key=lambda x: x.created_at, reverse=True)

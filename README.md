@@ -1,7 +1,10 @@
-# FantasyWorld (Screaming Architecture + Django)
+# FantasyWorld (Screaming Architecture + Django) - v5.0 (Base)
 
 ## 📖 Introduction
 **FantasyWorld** is a comprehensive web application for creating, managing, and simulating fantasy worlds. It leverages **Django** for its robust infrastructure and follows a **Screaming Architecture** pattern to keep the core domain logic pure and decoupled.
+
+**Current Version:** v5.0 (Base) - *The "First Real Version"*
+**Status:** Stable / Strict Approval Mode Enforced
 
 ## 🚀 Quick Start
 
@@ -48,13 +51,15 @@ Detailed documentation is available in the `docs/` directory:
 
 -   [**Architecture**](docs/ARCHITECTURE.md): Explanation of the Screaming Architecture, DDD patterns, and directory structure.
 -   [**AI Integration (ECLAI)**](docs/ECLAI.md): Details on the AI image generation system and proposal flow.
+-   [**Narrative Workflow**](docs/NARRATIVE_WORKFLOW.md): How to create, edit, and approve narratives.
 -   [**Project Context**](PROJECT_CONTEXT.md): High-level overview of the project's current state and features.
 
-## 🛠️ Key Features
--   **World Management**: Create and visualize worlds (Tree Map, Hemispheres).
--   **Narrative Engine**: Write and organize lore, history, and chapters.
--   **Versioning System**: Robust proposal and approval workflow. All changes (Create, Edit, Delete) must be approved in the Dashboard before going live.
--   **AI Power**: Generate images for your world using integrated AI models.
+## 🛠️ Key Features v5.0
+-   **Strict Approval Workflow**: All actions (Edit World, Edit Narrative, Change Visibility, Set Cover) generate a **Proposal**. Direct edits are blocked.
+-   **Unified Dashboard**: Manage all pending proposals (Worlds, Narratives, Images) in one central hub (`/control/`).
+-   **Contextual Navigation**: Dashboard provides parent context (e.g. "World > Chapter") for easy review.
+-   **Screaming Architecture**: Domain logic is isolated from Django, ensuring long-term maintainability.
+-   **Recursive Narratives**: Infinite nesting of stories and lore (Fractal Hierarchy).
 
 ## 🤝 Contributing
 Please read the [Architecture Guide](docs/ARCHITECTURE.md) before contributing to understand the separation of concerns between the Domain and Infrastructure layers.

@@ -59,7 +59,8 @@ def home(request):
         messages.success(request, "✨ Mundo propuesto. Ve al Dashboard para aprobarlo.")
         return redirect('dashboard')
     
-    ms = CaosWorldORM.objects.filter(id__regex=r'^..$').exclude(status='DRAFT').order_by('id')
+    # Show ALL live worlds (User requested "see the rest")
+    ms = CaosWorldORM.objects.exclude(status='DRAFT').order_by('id')
     l = []
     for m in ms:
         imgs = get_world_images(m.id)

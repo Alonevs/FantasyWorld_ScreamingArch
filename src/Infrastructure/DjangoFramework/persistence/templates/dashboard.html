@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ECLAI v5.0 | Dashboard Unificado</title>
+    <title>ECLAI v5.0 (Base) | Dashboard Unificado</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -161,6 +161,12 @@
                     <div class="flex-grow min-w-0">
                         <div class="flex items-center gap-3 mb-1 flex-wrap">
                             <span class="bg-yellow-900/30 text-yellow-500 text-xs font-bold px-2 py-1 rounded border border-yellow-800">v{{ item.version_number }}</span>
+                            <!-- PARENT CONTEXT -->
+                            {% if item.parent_context %}
+                                <span class="bg-indigo-900/30 text-indigo-300 text-xs font-mono px-2 py-1 rounded border border-indigo-800 flex items-center gap-1">
+                                    📍 {{ item.parent_context }}
+                                </span>
+                            {% endif %}
                             <h2 class="text-xl font-bold text-white break-all">{{ item.target_name }}</h2>
                             
                             {% if item.type == 'WORLD' %}
@@ -231,6 +237,12 @@
                     <div class="flex-grow min-w-0">
                         <div class="flex items-center gap-3 mb-1 flex-wrap">
                             <span class="bg-green-900/30 text-green-500 text-xs font-bold px-2 py-1 rounded border border-green-800">v{{ item.version_number }}</span>
+                            <!-- PARENT CONTEXT -->
+                            {% if item.parent_context %}
+                                <span class="bg-indigo-900/30 text-indigo-300 text-xs font-mono px-2 py-1 rounded border border-indigo-800 flex items-center gap-1">
+                                    📍 {{ item.parent_context }}
+                                </span>
+                            {% endif %}
                             <h2 class="text-xl font-bold text-white break-all">{{ item.target_name }}</h2>
                             {% if item.type == 'WORLD' %}
                                 <span class="text-gray-500 text-sm">para <a href="{% url 'ver_mundo' item.target_link %}" class="text-accent hover:underline">{{ item.world.name }}</a></span>
