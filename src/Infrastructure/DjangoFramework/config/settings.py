@@ -78,10 +78,25 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+import environ
+
+env = environ.Env()
+# reading .env file from PROJECT ROOT (3 levels up from BASE_DIR)
+# BASE_DIR = .../src/Infrastructure/DjangoFramework
+# Root = .../FantasyWorld_ScreamingArch
+environ.Env.read_env(BASE_DIR.parent.parent.parent / '.env')
+
+# Database
+# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': env('DB_NAME'),
+        'USER': env('DB_USER'),
+        'PASSWORD': env('DB_PASSWORD'),
+        'HOST': env('DB_HOST', default='localhost'),
+        'PORT': env('DB_PORT', default='5432'),
     }
 }
 
