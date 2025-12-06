@@ -13,6 +13,7 @@ from src.WorldManagement.Caos.Application.approve_narrative_version import Appro
 from src.WorldManagement.Caos.Application.reject_narrative_version import RejectNarrativeVersionUseCase
 from src.WorldManagement.Caos.Application.publish_narrative_to_live import PublishNarrativeToLiveUseCase
 from src.WorldManagement.Caos.Application.restore_narrative_version import RestoreNarrativeVersionUseCase
+from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
 
 # ... imports remain same ...
 
@@ -248,7 +249,6 @@ def aprobar_propuestas_masivo(request):
 
             # 3. Approve Images
             if img_ids:
-                from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
                 repo = DjangoCaosRepository()
                 props = CaosImageProposalORM.objects.filter(id__in=img_ids)
                 for prop in props:
