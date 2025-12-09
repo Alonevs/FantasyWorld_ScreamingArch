@@ -73,22 +73,26 @@ class Llama3Service(LoreGenerator):
         Extracts open-ended metadata properties using Chat API (Llama 3 friendly).
         """
         system_instruction = (
-            "Eres un extractor de datos JSON. Analiza el texto.\n"
-            "Devuelve SOLO un objeto JSON con esta estructura exacta:\n"
+            "Eres un extractor de datos JSON especializado en mundos de fantasía.\n"
+            "TAREA: Analiza el TEXTO proporcionado y extrae propiedades clave.\n"
+            "REGLAS ESTRICTAS:\n"
+            "1. Devuelve SOLO un objeto JSON con esta estructura:\n"
             "{\n"
             "  \"properties\": [\n"
-            "    {\"key\": \"Fauna\", \"value\": \"Cerdos de Éter\"},\n"
-            "    {\"key\": \"Gravedad\", \"value\": \"Nula\"}\n"
+            "    {\"key\": \"NombrePropiedad\", \"value\": \"valor extraído del texto\"},\n"
+            "    {\"key\": \"OtraPropiedad\", \"value\": \"otro valor del texto\"}\n"
             "  ]\n"
             "}\n"
-            "Si no hay datos claros, devuelve { \"properties\": [] }.\n"
-            "NO escribas introducciones. NO uses Markdown."
+            "2. EXTRAE datos del TEXTO, NO inventes ni uses ejemplos.\n"
+            "3. Propiedades relevantes: Geografía, Clima, Habitantes, Física, Magia, Peligros, Recursos.\n"
+            "4. Si no hay datos claros, devuelve {\"properties\": []}.\n"
+            "5. NO escribas introducciones. NO uses Markdown. SOLO JSON válido."
         )
         
         # We reuse the Chat Completion method (generate_structure) 
         # which is much better for Llama 3 than the legacy completion endpoint.
         print(f"📡 [LlamaService] Analizando texto ({len(description)} chars) con Chat API...")
-        return self.generate_structure(system_instruction, f"TEXTO:\n{description}")
+        return self.generate_structure(system_instruction, f"TEXTO A ANALIZAR:\n{description}")
     
     def generate_description(self, prompt: str) -> str:
         full_prompt = f"### Instruction:\nDescribe visualmente en español (max 3 frases) el siguiente lugar o concepto: \"{prompt}\".\nNO uses Markdown. NO incluyas imágenes ni enlaces. Solo texto plano.\n### Response:\n"

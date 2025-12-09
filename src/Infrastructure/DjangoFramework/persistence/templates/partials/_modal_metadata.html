@@ -57,7 +57,7 @@
     </div>
 </div>
 
-{{ jid|json_script:"world-jid" }}
+{{ id_codificado|default:jid|json_script:"world-jid" }}
 <script id="metadata-props" type="application/json">
     [
     {% if metadata_obj.properties %}

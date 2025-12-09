@@ -1,6 +1,7 @@
 from django.conf import settings
 from src.Infrastructure.Utils.FileExtractor import FileExtractor
 from src.FantasyWorld.AI_Generation.Infrastructure.llama_service import Llama3Service
+from src.FantasyWorld.Domain.Services.ContextService import ContextBuilder
 from src.WorldManagement.Caos.Application.propose_narrative_change import ProposeNarrativeChangeUseCase
 from src.Infrastructure.DjangoFramework.persistence.models import CaosNarrativeORM
 
@@ -18,21 +19,30 @@ class NarrativeService:
         return FileExtractor.extract_text_from_file(uploaded_file)
 
     @staticmethod
-    def generate_magic_title(text: str) -> str:
+    def generate_magic_title(text: str, world_id: str = None) -> str:
         """
-        Generates an epic title using AI.
+        Genera un título mágico para un texto dado.
+        Ahora con CONCIENCIA SITUACIONAL de la jerarquía.
         """
-        if not text or len(text.strip()) < 50:
-             raise ValueError("El texto es demasiado corto para generar un título (min 50 chars).")
-        
-        system_prompt = (
-            "Eres un editor de novelas de fantasía experto. Lee el siguiente texto y genera un Título corto, épico y descriptivo (máximo 5-6 palabras). "
-            "Devuelve SOLO el título, sin comillas, ni preámbulos, ni explicaciones extra. "
-            "Ejemplo de salida: La Caída de los Dioses"
-        )
-        
+        if not text:
+             raise ValueError("El texto está vacío.")
+
+        # 1. Build Context if world_id provided
+        context_prompt = ""
+        if world_id:
+            context_prompt = ContextBuilder.build_hierarchy_context(world_id)
+
+        # 2. Call AI Service
         service = Llama3Service()
-        title = service.edit_text(system_prompt, text[:2000]) # Context window limit
+        
+        system_prompt = "Eres un Editor de Fantasía experto en dar títulos evocadores y poéticos."
+        if context_prompt:
+            system_prompt += f"\n{context_prompt}\nUSA el contexto anterior para dar coherencia al título."
+
+        prompt = f"Analiza el siguiente texto y genera UN SOLO título corto, evocador y sin comillas:\n\n{text[:3000]}"
+        
+        # We reuse 'edit_text' which calls chat completion
+        title = service.edit_text(system_prompt, prompt)
         
         if not title:
             raise Exception("La IA no devolvió respuesta.")

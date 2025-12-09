@@ -20,45 +20,46 @@ def analyze_metadata_api(request):
         
         if not world_id_raw:
             return JsonResponse({'success': False, 'error': 'Missing world_id'})
+        
+        # EXTRACCIÓN DEL MUNDO DESDE NID (si es narrativa)
+        # Formato NID: 0101L01, 01C03, etc. -> Extraer prefijo del mundo (0101, 01)
+        world_code = world_id_raw
+        if any(marker in world_id_raw for marker in ['L', 'C', 'H', 'E', 'R', 'B']):
+            # Es un NID, extraer el prefijo del mundo (antes del marcador)
+            for marker in ['L', 'C', 'H', 'E', 'R', 'B']:
+                if marker in world_id_raw:
+                    world_code = world_id_raw.split(marker)[0]
+                    break
 
-        # RESOLUCION DE MUNDO ROBUSTA (CASCADA)
+
+        # RESOLUCION DE MUNDO POR ID_CODIFICADO (Jerárquico)
         w_orm = None
         
-        # 1. Intentar por ID exacto (PK es String en CaosWorldORM)
-        if not w_orm:
+        # Buscar por id_codificado (0101, 01, etc.)
+        try:
+            w_orm = CaosWorldORM.objects.get(id_codificado=world_code)
+        except CaosWorldORM.DoesNotExist:
+            # Fallback: intentar por PK o public_id si no es código jerárquico
             try:
                 w_orm = CaosWorldORM.objects.get(id=world_id_raw)
-
             except CaosWorldORM.DoesNotExist:
-                pass
-        
-        # 2. Intentar por public_id (NanoID)
-        if not w_orm:
-            try:
-                w_orm = CaosWorldORM.objects.get(public_id=world_id_raw)
-
-            except (CaosWorldORM.DoesNotExist, Exception):
-                pass
-
-        # 3. Intentar por id_codificado (Campo Jerárquico, ej: "01")
-        if not w_orm:
-            try:
-                w_orm = CaosWorldORM.objects.get(id_codificado=world_id_raw)
-
-            except (CaosWorldORM.DoesNotExist, Exception):
-                pass
+                try:
+                    w_orm = CaosWorldORM.objects.get(public_id=world_id_raw)
+                except CaosWorldORM.DoesNotExist:
+                    pass
                 
         if not w_orm:
-
-            return JsonResponse({'success': False, 'error': f'World not found for {world_id_raw}'})
-
+            return JsonResponse({
+                'success': False, 
+                'error': f'❌ Mundo no encontrado para: {world_id_raw} (código extraído: {world_code})'
+            })
 
         
         # OBTENCION DE TEXTO (Cascada)
         texto_final = ""
         
-        # Buscar Narrativas (LORE o ROOT)
-        narrativas = CaosNarrativeORM.objects.filter(world_id=w_orm.id)
+        # Buscar Narrativas LORE específicamente para este mundo
+        narrativas = CaosNarrativeORM.objects.filter(world=w_orm)
         
         # Prioridad 1: Tipo LORE
         lore_real = narrativas.filter(tipo='LORE').order_by('-created_at').first()
@@ -72,11 +73,13 @@ def analyze_metadata_api(request):
             lore_real = narrativas.exclude(titulo__icontains="Nuevo Documento").order_by('-created_at').first()
 
         if lore_real and lore_real.contenido:
-
             texto_final = f"{lore_real.titulo}:\n{lore_real.contenido}"
         else:
-
-            texto_final = w_orm.description or ""
+            # NO HAY LORE - Retornar error claro
+            return JsonResponse({
+                'success': False,
+                'error': f'⚠️ No existe LORE para "{w_orm.name}". Crea primero una narrativa de tipo LORE en este mundo.'
+            })
             
         if not texto_final.strip():
             texto_final = f"Mundo: {w_orm.name}. No hay datos disponibles."
@@ -112,10 +115,17 @@ def edit_narrative_api(request):
         data = json.loads(request.body)
         text = data.get('text', '')
         mode = data.get('mode', 'fix')
+        world_id = data.get('world_id', None)  # NUEVO: Para contexto jerárquico
 
         # Length Validation (approx 6-7 pages max to avoid timeout/context overflow)
         if len(text.split()) > 4000:
             return JsonResponse({'success': False, 'error': 'Texto demasiado largo (Máx ~4000 palabras). Por favor, edita por partes.'})
+
+        # NUEVO: Build hierarchical context
+        from src.FantasyWorld.Domain.Services.ContextService import ContextBuilder
+        context_prompt = ""
+        if world_id:
+            context_prompt = ContextBuilder.build_hierarchy_context(world_id)
 
         # Dynamic Prompts
         prompts = {
@@ -125,6 +135,10 @@ def edit_narrative_api(request):
         }
         
         system_prompt = prompts.get(mode, prompts['fix'])
+        
+        # NUEVO: Inject context if available
+        if context_prompt:
+            system_prompt += f"\n{context_prompt}\nRESPETA las reglas y el contexto de la jerarquía al editar."
         
         service = Llama3Service()
         result_text = service.edit_text(system_prompt, text)
@@ -145,8 +159,9 @@ def api_generate_title(request):
     try:
         data = json.loads(request.body)
         text = data.get('text', '')
+        world_id = data.get('world_id', None)  # Optional: para contexto jerárquico
 
-        clean_title = NarrativeService.generate_magic_title(text)
+        clean_title = NarrativeService.generate_magic_title(text, world_id=world_id)
 
         return JsonResponse({'success': True, 'title': clean_title})
 

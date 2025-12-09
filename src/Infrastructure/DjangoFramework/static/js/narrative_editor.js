@@ -98,14 +98,22 @@ async function requestAIEdit(mode) {
      textarea.style.opacity = "0.5";
 
      try {
-        const response = await fetch('/api/ai/edit-narrative/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                text: originalText,
-                mode: mode
-            })
-        });
+         // Extract world_id for context
+         const paperDiv = document.querySelector('.paper');
+         const worldId = paperDiv ? paperDiv.getAttribute('data-world-id') : null;
+         
+         const response = await fetch('/api/ai/edit-narrative/', {
+             method: 'POST',
+             headers: {
+                 'Content-Type': 'application/json',
+                 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+             },
+             body: JSON.stringify({ 
+                 text: originalText, 
+                 mode: mode,
+                 world_id: worldId  // NUEVO: Para herencia de lore
+             })
+         });
         
         const data = await response.json();
         
@@ -145,11 +153,17 @@ async function generateTitle() {
     titleInput.value = "🔮 Consultando a los Oráculos...";
     titleInput.disabled = true;
     
+    const worldIdAttr = document.querySelector('[data-world-id]');
+    const worldId = worldIdAttr ? worldIdAttr.getAttribute('data-world-id') : null;
+    
     try {
         const response = await fetch('/api/ai/generate-title/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: textarea.value })
+            body: JSON.stringify({ 
+                text: textarea.value,
+                world_id: worldId  // NUEVO: Para contexto jerárquico
+            })
         });
 
         const data = await response.json();

@@ -28,6 +28,12 @@
         .children-section { max-width: 800px; margin: 0 auto; border-top: 1px solid #333; padding-top: 20px; }
         .child-card { display: block; background: #111; padding: 15px; margin-bottom: 10px; text-decoration: none; color: #aaa; border-left: 3px solid #444; transition: 0.2s; font-family: 'Segoe UI', sans-serif; word-wrap: break-word; overflow-wrap: break-word; }
         .child-card:hover { border-left-color: #d633ff; background: #1a1a25; color: #fff; padding-left: 20px; }
+        
+        .toast-msg { padding: 10px 20px; margin-bottom: 10px; border-radius: 5px; color: #fff; font-weight: bold; text-align: center; font-size: 0.9em; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .toast-success { background: #27ae60; }
+        .toast-warning { background: #f39c12; }
+        .toast-error { background: #c0392b; }
+        .toast-info, .toast-debug { background: #3498db; }
     </style>
 </head>
 <body>
@@ -35,8 +41,7 @@
     {% if messages %}
     <div id="toast-container" style="position:fixed; top:70px; left:50%; transform:translateX(-50%); z-index:9999; width: auto; max-width: 400px;">
         {% for message in messages %}
-        <div style="padding: 10px 20px; margin-bottom: 10px; border-radius: 5px; color: #fff; font-weight: bold; text-align: center; font-size: 0.9em; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            {% if message.tags == 'success' %}background: #27ae60;{% elif message.tags == 'warning' %}background: #f39c12;{% elif message.tags == 'error' %}background: #c0392b;{% else %}background: #3498db;{% endif %}">
+        <div class="toast-msg toast-{{ message.tags }}">
             {{ message }}
         </div>
         {% endfor %}
@@ -66,7 +71,7 @@
         </div>
     </div>
 
-    <div class="paper">
+    <div class="paper" data-world-id="{{ narr.world.id }}">
         {% if is_proposal %}
             <div style="background:#d633ff; color:white; padding:10px; border-radius:5px; margin-bottom:20px; font-weight:bold; text-align:center;">
                 👁️ ESTÁS VIENDO UNA PROPUESTA (v{{ narr.version_id }})
@@ -182,7 +187,7 @@
                     <a href="{% url 'borrar_narrativa' narr.nid %}" onclick="return confirm('¿BORRAR PARA SIEMPRE?')" style="color:#e74c3c; margin-right:auto; align-self:center; cursor:pointer;">🗑️ Eliminar</a>
                 {% endif %}
                 
-                <button type="button" onclick="{% if is_creation_mode %}history.back(){% else %}toggleEdit(){% endif %}" style="background:#555; color:white; border:none; padding:10px 20px; border-radius:4px; cursor:pointer;">Cancelar</button>
+                <button type="button" id="cancel-btn" style="background:#555; color:white; border:none; padding:10px 20px; border-radius:4px; cursor:pointer;">Cancelar</button>
                 
                 <button type="submit" class="btn-save" style="background: #d633ff;">
                     {% if is_creation_mode %}🚀 CREAR AHORA{% else %}🚀 PROPONER CAMBIO{% endif %}
@@ -196,9 +201,21 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // Initialize Editor
-            const isCreation = {% if is_creation_mode %}true{% else %}false{% endif %};
+            const isCreation = {{ is_creation_mode|yesno:"true,false" }};
             const urlParams = new URLSearchParams(window.location.search);
             initEditor(isCreation, urlParams.get('edit'));
+            
+            // Cancel button handler
+            const cancelBtn = document.getElementById('cancel-btn');
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', () => {
+                    if (isCreation) {
+                        history.back();
+                    } else {
+                        toggleEdit();
+                    }
+                });
+            }
         });
     </script>
 </body>
