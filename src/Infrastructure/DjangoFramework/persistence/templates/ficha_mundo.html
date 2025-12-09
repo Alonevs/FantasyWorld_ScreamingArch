@@ -101,6 +101,15 @@
                 </div>
             </div>
             
+            <!-- IMAGEN DE PORTADA -->
+            {% for img in imagenes %}
+                {% if img.is_cover %}
+                <div class="hidden md:block w-48 h-32 rounded-lg overflow-hidden border-2 border-accent/50 shadow-lg">
+                    <img src="{% static 'persistence/img/'|add:img.url %}" class="w-full h-full object-cover" alt="Portada">
+                </div>
+                {% endif %}
+            {% endfor %}
+            
             {% if not is_preview %}
             <div class="flex gap-2">
                 <a href="{% url 'dashboard' %}" class="p-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition shadow-md flex items-center gap-2" title="Panel de Control">
@@ -165,8 +174,8 @@
             <div class="flex gap-4 overflow-x-auto pb-4 mb-8 snap-x min-h-[140px]">
                 {% for img in imagenes %}
                 <div class="snap-start shrink-0 relative group w-40 h-56">
-                    <div class="w-full h-full rounded-lg overflow-hidden border border-gray-700 cursor-pointer hover:border-accent transition shadow-lg bg-black" onclick="openLightbox('{% static 'persistence/img/'|add:img.url %}', '{{ img.filename|escapejs }}')">
-                        <img src="{% static 'persistence/img/'|add:img.url %}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500 opacity-90 group-hover:opacity-100">
+                    <div class="w-full h-full rounded-lg overflow-hidden border border-gray-700 cursor-pointer hover:border-accent transition shadow-lg bg-black" onclick="openLightbox('{% static 'persistence/img/' %}{{ img.url }}', '{{ img.filename|escapejs }}')">
+                        <img src="{% static 'persistence/img/' %}{{ img.url }}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500 opacity-90 group-hover:opacity-100">
                     </div>
                     {% if not is_preview %}
                     <a href="{% url 'borrar_foto' jid img.filename %}" class="absolute top-1 right-1 bg-red-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition hover:bg-red-500 shadow-lg" onclick="event.stopPropagation(); return confirm('¿Borrar?')">✕</a>

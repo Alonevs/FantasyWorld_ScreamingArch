@@ -42,7 +42,14 @@ class GetWorldDetailsUseCase:
         for h in raw_hijos:
             h_pid = h.public_id if h.public_id else h.id
             imgs = get_world_images(h.id)
-            img_url = imgs[0]['url'] if imgs else None
+            
+            # Buscar portada primero, luego primera imagen
+            img_url = None
+            if imgs:
+                # Intentar encontrar la imagen de portada
+                cover_img = next((img for img in imgs if img.get('is_cover')), None)
+                img_url = cover_img['url'] if cover_img else imgs[0]['url']
+            
             hijos.append({
                 'id': h.id, 
                 'public_id': h_pid, 

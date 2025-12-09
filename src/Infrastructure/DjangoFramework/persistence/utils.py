@@ -47,8 +47,10 @@ def get_world_images(jid):
     try:
         w = CaosWorldORM.objects.get(id=jid)
         gallery_log = w.metadata.get('gallery_log', {}) if w.metadata else {}
+        cover_image = w.metadata.get('cover_image', None) if w.metadata else None  # NUEVO
     except:
         gallery_log = {}
+        cover_image = None
 
     imgs = []
     if os.path.exists(target):
@@ -61,6 +63,7 @@ def get_world_images(jid):
                     'filename': f,
                     'author': meta.get('uploader', 'Sistema'),
                     'date': meta.get('date', ''),
-                    'title': meta.get('title', '')
+                    'title': meta.get('title', ''),
+                    'is_cover': (f == cover_image)  # NUEVO: Marcar portada
                 })
     return imgs
