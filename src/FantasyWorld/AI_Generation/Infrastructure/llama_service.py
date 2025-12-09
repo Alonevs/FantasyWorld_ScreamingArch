@@ -149,6 +149,34 @@ Constraints:
             print(f"⚠️ Error IA Estructura: {e}")
         return {}
 
+    def edit_text(self, system_prompt: str, user_text: str) -> str:
+        """
+        Edits text based on a system instruction using Chat API.
+        """
+        print(f" ✍️ [Llama] Editando texto ({len(user_text)} chars)...")
+        payload = {
+            "mode": "instruct",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_text}
+            ],
+            "max_tokens": 2000, # Allow generous output for editing
+            "temperature": 0.7 
+        }
+        try:
+            r = requests.post(self.api_url_chat, headers=self.headers, json=payload, timeout=120)
+            if r.status_code == 200:
+                content = r.json()['choices'][0]['message']['content']
+                return content.strip()
+            else:
+                print(f"⚠️ [Llama] Error Status {r.status_code}")
+        except requests.exceptions.Timeout:
+            print("⏳ [Llama] Timeout reached after 120s.")
+            raise Exception("⏳ La IA está tardando demasiado (Timeout > 120s). Intenta con trozos más pequeños.")
+        except Exception as e:
+            print(f"⚠️ Error IA Edit: {e}")
+        return ""
+
     # --- MÉTODO LEGACY (Compatibilidad) ---
     def generate_entity_json(self, name, tipo, habitat):
         # Mantenemos este por si algún código viejo lo llama

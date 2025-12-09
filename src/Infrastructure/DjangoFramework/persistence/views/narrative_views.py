@@ -1,5 +1,9 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
 from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosNarrativeORM, CaosNarrativeVersionORM
 from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
 from src.WorldManagement.Caos.Application.update_narrative import UpdateNarrativeUseCase
@@ -9,6 +13,23 @@ from src.WorldManagement.Caos.Application.propose_narrative_change import Propos
 from src.WorldManagement.Caos.Application.common import resolve_world_id
 from src.WorldManagement.Caos.Application.get_narrative_details import GetNarrativeDetailsUseCase
 from src.WorldManagement.Caos.Application.get_world_narratives import GetWorldNarrativesUseCase
+from src.Infrastructure.Utils.FileExtractor import FileExtractor
+
+@csrf_exempt
+@require_POST
+def import_narrative_file(request):
+    try:
+        if 'file' not in request.FILES:
+            return JsonResponse({'success': False, 'error': 'No se recibió ningún archivo.'}, status=400)
+        
+        uploaded_file = request.FILES['file']
+        text = FileExtractor.extract_text_from_file(uploaded_file)
+        
+        return JsonResponse({'success': True, 'text': text})
+    except ValueError as ve:
+        return JsonResponse({'success': False, 'error': str(ve)}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f"Error interno: {str(e)}"}, status=500)
 
 def resolve_jid(identifier):
     repo = DjangoCaosRepository()

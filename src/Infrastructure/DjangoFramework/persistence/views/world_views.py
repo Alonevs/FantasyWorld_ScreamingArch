@@ -117,8 +117,6 @@ def ver_mundo(request, public_id):
         try:
             tpl = MetadataTemplate.objects.filter(entity_type='CHAOS').first()
             if tpl:
-                print(f"✅ [POC] Plantilla Cargada: {tpl.entity_type}")
-                print(json.dumps(tpl.schema_definition, indent=2))
                 context['metadata_template'] = {
                     'entity_type': tpl.entity_type,
                     'schema': tpl.schema_definition,
