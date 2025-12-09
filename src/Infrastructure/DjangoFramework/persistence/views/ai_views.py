@@ -7,6 +7,7 @@ from src.FantasyWorld.AI_Generation.Infrastructure.llama_service import Llama3Se
 from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, MetadataTemplate, CaosNarrativeORM
 from src.WorldManagement.Caos.Application.common import resolve_world_id
 from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
+from src.FantasyWorld.Domain.Services.NarrativeService import NarrativeService
 
 @login_required
 @require_POST
@@ -15,7 +16,7 @@ def analyze_metadata_api(request):
         data = json.loads(request.body)
         world_id_raw = data.get('world_id')
         
-        print(f"🔍 DEBUG AI: Recibido world_id raw: {world_id_raw}")
+
         
         if not world_id_raw:
             return JsonResponse({'success': False, 'error': 'Missing world_id'})
@@ -27,7 +28,7 @@ def analyze_metadata_api(request):
         if not w_orm:
             try:
                 w_orm = CaosWorldORM.objects.get(id=world_id_raw)
-                print(f"✅ DEBUG AI: Mundo encontrado por ID exacto: '{world_id_raw}'")
+
             except CaosWorldORM.DoesNotExist:
                 pass
         
@@ -35,7 +36,7 @@ def analyze_metadata_api(request):
         if not w_orm:
             try:
                 w_orm = CaosWorldORM.objects.get(public_id=world_id_raw)
-                print(f"✅ DEBUG AI: Mundo encontrado por Public ID: '{world_id_raw}'")
+
             except (CaosWorldORM.DoesNotExist, Exception):
                 pass
 
@@ -43,15 +44,15 @@ def analyze_metadata_api(request):
         if not w_orm:
             try:
                 w_orm = CaosWorldORM.objects.get(id_codificado=world_id_raw)
-                print(f"✅ DEBUG AI: Mundo encontrado por id_codificado: '{world_id_raw}'")
+
             except (CaosWorldORM.DoesNotExist, Exception):
                 pass
                 
         if not w_orm:
-            print(f"❌ DEBUG AI: Fallaron todas las búsquedas (ID, PublicID, J-ID) para: {world_id_raw}")
+
             return JsonResponse({'success': False, 'error': f'World not found for {world_id_raw}'})
 
-        print(f"✅ DEBUG AI: Mundo resuelto: {w_orm.name} (ID: {w_orm.id})")
+
         
         # OBTENCION DE TEXTO (Cascada)
         texto_final = ""
@@ -71,16 +72,16 @@ def analyze_metadata_api(request):
             lore_real = narrativas.exclude(titulo__icontains="Nuevo Documento").order_by('-created_at').first()
 
         if lore_real and lore_real.contenido:
-            print(f"✅ DEBUG AI: Usando Narrativa '{lore_real.titulo}' (Tipo: {lore_real.tipo})")
+
             texto_final = f"{lore_real.titulo}:\n{lore_real.contenido}"
         else:
-            print("DEBUG: Usando Descripción de Mundo (Fallback)")
+
             texto_final = w_orm.description or ""
             
         if not texto_final.strip():
             texto_final = f"Mundo: {w_orm.name}. No hay datos disponibles."
              
-        print(f"🔍 DEBUG AI: Texto enviado ({len(texto_final)} chars): {texto_final[:100]}...")
+
         
         # Call AI
         # Ignoring template schema as per Open Extraction req
@@ -145,25 +146,7 @@ def api_generate_title(request):
         data = json.loads(request.body)
         text = data.get('text', '')
 
-        if not text or len(text.strip()) < 50:
-            return JsonResponse({'success': False, 'error': 'El texto es demasiado corto para generar un título.'})
-
-        # System Prompt for Title Generation
-        system_prompt = (
-            "Eres un editor de novelas de fantasía experto. Lee el siguiente texto y genera un Título corto, épico y descriptivo (máximo 5-6 palabras). "
-            "Devuelve SOLO el título, sin comillas, ni preámbulos, ni explicaciones extra. "
-            "Ejemplo de salida: La Caída de los Dioses"
-        )
-
-        service = Llama3Service()
-        # We reuse edit_text as it uses the Chat API which is perfect for this instruction
-        generated_title = service.edit_text(system_prompt, text[:2000]) # Send first 2000 chars is enough for context
-
-        if not generated_title:
-             return JsonResponse({'success': False, 'error': 'La IA no pudo generar un título.'})
-
-        # Cleanup potential quotes or "Titulo:" prefix
-        clean_title = generated_title.replace('"', '').replace("Título:", "").strip()
+        clean_title = NarrativeService.generate_magic_title(text)
 
         return JsonResponse({'success': True, 'title': clean_title})
 

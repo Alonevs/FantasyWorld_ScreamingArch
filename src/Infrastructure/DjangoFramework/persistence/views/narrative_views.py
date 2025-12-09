@@ -13,7 +13,7 @@ from src.WorldManagement.Caos.Application.propose_narrative_change import Propos
 from src.WorldManagement.Caos.Application.common import resolve_world_id
 from src.WorldManagement.Caos.Application.get_narrative_details import GetNarrativeDetailsUseCase
 from src.WorldManagement.Caos.Application.get_world_narratives import GetWorldNarrativesUseCase
-from src.Infrastructure.Utils.FileExtractor import FileExtractor
+from src.FantasyWorld.Domain.Services.NarrativeService import NarrativeService
 
 @csrf_exempt
 @require_POST
@@ -22,10 +22,9 @@ def import_narrative_file(request):
         if 'file' not in request.FILES:
             return JsonResponse({'success': False, 'error': 'No se recibió ningún archivo.'}, status=400)
         
-        uploaded_file = request.FILES['file']
-        text = FileExtractor.extract_text_from_file(uploaded_file)
-        
+        text = NarrativeService.import_text(request.FILES['file'])
         return JsonResponse({'success': True, 'text': text})
+
     except ValueError as ve:
         return JsonResponse({'success': False, 'error': str(ve)}, status=400)
     except Exception as e:
@@ -73,18 +72,12 @@ def leer_narrativa(request, nid):
 def editar_narrativa(request, nid):
     if request.method == 'POST':
         try:
-            try: n_obj = CaosNarrativeORM.objects.get(public_id=nid)
-            except: n_obj = CaosNarrativeORM.objects.get(nid=nid)
-            
-            # ENFORCE PROPOSAL FOR ALL EDITS
-            change_reason = request.POST.get('change_reason', 'Edición estándar')
-            
-            ProposeNarrativeChangeUseCase().execute(
-                narrative_id=n_obj.nid,
-                new_title=request.POST.get('titulo'),
-                new_content=request.POST.get('contenido'),
-                reason=change_reason,
-                user=request.user if request.user.is_authenticated else None
+            NarrativeService.handle_edit_proposal(
+                user=request.user if request.user.is_authenticated else None,
+                narrative_identifier=nid,
+                title=request.POST.get('titulo'),
+                content=request.POST.get('contenido'),
+                reason=request.POST.get('change_reason', 'Edición estándar')
             )
             messages.success(request, "📝 Propuesta de cambio enviada para revisión.")
             return redirect('dashboard')

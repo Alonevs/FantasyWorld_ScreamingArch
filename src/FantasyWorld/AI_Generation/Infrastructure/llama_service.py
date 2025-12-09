@@ -1,14 +1,18 @@
 import requests
 import json
 import re
+from django.conf import settings
 from typing import Dict, Any
 from src.FantasyWorld.AI_Generation.Domain.interfaces import LoreGenerator
 
 class Llama3Service(LoreGenerator):
     def __init__(self):
-        self.api_url_completion = "http://127.0.0.1:5000/v1/completions"
-        self.api_url_chat = "http://127.0.0.1:5000/v1/chat/completions"
-        self.ollama_url = "http://localhost:11434"
+        # Use settings or fallback (Base URL)
+        base_url = getattr(settings, 'AI_API_BASE_URL', "http://127.0.0.1:5000")
+        self.api_url_completion = f"{base_url}/v1/completions"
+        self.api_url_chat = f"{base_url}/v1/chat/completions"
+        self.timeout = getattr(settings, 'AI_TIMEOUT', 120)
+        
         self.headers = {"Content-Type": "application/json"}
 
     def _call_api(self, prompt, max_tokens=200, temperature=0.7, stop=None):
@@ -164,15 +168,15 @@ Constraints:
             "temperature": 0.7 
         }
         try:
-            r = requests.post(self.api_url_chat, headers=self.headers, json=payload, timeout=120)
+            r = requests.post(self.api_url_chat, headers=self.headers, json=payload, timeout=self.timeout)
             if r.status_code == 200:
                 content = r.json()['choices'][0]['message']['content']
                 return content.strip()
             else:
                 print(f"⚠️ [Llama] Error Status {r.status_code}")
         except requests.exceptions.Timeout:
-            print("⏳ [Llama] Timeout reached after 120s.")
-            raise Exception("⏳ La IA está tardando demasiado (Timeout > 120s). Intenta con trozos más pequeños.")
+            print(f"⏳ [Llama] Timeout reached after {self.timeout}s.")
+            raise Exception(f"⏳ La IA está tardando demasiado (Timeout > {self.timeout}s). Intenta con trozos más pequeños.")
         except Exception as e:
             print(f"⚠️ Error IA Edit: {e}")
         return ""

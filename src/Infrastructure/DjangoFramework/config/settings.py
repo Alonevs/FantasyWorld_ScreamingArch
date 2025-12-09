@@ -136,7 +136,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
-
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
@@ -185,7 +187,14 @@ LOGGING = {
             'propagate': True,
         },
     },
-}# reload
+}
+
+# ==========================================
+# CONFIGURACIÓN IA
+# ==========================================
+import os
+AI_API_BASE_URL = os.getenv('AI_API_URL', 'http://127.0.0.1:5000') # Base de Text-Gen-WebUI
+AI_TIMEOUT = 120 # Segundos ("Pollo a 120s")
 # reload2
 # reload3
 # reload4
