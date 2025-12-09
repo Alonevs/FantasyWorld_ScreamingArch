@@ -6,8 +6,9 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required
 
-from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosVersionORM, CaosNarrativeORM, CaosEventLog
+from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosVersionORM, CaosNarrativeORM, CaosEventLog, MetadataTemplate
 from src.Shared.Domain import eclai_core
 from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
 from src.WorldManagement.Caos.Application.create_world import CreateWorldUseCase
@@ -108,6 +109,23 @@ def ver_mundo(request, public_id):
     if not context:
         return render(request, '404.html', {"jid": public_id})
 
+    # --- POC METADATA SYSTEM ---
+    # Detectar si estamos viendo el Caos (Root) o check manual
+    # Para POC: Si el ID es 0, O el nombre contiene "Caos" (ignorando mayúsculas)
+    w_name = context.get('name', '')
+    if public_id == "0" or "Caos" in w_name or "chaos" in w_name.lower():
+        try:
+            tpl = MetadataTemplate.objects.filter(entity_type='CHAOS').first()
+            if tpl:
+                context['metadata_template'] = {
+                    'entity_type': tpl.entity_type,
+                    'schema': tpl.schema_definition,
+                    'ui': tpl.ui_config
+                }
+        except Exception as e:
+            print(f"⚠️ [POC] Error cargando plantilla: {e}")
+    # ---------------------------
+
     return render(request, 'ficha_mundo.html', context)
 
 def editar_mundo(request, jid):
@@ -115,11 +133,38 @@ def editar_mundo(request, jid):
         try:
             w = resolve_jid(jid); real_jid = w.id if w else jid
             desc = request.POST.get('description')
-            if request.POST.get('use_ai_edit') == 'on':
-                try: desc = Llama3Service().generate_description(f"Nombre: {request.POST.get('name')}. Concepto: {desc}") or desc
-                except: pass
-            ProposeChangeUseCase().execute(real_jid, request.POST.get('name'), desc, request.POST.get('reason'), get_current_user(request))
-            log_event(request.user, "PROPOSE_CHANGE", real_jid, f"Reason: {request.POST.get('reason')}")
+            action_type = request.POST.get('action_type', 'EDIT_WORLD')
+            
+            metadata_prop = None
+            reason = request.POST.get('reason', 'Actualización de Metadatos')
+
+            # Handle Metadata Proposal
+            if action_type == 'METADATA_PROPOSAL':
+                # NEW DYNAMIC LOGIC (Arrays)
+                prop_keys = request.POST.getlist('prop_keys[]')
+                prop_values = request.POST.getlist('prop_values[]')
+                
+                metadata_prop = {'properties': []}
+                
+                # Zip them together
+                if prop_keys and prop_values:
+                    for k, v in zip(prop_keys, prop_values):
+                        if k.strip(): # Ignore empty keys
+                            metadata_prop['properties'].append({'key': k.strip(), 'value': v.strip()})
+                
+                # If editing metadata, we might keep name/desc as is (or use hidden fields)
+                # For safety, let's just pass None to keep existing values in UseCase
+                ProposeChangeUseCase().execute(real_jid, None, None, reason, get_current_user(request), metadata_proposal=metadata_prop)
+                messages.success(request, f"🔮 Propuesta de METADATOS enviada (v{CaosVersionORM.objects.filter(world_id=real_jid).count() + 1}).")
+                log_event(request.user, "PROPOSE_METADATA", real_jid, f"Reason: {reason}")
+            else:
+                # Regular Edit
+                if request.POST.get('use_ai_edit') == 'on':
+                    try: desc = Llama3Service().generate_description(f"Nombre: {request.POST.get('name')}. Concepto: {desc}") or desc
+                    except: pass
+                ProposeChangeUseCase().execute(real_jid, request.POST.get('name'), desc, request.POST.get('reason'), get_current_user(request))
+                log_event(request.user, "PROPOSE_CHANGE", real_jid, f"Reason: {request.POST.get('reason')}")
+            
             return redirect('ver_mundo', public_id=w.public_id if w.public_id else w.id)
         except: return redirect('home')
     return redirect('home')
@@ -244,3 +289,28 @@ def toggle_lock(request, jid):
         else: messages.success(request, "🔓 Mundo desbloqueado.")
         return redirect('ver_mundo', public_id=w_orm.public_id if w_orm.public_id else w_orm.id)
     except: return redirect('home')
+
+@login_required
+def ver_metadatos(request, public_id):
+    w = resolve_jid(public_id)
+    if not w: return redirect('home')
+    
+    context = {
+        'name': w.name,
+        'public_id': w.public_id,
+        'jid': w.id,
+        'metadata_template': None
+    }
+    
+    # Load Metadata (Reuse logic)
+    if w.id == "01" or "Caos" in w.name:
+         tpl = MetadataTemplate.objects.filter(entity_type='CHAOS').first()
+         if tpl:
+             context['metadata_template'] = {
+                'entity_type': tpl.entity_type,
+                'schema': tpl.schema_definition,
+                # In real app, fetch stored metadata values from w.metadata
+             }
+             context['metadata_obj'] = {} 
+    
+    return render(request, 'ver_metadatos.html', context)

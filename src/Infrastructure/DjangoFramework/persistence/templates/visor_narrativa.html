@@ -13,10 +13,10 @@
         
         .paper { max-width: 800px; margin: 80px auto 40px auto; background: #161620; padding: 60px; border-radius: 5px; box-shadow: 0 0 50px rgba(0,0,0,0.5); min-height: 80vh; border: 1px solid #222; }
         
-        h1 { color: #d633ff; font-family: 'Segoe UI', sans-serif; font-size: 2.5em; margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 20px; word-break: break-all; }
+        h1 { color: #d633ff; font-family: 'Segoe UI', sans-serif; font-size: 2.5em; margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 20px; word-wrap: break-word; overflow-wrap: break-word; }
         .meta { color: #666; font-family: monospace; font-size: 0.8em; margin-bottom: 30px; display:flex; justify-content:space-between; }
         
-        .content { font-size: 1.1em; color: #e0e0e0; white-space: pre-wrap; word-break: break-all; }
+        .content { font-size: 1.1em; color: #e0e0e0; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word; }
         
         .edit-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 200; padding: 40px; box-sizing:border-box; }
         .edit-container { max-width: 900px; margin: 0 auto; background: #1f1f2e; padding: 30px; border-radius: 10px; border: 1px solid #d633ff; height: 90%; display: flex; flex-direction: column; }
@@ -26,8 +26,14 @@
         .btn-save { background: #2ecc71; color: white; border: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; }
         
         .children-section { max-width: 800px; margin: 0 auto; border-top: 1px solid #333; padding-top: 20px; }
-        .child-card { display: block; background: #111; padding: 15px; margin-bottom: 10px; text-decoration: none; color: #aaa; border-left: 3px solid #444; transition: 0.2s; font-family: 'Segoe UI', sans-serif; word-break: break-all; }
+        .child-card { display: block; background: #111; padding: 15px; margin-bottom: 10px; text-decoration: none; color: #aaa; border-left: 3px solid #444; transition: 0.2s; font-family: 'Segoe UI', sans-serif; word-wrap: break-word; overflow-wrap: break-word; }
         .child-card:hover { border-left-color: #d633ff; background: #1a1a25; color: #fff; padding-left: 20px; }
+        
+        .toast-msg { padding: 10px 20px; margin-bottom: 10px; border-radius: 5px; color: #fff; font-weight: bold; text-align: center; font-size: 0.9em; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .toast-success { background: #27ae60; }
+        .toast-warning { background: #f39c12; }
+        .toast-error { background: #c0392b; }
+        .toast-info, .toast-debug { background: #3498db; }
     </style>
 </head>
 <body>
@@ -35,8 +41,7 @@
     {% if messages %}
     <div id="toast-container" style="position:fixed; top:70px; left:50%; transform:translateX(-50%); z-index:9999; width: auto; max-width: 400px;">
         {% for message in messages %}
-        <div style="padding: 10px 20px; margin-bottom: 10px; border-radius: 5px; color: #fff; font-weight: bold; text-align: center; font-size: 0.9em; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            {% if message.tags == 'success' %}background: #27ae60;{% elif message.tags == 'warning' %}background: #f39c12;{% elif message.tags == 'error' %}background: #c0392b;{% else %}background: #3498db;{% endif %}">
+        <div class="toast-msg toast-{{ message.tags }}">
             {{ message }}
         </div>
         {% endfor %}
@@ -66,7 +71,7 @@
         </div>
     </div>
 
-    <div class="paper">
+    <div class="paper" data-world-id="{{ narr.world.id }}">
         {% if is_proposal %}
             <div style="background:#d633ff; color:white; padding:10px; border-radius:5px; margin-bottom:20px; font-weight:bold; text-align:center;">
                 👁️ ESTÁS VIENDO UNA PROPUESTA (v{{ narr.version_id }})
@@ -113,7 +118,13 @@
             </h2>
             
             <label>Título:</label>
-            <input type="text" name="title" value="{{ narr.titulo }}" {% if not is_creation_mode %}name="titulo"{% endif %}>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <input type="text" {% if is_creation_mode %}name="title"{% else %}name="titulo"{% endif %} value="{{ narr.titulo }}" style="flex:1;">
+                <button type="button" onclick="generateTitle()" title="🪄 Generar Título Mágico con IA" 
+                        style="background: linear-gradient(135deg, #8e44ad, #d633ff); border:none; padding:8px 12px; border-radius:4px; cursor:pointer; font-size:1.2em; box-shadow: 0 0 10px rgba(142, 68, 173, 0.5); transition: transform 0.2s;">
+                    🪄
+                </button>
+            </div>
             <!-- Note: Create uses 'title', Update uses 'titulo'. I should standardize or handle both. -->
             <!-- checking views... Create uses title, Update uses titulo. -->
             <!-- I will send BOTH names or handle in JS? No, just conditional name? -->
@@ -134,8 +145,33 @@
                 </div>
             </div>
 
-            <label>Contenido:</label>
-            <textarea name="content" {% if not is_creation_mode %}name="contenido"{% endif %}>{{ narr.contenido }}</textarea>
+            <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:5px;">
+                <label style="margin-bottom:0;">Contenido:</label>
+                <div>
+                    <button type="button" onclick="document.getElementById('file-upload').click()" style="background:#2980b9; color:white; border:none; padding:5px 10px; border-radius:4px; font-size:0.8em; cursor:pointer; font-family:'Segoe UI'; display:flex; align-items:center; gap:5px; margin-bottom: 5px;">
+                        📂 Importar Word/PDF
+                    </button>
+                    <input type="file" id="file-upload" accept=".pdf,.docx" style="display:none" onchange="uploadNarrativeFile(this)">
+                    <span id="upload-status" style="font-size:0.8em; color:#aaa; margin-left:10px;"></span>
+                </div>
+            </div>
+
+            <!-- AI Editing Toolbar -->
+            <div style="display:flex; gap:5px; margin-bottom:10px; align-items:center; background:#161620; padding:10px; border-radius:5px; border:1px solid #333;">
+                 <button type="button" onclick="requestAIEdit('fix')" style="background:#27ae60; color:white; border:none; padding:5px 10px; border-radius:4px; font-size:0.85em; cursor:pointer;" title="Corrige ortografía y gramática">
+                    📝 Corregir
+                 </button>
+                 <button type="button" onclick="requestAIEdit('enrich')" style="background:#8e44ad; color:white; border:none; padding:5px 10px; border-radius:4px; font-size:0.85em; cursor:pointer;" title="Mejora descripciones y vocabulario">
+                    ✨ Enriquecer
+                 </button>
+                 <button type="button" onclick="requestAIEdit('format')" style="background:#e67e22; color:white; border:none; padding:5px 10px; border-radius:4px; font-size:0.85em; cursor:pointer;" title="Aplica formato Markdown">
+                    📖 Auto-Formato
+                 </button>
+                 <span id="ai-status" style="font-size:0.8em; color:#d633ff; margin-left:10px; font-weight:bold;"></span>
+                 <span id="word-count" style="font-size:0.8em; color:#666; margin-left:auto;">0 palabras</span>
+            </div>
+
+            <textarea {% if is_creation_mode %}name="content"{% else %}name="contenido"{% endif %} oninput="updateWordCount(this)">{{ narr.contenido }}</textarea>
             <!-- Same here: Create uses content, Update uses contenido. -->
             
             {% if not is_creation_mode %}
@@ -151,7 +187,7 @@
                     <a href="{% url 'borrar_narrativa' narr.nid %}" onclick="return confirm('¿BORRAR PARA SIEMPRE?')" style="color:#e74c3c; margin-right:auto; align-self:center; cursor:pointer;">🗑️ Eliminar</a>
                 {% endif %}
                 
-                <button type="button" onclick="{% if is_creation_mode %}history.back(){% else %}toggleEdit(){% endif %}" style="background:#555; color:white; border:none; padding:10px 20px; border-radius:4px; cursor:pointer;">Cancelar</button>
+                <button type="button" id="cancel-btn" style="background:#555; color:white; border:none; padding:10px 20px; border-radius:4px; cursor:pointer;">Cancelar</button>
                 
                 <button type="submit" class="btn-save" style="background: #d633ff;">
                     {% if is_creation_mode %}🚀 CREAR AHORA{% else %}🚀 PROPONER CAMBIO{% endif %}
@@ -160,21 +196,27 @@
         </form>
     </div>
 
+    <!-- Load Static Logic -->
+    <script src="{% static 'js/narrative_editor.js' %}"></script>
     <script>
-        function toggleEdit() {
-            const el = document.getElementById('editor');
-            el.style.display = (el.style.display === 'block') ? 'none' : 'block';
-        }
-        
-        // Auto-open if ?edit=true or Creation Mode
-        const urlParams = new URLSearchParams(window.location.search);
-        if(urlParams.get('edit') === 'true') {
-            toggleEdit();
-        }
-        {% if is_creation_mode %}
-            toggleEdit();
-        {% endif %}
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize Editor
+            const isCreation = {{ is_creation_mode|yesno:"true,false" }};
+            const urlParams = new URLSearchParams(window.location.search);
+            initEditor(isCreation, urlParams.get('edit'));
+            
+            // Cancel button handler
+            const cancelBtn = document.getElementById('cancel-btn');
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', () => {
+                    if (isCreation) {
+                        history.back();
+                    } else {
+                        toggleEdit();
+                    }
+                });
+            }
+        });
     </script>
-
 </body>
 </html>

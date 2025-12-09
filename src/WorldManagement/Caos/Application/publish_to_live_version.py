@@ -50,6 +50,22 @@ class PublishToLiveVersionUseCase:
         world.current_version_number = version.version_number
         world.current_author_name = version.author.username if version.author else "Desconocido"
         
+        # --- METADATA UPDATE LOGIC ---
+        if version.cambios and 'metadata' in version.cambios:
+             # Merge or Replace? 
+             # The editing logic sends the FULL properties list, so we should probably update/replace.
+             # However, we only have 'properties'. We should preserve other metadata fields (like cover_image).
+             new_meta = version.cambios['metadata']
+             if not world.metadata: world.metadata = {}
+             
+             # Specific update for properties
+             if 'properties' in new_meta:
+                 world.metadata['properties'] = new_meta['properties']
+                 
+             # Or generic update
+             # world.metadata.update(new_meta)
+             print(f" 💾 Metadatos aplicados al LIVE: {len(new_meta.get('properties', []))} propiedades.")
+
         # --- CORRECCIÓN: ACTUALIZAR ESTADO DEL MUNDO ---
         world.status = "LIVE" 
         # -----------------------------------------------

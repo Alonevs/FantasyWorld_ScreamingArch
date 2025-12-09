@@ -69,6 +69,7 @@ class GetWorldDetailsUseCase:
             'name': w.name, 
             'description': w.description, 
             'jid': jid, 
+            'id_codificado': w.id_codificado,  # NUEVO: Para Auto-Noos correcto
             'public_id': safe_pid,
             'status': w.status, 
             'version_live': w.current_version_number,

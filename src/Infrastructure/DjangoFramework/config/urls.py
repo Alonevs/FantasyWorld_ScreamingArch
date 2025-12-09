@@ -6,8 +6,9 @@ from django.conf.urls.static import static
 from src.Infrastructure.DjangoFramework.persistence.views.world_views import (
     home, ver_mundo, editar_mundo, borrar_mundo, 
     toggle_lock, toggle_visibilidad, init_hemisferios, escanear_planeta,
-    mapa_arbol, comparar_version
+    mapa_arbol, comparar_version, ver_metadatos
 )
+from src.Infrastructure.DjangoFramework.persistence.views.ai_views import analyze_metadata_api, edit_narrative_api, api_generate_title
 from src.Infrastructure.DjangoFramework.persistence.views.dashboard_views import (
     dashboard, aprobar_propuesta, rechazar_propuesta, publicar_version, 
     restaurar_version, borrar_propuesta, borrar_propuestas_masivo,
@@ -21,7 +22,7 @@ from src.Infrastructure.DjangoFramework.persistence.views.media_views import (
 from src.Infrastructure.DjangoFramework.persistence.views.narrative_views import (
     ver_narrativa_mundo, leer_narrativa, editar_narrativa, borrar_narrativa, 
     crear_nueva_narrativa, crear_sub_narrativa, revisar_narrativa_version,
-    pre_crear_root, pre_crear_child
+    pre_crear_root, pre_crear_child, import_narrative_file
 )
 
 urlpatterns = [
@@ -42,7 +43,8 @@ urlpatterns = [
     # ==========================================
     # GESTIÓN (Acciones sobre mundos)
     # ==========================================
-    path('crear/', home, name='crear_mundo'), # Asumiendo que home maneja creación por POST
+    path('crear/', home, name='crear_mundo'),
+    path('metadatos/<str:public_id>/', ver_metadatos, name='ver_metadatos'),
     path('borrar/<str:jid>/', borrar_mundo, name='borrar_mundo'),
     path('editar/<str:jid>/', editar_mundo, name='editar_mundo'),
     
@@ -87,7 +89,6 @@ urlpatterns = [
     # Acciones de Imágenes
     path('imagen/propuesta/<int:id>/aprobar/', aprobar_imagen, name='aprobar_imagen'),
     path('imagen/propuesta/<int:id>/rechazar/', rechazar_imagen, name='rechazar_imagen'),
-    # path('imagenes/aprobar_masivo/', aprobar_imagenes_masivo, name='aprobar_imagenes_masivo'), # DEPRECATED
 
     # ==========================================
     # NARRATIVA
@@ -110,6 +111,10 @@ urlpatterns = [
     path('api/preview_foto/<str:jid>/', api_preview_foto, name='api_preview_foto'),
     path('api/save_foto/<str:jid>/', api_save_foto, name='api_save_foto'),
     path('api/update_meta/<str:jid>/', api_update_image_metadata, name='api_update_image_metadata'),
+    path('api/ai/analyze-metadata/', analyze_metadata_api, name='analyze_metadata_api'),
+    path('api/ai/edit-narrative/', edit_narrative_api, name='edit_narrative_api'),
+    path('api/ai/generate-title/', api_generate_title, name='api_generate_title'),
+    path('api/narrative/import-file/', import_narrative_file, name='import_narrative_file'),
 ]
 
 if settings.DEBUG:

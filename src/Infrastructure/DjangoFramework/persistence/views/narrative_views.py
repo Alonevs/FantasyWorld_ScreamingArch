@@ -1,5 +1,9 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
 from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosNarrativeORM, CaosNarrativeVersionORM
 from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
 from src.WorldManagement.Caos.Application.update_narrative import UpdateNarrativeUseCase
@@ -9,6 +13,22 @@ from src.WorldManagement.Caos.Application.propose_narrative_change import Propos
 from src.WorldManagement.Caos.Application.common import resolve_world_id
 from src.WorldManagement.Caos.Application.get_narrative_details import GetNarrativeDetailsUseCase
 from src.WorldManagement.Caos.Application.get_world_narratives import GetWorldNarrativesUseCase
+from src.FantasyWorld.Domain.Services.NarrativeService import NarrativeService
+
+@csrf_exempt
+@require_POST
+def import_narrative_file(request):
+    try:
+        if 'file' not in request.FILES:
+            return JsonResponse({'success': False, 'error': 'No se recibió ningún archivo.'}, status=400)
+        
+        text = NarrativeService.import_text(request.FILES['file'])
+        return JsonResponse({'success': True, 'text': text})
+
+    except ValueError as ve:
+        return JsonResponse({'success': False, 'error': str(ve)}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f"Error interno: {str(e)}"}, status=500)
 
 def resolve_jid(identifier):
     repo = DjangoCaosRepository()
@@ -52,18 +72,12 @@ def leer_narrativa(request, nid):
 def editar_narrativa(request, nid):
     if request.method == 'POST':
         try:
-            try: n_obj = CaosNarrativeORM.objects.get(public_id=nid)
-            except: n_obj = CaosNarrativeORM.objects.get(nid=nid)
-            
-            # ENFORCE PROPOSAL FOR ALL EDITS
-            change_reason = request.POST.get('change_reason', 'Edición estándar')
-            
-            ProposeNarrativeChangeUseCase().execute(
-                narrative_id=n_obj.nid,
-                new_title=request.POST.get('titulo'),
-                new_content=request.POST.get('contenido'),
-                reason=change_reason,
-                user=request.user if request.user.is_authenticated else None
+            NarrativeService.handle_edit_proposal(
+                user=request.user if request.user.is_authenticated else None,
+                narrative_identifier=nid,
+                title=request.POST.get('titulo'),
+                content=request.POST.get('contenido'),
+                reason=request.POST.get('change_reason', 'Edición estándar')
             )
             messages.success(request, "📝 Propuesta de cambio enviada para revisión.")
             return redirect('dashboard')

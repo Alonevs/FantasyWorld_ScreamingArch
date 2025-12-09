@@ -121,3 +121,14 @@ class CaosImageProposalORM(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta: db_table = 'caos_image_proposals'; ordering = ['-created_at']
+
+class MetadataTemplate(models.Model):
+    entity_type = models.CharField(max_length=50, unique=True)
+    schema_definition = models.JSONField(default=dict)
+    ui_config = models.JSONField(default=dict)
+
+    def __str__(self):
+        return self.entity_type
+
+    class Meta:
+        db_table = 'metadata_templates'
