@@ -1,4 +1,5 @@
 {% load static %}
+{% load metadata_tags %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -164,7 +165,7 @@
             <div class="flex gap-4 overflow-x-auto pb-4 mb-8 snap-x min-h-[140px]">
                 {% for img in imagenes %}
                 <div class="snap-start shrink-0 relative group w-40 h-56">
-                    <div class="w-full h-full rounded-lg overflow-hidden border border-gray-700 cursor-pointer hover:border-accent transition shadow-lg bg-black" onclick="openLightbox('{% static 'persistence/img/'|add:img.url %}', '{{ img.filename }}')">
+                    <div class="w-full h-full rounded-lg overflow-hidden border border-gray-700 cursor-pointer hover:border-accent transition shadow-lg bg-black" onclick="openLightbox('{% static 'persistence/img/'|add:img.url %}', '{{ img.filename|escapejs }}')">
                         <img src="{% static 'persistence/img/'|add:img.url %}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500 opacity-90 group-hover:opacity-100">
                     </div>
                     {% if not is_preview %}
@@ -178,15 +179,23 @@
                 </div>
                 {% endfor %} </div>
 
+
+
             <div class="prose prose-invert max-w-none mt-8">
                 <h3 class="text-white font-bold mb-2">Descripción</h3>
                 <div class="bg-gray-900/50 p-4 rounded-lg border border-gray-800 text-gray-300 leading-relaxed whitespace-pre-wrap">{{ description|default:"Sin descripción disponible." }}</div>
             </div>
+
+
+
+
             
         </div>
+            
+            <!-- Block Moved Inside -->
         
         <div class="col-span-1 p-6 lg:p-8 bg-gray-900/30">
-            <h3 class="text-gray-500 text-xs font-bold uppercase mb-4">Metadatos</h3>
+            <h3 class="text-gray-500 text-xs font-bold uppercase mb-4">Información</h3>
             <div class="space-y-3 text-sm text-gray-400">
                 <div class="flex justify-between border-b border-gray-800 pb-2"><span>Creado:</span> <span class="text-white">{{ created_at|date:"d/m/Y" }}</span></div>
                 <div class="flex justify-between border-b border-gray-800 pb-2"><span>Versión:</span> <span class="text-green-400 font-mono">LIVE (v{{ version_live }})</span></div>
@@ -198,6 +207,9 @@
                 <a href="{% url 'ver_narrativa_mundo' jid %}" class="block w-full px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded flex items-center gap-2 transition border border-gray-700 text-sm">
                     📖 Narrativa
                 </a>
+                
+
+                
                 <a href="{% url 'mapa_arbol' public_id %}" class="block w-full px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded flex items-center gap-2 transition border border-gray-700 text-sm">
                     🌳 Mapa Árbol
                 </a>
@@ -206,9 +218,16 @@
                     <button onclick="openCreateModal()" class="w-full py-3 bg-gradient-to-r from-accent to-purple-600 hover:from-accent-hover hover:to-purple-500 text-white font-bold rounded-lg shadow-lg shadow-purple-900/30 transition transform hover:scale-[1.02] flex items-center justify-center gap-2">
                         ✨ GENERAR ENTORNO
                     </button>
-                    <p class="text-xs text-gray-500 mt-2 text-center">Crea sub-entidades (lugares, criaturas) dentro de este mundo.</p>
+
+
+                    <!-- Metadata Viewer (HUD) -->
+                    {% include 'partials/_metadata_viewer.html' %}
                 </div>
             </div>
+
+            <!-- Block Form Removed (Moved to Modal effectively) -->
+            
+            <!-- Block Moved -->
         </div>
     </div>
 
@@ -373,16 +392,19 @@
         </div>
     </div>
 
+    {{ imagenes|json_script:"imagenes-data" }}
     <script>
         // Initialize Gallery Log from Server Data
         const galleryLog = {};
-        {% for img in imagenes %}
-        galleryLog["{{ img.filename }}"] = {
-            uploader: "{{ img.author|default:'-' }}",
-            date: "{{ img.date|default:'-' }}",
-            title: "{{ img.title|default:img.filename }}"
-        };
-        {% endfor %}
+        const imgsData = JSON.parse(document.getElementById('imagenes-data').textContent);
+        
+        imgsData.forEach(img => {
+            galleryLog[img.filename] = {
+                uploader: img.author || '-',
+                date: img.date || '-',
+                title: img.title || img.filename
+            };
+        });
 
         // MODAL LOGIC
         function openEditModal() {
@@ -605,5 +627,6 @@
             if(filename !== "-") window.location.href = "{% url 'set_cover_image' jid '123456' %}".replace('123456', encodeURIComponent(filename));
         }
     </script>
+    {% include 'partials/_modal_metadata.html' %}
 </body>
 </html>

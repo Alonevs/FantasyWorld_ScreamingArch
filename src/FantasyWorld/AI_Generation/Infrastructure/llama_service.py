@@ -8,6 +8,7 @@ class Llama3Service(LoreGenerator):
     def __init__(self):
         self.api_url_completion = "http://127.0.0.1:5000/v1/completions"
         self.api_url_chat = "http://127.0.0.1:5000/v1/chat/completions"
+        self.ollama_url = "http://localhost:11434"
         self.headers = {"Content-Type": "application/json"}
 
     def _call_api(self, prompt, max_tokens=200, temperature=0.7, stop=None):
@@ -16,20 +17,75 @@ class Llama3Service(LoreGenerator):
             "top_p": 0.9, "seed": -1, "stream": False, "stop": stop or ["###", "\n\n"]
         }
         try:
-            r = requests.post(self.api_url_completion, headers=self.headers, json=payload, timeout=60)
-            if r.status_code == 200: return r.json()['choices'][0]['text'].strip()
+            print(f"📡 [LlamaService] POST {self.api_url_completion}")
+            r = requests.post(self.api_url_completion, headers=self.headers, json=payload, timeout=120)
+            
+            if r.status_code == 200: 
+                text = r.json()['choices'][0]['text'].strip()
+                print(f"✅ [LlamaService] 200 OK. Recibido {len(text)} chars.")
+                # print(f"🔍 RAW: {text[:100]}...") 
+                return text
+            else:
+                print(f"⚠️ [LlamaService] Error Status {r.status_code}: {r.text}")
+                
         except Exception as e: 
-            print(f"⚠️ Error IA Texto: {e}")
+            print(f"⚠️ [LlamaService] Exception: {e}")
         return ""
 
     def _clean_json(self, raw_text: str) -> Dict:
+        """
+        Robust JSON cleaning, now with Regex extraction.
+        """
         try:
+            # 1. Remove Markdown
             text = re.sub(r'```json|```', '', raw_text).strip()
+            
+            # 2. Try Standard JSON Load
             return json.loads(text)
         except json.JSONDecodeError:
-            print(f"⚠️ Error parseando JSON de Llama. Raw: {raw_text[:50]}...")
+            try:
+                # 3. Regex Extraction (Find the first outer object)
+                # Looks for { ... } across multiple lines
+                match = re.search(r'\{.*\}', raw_text, re.DOTALL)
+                if match:
+                    potential_json = match.group(0)
+                    return json.loads(potential_json)
+
+                # 4. Fallback: Parse as Python Dictionary
+                import ast
+                clean_data = ast.literal_eval(text)
+                if isinstance(clean_data, dict):
+                    return clean_data
+                elif isinstance(clean_data, list):
+                    return {"properties": clean_data}
+            except (ValueError, SyntaxError, Exception):
+                pass
+            
+            print(f"⚠️ Error parseando JSON de Llama. Raw: {raw_text[:100]}...")
             return {}
 
+    def extract_metadata(self, description: str, schema: dict = None) -> dict:
+        """
+        Extracts open-ended metadata properties using Chat API (Llama 3 friendly).
+        """
+        system_instruction = (
+            "Eres un extractor de datos JSON. Analiza el texto.\n"
+            "Devuelve SOLO un objeto JSON con esta estructura exacta:\n"
+            "{\n"
+            "  \"properties\": [\n"
+            "    {\"key\": \"Fauna\", \"value\": \"Cerdos de Éter\"},\n"
+            "    {\"key\": \"Gravedad\", \"value\": \"Nula\"}\n"
+            "  ]\n"
+            "}\n"
+            "Si no hay datos claros, devuelve { \"properties\": [] }.\n"
+            "NO escribas introducciones. NO uses Markdown."
+        )
+        
+        # We reuse the Chat Completion method (generate_structure) 
+        # which is much better for Llama 3 than the legacy completion endpoint.
+        print(f"📡 [LlamaService] Analizando texto ({len(description)} chars) con Chat API...")
+        return self.generate_structure(system_instruction, f"TEXTO:\n{description}")
+    
     def generate_description(self, prompt: str) -> str:
         full_prompt = f"### Instruction:\nDescribe visualmente en español (max 3 frases) el siguiente lugar o concepto: \"{prompt}\".\nNO uses Markdown. NO incluyas imágenes ni enlaces. Solo texto plano.\n### Response:\n"
         response = self._call_api(full_prompt, max_tokens=150, temperature=0.6)

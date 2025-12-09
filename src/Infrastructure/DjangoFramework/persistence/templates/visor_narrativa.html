@@ -13,10 +13,10 @@
         
         .paper { max-width: 800px; margin: 80px auto 40px auto; background: #161620; padding: 60px; border-radius: 5px; box-shadow: 0 0 50px rgba(0,0,0,0.5); min-height: 80vh; border: 1px solid #222; }
         
-        h1 { color: #d633ff; font-family: 'Segoe UI', sans-serif; font-size: 2.5em; margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 20px; word-break: break-all; }
+        h1 { color: #d633ff; font-family: 'Segoe UI', sans-serif; font-size: 2.5em; margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 20px; word-wrap: break-word; overflow-wrap: break-word; }
         .meta { color: #666; font-family: monospace; font-size: 0.8em; margin-bottom: 30px; display:flex; justify-content:space-between; }
         
-        .content { font-size: 1.1em; color: #e0e0e0; white-space: pre-wrap; word-break: break-all; }
+        .content { font-size: 1.1em; color: #e0e0e0; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word; }
         
         .edit-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 200; padding: 40px; box-sizing:border-box; }
         .edit-container { max-width: 900px; margin: 0 auto; background: #1f1f2e; padding: 30px; border-radius: 10px; border: 1px solid #d633ff; height: 90%; display: flex; flex-direction: column; }
@@ -26,7 +26,7 @@
         .btn-save { background: #2ecc71; color: white; border: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; }
         
         .children-section { max-width: 800px; margin: 0 auto; border-top: 1px solid #333; padding-top: 20px; }
-        .child-card { display: block; background: #111; padding: 15px; margin-bottom: 10px; text-decoration: none; color: #aaa; border-left: 3px solid #444; transition: 0.2s; font-family: 'Segoe UI', sans-serif; word-break: break-all; }
+        .child-card { display: block; background: #111; padding: 15px; margin-bottom: 10px; text-decoration: none; color: #aaa; border-left: 3px solid #444; transition: 0.2s; font-family: 'Segoe UI', sans-serif; word-wrap: break-word; overflow-wrap: break-word; }
         .child-card:hover { border-left-color: #d633ff; background: #1a1a25; color: #fff; padding-left: 20px; }
     </style>
 </head>
@@ -113,7 +113,7 @@
             </h2>
             
             <label>Título:</label>
-            <input type="text" name="title" value="{{ narr.titulo }}" {% if not is_creation_mode %}name="titulo"{% endif %}>
+            <input type="text" {% if is_creation_mode %}name="title"{% else %}name="titulo"{% endif %} value="{{ narr.titulo }}">
             <!-- Note: Create uses 'title', Update uses 'titulo'. I should standardize or handle both. -->
             <!-- checking views... Create uses title, Update uses titulo. -->
             <!-- I will send BOTH names or handle in JS? No, just conditional name? -->
@@ -135,7 +135,7 @@
             </div>
 
             <label>Contenido:</label>
-            <textarea name="content" {% if not is_creation_mode %}name="contenido"{% endif %}>{{ narr.contenido }}</textarea>
+            <textarea {% if is_creation_mode %}name="content"{% else %}name="contenido"{% endif %}>{{ narr.contenido }}</textarea>
             <!-- Same here: Create uses content, Update uses contenido. -->
             
             {% if not is_creation_mode %}

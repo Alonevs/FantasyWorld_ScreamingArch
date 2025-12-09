@@ -6,8 +6,9 @@ from django.conf.urls.static import static
 from src.Infrastructure.DjangoFramework.persistence.views.world_views import (
     home, ver_mundo, editar_mundo, borrar_mundo, 
     toggle_lock, toggle_visibilidad, init_hemisferios, escanear_planeta,
-    mapa_arbol, comparar_version
+    mapa_arbol, comparar_version, ver_metadatos
 )
+from src.Infrastructure.DjangoFramework.persistence.views.ai_views import analyze_metadata_api
 from src.Infrastructure.DjangoFramework.persistence.views.dashboard_views import (
     dashboard, aprobar_propuesta, rechazar_propuesta, publicar_version, 
     restaurar_version, borrar_propuesta, borrar_propuestas_masivo,
@@ -43,6 +44,7 @@ urlpatterns = [
     # GESTIÓN (Acciones sobre mundos)
     # ==========================================
     path('crear/', home, name='crear_mundo'), # Asumiendo que home maneja creación por POST
+    path('metadatos/<str:public_id>/', ver_metadatos, name='ver_metadatos'), # Added path
     path('borrar/<str:jid>/', borrar_mundo, name='borrar_mundo'),
     path('editar/<str:jid>/', editar_mundo, name='editar_mundo'),
     
@@ -110,6 +112,7 @@ urlpatterns = [
     path('api/preview_foto/<str:jid>/', api_preview_foto, name='api_preview_foto'),
     path('api/save_foto/<str:jid>/', api_save_foto, name='api_save_foto'),
     path('api/update_meta/<str:jid>/', api_update_image_metadata, name='api_update_image_metadata'),
+    path('api/ai/analyze-metadata/', analyze_metadata_api, name='analyze_metadata_api'),
 ]
 
 if settings.DEBUG:
