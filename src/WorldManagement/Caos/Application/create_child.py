@@ -7,13 +7,14 @@ class CreateChildWorldUseCase:
     def __init__(self, repository: CaosRepository):
         self.repository = repository
 
-    def execute(self, parent_id: str, name: str, description: str, reason: str = "Creación inicial", generate_image: bool = False) -> str:
-        print(f" 🐣 Iniciando nacimiento de una nueva entidad en {parent_id}...")
+    def execute(self, parent_id: str, name: str, description: str, reason: str = "Creación inicial", generate_image: bool = False, target_level: int = None) -> str:
+        print(f" 🐣 Iniciando nacimiento de una nueva entidad en {parent_id} (Target Level: {target_level})...")
 
         # 1. Calcular el ID del nuevo hijo
-        new_child_id = self.repository.get_next_child_id(parent_id)
+        # Delegamos completamente en el repositorio para manejar relleno (padding) si es un salto
+        new_child_id = self.repository.get_next_child_id(parent_id, target_level=target_level)
         
-        print(f"    Calculado ID: {new_child_id} (Hijo de {parent_id})")
+        print(f"    Calculado ID: {new_child_id}")
 
         # --- AI TEXT GENERATION (Optional) ---
         if generate_image: # Reusing the flag as "use_ai"

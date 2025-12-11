@@ -48,6 +48,9 @@
             ECLAI <span class="text-xs text-accent ml-2 bg-purple-900/30 px-2 py-1 rounded border border-purple-800">DASHBOARD</span>
         </div>
         <div class="flex gap-2">
+            <a href="{% url 'ver_papelera' %}" class="px-4 py-2 bg-red-900/40 hover:bg-red-900/70 border border-red-800 text-red-200 rounded-lg text-sm transition flex items-center gap-2">
+                🗑️ Papelera
+            </a>
             <a href="{% url 'home' %}" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm border border-gray-700 transition">🏠 Inicio</a>
         </div>
     </div>
@@ -154,6 +157,10 @@
                     {% elif item.cambios.properties %}
                          <div class="absolute -top-3 left-6 bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg z-20">
                             🧬 PROPUESTA DE METADATOS
+                        </div>
+                    {% elif item.cambios.action == 'RESTORE' %}
+                         <div class="absolute -top-3 left-6 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg z-20">
+                            ♻️ SOLICITUD DE RESTAURACIÓN
                         </div>
                     {% endif %}
 
@@ -434,7 +441,7 @@
             
             <div class="space-y-4">
                 <!-- WORLD LOGS -->
-                <details class="group bg-card border border-blue-900/30 rounded-xl overflow-hidden shadow-lg" open>
+                <details class="group bg-card border border-blue-900/30 rounded-xl overflow-hidden shadow-lg">
                     <summary class="flex justify-between items-center p-4 cursor-pointer bg-blue-900/20 hover:bg-blue-900/30 transition list-none">
                         <span class="font-bold text-blue-200 flex items-center gap-2">🌍 Cambios en MUNDOS <span class="text-xs bg-blue-900 text-blue-300 px-2 rounded-full">{{ logs_world|length }}</span></span>
                         <span class="text-blue-400 transform group-open:rotate-180 transition">▼</span>

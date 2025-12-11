@@ -20,7 +20,7 @@ class GetWorldDetailsUseCase:
         
         from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM
         try:
-            w = CaosWorldORM.objects.get(id=w_domain.id.value)
+            w = CaosWorldORM.objects.get(id=w_domain.id.value, is_active=True)
         except CaosWorldORM.DoesNotExist:
             return None
 
@@ -39,23 +39,78 @@ class GetWorldDetailsUseCase:
         from src.Infrastructure.DjangoFramework.persistence.utils import get_world_images, generate_breadcrumbs
         
         hijos = []
-        for h in raw_hijos:
+        hijos = []
+        
+        # --- DIRECT LINK / PADDED CHILDREN LOGIC ---
+        # We need to find all descendants that conceptually belong to THIS parent.
+        # This includes:
+        # 1. Direct children (len = parent + 2)
+        # 2. Deep children (len > parent + 2) whose intermediate ancestors DO NOT EXIST.
+        
+        # Fetch all descendants
+        all_descendants = CaosWorldORM.objects.filter(id__startswith=jid, is_active=True).exclude(id=jid).exclude(status='DRAFT').order_by('id')
+        
+        # Build a set of existing IDs for fast "parent exists" check
+        existing_ids = set(d.id for d in all_descendants)
+        existing_ids.add(jid) # Parent exists obviously
+        
+        visible_children = []
+        
+        for d in all_descendants:
+            # Check "Immediate Parent"
+            # If my logical parent exists in the set, then I am NOT a direct child of 'jid' (I belong to them).
+            # If my logical parent DOES NOT exist, then I am orphaned -> show me here.
+            
+            # Determine logical parent ID (slice off last segment)
+            # Segments: usually 2 chars. Level 16 (Entity) might be 4 chars.
+            # We can try assuming 2 chars removal first.
+            # ID: ...0101 -> Parent: ...01 (exists?)
+            # ID: ...000001 -> Parent: ...0000 (does not exist?) -> GranParent: ...00 (no) -> JID (yes)
+            
+            # Simplified logic:
+            # Cut off 2 chars. If result exists in `existing_ids` AND result != jid, then this entity has a closer parent.
+            # So hide it.
+            # If result == jid, show it (direct child).
+            # If result not in existing_ids, try cutting 4 chars?
+            # Actually, we just need to know if there is ANY ancestor between JID and Child.
+            
+            # Better approach:
+            # Iterate potential ancestors from JID_LEN + 2 up to CHILD_LEN - 2.
+            # If any of those IDs exist in `existing_ids`, then this child is shadowed.
+            
+            is_shadowed = False
+            # Check for regular intermediate ancestors (step 2)
+            for l in range(len(jid) + 2, len(d.id), 2):
+                intermediate_id = d.id[:l]
+                if intermediate_id in existing_ids:
+                    is_shadowed = True
+                    break
+            
+            if not is_shadowed:
+                visible_children.append(d)
+
+        for h in visible_children:
             h_pid = h.public_id if h.public_id else h.id
             imgs = get_world_images(h.id)
             
             # Buscar portada primero, luego primera imagen
             img_url = None
             if imgs:
-                # Intentar encontrar la imagen de portada
                 cover_img = next((img for img in imgs if img.get('is_cover')), None)
                 img_url = cover_img['url'] if cover_img else imgs[0]['url']
+            
+            # Determine if it's a deep/padded child for UI hint
+            is_deep = (len(h.id) > len(jid) + 2) and (len(h.id) != 34) # Exclude standard Level 16 if parent is 15 (len 30->34)
+            # Actually level 16 logic: 30 chars -> 34 chars. +4.
+            # Just comparing len > len(jid)+2 is decent indicator of "something special" or deep.
             
             hijos.append({
                 'id': h.id, 
                 'public_id': h_pid, 
                 'name': h.name, 
                 'short': h.id[len(jid):], 
-                'img': img_url
+                'img': img_url,
+                'is_hoisted': is_deep
             })
 
         # 4. Get Images

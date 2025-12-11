@@ -43,6 +43,22 @@ class CaosWorldORM(models.Model):
     born_in_epoch = models.ForeignKey(CaosEpochORM, on_delete=models.SET_NULL, null=True, blank=True, related_name='entities_born')
     died_in_epoch = models.ForeignKey(CaosEpochORM, on_delete=models.SET_NULL, null=True, blank=True, related_name='entities_died')
     
+    # CONTROL DE BORRADO LÓGICO (SOFT DELETE)
+    is_active = models.BooleanField(default=True, help_text="Si es False, está en la papelera.")
+    deleted_at = models.DateTimeField(null=True, blank=True)
+
+    def soft_delete(self):
+        """Mueve a la papelera sin destruir datos."""
+        self.is_active = False
+        self.deleted_at = datetime.now()
+        self.save()
+
+    def restore(self):
+        """Recupera de la papelera."""
+        self.is_active = True
+        self.deleted_at = None
+        self.save()
+
     @property
     def is_locked(self):
         return self.status == 'LOCKED'

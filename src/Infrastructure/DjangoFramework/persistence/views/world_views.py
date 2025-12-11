@@ -29,6 +29,8 @@ from src.FantasyWorld.AI_Generation.Infrastructure.llama_service import Llama3Se
 from src.Infrastructure.DjangoFramework.persistence.utils import generate_breadcrumbs, get_world_images
 
 
+from src.WorldManagement.Caos.Domain.hierarchy_utils import get_readable_hierarchy
+
 def log_event(user, action, target_id, details=""):
     try:
         u = user if user.is_authenticated else None
@@ -87,18 +89,30 @@ def ver_mundo(request, public_id):
         safe_pid = w.public_id if w.public_id else jid
 
         c_name = request.POST.get('child_name')
+        target_level_str = request.POST.get('target_level')
+        target_level = int(target_level_str) if target_level_str else None
+        
         if c_name:
             c_desc = request.POST.get('child_desc', "")
             reason = request.POST.get('reason', "Creación vía Wizard")
             use_ai = request.POST.get('use_ai_gen') == 'on'
             
+            # Use universal creation with optional target_level
             uc = CreateChildWorldUseCase(repo)
-            new_id = uc.execute(parent_id=jid, name=c_name, description=c_desc, reason=reason, generate_image=use_ai)
+            new_id = uc.execute(
+                parent_id=jid, 
+                name=c_name, 
+                description=c_desc, 
+                reason=reason, 
+                generate_image=use_ai, 
+                target_level=target_level
+            )
             
             try:
-                # new_w = CaosWorldORM.objects.get(id=new_id)
-                # return redirect('ver_mundo', public_id=new_w.public_id if new_w.public_id else new_id)
-                messages.success(request, "✨ Entorno propuesto (y su imagen). Ve al Dashboard para aprobarlo.")
+                if target_level and target_level > (len(jid)//2 + 1):
+                     messages.success(request, f"✨ Entidad profunda creada con Salto (Nivel {target_level}).")
+                else:
+                     messages.success(request, "✨ Entorno propuesto (y su imagen). Ve al Dashboard para aprobarlo.")
                 return redirect('dashboard')
             except:
                 return redirect('dashboard')
@@ -108,6 +122,15 @@ def ver_mundo(request, public_id):
     
     if not context:
         return render(request, '404.html', {"jid": public_id})
+
+    # --- HIERARCHY LABEL INJECTION ---
+    context['hierarchy_label'] = get_readable_hierarchy(context['jid'])
+    # ---------------------------------
+    
+    # --- DEEP CREATION OPTIONS ---
+    from src.WorldManagement.Caos.Domain.hierarchy_utils import get_available_levels
+    context['available_levels'] = get_available_levels(context['jid'])
+    # -----------------------------
 
     # --- POC METADATA SYSTEM ---
     # Detectar si estamos viendo el Caos (Root) o check manual
@@ -256,6 +279,11 @@ def comparar_version(request, version_id):
             'is_preview': True, 
             'preview_version_id': v.id
         }
+        
+        # --- HIERARCHY LABEL INJECTION ---
+        context['hierarchy_label'] = get_readable_hierarchy(jid)
+        # ---------------------------------
+        
         messages.info(request, f"👀 Viendo PREVISUALIZACIÓN de versión {v.version_number}")
         return render(request, 'ficha_mundo.html', context)
     except Exception as e: 
@@ -301,6 +329,10 @@ def ver_metadatos(request, public_id):
         'jid': w.id,
         'metadata_template': None
     }
+    
+    # --- HIERARCHY LABEL INJECTION ---
+    context['hierarchy_label'] = get_readable_hierarchy(w.id)
+    # ---------------------------------
     
     # Load Metadata (Reuse logic)
     if w.id == "01" or "Caos" in w.name:

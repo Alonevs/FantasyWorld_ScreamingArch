@@ -44,7 +44,7 @@ class DjangoCaosRepository(CaosRepository):
     def find_by_id(self, world_id) -> Optional[CaosWorld]:
         val = world_id.value if hasattr(world_id, 'value') else world_id
         try:
-            orm_obj = CaosWorldORM.objects.get(id=val)
+            orm_obj = CaosWorldORM.objects.get(id=val, is_active=True)
             return CaosWorld(
                 id=WorldID(str(orm_obj.id)),
                 name=orm_obj.name,
@@ -59,7 +59,7 @@ class DjangoCaosRepository(CaosRepository):
 
     def get_by_public_id(self, public_id: str) -> Optional[CaosWorld]:
         try:
-            orm_obj = CaosWorldORM.objects.get(public_id=public_id)
+            orm_obj = CaosWorldORM.objects.get(public_id=public_id, is_active=True)
             return CaosWorld(
                 id=WorldID(str(orm_obj.id)),
                 name=orm_obj.name,
@@ -75,10 +75,38 @@ class DjangoCaosRepository(CaosRepository):
     def find_descendants(self, root_id: WorldID) -> List[CaosWorld]:
         root_val = root_id.value if hasattr(root_id, 'value') else root_id
         # Filter by startswith and order by ID to maintain hierarchy
-        orm_objs = CaosWorldORM.objects.filter(id__startswith=root_val).order_by('id')
+        orm_objs = CaosWorldORM.objects.filter(id__startswith=root_val, is_active=True).order_by('id')
         results = []
         for obj in orm_objs:
             results.append(CaosWorld(
+                id=WorldID(str(obj.id)),
+                name=obj.name,
+                lore_description=obj.description,
+                status=getattr(VersionStatus, obj.status, VersionStatus.DRAFT),
+                metadata=obj.metadata or {},
+                is_public=obj.visible_publico,
+                is_locked=obj.is_locked
+            ))
+        return results
+
+    def get_ancestors_by_id(self, entity_id: str) -> List[CaosWorld]:
+        # Generate potential ancestor IDs based on length
+        # Assuming standard depth: 2 chars per level
+        ids_to_fetch = []
+        # Start at 2, go up to len-2 (strict ancestors)
+        # Use step 2 generic rule
+        for l in range(2, len(entity_id), 2):
+            ids_to_fetch.append(entity_id[:l])
+            
+        if not ids_to_fetch:
+            return []
+            
+        orm_objs = CaosWorldORM.objects.filter(id__in=ids_to_fetch, is_active=True).order_by('id')
+        
+        results = []
+        for obj in orm_objs:
+             # Reuse standard mapping
+             results.append(CaosWorld(
                 id=WorldID(str(obj.id)),
                 name=obj.name,
                 lore_description=obj.description,
@@ -199,25 +227,53 @@ class DjangoCaosRepository(CaosRepository):
             print(f"⚠️ Error manual save: {e}")
             return False
 
-    def get_next_child_id(self, parent_id_str: str) -> str:
+    def get_next_child_id(self, parent_id_str: str, target_level: int = None) -> str:
         len_parent = len(parent_id_str)
         nivel_padre = eclai_core.get_level_from_jid_length(len_parent)
-        nivel_hijo = nivel_padre + 1
-        es_entidad = (nivel_hijo == 16) 
-        len_hijo = 34 if es_entidad else len_parent + 2
+        
+        # Calculate Target Level logic
+        if target_level:
+            nivel_hijo = target_level
+        else:
+            nivel_hijo = nivel_padre + 1
 
-        ultimo_hijo = CaosWorldORM.objects.filter(id__startswith=parent_id_str).annotate(id_len=Length('id')).filter(id_len=len_hijo).aggregate(Max('id'))['id__max']
+        # Determine if "Entity" (Level 16 or Level 13+ logic dep on branch)
+        # Using simple rule for now: if target is 16, use 4 digits.
+        # But wait, hierarchy_utils had some branch logic.
+        # For simplicty, stick to existing `es_entidad` check if possible or expand.
+        # Check if gap exists
+        gaps = nivel_hijo - nivel_padre - 1
+        
+        # Determine segment length for the final entity
+        es_entidad = (nivel_hijo == 16)
+        segment_len = 4 if es_entidad else 2
+        
+        # Padding
+        # Each gap level is usually 2 chars "00".
+        # If jumping from 3 to 8. Gaps: 4, 5, 6, 7. 4 gaps.
+        # Padding = "00" * 4.
+        # BUT: Level 16 jump logic might be tricky if gaps are mixed.
+        # Assuming standard 2-char gaps for transparency.
+        padding = "00" * gaps if gaps > 0 else ""
+        
+        prefix = parent_id_str + padding
+        
+        # Use prefix to find max existing
+        # Filter: starts with prefix AND length equals expected total length
+        # Expected total len = len(prefix) + segment_len
+        target_len = len(prefix) + segment_len
+        
+        ultimo_hijo = CaosWorldORM.objects.filter(id__startswith=prefix).annotate(id_len=Length('id')).filter(id_len=target_len).aggregate(Max('id'))['id__max']
 
         if not ultimo_hijo: siguiente_seq = 1
         else:
-            cut = 4 if es_entidad else 2
-            segmento = ultimo_hijo[-cut:]
+            segmento = ultimo_hijo[-segment_len:]
             siguiente_seq = int(segmento) + 1
 
         if es_entidad: nuevo_segmento = f"{siguiente_seq:04d}"
         else: nuevo_segmento = f"{siguiente_seq:02d}"
 
-        return eclai_core.construir_jid(parent_id_str, nivel_hijo, nuevo_segmento)
+        return prefix + nuevo_segmento
 
     def get_next_narrative_id(self, prefix: str) -> str:
         from src.Infrastructure.DjangoFramework.persistence.models import CaosNarrativeORM

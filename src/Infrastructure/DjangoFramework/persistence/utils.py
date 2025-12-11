@@ -27,14 +27,21 @@ def generate_breadcrumbs(jid):
     worlds = {w.id: w.name for w in CaosWorldORM.objects.filter(id__in=ids_to_fetch)}
     
     # 3. Construir lista ordenada
+    full_list = []
     for i, pid in enumerate(ids_to_fetch):
         # El nivel es el índice + 1
-        breadcrumbs.append({
+        full_list.append({
             'id': pid, 
             'label': worlds.get(pid, f"Nivel {i+1}")
         })
         
-    return breadcrumbs
+    # --- SMART TRUNCATION ---
+    # Si hay más de 5 elementos, mostramos: Root + ... + Últimos 3
+    if len(full_list) > 5:
+        short_list = [full_list[0], {'id': None, 'label': '...'}] + full_list[-3:]
+        return short_list
+        
+    return full_list
 
 def get_world_images(jid):
     base = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img')

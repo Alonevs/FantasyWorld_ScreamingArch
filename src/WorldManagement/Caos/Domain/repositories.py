@@ -24,6 +24,11 @@ class CaosRepository(ABC):
     def find_descendants(self, root_id: WorldID) -> List[CaosWorld]:
         pass
 
+    @abstractmethod
+    def get_ancestors_by_id(self, entity_id: str) -> List[CaosWorld]:
+        """Returns ancestors ordered from furthest (root) to closest (parent)."""
+        pass
+
     # Helper methods for ID generation
     @abstractmethod
     def get_next_child_id(self, parent_id_str: str) -> str:

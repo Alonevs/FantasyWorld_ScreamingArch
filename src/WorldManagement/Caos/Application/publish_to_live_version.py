@@ -21,9 +21,14 @@ class PublishToLiveVersionUseCase:
             print(f"Error archivando versión anterior: {e}")
 
         # 0.5 CHECK FOR DELETE ACTION
+        # 0.5 CHECK FOR DELETE ACTION
         if version.cambios and version.cambios.get('action') == 'DELETE':
-            print(f" 🗑️ Ejecutando eliminación de mundo '{version.world.name}' (v{version.version_number})")
-            version.world.delete()
+            print(f" 🗑️ Ejecutando eliminación lógica de mundo '{version.world.name}' (v{version.version_number})")
+            version.world.soft_delete()
+            # Also mark version as ARCHIVED or LIVE?
+            # It was approved, so it is technically "Executed". But since the world is gone (logically), maybe we keep the version as record.
+            version.status = 'ARCHIVED' 
+            version.save()
             return
 
         # 0.6 CHECK FOR SET_COVER ACTION
@@ -41,6 +46,14 @@ class PublishToLiveVersionUseCase:
             version.status = "LIVE"
             version.save()
             print(f" 👁️ Visibilidad actualizada para mundo '{version.world.name}'")
+            return
+
+        # 0.8 CHECK FOR RESTORE ACTION
+        if version.cambios and version.cambios.get('action') == 'RESTORE':
+            print(f" ♻️ Ejecutando restauración de mundo '{version.world.name}' (v{version.version_number})")
+            version.world.restore()
+            version.status = "LIVE"
+            version.save()
             return
 
         # 1. APLICAR AL LIVE (Normal Update)

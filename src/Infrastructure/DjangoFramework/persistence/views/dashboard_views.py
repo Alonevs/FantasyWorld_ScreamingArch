@@ -356,3 +356,42 @@ def rechazar_imagen(request, id):
         messages.warning(request, "❌ Imagen rechazada.")
         return redirect('dashboard')
     except Exception as e: messages.error(request, f"Error: {e}"); return redirect('dashboard')
+
+# --- TRASH / PAPELERA ---
+
+def ver_papelera(request):
+    try:
+        # All inactive worlds
+        deleted_items = CaosWorldORM.objects.filter(is_active=False).order_by('-deleted_at')
+        return render(request, 'papelera.html', {'deleted_items': deleted_items})
+    except Exception as e:
+        print(e)
+        return redirect('dashboard')
+
+def restaurar_entidad_fisica(request, jid):
+    try:
+        w = CaosWorldORM.objects.get(id=jid, is_active=False)
+        
+        # Calculate next version
+        last_v = w.versiones.order_by('-version_number').first()
+        next_v = (last_v.version_number + 1) if last_v else 1
+        
+        # Create RESTORE Proposal
+        CaosVersionORM.objects.create(
+            world=w,
+            proposed_name=w.name,
+            proposed_description=w.description,
+            version_number=next_v,
+            status='PENDING',
+            change_log=f"Solicitud de Restauración desde Papelera",
+            cambios={'action': 'RESTORE'},
+            author=request.user if request.user.is_authenticated else None
+        )
+        
+        log_event(request.user, "PROPOSE_RESTORE", w.id, f"Solicitud de restauración para '{w.name}'")
+
+        messages.success(request, f"♻️ Solicitud de restauración creada para '{w.name}'. Revisa el Dashboard para aprobarla.")
+        return redirect('ver_papelera')
+    except Exception as e:
+        messages.error(request, str(e))
+        return redirect('dashboard')

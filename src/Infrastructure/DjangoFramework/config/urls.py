@@ -13,7 +13,8 @@ from src.Infrastructure.DjangoFramework.persistence.views.dashboard_views import
     dashboard, aprobar_propuesta, rechazar_propuesta, publicar_version, 
     restaurar_version, borrar_propuesta, borrar_propuestas_masivo,
     aprobar_narrativa, rechazar_narrativa, publicar_narrativa, restaurar_narrativa, borrar_narrativa_version,
-    aprobar_imagen, rechazar_imagen, aprobar_propuestas_masivo
+    aprobar_imagen, rechazar_imagen, aprobar_propuestas_masivo,
+    ver_papelera, restaurar_entidad_fisica  # NEW TRASH VIEWS
 )
 from src.Infrastructure.DjangoFramework.persistence.views.media_views import (
     api_preview_foto, api_save_foto, api_update_image_metadata, 
@@ -64,6 +65,8 @@ urlpatterns = [
     # DASHBOARD Y CONTROL DE VERSIONES
     # ==========================================
     path('control/', dashboard, name='dashboard'), 
+    path('papelera/', ver_papelera, name='ver_papelera'),
+    path('papelera/restaurar/<str:jid>/', restaurar_entidad_fisica, name='restaurar_entidad_fisica'), 
     
     # Acciones de Propuestas (Aprobar/Rechazar)
     path('propuesta/<int:id>/aprobar/', aprobar_propuesta, name='aprobar_propuesta'),

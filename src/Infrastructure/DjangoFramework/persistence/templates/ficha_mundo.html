@@ -70,11 +70,17 @@
         
         <div class="col-span-1 lg:col-span-4 bg-gradient-to-r from-indigo-950 to-gray-900 p-6 border-b border-indigo-900 flex flex-col md:flex-row justify-between items-start gap-4">
             <div>
-                <div class="flex items-center gap-2 text-xs text-gray-400 mb-2">
-                    <a href="{% url 'home' %}" class="hover:text-accent">🏠 Universo</a>
+                <div class="flex items-center flex-wrap gap-2 text-xs text-gray-400 mb-4">
+                    <a href="{% url 'home' %}" class="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded-full text-gray-300 transition border border-gray-700 hover:border-accent">🏠</a>
                     {% for b in breadcrumbs %}
-                        <span>›</span>
-                        <a href="{% url 'ver_mundo' b.id %}" class="{% if b.id == jid %}text-accent font-bold{% else %}hover:text-white{% endif %}">{{ b.label }}</a>
+                        {% if b.id %}
+                        <a href="{% url 'ver_mundo' b.id %}" class="px-3 py-1 rounded-full border transition whitespace-nowrap {% if b.id == jid %}bg-accent/20 border-accent text-accent font-bold{% else %}bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700 hover:border-gray-500{% endif %}">
+                            {{ b.label }}
+                        </a>
+                        <!-- Arrow only if not last -->
+                        {% else %}
+                        <span class="text-gray-600 font-bold">...</span>
+                        {% endif %}
                     {% endfor %}
                 </div>
 
@@ -97,18 +103,12 @@
                 </div>
 
                 <div class="text-xs font-mono text-gray-500 bg-black/30 px-2 py-1 rounded inline-block border border-gray-800">
+                    <span class="text-accent font-bold uppercase mr-2">{{ hierarchy_label }}</span>
                     J-ID: {{ jid }} <span class="text-gray-600 mx-2">|</span> CODE: <span class="text-accent">{{ public_id }}</span>
                 </div>
             </div>
             
-            <!-- IMAGEN DE PORTADA -->
-            {% for img in imagenes %}
-                {% if img.is_cover %}
-                <div class="hidden md:block w-48 h-32 rounded-lg overflow-hidden border-2 border-accent/50 shadow-lg">
-                    <img src="{% static 'persistence/img/'|add:img.url %}" class="w-full h-full object-cover" alt="Portada">
-                </div>
-                {% endif %}
-            {% endfor %}
+            <!-- IMAGEN DE PORTADA ELIMINADA POR USUARIO -->
             
             {% if not is_preview %}
             <div class="flex gap-2">
@@ -281,11 +281,17 @@
                 
                 <div class="mb-4">
                     <label class="block text-xs text-gray-500 uppercase font-bold mb-1">Tipo de Entidad</label>
-                    <select name="entity_type" class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none">
-                        <option value="Lugar">🏰 Lugar / Región</option>
-                        <option value="Criatura">🐉 Criatura / NPC</option>
-                        <option value="Objeto">💎 Objeto / Artefacto</option>
+                    <!-- LEVEL SELECTOR (Deep Creation) -->
+                    <select name="target_level" class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none mb-4">
+                        {% for lvl in available_levels %}
+                        <option value="{{ lvl.level }}" {% if lvl.is_next %}selected{% endif %}>
+                            {% if lvl.is_next %}📍 Siguiente: {{ lvl.label }} (Nivel {{ lvl.level }}){% else %}🕳️ Salto a: {{ lvl.label }} (Nivel {{ lvl.level }}){% endif %}
+                        </option>
+                        {% endfor %}
                     </select>
+                    
+                    <!-- Legacy Type Selector (Optional/Cosmetic now if level drives logic, but kept for reasoning) -->
+                    <input type="text" name="entity_type_desc" placeholder="Tipo (ej: Lugar, Personaje...)" class="w-full bg-black border border-gray-700 rounded p-2 text-white text-xs mb-2">
                 </div>
 
                 <div class="mb-4">
