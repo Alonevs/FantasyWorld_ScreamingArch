@@ -1,7 +1,8 @@
+{% load custom_filters %}
 <div class="mt-8 bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
     <div class="flex items-center justify-between px-4 py-3 border-b border-gray-800 bg-black/20">
         <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-            🧬 ANÁLISIS ESTRUCTURAL
+            🧬 METADATA
         </h3>
         <button onclick="openMetadataModal()" class="text-purple-500 hover:text-white text-xs transition px-2 py-1 rounded hover:bg-purple-900/30" title="Editar">⚙️ EDITAR</button>
     </div>
@@ -9,17 +10,11 @@
     {% if metadata_obj.properties %}
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
-                <thead class="bg-black/30 text-gray-500 uppercase font-mono text-[10px] tracking-wider">
-                    <tr>
-                        <th class="px-4 py-2 font-bold w-1/3 border-b border-gray-800">Variable</th>
-                        <th class="px-4 py-2 font-bold w-2/3 border-b border-gray-800">Valor</th>
-                    </tr>
-                </thead>
                 <tbody class="divide-y divide-gray-800">
                     {% for item in metadata_obj.properties %}
                     <tr class="group hover:bg-white/5 transition">
-                        <td class="px-4 py-2 font-mono text-[11px] text-purple-400 font-bold uppercase tracking-wide border-r border-gray-800/50">
-                            {{ item.key }}
+                        <td class="px-4 py-2 font-mono text-[11px] text-purple-400 font-bold tracking-wide border-r border-gray-800/50">
+                            {{ item.key|clean_metadata_key }}
                         </td>
                         <td class="px-4 py-2 text-gray-300">
                             {{ item.value }}

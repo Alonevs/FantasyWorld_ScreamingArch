@@ -75,11 +75,8 @@ def analyze_metadata_api(request):
         if lore_real and lore_real.contenido:
             texto_final = f"{lore_real.titulo}:\n{lore_real.contenido}"
         else:
-            # NO HAY LORE - Retornar error claro
-            return JsonResponse({
-                'success': False,
-                'error': f'⚠️ No existe LORE para "{w_orm.name}". Crea primero una narrativa de tipo LORE en este mundo.'
-            })
+            # NO HAY LORE - Permitir Cold Start (Metadata Placeholder)
+            texto_final = ""
             
         if not texto_final.strip():
             texto_final = f"Mundo: {w_orm.name}. No hay datos disponibles."
@@ -87,9 +84,15 @@ def analyze_metadata_api(request):
 
         
         # Call AI
-        # Ignoring template schema as per Open Extraction req
+        # Call AI via Use Case (V2 Logic - Schemas + Cold Start)
         service = Llama3Service()
-        extracted_data = service.extract_metadata(texto_final)
+        repo = DjangoCaosRepository()
+        
+        # Local import to avoid circular dependency
+        from src.WorldManagement.Caos.Application.generate_contextual_metadata import GenerateContextualMetadataUseCase
+        
+        use_case = GenerateContextualMetadataUseCase(repo, service)
+        extracted_data = use_case.execute(w_orm.id)
         
         if not extracted_data:
             return JsonResponse({
