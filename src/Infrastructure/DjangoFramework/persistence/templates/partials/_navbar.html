@@ -1,0 +1,43 @@
+{% load static %}
+<!-- Global Navigation -->
+<nav class="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-gray-800 h-16 px-6 flex items-center justify-between">
+    <!-- Logo -->
+    <a href="{% url 'home' %}" class="flex items-center gap-2 group">
+        <span class="text-2xl filter drop-shadow-[0_0_10px_rgba(214,51,255,0.5)] group-hover:scale-110 transition">🌌</span>
+        <span class="text-xl font-bold tracking-widest text-white group-hover:text-accent transition">ECLAI</span>
+    </a>
+
+    <!-- User Controls -->
+    <div class="flex items-center gap-4">
+        <!-- Nav Actions (Hidden on mobile, visible on desktop) -->
+        <div class="hidden md:flex items-center gap-2 mr-4 border-r border-gray-800 pr-4">
+            <a href="{% url 'home' %}" class="text-sm font-bold text-gray-400 hover:text-white px-3 py-1.5 rounded hover:bg-white/5 transition {% if request.resolver_match.url_name == 'home' %}text-white bg-white/5{% endif %}">
+                🏠 Inicio
+            </a>
+            <a href="{% url 'dashboard' %}" class="text-sm font-bold text-gray-400 hover:text-white px-3 py-1.5 rounded hover:bg-white/5 transition {% if request.resolver_match.url_name == 'dashboard' %}text-white bg-white/5{% endif %}">
+                🎛️ Dashboard
+            </a>
+        </div>
+
+        {% if user.is_authenticated %}
+            <div class="flex items-center gap-3 bg-gray-900/50 rounded-full pl-4 pr-1 py-1 border border-gray-800">
+                <div class="flex flex-col items-end leading-none">
+                    <span class="text-[9px] text-gray-500 font-bold uppercase tracking-wider">On Air</span>
+                    <span class="text-xs font-bold text-accent">{{ user.username }}</span>
+                </div>
+                <form method="post" action="{% url 'logout' %}" class="m-0">
+                    {% csrf_token %}
+                    <button type="submit" class="bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white p-1.5 rounded-full transition border border-transparent hover:border-red-500/50" title="Cerrar Sesión">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        {% else %}
+            <a href="{% url 'login' %}" class="flex items-center gap-2 bg-accent/20 hover:bg-accent text-accent hover:text-white px-4 py-1.5 rounded-full text-xs font-bold transition border border-accent/50">
+                <span>👤</span> Iniciar Sesión
+            </a>
+        {% endif %}
+    </div>
+</nav>

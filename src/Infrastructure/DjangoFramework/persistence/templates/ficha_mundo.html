@@ -54,6 +54,7 @@
                         <a href="{% url 'toggle_lock' jid %}" class="text-xs px-2 py-1 rounded border border-gray-600 bg-gray-800 text-gray-400 hover:bg-gray-700">
                             {% if is_locked %}🔓 Desbloquear{% else %}🔒 Bloquear{% endif %}
                         </a>
+                        <!-- Also allow admin to toggle visibility directly here if needed, or keep it separate -->
                         {% endif %}
                     {% endif %}
 
@@ -118,7 +119,7 @@
             <div class="flex gap-4 overflow-x-auto pb-4 mb-8 snap-x min-h-[140px]">
                 {% for img in imagenes %}
                 <div class="snap-start shrink-0 relative group w-40 h-56">
-                    <div class="w-full h-full rounded-lg overflow-hidden border border-gray-700 cursor-pointer hover:border-accent transition shadow-lg bg-black" onclick="openLightbox('{% static 'persistence/img/' %}{{ img.url }}', '{{ img.filename|escapejs }}')">
+                    <div class="w-full h-full rounded-lg overflow-hidden border border-gray-700 cursor-pointer hover:border-accent transition shadow-lg bg-black" onclick="openLightbox('{% static '/persistence/img/' %}{{ img.url }}', '{{ img.filename|escapejs }}')">
                         <img src="{% static 'persistence/img/' %}{{ img.url }}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500 opacity-90 group-hover:opacity-100">
                     </div>
                     {% if not is_preview %}

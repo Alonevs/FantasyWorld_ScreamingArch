@@ -1,19 +1,21 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>404 - Extraviado en el Caos</title>
-    <style>
-        body { background: #0a0a12; color: #fff; font-family: monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        h1 { font-size: 4em; color: #d633ff; margin-bottom: 10px; }
-        p { color: #888; font-size: 1.2em; }
-        a { margin-top: 20px; padding: 10px 20px; background: #333; color: white; text-decoration: none; border-radius: 5px; border: 1px solid #444; }
-        a:hover { background: #444; }
-    </style>
-</head>
-<body>
-    <h1>404</h1>
-    <p>La entidad "{{ jid }}" no existe en este plano de la realidad.</p>
-    <a href="/">Volver al Origen</a>
-</body>
-</html>
+{% extends "layouts/base.html" %}
+
+{% block title %}404 - Extraviado en el Caos{% endblock %}
+
+{% block content %}
+<div class="flex flex-col items-center justify-center min-h-[80vh] text-center p-6">
+    <div class="relative">
+        <h1 class="text-9xl font-bold text-transparent bg-clip-text bg-gradient-to-br from-accent to-purple-900 select-none animate-pulse">404</h1>
+        <div class="absolute -inset-4 bg-accent/20 blur-3xl -z-10 rounded-full"></div>
+    </div>
+    
+    <h2 class="text-2xl text-white font-bold mt-4 mb-2 uppercase tracking-widest">Extraviado en el Caos</h2>
+    <p class="text-gray-400 text-lg max-w-md mx-auto mb-8">
+        La entidad <span class="text-accent font-mono">{{ jid }}</span> no existe en este plano de la realidad o ha sido consumida por la nada.
+    </p>
+
+    <a href="{% url 'home' %}" class="px-8 py-3 bg-gray-800 hover:bg-white hover:text-black text-white font-bold rounded-full border border-gray-600 hover:border-white transition transform hover:scale-105 shadow-xl">
+        🌌 Volver al Origen
+    </a>
+</div>
+{% endblock %}

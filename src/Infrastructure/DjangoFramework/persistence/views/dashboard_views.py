@@ -153,10 +153,10 @@ def publicar_version(request, version_id):
         v = CaosVersionORM.objects.get(id=version_id)
         log_event(request.user, "WORLD_PUBLISH", v.world.id, f"Published v{v.version_number} to LIVE")
         messages.success(request, f"🚀 Versión {v.version_number} PUBLICADA LIVE.")
-        return redirect('ver_mundo', public_id=v.world.public_id if v.world.public_id else v.world.id)
+        return redirect('dashboard')
     except Exception as e:
         messages.error(request, str(e))
-        return redirect('home')
+        return redirect('dashboard')
 
 def aprobar_version(request, version_id): return redirect('aprobar_propuesta', id=version_id)
 def rechazar_version(request, version_id): return redirect('rechazar_propuesta', id=version_id)

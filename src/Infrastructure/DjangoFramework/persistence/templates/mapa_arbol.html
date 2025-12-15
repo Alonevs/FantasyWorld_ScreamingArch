@@ -1,48 +1,51 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Mapa Estructural</title>
-    <style>
-        body { background-color: #0a0a12; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; padding: 40px; }
-        .container { max-width: 900px; margin: 0 auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 15px; }
-        h1 { margin: 0; color: #d633ff; text-transform: uppercase; letter-spacing: 2px; }
-        .btn-back { background: #333; color: #fff; text-decoration: none; padding: 8px 20px; border-radius: 5px; border: 1px solid #444; }
-        .btn-back:hover { background: #555; }
-        .tree-container { background: #161625; border: 1px solid #2a2a40; border-radius: 10px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .node-row { display: flex; align-items: center; padding: 8px 10px; border-bottom: 1px solid #222; transition: background 0.2s; text-decoration: none; color: #ccc; }
-        .node-row:hover { background: #1f1f33; color: #fff; }
-        .node-row:last-child { border-bottom: none; }
-        .connector { color: #444; margin-right: 10px; font-family: monospace; }
-        .node-badge { font-family: 'Courier New', monospace; font-size: 0.8em; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; color: #666; margin-right: 10px; }
-        .node-name { font-weight: bold; font-size: 1.1em; }
-        .root-node .node-name { color: #d633ff; text-decoration: underline; }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; margin-left: auto; }
-        .st-LIVE { background: #2ecc71; box-shadow: 0 0 5px #2ecc71; }
-        .st-DRAFT { background: #f39c12; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🗺️ Estructura: {{ root_name }}</h1>
-            <a href="javascript:history.back()" class="btn-back">⬅ Volver</a>
-        </div>
-        <div class="tree-container">
-            {% for item in tree %}
-            <a href="{% url 'ver_mundo' item.public_id %}" class="node-row {% if item.is_root %}root-node{% endif %}">
-                <div style="width: {{ item.indent_px }}px;"></div>
-                {% if not item.is_root %}<span class="connector">└─</span>{% endif %}
-                <span class="node-badge">{{ item.id_display }}</span>
-                <span class="node-name">{{ item.name }}</span>
-                <span class="status-dot st-{{ item.status }}" title="{{ item.status }}"></span>
-            </a>
-            {% empty %}
-                <p style="text-align:center; color:#666;">Vacío.</p>
-            {% endfor %}
-        </div>
+{% extends "layouts/base.html" %}
+
+{% block title %}Mapa Estructural | {{ root_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto p-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row justify-between items-center mb-8 border-b border-gray-800 pb-4">
+        <h1 class="text-2xl font-bold text-accent uppercase tracking-widest mb-4 sm:mb-0">
+            🗺️ Estructura: {{ root_name }}
+        </h1>
+        <a href="javascript:history.back()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg border border-gray-700 transition flex items-center gap-2">
+            ⬅ Volver
+        </a>
     </div>
-</body>
-</html>
+
+    <!-- Tree Container -->
+    <div class="bg-card border border-gray-800 rounded-xl p-6 shadow-2xl overflow-x-auto">
+        {% for item in tree %}
+        <a href="{% url 'ver_mundo' item.public_id %}" class="flex items-center px-3 py-2 border-b border-gray-800/50 hover:bg-white/5 transition rounded group {% if item.is_root %}text-accent font-bold{% else %}text-gray-400 hover:text-white{% endif %}">
+            <!-- Indentation -->
+            <div style="width: {{ item.indent_px }}px;" class="flex-shrink-0"></div>
+            
+            <!-- Connector & Badge -->
+            {% if not item.is_root %}
+                <span class="text-gray-600 font-mono mr-2">└─</span>
+            {% endif %}
+            
+            <span class="font-mono text-xs bg-black/40 text-gray-500 px-1.5 py-0.5 rounded mr-3 border border-gray-800">
+                {{ item.id_display }}
+            </span>
+            
+            <!-- Name -->
+            <span class="text-lg {% if item.is_root %}underline decoration-accent/30 underline-offset-4{% endif %} mr-auto">
+                {{ item.name }}
+            </span>
+
+            <!-- Status Dot -->
+            <span class="w-2.5 h-2.5 rounded-full ml-4 shadow-sm
+                {% if item.status == 'LIVE' %}bg-green-500 shadow-green-500/50{% else %}bg-orange-500{% endif %}" 
+                title="{{ item.status }}">
+            </span>
+        </a>
+        {% empty %}
+            <div class="text-center py-10 text-gray-500 italic">
+                El vacío es absoluto. No hay estructura visible.
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

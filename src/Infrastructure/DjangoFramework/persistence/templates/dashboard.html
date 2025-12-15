@@ -75,8 +75,13 @@
                             <span>{{ img.created_at|date:"d/m H:i" }}</span>
                         </div>
                         <div class="flex gap-2">
-                            <a href="{% url 'aprobar_imagen' img.id %}" class="flex-1 py-2 bg-green-900/20 hover:bg-green-600 text-green-400 hover:text-white rounded text-center font-bold transition border border-green-900/50">✅ Aprobar</a>
-                            <a href="{% url 'rechazar_imagen' img.id %}" class="flex-1 py-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded text-center font-bold transition border border-red-900/50" onclick="return confirm('¿Rechazar y borrar?')">✕ Rechazar</a>
+                            {% if img.action == 'DELETE' %}
+                                <a href="{% url 'rechazar_imagen' img.id %}" class="flex-1 py-2 bg-green-900/20 hover:bg-green-600 text-green-400 hover:text-white rounded text-center font-bold transition border border-green-900/50">✅ Mantener</a>
+                                <a href="{% url 'aprobar_imagen' img.id %}" class="flex-1 py-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded text-center font-bold transition border border-red-900/50" onclick="return confirm('¿Confirmar borrado definitivo?')">🗑️ Borrar</a>
+                            {% else %}
+                                <a href="{% url 'aprobar_imagen' img.id %}" class="flex-1 py-2 bg-green-900/20 hover:bg-green-600 text-green-400 hover:text-white rounded text-center font-bold transition border border-green-900/50">✅ Aprobar</a>
+                                <a href="{% url 'rechazar_imagen' img.id %}" class="flex-1 py-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded text-center font-bold transition border border-red-900/50" onclick="return confirm('¿Rechazar y borrar?')">✕ Rechazar</a>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -135,19 +140,32 @@
             {% endif %}
     
             <!-- ARCHIVADAS (HISTORIAL) -->
-            <h2 class="text-2xl font-bold text-gray-500 mt-12 mb-4 flex justify-between items-center">
-                <span>📜 Historial (Versiones Archivadas)</span>
-                <button type="button" onclick="toggleSelectSection('archived-list')" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded border border-gray-700 transition">Seleccionar Todo</button>
-            </h2>
-            {% if archived %}
-            <div id="archived-list" class="grid gap-4">
-                {% for item in archived %}
-                    {% include "components/_proposal_card.html" with item=item variant="archived" %}
-                {% endfor %}
-            </div>
-            {% else %}
-            <p class="text-gray-600 italic">No hay historial de versiones archivadas.</p>
-            {% endif %}
+            <!-- ARCHIVADAS (HISTORIAL) -->
+            <details class="group mt-12 mb-4 bg-gray-900/20 rounded-xl border border-gray-800/50 overflow-hidden">
+                <summary class="flex justify-between items-center p-4 cursor-pointer hover:bg-gray-800/50 transition list-none select-none">
+                    <h2 class="text-xl font-bold text-gray-500 flex items-center gap-3">
+                        <span>📜 Historial (Versiones Archivadas)</span>
+                        <span class="text-xs bg-gray-800 text-gray-500 px-2 py-1 rounded-full border border-gray-700">{{ archived|length }}</span>
+                    </h2>
+                    <span class="text-gray-500 transform group-open:rotate-180 transition">▼</span>
+                </summary>
+
+                <div class="p-4 border-t border-gray-800/50 bg-black/20">
+                    <div class="flex justify-end mb-4">
+                        <button type="button" onclick="toggleSelectSection('archived-list')" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded border border-gray-700 transition">Seleccionar Todo</button>
+                    </div>
+
+                    {% if archived %}
+                    <div id="archived-list" class="grid gap-4">
+                        {% for item in archived %}
+                            {% include "components/_proposal_card.html" with item=item variant="archived" %}
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-gray-600 italic text-center py-4">No hay historial de versiones archivadas.</p>
+                    {% endif %}
+                </div>
+            </details>
 
             <!-- EVENT LOG (AUDIT) -->
             <h2 class="text-2xl font-bold text-blue-400 mt-12 mb-4">📋 Registro de Actividad (Audit Log)</h2>

@@ -38,11 +38,21 @@
             </div>
             {% endif %}
             
-            <!-- Floating Status Badge -->
-            <div class="absolute top-2 right-2 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border backdrop-blur-sm
-                {% if entity.status == 'LIVE' %}bg-green-900/40 border-green-500/50 text-green-400
-                {% else %}bg-yellow-900/40 border-yellow-500/50 text-yellow-400{% endif %}">
-                {{ entity.status }}
+            <!-- Floating Status Indicators -->
+            <div class="absolute top-2 right-2 flex items-center gap-2">
+                {% if entity.is_locked %}
+                <div class="w-6 h-6 rounded-full bg-black/60 backdrop-blur border border-white/20 flex items-center justify-center text-xs" title="Bloqueado">
+                    🔒
+                </div>
+                {% endif %}
+
+                <!-- Status Dot -->
+                <div class="w-3 h-3 rounded-full shadow-lg border border-white/20 
+                    {% if entity.status == 'DRAFT' %}bg-yellow-500 shadow-yellow-500/50
+                    {% elif entity.visible %}bg-green-500 shadow-green-500/50
+                    {% else %}bg-red-600 shadow-red-600/50{% endif %}"
+                    title="{% if entity.status == 'DRAFT' %}Propuesta{% elif entity.visible %}Público{% else %}Privado{% endif %}">
+                </div>
             </div>
         </div>
 

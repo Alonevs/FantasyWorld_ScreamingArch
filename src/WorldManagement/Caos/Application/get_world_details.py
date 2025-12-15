@@ -49,6 +49,10 @@ class GetWorldDetailsUseCase:
         # Fetch all descendants
         all_descendants = CaosWorldORM.objects.filter(id__startswith=jid, is_active=True).exclude(id=jid).exclude(status='DRAFT').order_by('id')
         
+        # Privacy Logic: Hide private entities for non-admins
+        if not (user and (user.is_superuser or user.is_staff)):
+             all_descendants = all_descendants.filter(visible_publico=True)
+        
         # Build a set of existing IDs for fast "parent exists" check
         existing_ids = set(d.id for d in all_descendants)
         existing_ids.add(jid) # Parent exists obviously

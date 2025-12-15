@@ -6,6 +6,17 @@
         <h1 class="text-5xl font-bold text-accent mb-2 drop-shadow-[0_0_15px_rgba(214,51,255,0.5)]">ECLAI UNIVERSE</h1>
         <p class="text-gray-400 text-lg">Sistema de Gestión de Realidades - v5.0 (Base)</p>
         
+        <!-- Admin Status Indicator -->
+        <div class="mt-4 text-xs font-mono uppercase tracking-widest">
+            {% if user.is_authenticated %}
+                <span class="text-green-500">🟢 Operador: {{ user.username }}</span>
+                {% if user.is_superuser %} <span class="text-accent border border-accent/30 px-1 rounded ml-1">ADMIN</span>{% endif %}
+            {% else %}
+                <span class="text-red-500">🔴 Acceso Público (Solo Lectura)</span>
+                <a href="{% url 'login' %}" class="ml-2 text-gray-400 hover:text-white underline">Iniciar Sesión</a>
+            {% endif %}
+        </div>
+        
         <div class="flex justify-center gap-4 mt-6">
             <button onclick="document.getElementById('createModal').classList.remove('hidden');document.getElementById('createModal').classList.add('flex')" 
                class="px-6 py-2 bg-accent hover:bg-accent-hover text-white font-bold rounded-full transition transform hover:scale-105 shadow-lg shadow-purple-900/40">

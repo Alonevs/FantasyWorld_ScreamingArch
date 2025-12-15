@@ -65,9 +65,17 @@ def home(request):
         messages.success(request, "✨ Mundo propuesto. Ve al Dashboard para aprobarlo.")
         return redirect('dashboard')
     
-    # Show ALL live worlds that have CONTENT (Description is not empty)
-    # This hides "gap" levels or empty containers, but shows deep entities like "Plataforma 1º"
-    ms = CaosWorldORM.objects.exclude(status='DRAFT').exclude(description__isnull=True).exclude(description__exact='').exclude(description__iexact='None').order_by('id')
+    # Show LIVE worlds based on user permissions
+    # Admins/Staff see EVERYTHING (including Private)
+    # Public users see ONLY visible_publico=True
+    
+    ms = CaosWorldORM.objects.exclude(status='DRAFT') \
+        .exclude(description__isnull=True).exclude(description__exact='') \
+        .exclude(description__iexact='None').order_by('id')
+
+    if not (request.user.is_authenticated and (request.user.is_superuser or request.user.is_staff)):
+        ms = ms.filter(visible_publico=True)
+
     l = []
     for m in ms:
         imgs = get_world_images(m.id)
@@ -78,7 +86,16 @@ def home(request):
             if found: cover = found['url']
         
         pid = m.public_id if m.public_id else m.id
-        l.append({'id': m.id, 'public_id': pid, 'name': m.name, 'status': m.status, 'img_file': cover, 'has_img': bool(cover)})
+        l.append({
+            'id': m.id, 
+            'public_id': pid, 
+            'name': m.name, 
+            'status': m.status, 
+            'img_file': cover, 
+            'has_img': bool(cover), 
+            'visible': m.visible_publico,
+            'is_locked': m.status == 'LOCKED'
+        })
     return render(request, 'index.html', {'mundos': l})
 
 def ver_mundo(request, public_id):
@@ -126,6 +143,13 @@ def ver_mundo(request, public_id):
     
     if not context:
         return render(request, '404.html', {"jid": public_id})
+
+    # --- URL CANONICALIZATION (Legacy ID -> NanoID) ---
+    # If accessed via legacy ID (e.g., '01') but entity has a public_id (NanoID), redirect.
+    # We check if the requested 'public_id' mismatches the resolved 'context["public_id"]'.
+    if context['public_id'] and context['public_id'] != public_id:
+        return redirect('ver_mundo', public_id=context['public_id'])
+    # --------------------------------------------------
 
     # --- HIERARCHY LABEL INJECTION ---
     context['hierarchy_label'] = get_readable_hierarchy(context['jid'])
