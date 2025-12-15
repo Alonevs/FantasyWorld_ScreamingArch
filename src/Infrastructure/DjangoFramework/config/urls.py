@@ -6,7 +6,7 @@ from django.conf.urls.static import static
 from src.Infrastructure.DjangoFramework.persistence.views.world_views import (
     home, ver_mundo, editar_mundo, borrar_mundo, 
     toggle_lock, toggle_visibilidad, init_hemisferios, escanear_planeta,
-    mapa_arbol, comparar_version, ver_metadatos
+    mapa_arbol, comparar_version, ver_metadatos, api_auto_noos
 )
 from src.Infrastructure.DjangoFramework.persistence.views.ai_views import analyze_metadata_api, edit_narrative_api, api_generate_title
 from src.Infrastructure.DjangoFramework.persistence.views.dashboard_views import (
@@ -118,6 +118,7 @@ urlpatterns = [
     path('api/ai/edit-narrative/', edit_narrative_api, name='edit_narrative_api'),
     path('api/ai/generate-title/', api_generate_title, name='api_generate_title'),
     path('api/narrative/import-file/', import_narrative_file, name='import_narrative_file'),
+    path('api/auto_noos/<str:jid>/', api_auto_noos, name='api_auto_noos'),
 ]
 
 if settings.DEBUG:

@@ -7,7 +7,7 @@
         <div class="flex justify-between items-center p-5 border-b border-gray-800 bg-black/40">
             <div>
                 <h2 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 flex items-center gap-3">
-                    <span class="text-2xl">🔮</span> METADATA <span class="text-xs text-gray-500 font-mono mt-1 border border-gray-700 px-1 rounded">V2.0 RAW</span>
+                    <span class="text-2xl">🔮</span> METADATA <span class="text-xs text-gray-500 font-mono mt-1 border border-gray-700 px-1 rounded">IA AGENT</span>
                 </h2>
             </div>
             <button onclick="closeMetadataModal()" class="text-gray-500 hover:text-white transition w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10">✕</button>
@@ -30,16 +30,17 @@
                     <div class="flex justify-between items-center mb-4 border-b border-gray-800 pb-2">
                         <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Variables Identificadas</span>
                         <div class="flex gap-2">
-                            <button type="button" onclick="renderRow('', '')" class="text-xs text-purple-400 hover:text-purple-300 border border-purple-500/30 px-2 py-1 rounded hover:bg-purple-900/20 transition">+ VARIABLE</button>
-                            <button type="button" onclick="requestAIAnalysis()" class="text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 px-3 py-1 rounded shadow-lg shadow-purple-900/20 flex items-center gap-2 transition">
-                                🤖 AUTO-NOOS
+                            <button type="button" onclick="addMetadataRow()" class="text-xs text-purple-400 hover:text-purple-300 border border-purple-500/30 px-2 py-1 rounded hover:bg-purple-900/20 transition">+ VARIABLE</button>
+                            <button type="button" onclick="runAutoNoos()" class="text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 px-3 py-1 rounded shadow-lg shadow-purple-900/20 flex items-center gap-2 transition group">
+                                <span id="noos-icon" class="group-hover:animate-pulse">🧠</span> 
+                                <span id="noos-text">AUTO-NOOS</span>
                             </button>
                         </div>
                     </div>
 
-                    <div id="dynamic-rows" class="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+                    <div id="metadata-rows-container" class="space-y-2 max-h-[400px] overflow-y-auto pr-2">
                         <!-- JS injected rows -->
-                        <div id="empty-state" class="text-center py-12 text-gray-600 italic text-xs">
+                        <div id="empty-msg" class="text-center py-12 text-gray-600 italic text-xs">
                             Sin variables definidas. Usa "AUTO-NOOS" para escanear.
                         </div>
                     </div>
@@ -68,11 +69,17 @@
     ]
 </script>
 
-<script src="{% static 'js/metadata_manager.js' %}"></script>
+<script src="{% static 'persistence/js/metadata_manager.js' %}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        const savedProps = JSON.parse(document.getElementById('metadata-props').textContent);
-        const jid = JSON.parse(document.getElementById('world-jid').textContent);
-        initMetadata(savedProps, jid);
+        try {
+            const savedProps = JSON.parse(document.getElementById('metadata-props').textContent);
+            const jid = JSON.parse(document.getElementById('world-jid').textContent);
+            if(typeof initMetadataManager === 'function') {
+                initMetadataManager(savedProps, jid);
+            } else {
+                console.error("Metadata Manager JS not loaded!");
+            }
+        } catch(e) { console.error("Metadata Init Error:", e); }
     });
 </script>

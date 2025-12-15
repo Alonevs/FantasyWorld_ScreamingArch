@@ -34,7 +34,15 @@ class Llama3Service(LoreGenerator):
                 
         except Exception as e: 
             print(f"⚠️ [LlamaService] Exception: {e}")
-        return ""
+    def generate_raw(self, system, user, max_tokens=600, temperature=0.7):
+        """
+        Public wrapper for raw generation (Instruct Mode).
+        Combines System and User into a standard Llama 3 Instruct prompt if needed, 
+        or just sends them as messages if using Chat API.
+        Here we use Chat API for better instruction following.
+        """
+        prompt = f"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{user}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+        return self._call_api(prompt, max_tokens=max_tokens, temperature=temperature)
 
     def _clean_json(self, raw_text: str) -> Dict:
         """
@@ -137,7 +145,7 @@ Constraints:
         return raw_response
 
     # --- MÉTODO PARA CRIATURAS (JSON ESTRUCTURADO) ---
-    def generate_structure(self, system_prompt: str, context_prompt: str) -> Dict[str, Any]:
+    def generate_structure(self, system_prompt: str, context_prompt: str, max_tokens=600, temperature=0.6) -> Dict[str, Any]:
         print(f" 🧬 [Llama] Generando estructura JSON...")
         payload = {
             "mode": "instruct",
@@ -145,8 +153,8 @@ Constraints:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": context_prompt}
             ],
-            "max_tokens": 600,
-            "temperature": 0.6 
+            "max_tokens": max_tokens,
+            "temperature": temperature 
         }
         try:
             r = requests.post(self.api_url_chat, headers=self.headers, json=payload, timeout=90)

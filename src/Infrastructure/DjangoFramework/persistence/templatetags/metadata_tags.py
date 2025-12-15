@@ -121,3 +121,48 @@ def render_metadata_readonly(schema, metadata_values=None):
         html_parts.append('</div>')
         
     return mark_safe("".join(html_parts))
+
+@register.simple_tag
+def diff_metadata(live_obj, proposed_list):
+    """
+    Compares live metadata (dict or obj) with proposed list of properties.
+    Returns list of dicts: {'key': k, 'value': v, 'status': 'added'|'deleted'|'modified'}
+    """
+    # 1. Normalize Live Data to Dict
+    live_dict = {}
+    if live_obj:
+        if isinstance(live_obj, dict):
+            # Check for standard properties list (V2.1)
+            if 'properties' in live_obj and isinstance(live_obj['properties'], list):
+                for item in live_obj['properties']:
+                    if isinstance(item, dict) and 'key' in item:
+                        live_dict[item['key']] = item.get('value', '')
+            # Check for legacy flat dict
+            elif 'datos_nucleo' not in live_obj:
+                 for k, v in live_obj.items():
+                    if k not in ['cover_image', 'images', 'properties']:
+                         live_dict[k] = str(v)
+            
+    # 2. Normalize Proposed Data to Dict
+    prop_dict = {}
+    if proposed_list and isinstance(proposed_list, list):
+        for item in proposed_list:
+            if isinstance(item, dict) and 'key' in item:
+                prop_dict[item['key']] = item.get('value', '')
+
+    # 3. Compare
+    all_keys = set(live_dict.keys()) | set(prop_dict.keys())
+    diff = []
+
+    for k in sorted(all_keys):
+        v_live = live_dict.get(k)
+        v_prop = prop_dict.get(k)
+        
+        if k in prop_dict and k not in live_dict:
+            diff.append({'key': k, 'value': v_prop, 'status': 'added'})
+        elif k in live_dict and k not in prop_dict:
+            diff.append({'key': k, 'value': v_live, 'status': 'deleted'})
+        elif v_live != v_prop:
+            diff.append({'key': k, 'value': f"{v_live} ➝ {v_prop}", 'status': 'modified'})
+    
+    return diff

@@ -4,9 +4,12 @@ from src.WorldManagement.Caos.Domain.repositories import CaosRepository
 from src.FantasyWorld.AI_Generation.Domain.interfaces import LoreGenerator
 from src.Shared.Domain.value_objects import WorldID
 from src.WorldManagement.Caos.Domain.metadata import (
-    METADATA_SCHEMAS, TYPE_MAPPING, get_schema_for_type, get_schema_for_hierarchy
+    METADATA_SCHEMAS, get_schema_for_type, get_schema_for_hierarchy
 )
 
+
+# Derive mapping dynamically from schemas
+TYPE_MAPPING = {k.replace('_SCHEMA', ''): k for k in METADATA_SCHEMAS.keys()}
 
 class GenerateContextualMetadataUseCase:
     def __init__(self, repository: CaosRepository, ai_service: LoreGenerator):

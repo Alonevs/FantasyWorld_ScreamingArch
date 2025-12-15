@@ -160,22 +160,40 @@ def ver_mundo(request, public_id):
     context['available_levels'] = get_available_levels(context['jid'])
     # -----------------------------
 
-    # --- POC METADATA SYSTEM ---
-    # Detectar si estamos viendo el Caos (Root) o check manual
-    # Para POC: Si el ID es 0, O el nombre contiene "Caos" (ignorando mayúsculas)
-    w_name = context.get('name', '')
-    if public_id == "0" or "Caos" in w_name or "chaos" in w_name.lower():
-        try:
-            tpl = MetadataTemplate.objects.filter(entity_type='CHAOS').first()
-            if tpl:
-                context['metadata_template'] = {
-                    'entity_type': tpl.entity_type,
-                    'schema': tpl.schema_definition,
-                    'ui': tpl.ui_config
-                }
-        except Exception as e:
-            print(f"⚠️ [POC] Error cargando plantilla: {e}")
-    # ---------------------------
+    # --- METADATA ADAPTER (V2.0 + V1.0 Support) ---
+    # Ensure frontend always gets a flat list of properties
+    raw_meta = context.get('metadata_obj', {})
+    if not isinstance(raw_meta, dict): raw_meta = {} # Safety check
+    
+    properties = []
+    
+    # CASE C: V2.1 "Standard List" (Auto-Noos & Manual Format)
+    if 'properties' in raw_meta and isinstance(raw_meta['properties'], list):
+         properties = raw_meta['properties']
+
+    # CASE A: V2.0 Structured (Schema-based - Legacy/Imported)
+    elif 'datos_nucleo' in raw_meta:
+        # 1. Type
+        if 'tipo_entidad' in raw_meta:
+            properties.append({'key': 'TIPO_ENTIDAD', 'value': raw_meta['tipo_entidad']})
+            
+        # 2. Nucleo (Fixed)
+        for k, v in raw_meta.get('datos_nucleo', {}).items():
+            properties.append({'key': k, 'value': v})
+            
+        # 3. Extended (Extra)
+        for k, v in raw_meta.get('datos_extendidos', {}).items():
+            properties.append({'key': k, 'value': v})
+            
+    # CASE B: V1.0 Flat (Legacy)
+    else:
+        for k, v in raw_meta.items():
+            # Filter out internal/system keys if any
+            if k not in ['cover_image', 'images', 'properties']: 
+                properties.append({'key': k, 'value': v})
+                
+    context['metadata_obj'] = {'properties': properties}
+    # ----------------------------------------------
 
     return render(request, 'ficha_mundo.html', context)
 
@@ -202,6 +220,9 @@ def editar_mundo(request, jid):
                     for k, v in zip(prop_keys, prop_values):
                         if k.strip(): # Ignore empty keys
                             metadata_prop['properties'].append({'key': k.strip(), 'value': v.strip()})
+                
+                print(f"📝 [Manual Edit] Submitting Metadata Proposal: {len(metadata_prop['properties'])} items.")
+                print(f"   Payload: {metadata_prop}")
                 
                 # If editing metadata, we might keep name/desc as is (or use hidden fields)
                 # For safety, let's just pass None to keep existing values in UseCase
@@ -374,3 +395,147 @@ def ver_metadatos(request, public_id):
              context['metadata_obj'] = {} 
     
     return render(request, 'ver_metadatos.html', context)
+
+# --- AUTO-NOOS API ---
+@csrf_exempt 
+def api_auto_noos(request, jid):
+    try:
+        print(f"🤖 [Auto-Noos] Start for JID: {jid}")
+        repo = DjangoCaosRepository()
+        w_domain = resolve_world_id(repo, jid)
+        
+        if not w_domain:
+            return JsonResponse({'status': 'error', 'message': 'Mundo no encontrado'})
+        
+        # 1. Gather Context
+        sources_found = []
+        context_parts = [f"Entidad: {w_domain.name}"]
+        
+        # A. Description
+        # FIX: Domain Entity uses lore_description, ORM uses description.
+        # Check both to be safe (Hybrid Object)
+        desc_val = getattr(w_domain, 'lore_description', '') or getattr(w_domain, 'description', '')
+        if desc_val and len(desc_val.strip()) > 5:
+            context_parts.append(f"Descripción: {desc_val}")
+            sources_found.append("Descripción")
+            
+        # B. Existing Metadata
+        try:
+            w_orm = CaosWorldORM.objects.get(id=w_domain.id.value)
+            raw_meta = w_orm.metadata or {}
+            if isinstance(raw_meta, dict):
+                 # Flatten existing dict if any suitable
+                 if 'properties' in raw_meta and raw_meta['properties']:
+                     context_parts.append(f"Metadatos Existentes: {json.dumps(raw_meta['properties'])}")
+                     sources_found.append("Metadatos")
+        except Exception as e:
+            print(f"⚠️ Error reading existing metadata: {e}")
+        
+        # C. Narratives
+        try:
+            narrs = w_orm.narrativas.filter(is_active=True).order_by('-updated_at')[:5]
+            if narrs.exists():
+                narr_text = "\nInformación Narrativa:\n"
+                has_narr = False
+                for n in narrs:
+                    if n.contenido and len(n.contenido.strip()) > 10:
+                        narr_text += f"- {n.titulo}: {n.contenido[:400]}...\n"
+                        has_narr = True
+                if has_narr:
+                    context_parts.append(narr_text)
+                    sources_found.append("Narrativa")
+        except Exception as e:
+            print(f"⚠️ Error reading narratives: {e}")
+
+        if not sources_found:
+             # FALLBACK: If almost no context, force creative generation based on Name
+             print("⚠️ Low context. Engaging Creative Mode.")
+             context_text = f"Entidad: {w_domain.name}\n(Esta entidad no tiene descripción. INVENTA atributos coherentes con un mundo de fantasía basados en su nombre)."
+        else:
+             context_text = "\n\n".join(context_parts)
+
+        # 2. RESOLVE SCHEMA (Source of Truth: metadata_schemas.py)
+        target_schema = None
+        try:
+            from src.WorldManagement.Caos.Domain.metadata_schemas import get_schema_for_hierarchy
+            
+            raw_id = w_domain.id.value
+            level = len(raw_id) // 2
+            
+            target_schema = get_schema_for_hierarchy(raw_id, level)
+            
+            if target_schema:
+                print(f"📏 [Auto-Noos] Using Strict Schema for Level {level} (JID {raw_id})")
+            else:
+                print(f"ℹ️ [Auto-Noos] No explicit schema for Level {level} (Generic Mode)")
+
+        except Exception as e:
+            print(f"⚠️ Schema Resolution Failed: {e}")
+
+        # 3. Prompt Engineering
+        system_prompt = (
+            "Eres el Oráculo del Caos (Auto-Noos). Extrae metadatos del texto.\n"
+            "Devuelve SOLO JSON con formato: { \"properties\": [ {\"key\": \"Nombre\", \"value\": \"Valor\"} ] }.\n"
+        )
+
+        # 3. Prompt Engineering (Concise Mode)
+        base_system_prompt = (
+            "Eres un Motor de Base de Datos Semántica para Worldbuilding.\n"
+            "Tu objetivo es extraer atributos técnicos de una narrativa para rellenar una ficha JSON.\n\n"
+            "REGLAS ABSOLUTAS DE FORMATO:\n"
+            "1. LONGITUD MÁXIMA: Los valores deben tener entre 1 y 3 palabras. NUNCA frases completas.\n"
+            "   - ⛔ MALO: 'El clima es muy seco con tormentas de arena'\n"
+            "   - ✅ BUENO: 'Árido / Tormentoso'\n"
+            "2. ESTILO: Usa un tono técnico, científico o de RPG. Sé directo.\n"
+            "3. VALORES PROHIBIDOS: No uses 'TRUE', 'FALSE', 'SI', 'NO' ni copies los ejemplos. Interpreta el texto.\n"
+            "   - Si el esquema dice 'leyes_fisicas', no ponas 'TRUE'. Pon 'Inestables', 'Rígidas', 'Mágicas'.\n"
+            "4. DATOS EXTRA: Si detectas conceptos únicos (razas, materiales, dioses), añádelos como claves nuevas, manteniendo el valor corto.\n"
+            "5. TU SALIDA DEBE SER SOLO EL JSON LIMPIO."
+        )
+
+        if target_schema and 'campos_fijos' in target_schema:
+            fixed = json.dumps(target_schema['campos_fijos'], ensure_ascii=False)
+            system_prompt = base_system_prompt + f"\n\n⚠️ ESQUEMA OBLIGATORIO: Debes priorizar y rellenar estos campos: {fixed}."
+        else:
+            system_prompt = base_system_prompt + "\n\nTAREA: Extrae los 5-10 atributos técnicos/sociológicos más críticos para definir esta entidad."
+
+        user_prompt = f"Analiza este texto narrativo:\n\n{context_text}"
+        
+        # 4. AI Call (Using Structured Chat API)
+        print(f"🤖 Sending Prompt to AI ({len(user_prompt)} chars). Max Tokens: 200")
+        
+        # Use generate_structure with strict token limit to enforce conciseness
+        data = Llama3Service().generate_structure(system_prompt, user_prompt, max_tokens=200)
+        
+        print(f"📥 AI Response Data: {str(data)[:100]}...")
+
+        if not data:
+             return JsonResponse({'status': 'error', 'message': 'La IA no devolvió datos válidos.'})
+
+        # 5. Parse/Normalize (Data is already a dict)
+        properties = []
+        
+        # Normalize
+        if 'properties' in data and isinstance(data['properties'], list):
+            properties = data['properties']
+        else:
+            # Flat dict fallback
+            exclude = ['properties', 'datos_nucleo', 'datos_extendidos', 'tipo_entidad']
+            # Check for nested schema structure
+            if 'datos_nucleo' in data:
+                for k,v in data.get('datos_nucleo', {}).items(): properties.append({'key': k, 'value': str(v)})
+                for k,v in data.get('datos_extendidos', {}).items(): properties.append({'key': k, 'value': str(v)})
+            else:
+                for k,v in data.items():
+                    if k not in exclude and not isinstance(v, dict):
+                        properties.append({'key': k, 'value': str(v)})
+    
+        if not properties:
+            return JsonResponse({'status': 'error', 'message': 'La IA no extrajo datos válidos.'})
+
+        return JsonResponse({'status': 'success', 'properties': properties})
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'status': 'error', 'message': f"Server Error: {str(e)}"})
