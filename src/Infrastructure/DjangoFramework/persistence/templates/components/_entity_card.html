@@ -23,7 +23,9 @@
     </div>
     <div>
         <div class="font-bold text-gray-200 group-hover:text-white transition-colors">{{ entity.name }}</div>
+        {% if user.is_superuser %}
         <div class="text-xs text-gray-500 font-mono">{{ entity.short|default:entity.public_id }}</div>
+        {% endif %}
     </div>
 </a>
 
@@ -95,7 +97,13 @@
             
             <!-- Tags/Meta -->
             <div class="flex items-center justify-between text-xs text-gray-500 mt-auto pt-2 border-t border-gray-800/50 group-hover:border-accent/20 transition-colors">
-               <span class="font-mono">{{ entity.public_id }}</span>
+               <span class="font-mono">
+                   {% if user.is_superuser %}
+                       {{ entity.public_id }}
+                   {% else %}
+                       <span class="text-gray-700">●●●</span>
+                   {% endif %}
+               </span>
                <span class="opacity-0 group-hover:opacity-100 transition-opacity text-accent">EXPLORAR →</span>
             </div>
         </div>
