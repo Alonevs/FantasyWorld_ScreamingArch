@@ -1,0 +1,82 @@
+    <div id="editor" class="edit-overlay hidden fixed inset-0 bg-black/90 z-50 p-10 box-border">
+        <form method="POST" 
+              action="{% if is_creation_mode %}{% if is_child_mode %}{% url 'crear_sub_narrativa' target_parent target_type %}{% else %}{% url 'crear_narrativa' target_jid target_type %}{% endif %}{% else %}{% url 'editar_narrativa' narr.nid %}{% endif %}" 
+              class="max-w-[900px] mx-auto bg-[#1f1f2e] p-[30px] rounded-[10px] border border-[#d633ff] h-[90%] flex flex-col">
+            {% csrf_token %}
+            <h2 class="mt-0 font-['Segoe_UI'] text-white text-2xl mb-4 font-bold">
+                {% if is_creation_mode %}✨ Creando Nuevo Documento{% else %}Modo Edición{% endif %}
+            </h2>
+            
+            <label class="text-white mb-1 block">Título:</label>
+            <div class="flex gap-[10px] items-center mb-2">
+                <input type="text" {% if is_creation_mode %}name="title"{% else %}name="titulo"{% endif %} value="{{ narr.titulo }}" class="flex-1 bg-[#0a0a12] border border-[#444] text-white p-[10px] rounded focus:border-accent outline-none">
+                <button type="button" onclick="generateTitle()" title="🪄 Generar Título Mágico con IA" 
+                        class="bg-gradient-to-br from-[#8e44ad] to-[#d633ff] border-none p-[8px_12px] rounded-[4px] cursor-pointer text-[1.2em] shadow-[0_0_10px_rgba(142,68,173,0.5)] transition duration-200 hover:scale-110">
+                    🪄
+                </button>
+            </div>
+            
+            <div class="flex gap-[10px] mb-2">
+                <div class="flex-1">
+                    <label class="text-white mb-1 block">Tipo:</label>
+                    <select name="tipo" class="w-full bg-[#0a0a12] border border-[#444] text-white p-[10px] rounded">
+                        <option value="LORE" {% if narr.tipo == 'LORE' %}selected{% endif %}>📜 Lore</option>
+                        <option value="HISTORIA" {% if narr.tipo == 'HISTORIA' %}selected{% endif %}>📖 Historia</option>
+                        <option value="CAPITULO" {% if narr.tipo == 'CAPITULO' %}selected{% endif %}>📑 Capítulo</option>
+                    </select>
+                </div>
+                <div class="flex-1">
+                    <label class="text-white mb-1 block">Narrador:</label>
+                    <input type="text" name="narrador" value="{{ narr.narrador }}" class="w-full bg-[#0a0a12] border border-[#444] text-white p-[10px] rounded">
+                </div>
+            </div>
+
+            <div class="flex justify-between items-end mb-[5px]">
+                <label class="mb-0 text-white">Contenido:</label>
+                <div>
+                    <button type="button" onclick="document.getElementById('file-upload').click()" class="bg-[#2980b9] text-white border-none padding-[5px_10px] rounded-[4px] text-[0.8em] cursor-pointer font-['Segoe_UI'] flex items-center gap-[5px] hover:bg-[#1f618d] p-1 px-2 mb-1">
+                        📂 Importar Word/PDF
+                    </button>
+                    <input type="file" id="file-upload" accept=".pdf,.docx" class="hidden" onchange="uploadNarrativeFile(this)">
+                    <span id="upload-status" class="text-[0.8em] text-[#aaa] ml-[10px]"></span>
+                </div>
+            </div>
+
+            <!-- AI Editing Toolbar -->
+            <div class="flex gap-[5px] mb-[10px] items-center bg-[#161620] p-[10px] rounded-[5px] border border-[#333]">
+                 <button type="button" onclick="requestAIEdit('fix')" class="bg-[#27ae60] text-white border-none p-[5px_10px] rounded-[4px] text-[0.85em] cursor-pointer hover:bg-[#1e8449]" title="Corrige ortografía y gramática">
+                    📝 Corregir
+                 </button>
+                 <button type="button" onclick="requestAIEdit('enrich')" class="bg-[#8e44ad] text-white border-none p-[5px_10px] rounded-[4px] text-[0.85em] cursor-pointer hover:bg-[#71368a]" title="Mejora descripciones y vocabulario">
+                    ✨ Enriquecer
+                 </button>
+                 <button type="button" onclick="requestAIEdit('format')" class="bg-[#e67e22] text-white border-none p-[5px_10px] rounded-[4px] text-[0.85em] cursor-pointer hover:bg-[#ca6f1e]" title="Aplica formato Markdown">
+                    📖 Auto-Formato
+                 </button>
+                 <span id="ai-status" class="text-[0.8em] text-[#d633ff] ml-[10px] font-bold"></span>
+                 <span id="word-count" class="text-[0.8em] text-[#666] ml-auto">0 palabras</span>
+            </div>
+
+            <textarea {% if is_creation_mode %}name="content"{% else %}name="contenido"{% endif %} oninput="updateWordCount(this)" class="flex-grow resize-none bg-[#0a0a12] border border-[#444] text-white p-[10px] font-inherit mb-[10px] leading-relaxed">{{ narr.contenido }}</textarea>
+            
+            {% if not is_creation_mode %}
+            <div class="bg-[#2a2a35] p-[15px] rounded-[5px] mb-[15px] border border-[#444]">
+                <label class="text-[#d633ff] font-bold block mb-1">📝 Control de Versiones</label>
+                <p class="text-[0.8em] text-[#aaa] mt-0 mb-2">Describe brevemente por qué estás haciendo este cambio.</p>
+                <input type="text" name="change_reason" placeholder="Ej: Corregir ortografía..." required class="w-full bg-[#0a0a12] border border-[#444] text-white p-[10px] rounded box-border">
+            </div>
+            {% endif %}
+
+            <div class="flex justify-end gap-[10px] mt-[10px]">
+                {% if not is_creation_mode %}
+                    <a href="{% url 'borrar_narrativa' narr.nid %}" onclick="return confirm('¿BORRAR PARA SIEMPRE?')" class="text-[#e74c3c] mr-auto self-center cursor-pointer hover:text-red-400 font-bold">🗑️ Eliminar</a>
+                {% endif %}
+                
+                <button type="button" id="cancel-btn" class="bg-[#555] text-white border-none p-[10px_20px] rounded-[4px] cursor-pointer hover:bg-[#444]">Cancelar</button>
+                
+                <button type="submit" class="bg-[#d633ff] text-white border-none p-[10px_20px] rounded-[4px] font-bold cursor-pointer hover:bg-[#b02ce0] hover:scale-105 transition">
+                    {% if is_creation_mode %}🚀 CREAR AHORA{% else %}🚀 PROPONER CAMBIO{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>

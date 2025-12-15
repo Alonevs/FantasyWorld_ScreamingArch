@@ -10,7 +10,7 @@ from src.FantasyWorld.AI_Generation.Domain.interfaces import ImageGenerator
 class StableDiffusionService(ImageGenerator):
     def __init__(self):
         # ✅ PUERTO CONFIRMADO POR TU TEST
-        self.api_url = "http://127.0.0.1:7861"
+        self.api_url = "http://127.0.0.1:7860"
         self.headers = {"Content-Type": "application/json"}
 
     def generate_concept_art(self, prompt: str, category: str = "defecto") -> str:

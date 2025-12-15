@@ -1,244 +1,57 @@
-{% load static tailwind_tags %}
-<!DOCTYPE html>
-<html lang="es">
+{% extends "layouts/base.html" %}
+{% load static %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ECLAI - Universo</title>
-    {% tailwind_css %}
-    <style>
-        body {
-            background-color: #0e0e16;
-            color: #eee;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        .hero {
-            text-align: center;
-            padding: 40px 20px;
-            background: linear-gradient(180deg, #1a1a2e 0%, #0e0e16 100%);
-            border-bottom: 1px solid #333;
-        }
-
-        .hero h1 {
-            font-size: 2.5em;
-            margin: 0;
-            color: #d633ff;
-            text-shadow: 0 0 10px rgba(214, 51, 255, 0.5);
-        }
-
-        .hero p {
-            color: #aaa;
-            margin-top: 10px;
-            font-size: 1.1em;
-        }
-
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
-            padding: 30px;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .world-card {
-            background: #161625;
-            border: 1px solid #2a2a40;
-            border-radius: 12px;
-            overflow: hidden;
-            transition: transform 0.2s, box-shadow 0.2s;
-            position: relative;
-        }
-
-        .world-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
-            border-color: #d633ff;
-        }
-
-        .card-img {
-            width: 100%;
-            height: 160px;
-            object-fit: cover;
-            background: #000;
-            border-bottom: 1px solid #333;
-        }
-
-        .card-body {
-            padding: 15px;
-        }
-
-        .card-title {
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #fff;
-            margin: 0 0 5px 0;
-        }
-
-        .card-meta {
-            font-size: 0.85em;
-            color: #888;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 5px;
-        }
-
-        .status-live {
-            background: #2ecc71;
-            box-shadow: 0 0 5px #2ecc71;
-        }
-
-        .status-draft {
-            background: #f39c12;
-        }
-
-        .btn-create {
-            background: #d633ff;
-            color: white;
-            padding: 10px 25px;
-            border-radius: 25px;
-            text-decoration: none;
-            font-weight: bold;
-            display: inline-block;
-            margin-top: 20px;
-            transition: 0.2s;
-        }
-
-        .btn-create:hover {
-            background: #a569bd;
-            transform: scale(1.05);
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 50px;
-            color: #555;
-            grid-column: 1 / -1;
-        }
-
-        .toast-message {
-            padding: 15px;
-            border-radius: 8px;
-            font-weight: bold;
-            color: white;
-            margin-bottom: 10px;
-            pointer-events: auto;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
-        }
-
-        .toast-success {
-            background: rgba(46, 204, 113, 0.9);
-        }
-
-        .toast-error {
-            background: rgba(231, 76, 60, 0.9);
-        }
-    </style>
-</head>
-
-<body>
-
-    {% if messages %}
-    <div id="toast-container" style="position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:100; min-width:300px; text-align:center; pointer-events:none; transition:opacity 0.5s;">
-        {% for message in messages %}
-        <div class="toast-message {% if message.tags == 'success' %}toast-success{% else %}toast-error{% endif %}">
-            {{ message }}
+{% block content %}
+    <div class="relative bg-gradient-to-b from-[#1a1a2e] to-dark border-b border-gray-800 p-10 text-center mb-8">
+        <h1 class="text-5xl font-bold text-accent mb-2 drop-shadow-[0_0_15px_rgba(214,51,255,0.5)]">ECLAI UNIVERSE</h1>
+        <p class="text-gray-400 text-lg">Sistema de Gestión de Realidades - v5.0 (Base)</p>
+        
+        <div class="flex justify-center gap-4 mt-6">
+            <button onclick="document.getElementById('createModal').classList.remove('hidden');document.getElementById('createModal').classList.add('flex')" 
+               class="px-6 py-2 bg-accent hover:bg-accent-hover text-white font-bold rounded-full transition transform hover:scale-105 shadow-lg shadow-purple-900/40">
+               + NUEVO MUNDO
+            </button>
+            <a href="{% url 'dashboard' %}" class="px-6 py-2 bg-gray-800 hover:bg-gray-700 text-white font-bold rounded-full border border-gray-600 transition">
+               🎛️ GESTIÓN
+            </a>
         </div>
-        {% endfor %}
-    </div>
-    <script>
-        setTimeout(() => {
-            const el = document.getElementById('toast-container');
-            if(el) {
-                el.style.opacity = '0';
-                setTimeout(() => el.remove(), 500);
-            }
-        }, 2000);
-    </script>
-    {% endif %}
-
-    <div class="hero">
-        <h1>ECLAI UNIVERSE</h1>
-        <p>Sistema de Gestión de Realidades - v5.0 (Base)</p>
-        <a href="#createModal" class="btn-create"
-            onclick="document.getElementById('createModal').style.display='flex'">+ NUEVO MUNDO</a>
-        <a href="{% url 'dashboard' %}" class="btn-create"
-            style="background:#333; border:1px solid #555; margin-left:10px;">🎛️ GESTIÓN</a>
     </div>
 
-    <div class="grid-container">
+    <div class="max-w-[1600px] mx-auto px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
         {% for m in mundos %}
-        <a href="{% url 'ver_mundo' m.public_id %}" style="text-decoration: none;">
-            <div class="world-card">
-                {% if m.has_img %}
-                <img src="{% static 'persistence/img/'|add:m.img_file %}" class="card-img" alt="{{ m.name }}">
-                {% else %}
-                <div class="card-img"
-                    style="display:flex; align-items:center; justify-content:center; color:#333; font-size:3em;">🪐
-                </div>
-                {% endif %}
-
-                <div class="card-body">
-                    <h3 class="card-title">{{ m.name }}</h3>
-                    <div class="card-meta">
-                        <span>
-                            {% if m.status == 'LIVE' %}
-                            <span class="status-dot status-live"></span> LIVE
-                            {% else %}
-                            <span class="status-dot status-draft"></span> DRAFT
-                            {% endif %}
-                        </span>
-                        <!-- Removed legacy code display -->
-                    </div>
-                </div>
-            </div>
-        </a>
+            {% include "components/_entity_card.html" with entity=m variant="vertical" %}
         {% empty %}
-        <div class="empty-state">
-            <h2>El vacío es absoluto.</h2>
+        <div class="col-span-full py-20 text-center text-gray-500">
+            <h2 class="text-2xl font-bold mb-2">El vacío es absoluto.</h2>
             <p>No existen mundos en este sector. Crea el primero.</p>
         </div>
         {% endfor %}
     </div>
+{% endblock %}
 
+{% block modals %}
     <!-- MODAL CREAR -->
-    <div id="createModal"
-        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:100; justify-content:center; align-items:center;">
-        <div style="background:#161625; padding:30px; border-radius:10px; width:400px; border:1px solid #d633ff;">
-            <h2 style="margin-top:0; color:#d633ff;">Iniciar Génesis</h2>
+    <div id="createModal" class="hidden fixed inset-0 bg-black/80 z-50 items-center justify-center backdrop-blur-sm">
+        <div class="bg-[#161625] border border-accent rounded-xl p-8 w-full max-w-md shadow-2xl">
+            <h2 class="text-2xl font-bold text-accent mb-6">Iniciar Génesis</h2>
             <form method="POST">
                 {% csrf_token %}
-                <label style="display:block; margin-bottom:5px; color:#aaa;">Nombre del Mundo:</label>
-                <input type="text" name="world_name" required
-                    style="width:100%; padding:10px; background:#0a0a12; border:1px solid #444; color:#fff; border-radius:4px; margin-bottom:15px;">
+                <div class="mb-4">
+                    <label class="block text-gray-400 text-sm mb-2">Nombre del Mundo</label>
+                    <input type="text" name="world_name" required class="w-full bg-black border border-gray-700 rounded p-3 text-white focus:border-accent focus:outline-none transition">
+                </div>
 
-                <label style="display:block; margin-bottom:5px; color:#aaa;">Concepto Inicial:</label>
-                <textarea name="world_desc"
-                    style="width:100%; height:100px; padding:10px; background:#0a0a12; border:1px solid #444; color:#fff; border-radius:4px; margin-bottom:20px;"></textarea>
+                <div class="mb-6">
+                    <label class="block text-gray-400 text-sm mb-2">Concepto Inicial</label>
+                    <textarea name="world_desc" rows="4" class="w-full bg-black border border-gray-700 rounded p-3 text-white focus:border-accent focus:outline-none transition"></textarea>
+                </div>
 
-                <div style="text-align:right;">
-                    <button type="button" onclick="document.getElementById('createModal').style.display='none'"
-                        style="background:transparent; border:1px solid #555; color:#fff; padding:8px 15px; border-radius:4px; cursor:pointer; margin-right:10px;">Cancelar</button>
-                    <button type="submit"
-                        style="background:#d633ff; border:none; color:#fff; padding:8px 20px; border-radius:4px; font-weight:bold; cursor:pointer;">🚀
-                        CREAR</button>
+                <div class="flex justify-end gap-3">
+                    <button type="button" onclick="document.getElementById('createModal').classList.add('hidden');document.getElementById('createModal').classList.remove('flex')"
+                        class="px-4 py-2 text-gray-300 hover:text-white transition">Cancelar</button>
+                    <button type="submit" class="px-6 py-2 bg-accent hover:bg-accent-hover text-white font-bold rounded transition shadow-lg">🚀 CREAR</button>
                 </div>
             </form>
         </div>
     </div>
-
-</body>
-
-</html>
+{% endblock %}

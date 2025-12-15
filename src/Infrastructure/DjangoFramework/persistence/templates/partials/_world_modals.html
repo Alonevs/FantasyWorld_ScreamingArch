@@ -1,0 +1,157 @@
+    <!-- EDIT MODAL -->
+    <div id="editModal" class="hidden fixed inset-0 bg-black/90 z-50 items-center justify-center backdrop-blur-sm">
+        <div class="bg-card border border-indigo-500/50 rounded-2xl p-6 max-w-lg w-full shadow-2xl">
+            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">✏️ Editar Mundo</h2>
+            
+            <form method="POST" action="{% url 'editar_mundo' jid %}">
+                {% csrf_token %}
+                <div class="mb-4">
+                    <label class="block text-xs text-gray-500 uppercase font-bold mb-1">Nombre</label>
+                    <input type="text" name="name" value="{{ name }}" class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-xs text-gray-500 uppercase font-bold mb-1">Descripción</label>
+                    <textarea name="description" rows="5" class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none">{{ description }}</textarea>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-xs text-gray-500 uppercase font-bold mb-1">Razón del cambio (Obligatorio)</label>
+                    <input type="text" name="reason" placeholder="Ej: Corrección, expansión..." class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none" required>
+                </div>
+                <div class="mb-6 bg-gray-800/50 p-3 rounded border border-gray-700">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="use_ai_edit" class="accent-accent w-4 h-4">
+                        <span class="text-sm text-gray-300">✨ Refinar descripción con IA</span>
+                    </label>
+                </div>
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeEditModal()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700 transition">Cancelar</button>
+                    <button type="submit" class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg shadow-lg transition">💾 GUARDAR CAMBIOS</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- CREATE MODAL -->
+    <div id="createModal" class="hidden fixed inset-0 bg-black/90 z-50 items-center justify-center backdrop-blur-sm">
+        <div class="bg-card border border-accent rounded-2xl p-6 max-w-lg w-full shadow-2xl shadow-purple-900/20">
+            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">✨ Generar Entorno / Entidad</h2>
+            
+            <form method="POST" action="{% url 'ver_mundo' public_id %}">
+                {% csrf_token %}
+                <div class="mb-4">
+                    <label class="block text-xs text-gray-500 uppercase font-bold mb-1">Tipo de Entidad</label>
+                    <select name="target_level" class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none mb-4">
+                        {% for lvl in available_levels %}
+                        <option value="{{ lvl.level }}" {% if lvl.is_next %}selected{% endif %}>
+                            {% if lvl.is_next %}📍 Siguiente: {{ lvl.label }} (Nivel {{ lvl.level }}){% else %}🕳️ Salto a: {{ lvl.label }} (Nivel {{ lvl.level }}){% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <input type="text" name="entity_type_desc" placeholder="Tipo (ej: Lugar, Personaje...)" class="w-full bg-black border border-gray-700 rounded p-2 text-white text-xs mb-2">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-xs text-gray-500 uppercase font-bold mb-1">Nombre</label>
+                    <input type="text" name="child_name" placeholder="Nombre de la nueva entidad..." class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none" required>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-xs text-gray-500 uppercase font-bold mb-1">Descripción Inicial</label>
+                    <textarea name="child_desc" rows="3" placeholder="Breve descripción..." class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none"></textarea>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-xs text-gray-500 uppercase font-bold mb-1">Razón de Creación</label>
+                    <input type="text" name="reason" placeholder="Ej: Expansión del mapa, nuevo enemigo..." class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none" required>
+                </div>
+                <div class="mb-6 bg-gray-800/50 p-3 rounded border border-gray-700">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="use_ai_gen" class="accent-accent w-4 h-4">
+                        <span class="text-sm text-gray-300">🤖 Generar detalles con IA (Beta)</span>
+                    </label>
+                </div>
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeCreateModal()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700 transition">Cancelar</button>
+                    <button type="submit" class="flex-1 py-2 bg-accent hover:bg-accent-hover text-white font-bold rounded-lg shadow-lg transition">🚀 GENERAR</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- UPLOAD MODAL -->
+    <div id="uploadModal" class="hidden fixed inset-0 bg-black/90 z-50 items-center justify-center backdrop-blur-sm">
+        <div class="bg-card border border-gray-700 rounded-2xl p-6 max-w-lg w-full shadow-2xl text-center">
+            <h2 class="text-xl font-bold text-white mb-4">Confirmar Subida</h2>
+            <div id="file-info" class="text-xs font-mono text-accent mb-2"></div>
+            <div id="upload-previews" class="grid grid-cols-3 gap-2 mb-4 max-h-48 overflow-y-auto"></div>
+            
+            <div class="bg-gray-950 p-4 rounded-lg border border-gray-800 text-left mb-4">
+                <label class="flex items-center gap-2 mb-3 cursor-pointer group">
+                    <input type="checkbox" id="chk-original-name" onchange="toggleCustomName()" class="accent-accent w-4 h-4">
+                    <span class="text-sm text-gray-300 group-hover:text-white transition">Usar nombre original</span>
+                </label>
+                <input type="text" id="inp-custom-name" placeholder="O escribe un nombre..." class="w-full bg-black border border-gray-700 rounded p-2 text-sm text-white focus:border-accent focus:outline-none transition">
+            </div>
+
+            <div id="scan-status" class="text-xs font-bold mb-4 tracking-widest h-4"></div>
+
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeUploadModal()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded text-gray-300">Cancelar</button>
+                <button id="btn-confirm-upload" onclick="confirmUpload()" class="px-6 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded shadow-lg hidden">🚀 SUBIR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI MODAL -->
+    <div id="aiModal" class="hidden fixed inset-0 bg-black/90 z-50 items-center justify-center backdrop-blur-sm">
+        <div class="bg-card border border-purple-500/50 rounded-2xl p-6 max-w-lg w-full shadow-2xl">
+            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">🎨 Generador de Imágenes IA</h2>
+            
+            <div id="ai-step-1">
+                <div class="mb-4">
+                    <label class="block text-xs text-gray-500 uppercase font-bold mb-1">Cantidad</label>
+                    <input type="number" id="batch-size" value="1" min="1" max="5" class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none">
+                </div>
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeAiModal()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700 transition">Cancelar</button>
+                    <button type="button" onclick="generateBatch()" class="flex-1 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg shadow-lg transition">✨ GENERAR</button>
+                </div>
+            </div>
+
+            <div id="ai-step-loading" class="hidden text-center py-8">
+                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mx-auto mb-4"></div>
+                <p class="text-gray-400 animate-pulse">Imaginando nuevos mundos...</p>
+            </div>
+
+            <div id="ai-step-result" class="hidden">
+                <div id="staging-area" class="grid grid-cols-2 gap-2 mb-4 max-h-60 overflow-y-auto p-2 bg-black/30 rounded border border-gray-800"></div>
+                <div class="flex gap-3">
+                    <button type="button" onclick="resetAiModal()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700 transition">Descartar Todo</button>
+                    <button type="button" id="btn-submit-batch" onclick="saveBatch()" class="flex-1 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg shadow-lg transition">💾 GUARDAR</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LIGHTBOX -->
+    <div id="lightbox" class="hidden fixed inset-0 bg-black/95 z-[60] flex-col items-center justify-center p-4 backdrop-blur-md" onclick="closeLightbox()">
+        <img id="lb-img" class="max-w-full max-h-[80vh] rounded-lg shadow-2xl border border-gray-800 mb-4 object-contain" onclick="event.stopPropagation()">
+        
+        <div class="bg-gray-900/80 p-4 rounded-xl border border-gray-700 text-center min-w-[300px] backdrop-blur" onclick="event.stopPropagation()">
+            <h3 id="lb-title" class="text-xl font-bold text-white mb-1 cursor-pointer hover:text-accent flex items-center justify-center gap-2" onclick="editImageTitle()" title="Clic para editar título">
+                Título
+                <span class="text-xs text-gray-500">✏️</span>
+            </h3>
+            <p id="lb-name" class="text-xs font-mono text-gray-500 mb-4">filename.jpg</p>
+            
+            <div class="grid grid-cols-2 gap-4 text-xs text-gray-400 mb-4 text-left">
+                <div>Subido por: <span id="lb-uploader" class="text-white">User</span></div>
+                <div>Fecha: <span id="lb-date" class="text-white">Date</span></div>
+            </div>
+
+            <div class="flex gap-2 justify-center">
+                <button onclick="setAsCover()" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-xs font-bold transition">⭐ Portada</button>
+                <button onclick="closeLightbox()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs transition">Cerrar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- METADATA MODAL -->
+    {% include 'partials/_modal_metadata.html' %}

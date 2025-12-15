@@ -1,49 +1,11 @@
+{% extends "layouts/base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ECLAI v5.0 (Base) | Dashboard Unificado</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        dark: '#0a0a12',
-                        card: '#161625',
-                        accent: '#d633ff',
-                        'accent-hover': '#b02ce0',
-                    }
-                }
-            }
-        }
-    </script>
-</head>
-<body class="bg-dark text-gray-200 font-sans p-4 lg:p-8 min-h-screen">
 
-    {% if messages %}
-    <div id="toast-container" class="fixed top-10 left-1/2 -translate-x-1/2 z-50 w-auto min-w-[300px] space-y-2 pointer-events-none transition-opacity duration-500">
-        {% for message in messages %}
-        <div class="p-4 rounded-lg shadow-2xl font-bold text-white text-center pointer-events-auto backdrop-blur-md border border-white/20 
-            {% if message.tags == 'success' %}bg-green-600/90{% elif 'info' in message.tags %}bg-blue-600/90{% else %}bg-red-600/90{% endif %}">
-            {{ message }}
-        </div>
-        {% endfor %}
-    </div>
-    <script>
-        setTimeout(() => {
-            const el = document.getElementById('toast-container');
-            if(el) {
-                el.style.opacity = '0';
-                setTimeout(() => el.remove(), 500);
-            }
-        }, 2000);
-    </script>
-    {% endif %}
+{% block title %}ECLAI | Dashboard{% endblock %}
 
-    <div class="flex justify-between items-center mb-6 bg-gray-900/80 p-4 rounded-xl border border-gray-800 backdrop-blur-md">
+{% block content %}
+    <!-- DASHBOARD HEADER -->
+    <div class="flex justify-between items-center mb-6 bg-gray-900/80 p-4 rounded-xl border border-gray-800 backdrop-blur-md mx-4 mt-4 max-w-7xl xl:mx-auto">
         <div class="text-xl font-bold tracking-widest text-white">
             ECLAI <span class="text-xs text-accent ml-2 bg-purple-900/30 px-2 py-1 rounded border border-purple-800">DASHBOARD</span>
         </div>
@@ -55,7 +17,7 @@
         </div>
     </div>
 
-    <div class="max-w-7xl mx-auto pb-24">
+    <div class="max-w-7xl mx-auto pb-24 px-4">
         
         <form id="bulk-delete-form" method="POST" action="{% url 'borrar_propuestas_masivo' %}">
             {% csrf_token %}
@@ -82,17 +44,14 @@
             <div id="img-pending-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
                 {% for img in img_pending %}
                 <div class="bg-card border border-pink-900/30 rounded-xl overflow-hidden shadow-lg relative group">
-                    <!-- Checkbox -->
                     <div class="absolute top-2 right-2 z-10">
                         <input type="checkbox" name="selected_img_ids" value="{{ img.id }}" class="w-5 h-5 accent-green-500 cursor-pointer item-checkbox" onchange="updateFloatingBar()">
                     </div>
 
                     <div class="h-48 overflow-hidden bg-black relative">
                         {% if img.image %}
-                            <!-- ADDITION PROPOSAL -->
                             <img src="{{ img.image.url }}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition">
                         {% elif img.action == 'DELETE' %}
-                            <!-- DELETION PROPOSAL (Construct URL to existing file) -->
                             <div class="relative w-full h-full">
                                 <img src="/static/persistence/img/{{ img.world.id }}/{{ img.target_filename }}" class="w-full h-full object-cover opacity-50 grayscale group-hover:grayscale-0 transition">
                                 <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -100,18 +59,12 @@
                                 </div>
                             </div>
                         {% else %}
-                            <div class="w-full h-full flex items-center justify-center bg-red-900/20 text-red-500 font-bold text-4xl">
-                                ?
-                            </div>
+                            <div class="w-full h-full flex items-center justify-center bg-red-900/20 text-red-500 font-bold text-4xl">?</div>
                         {% endif %}
                         
                         <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
                             <span class="text-xs text-white font-bold">
-                                {% if img.action == 'DELETE' %}
-                                    🗑️ BORRAR: {{ img.target_filename }}
-                                {% else %}
-                                    {{ img.title }}
-                                {% endif %}
+                                {% if img.action == 'DELETE' %}🗑️ BORRAR: {{ img.target_filename }}{% else %}{{ img.title }}{% endif %}
                             </span>
                         </div>
                     </div>
@@ -140,97 +93,7 @@
             {% if pending %}
             <div id="pending-list" class="grid gap-4">
                 {% for item in pending %}
-                <div class="bg-card border {% if item.cambios.action == 'DELETE' or item.action == 'DELETE' %}border-red-600 bg-red-900/10{% elif item.cambios.action == 'SET_COVER' %}border-yellow-600 bg-yellow-900/10{% elif item.type == 'WORLD' %}border-blue-900/30{% else %}border-purple-900/30{% endif %} p-6 rounded-xl shadow-lg flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 relative group">
-                    
-                    {% if item.cambios.action == 'DELETE' or item.action == 'DELETE' %}
-                        <div class="absolute -top-3 left-6 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg z-20">
-                            🗑️ SOLICITUD DE ELIMINACIÓN
-                        </div>
-                    {% elif item.cambios.action == 'SET_COVER' %}
-                        <div class="absolute -top-3 left-6 bg-yellow-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg z-20">
-                            📸 PROPUESTA DE PORTADA
-                        </div>
-                    {% elif item.cambios.action == 'TOGGLE_VISIBILITY' %}
-                        <div class="absolute -top-3 left-6 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg z-20">
-                            👁️ CAMBIO VISIBILIDAD
-                        </div>
-                    {% elif item.cambios.properties %}
-                         <div class="absolute -top-3 left-6 bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg z-20">
-                            🧬 PROPUESTA DE METADATOS
-                        </div>
-                    {% elif item.cambios.action == 'RESTORE' %}
-                         <div class="absolute -top-3 left-6 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg z-20">
-                            ♻️ SOLICITUD DE RESTAURACIÓN
-                        </div>
-                    {% endif %}
-
-                    <!-- Checkbox -->
-                    <div class="absolute top-4 right-4 lg:static lg:mr-2">
-                        <input type="checkbox" name="{% if item.type == 'WORLD' %}selected_ids{% else %}selected_narr_ids{% endif %}" value="{{ item.id }}" class="w-5 h-5 accent-red-600 cursor-pointer item-checkbox" onchange="updateFloatingBar()">
-                    </div>
-
-                    <div class="flex-grow min-w-0">
-                        <div class="flex items-center gap-3 mb-1 flex-wrap">
-                            <span class="bg-yellow-900/30 text-yellow-500 text-xs font-bold px-2 py-1 rounded border border-yellow-800">v{{ item.version_number }}</span>
-                            <!-- PARENT CONTEXT -->
-                            {% if item.parent_context %}
-                                <span class="bg-indigo-900/30 text-indigo-300 text-xs font-mono px-2 py-1 rounded border border-indigo-800 flex items-center gap-1">
-                                    📍 {{ item.parent_context }}
-                                </span>
-                            {% endif %}
-                            <h2 class="text-xl font-bold text-white break-all">{{ item.target_name }}</h2>
-                            
-                            {% if item.type == 'WORLD' %}
-                                <span class="text-gray-500 text-sm">para <a href="{% url 'ver_mundo' item.target_link %}" class="text-accent hover:underline">{{ item.world.name }}</a></span>
-                                <span class="text-xs bg-blue-900/30 text-blue-400 px-2 py-0.5 rounded border border-blue-800">{{ item.type_label }}</span>
-                            {% else %}
-                                <span class="text-gray-500 text-sm">en <a href="{% url 'ver_mundo' item.narrative.world.public_id|default:item.narrative.world.id %}" class="text-accent hover:underline">{{ item.narrative.world.name }}</a></span>
-                                <span class="text-xs bg-purple-900/30 text-purple-400 px-2 py-0.5 rounded border border-purple-800">{{ item.type_label }}</span>
-                            {% endif %}
-                        </div>
-                        <p class="text-gray-400 text-sm mb-2 line-clamp-2 break-words">{{ item.target_desc|striptags|truncatewords:20 }}</p>
-                        <div class="flex gap-4 text-xs text-gray-500 font-mono">
-                            <span>👤 {{ item.author.username|default:"Sistema" }}</span>
-                            <span>📅 {{ item.created_at|date:"d/m/Y H:i" }}</span>
-                        </div>
-                        
-                        <!-- METADATA CHANGES -->
-                        {% if item.cambios.properties %}
-                        <div class="mt-3 bg-purple-900/10 border border-purple-500/20 rounded p-3">
-                            <h4 class="text-[10px] text-purple-400 font-bold uppercase tracking-widest mb-2">🧬 Cambios en Estructura</h4>
-                            <div class="flex flex-wrap gap-x-4 gap-y-2 text-xs font-mono text-gray-300">
-                                {% for prop in item.cambios.properties %}
-                                <div class="flex gap-1">
-                                    <span class="text-purple-500/60">{{ prop.key }}:</span>
-                                    <span class="text-white">{{ prop.value }}</span>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        {% endif %}
-
-                        {% if item.change_log %}
-                        <div class="mt-2 text-sm text-gray-300 bg-gray-900/50 p-2 rounded border border-gray-700">
-                            <span class="text-xs text-gray-500 font-bold uppercase block mb-1">Razón del cambio:</span>
-                            "{{ item.change_log }}"
-                        </div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="flex gap-3 shrink-0">
-                        {% if item.type == 'WORLD' %}
-                            <a href="{% url 'revisar_version' item.id %}" class="px-4 py-2 bg-blue-900/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg border border-blue-900/50 transition font-bold">👁️ Revisar</a>
-                            <a href="{% url 'aprobar_propuesta' item.id %}" class="px-4 py-2 bg-green-900/20 hover:bg-green-600 text-green-400 hover:text-white rounded-lg border border-green-900/50 transition font-bold shadow-lg shadow-green-900/20">✅ Aprobar</a>
-                            <a href="{% url 'rechazar_propuesta' item.id %}" class="px-4 py-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg border border-red-900/50 transition font-bold" onclick="return confirm('¿Rechazar esta propuesta?')">✕ Rechazar</a>
-                            <a href="{% url 'borrar_propuesta' item.id %}" class="px-4 py-2 bg-gray-800 hover:bg-red-600 text-gray-400 hover:text-white rounded-lg border border-gray-700 transition font-bold" onclick="return confirm('¿BORRAR DEFINITIVAMENTE?')">🗑️</a>
-                        {% else %}
-                            <a href="{% url 'revisar_narrativa_version' item.id %}" class="px-4 py-2 bg-blue-900/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg border border-blue-900/50 transition font-bold">👁️ Ver</a>
-                            <a href="{% url 'aprobar_narrativa' item.id %}" class="px-4 py-2 bg-green-900/20 hover:bg-green-600 text-green-400 hover:text-white rounded-lg border border-green-900/50 transition font-bold shadow-lg shadow-green-900/20">✅ Aprobar</a>
-                            <a href="{% url 'rechazar_narrativa' item.id %}" class="px-4 py-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg border border-red-900/50 transition font-bold" onclick="return confirm('¿Rechazar esta narrativa?')">✕ Rechazar</a>
-                            <a href="{% url 'borrar_narrativa_version' item.id %}" class="px-4 py-2 bg-gray-800 hover:bg-red-600 text-gray-400 hover:text-white rounded-lg border border-gray-700 transition font-bold" onclick="return confirm('¿BORRAR DEFINITIVAMENTE?')">🗑️</a>
-                        {% endif %}
-                    </div>
-                </div>
+                    {% include "components/_proposal_card.html" with item=item variant="pending" %}
                 {% endfor %}
             </div>
             {% else %}
@@ -249,81 +112,7 @@
             {% if approved %}
             <div id="approved-list" class="grid gap-4">
                 {% for item in approved %}
-                <div class="bg-card border {% if item.cambios.action == 'DELETE' or item.action == 'DELETE' %}border-red-600 bg-red-900/10{% else %}border-green-900/30{% endif %} p-6 rounded-xl shadow-lg flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 opacity-75 hover:opacity-100 transition relative">
-                    
-                     {% if item.cambios.action == 'DELETE' or item.action == 'DELETE' %}
-                        <div class="absolute -top-3 left-6 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg z-20">
-                            🗑️ LÍO PARA ELIMINAR (PUBLICAR PARA BORRAR)
-                        </div>
-                    {% endif %}
-                     <!-- Checkbox -->
-                     <div class="absolute top-4 right-4 lg:static lg:mr-2">
-                        <input type="checkbox" name="{% if item.type == 'WORLD' %}selected_ids{% else %}selected_narr_ids{% endif %}" value="{{ item.id }}" class="w-5 h-5 accent-red-600 cursor-pointer item-checkbox" onchange="updateFloatingBar()">
-                    </div>
-
-                    <div class="flex-grow min-w-0">
-                        <div class="flex items-center gap-3 mb-1 flex-wrap">
-                            <span class="bg-green-900/30 text-green-500 text-xs font-bold px-2 py-1 rounded border border-green-800">v{{ item.version_number }}</span>
-                            <!-- PARENT CONTEXT -->
-                            {% if item.parent_context %}
-                                <span class="bg-indigo-900/30 text-indigo-300 text-xs font-mono px-2 py-1 rounded border border-indigo-800 flex items-center gap-1">
-                                    📍 {{ item.parent_context }}
-                                </span>
-                            {% endif %}
-                            <h2 class="text-xl font-bold text-white break-all">{{ item.target_name }}</h2>
-                            {% if item.type == 'WORLD' %}
-                                <span class="text-gray-500 text-sm">para <a href="{% url 'ver_mundo' item.target_link %}" class="text-accent hover:underline">{{ item.world.name }}</a></span>
-                                <span class="text-xs bg-blue-900/30 text-blue-400 px-2 py-0.5 rounded border border-blue-800">{{ item.type_label }}</span>
-                            {% else %}
-                                <span class="text-gray-500 text-sm">en <a href="{% url 'ver_mundo' item.narrative.world.public_id|default:item.narrative.world.id %}" class="text-accent hover:underline">{{ item.narrative.world.name }}</a></span>
-                                <span class="text-xs bg-purple-900/30 text-purple-400 px-2 py-0.5 rounded border border-purple-800">{{ item.type_label }}</span>
-                            {% endif %}
-                        </div>
-                        <p class="text-gray-400 text-sm mb-2 line-clamp-2 break-words">{{ item.target_desc|striptags|truncatewords:20 }}</p>
-                        <div class="flex gap-4 text-xs text-gray-500 font-mono">
-                            <span>👤 {{ item.author.username|default:"Sistema" }}</span>
-                            <span>📅 {{ item.created_at|date:"d/m/Y H:i" }}</span>
-                        </div>
-                        
-                         <!-- METADATA CHANGES (Approved) -->
-                        {% if item.cambios.properties %}
-                        <div class="mt-3 bg-purple-900/10 border border-green-500/20 rounded p-3">
-                            <h4 class="text-[10px] text-green-400 font-bold uppercase tracking-widest mb-2">🧬 Cambios en Estructura</h4>
-                            <div class="flex flex-wrap gap-x-4 gap-y-2 text-xs font-mono text-gray-300">
-                                {% for prop in item.cambios.properties %}
-                                <div class="flex gap-1">
-                                    <span class="text-green-500/60">{{ prop.key }}:</span>
-                                    <span class="text-white">{{ prop.value }}</span>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        {% endif %}
-
-                        {% if item.change_log %}
-                        <div class="mt-2 text-sm text-gray-300 bg-gray-900/50 p-2 rounded border border-gray-700">
-                            <span class="text-xs text-gray-500 font-bold uppercase block mb-1">Razón del cambio:</span>
-                            "{{ item.change_log }}"
-                        </div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="flex gap-3 shrink-0">
-                        {% if item.type == 'WORLD' %}
-                            <a href="{% url 'revisar_version' item.id %}" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700 transition font-bold text-sm">👁️ Ver</a>
-                            <a href="{% url 'publicar_version' item.id %}" class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg shadow-lg shadow-green-900/50 transition font-bold flex items-center gap-2" onclick="return confirm('¿PUBLICAR esta versión a LIVE? Esto sobreescribirá los datos actuales.')">
-                                🚀 PUBLICAR
-                            </a>
-                            <a href="{% url 'borrar_propuesta' item.id %}" class="px-4 py-2 bg-gray-800 hover:bg-red-600 text-gray-400 hover:text-white rounded-lg border border-gray-700 transition font-bold" onclick="return confirm('¿BORRAR DEFINITIVAMENTE? No se podrá recuperar.')">🗑️</a>
-                        {% else %}
-                            <a href="{% url 'revisar_narrativa_version' item.id %}" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700 transition font-bold text-sm">👁️ Ver</a>
-                            <a href="{% url 'publicar_narrativa' item.id %}" class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg shadow-lg shadow-green-900/50 transition font-bold flex items-center gap-2" onclick="return confirm('¿PUBLICAR esta narrativa a LIVE?')">
-                                🚀 PUBLICAR
-                            </a>
-                            <a href="{% url 'borrar_narrativa_version' item.id %}" class="px-4 py-2 bg-gray-800 hover:bg-red-600 text-gray-400 hover:text-white rounded-lg border border-gray-700 transition font-bold" onclick="return confirm('¿BORRAR DEFINITIVAMENTE?')">🗑️</a>
-                        {% endif %}
-                    </div>
-                </div>
+                    {% include "components/_proposal_card.html" with item=item variant="approved" %}
                 {% endfor %}
             </div>
             {% else %}
@@ -336,44 +125,9 @@
                 <button type="button" onclick="toggleSelectSection('rejected-list')" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded border border-gray-700 transition">Seleccionar Todo</button>
             </h2>
             {% if rejected %}
-            <div id="rejected-list" class="grid gap-4 opacity-60 hover:opacity-100 transition">
+            <div id="rejected-list" class="grid gap-4">
                 {% for item in rejected %}
-                <div class="bg-card border border-red-900/20 p-4 rounded-xl flex flex-col lg:flex-row justify-between items-center gap-4 grayscale hover:grayscale-0 transition relative">
-                    <!-- Checkbox -->
-                    <div class="absolute top-4 right-4 lg:static lg:mr-2">
-                        <input type="checkbox" name="{% if item.type == 'WORLD' %}selected_ids{% else %}selected_narr_ids{% endif %}" value="{{ item.id }}" class="w-5 h-5 accent-red-600 cursor-pointer item-checkbox" onchange="updateFloatingBar()">
-                    </div>
-
-                    <div class="flex-grow min-w-0">
-                        <div class="flex items-center gap-3 flex-wrap">
-                            <span class="text-red-500 text-xs font-bold">v{{ item.version_number }}</span>
-                            <h3 class="text-lg font-bold text-gray-300 break-all">{{ item.target_name }}</h3>
-                            {% if item.type == 'WORLD' %}
-                                <span class="text-gray-600 text-sm">para {{ item.world.name }}</span>
-                                <span class="text-xs bg-blue-900/30 text-blue-400 px-2 py-0.5 rounded border border-blue-800">{{ item.type_label }}</span>
-                            {% else %}
-                                <span class="text-gray-600 text-sm">en {{ item.narrative.world.name }}</span>
-                                <span class="text-xs bg-purple-900/30 text-purple-400 px-2 py-0.5 rounded border border-purple-800">{{ item.type_label }}</span>
-                            {% endif %}
-                        </div>
-                        <p class="text-gray-500 text-xs mt-1">Rechazado el {{ item.created_at|date:"d/m/Y" }}</p>
-                        {% if item.change_log %}
-                        <div class="mt-2 text-sm text-gray-400 bg-gray-900/30 p-2 rounded border border-red-900/20">
-                            <span class="text-[10px] text-red-500 font-bold uppercase block mb-1">Razón:</span>
-                            "{{ item.change_log }}"
-                        </div>
-                        {% endif %}
-                    </div>
-                    <div class="flex gap-2">
-                        {% if item.type == 'WORLD' %}
-                            <a href="{% url 'revisar_version' item.id %}" class="text-xs text-gray-500 hover:text-white underline">Ver detalles</a>
-                            <a href="{% url 'borrar_propuesta' item.id %}" class="text-xs text-red-500 hover:text-red-400 font-bold border border-red-900/50 px-2 py-1 rounded hover:bg-red-900/20" onclick="return confirm('¿BORRAR DEFINITIVAMENTE?')">🗑️ Borrar</a>
-                        {% else %}
-                            <a href="{% url 'revisar_narrativa_version' item.id %}" class="text-xs text-gray-500 hover:text-white underline">Ver detalles</a>
-                            <a href="{% url 'borrar_narrativa_version' item.id %}" class="text-xs text-red-500 hover:text-red-400 font-bold border border-red-900/50 px-2 py-1 rounded hover:bg-red-900/20" onclick="return confirm('¿BORRAR DEFINITIVAMENTE?')">🗑️ Borrar</a>
-                        {% endif %}
-                    </div>
-                </div>
+                    {% include "components/_proposal_card.html" with item=item variant="rejected" %}
                 {% endfor %}
             </div>
             {% else %}
@@ -386,61 +140,19 @@
                 <button type="button" onclick="toggleSelectSection('archived-list')" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded border border-gray-700 transition">Seleccionar Todo</button>
             </h2>
             {% if archived %}
-            <div id="archived-list" class="grid gap-4 opacity-50 hover:opacity-100 transition">
+            <div id="archived-list" class="grid gap-4">
                 {% for item in archived %}
-                <div class="bg-card border border-gray-800 p-4 rounded-xl flex flex-col lg:flex-row justify-between items-center gap-4 relative">
-                    <!-- Checkbox -->
-                    <div class="absolute top-4 right-4 lg:static lg:mr-2">
-                        <input type="checkbox" name="{% if item.type == 'WORLD' %}selected_ids{% else %}selected_narr_ids{% endif %}" value="{{ item.id }}" class="w-5 h-5 accent-red-600 cursor-pointer item-checkbox" onchange="updateFloatingBar()">
-                    </div>
-
-                    <div class="flex-grow min-w-0">
-                        <div class="flex items-center gap-3 flex-wrap">
-                            <span class="bg-gray-800 text-gray-400 text-xs font-bold px-2 py-1 rounded border border-gray-700">v{{ item.version_number }}</span>
-                            <h3 class="text-lg font-bold text-gray-300 break-all">{{ item.target_name }}</h3>
-                            {% if item.type == 'WORLD' %}
-                                <span class="text-gray-600 text-sm">para {{ item.world.name }}</span>
-                                <span class="text-xs bg-blue-900/30 text-blue-400 px-2 py-0.5 rounded border border-blue-800">{{ item.type_label }}</span>
-                            {% else %}
-                                <span class="text-gray-600 text-sm">en {{ item.narrative.world.name }}</span>
-                                <span class="text-xs bg-purple-900/30 text-purple-400 px-2 py-0.5 rounded border border-purple-800">{{ item.type_label }}</span>
-                            {% endif %}
-                        </div>
-                        <p class="text-gray-500 text-xs mt-1">Archivado el {{ item.created_at|date:"d/m/Y" }}</p>
-                        {% if item.change_log %}
-                        <div class="mt-2 text-sm text-gray-500 bg-gray-900/30 p-2 rounded border border-gray-800">
-                            <span class="text-[10px] text-gray-600 font-bold uppercase block mb-1">Razón:</span>
-                            "{{ item.change_log }}"
-                        </div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="flex gap-2">
-                        {% if item.type == 'WORLD' %}
-                            <a href="{% url 'revisar_version' item.id %}" class="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded border border-gray-700 text-xs font-bold">👁️ Ver</a>
-                            <a href="{% url 'restaurar_version' item.id %}" class="px-3 py-1 bg-yellow-900/20 hover:bg-yellow-600 text-yellow-500 hover:text-white rounded border border-yellow-900/50 text-xs font-bold transition" onclick="return confirm('¿RESTAURAR esta versión? Se creará una nueva propuesta basada en ella.')">
-                                🔄 Restaurar
-                            </a>
-                            <a href="{% url 'borrar_propuesta' item.id %}" class="px-3 py-1 bg-gray-800 hover:bg-red-600 text-gray-400 hover:text-white rounded border border-gray-700 text-xs font-bold transition" onclick="return confirm('¿BORRAR DEFINITIVAMENTE?')">🗑️</a>
-                        {% else %}
-                            <a href="{% url 'revisar_narrativa_version' item.id %}" class="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded border border-gray-700 text-xs font-bold">👁️ Ver</a>
-                            <a href="{% url 'restaurar_narrativa' item.id %}" class="px-3 py-1 bg-yellow-900/20 hover:bg-yellow-600 text-yellow-500 hover:text-white rounded border border-yellow-900/50 text-xs font-bold transition" onclick="return confirm('¿RESTAURAR esta versión? Se creará una nueva propuesta basada en ella.')">
-                                🔄 Restaurar
-                            </a>
-                            <a href="{% url 'borrar_narrativa_version' item.id %}" class="px-3 py-1 bg-gray-800 hover:bg-red-600 text-gray-400 hover:text-white rounded border border-gray-700 text-xs font-bold transition" onclick="return confirm('¿BORRAR DEFINITIVAMENTE?')">🗑️</a>
-                        {% endif %}
-                    </div>
-                </div>
+                    {% include "components/_proposal_card.html" with item=item variant="archived" %}
                 {% endfor %}
             </div>
             {% else %}
             <p class="text-gray-600 italic">No hay historial de versiones archivadas.</p>
             {% endif %}
+
             <!-- EVENT LOG (AUDIT) -->
             <h2 class="text-2xl font-bold text-blue-400 mt-12 mb-4">📋 Registro de Actividad (Audit Log)</h2>
             
             <div class="space-y-4">
-                <!-- WORLD LOGS -->
                 <details class="group bg-card border border-blue-900/30 rounded-xl overflow-hidden shadow-lg">
                     <summary class="flex justify-between items-center p-4 cursor-pointer bg-blue-900/20 hover:bg-blue-900/30 transition list-none">
                         <span class="font-bold text-blue-200 flex items-center gap-2">🌍 Cambios en MUNDOS <span class="text-xs bg-blue-900 text-blue-300 px-2 rounded-full">{{ logs_world|length }}</span></span>
@@ -451,7 +163,6 @@
                     </div>
                 </details>
 
-                <!-- NARRATIVE LOGS -->
                 <details class="group bg-card border border-purple-900/30 rounded-xl overflow-hidden shadow-lg">
                     <summary class="flex justify-between items-center p-4 cursor-pointer bg-purple-900/20 hover:bg-purple-900/30 transition list-none">
                         <span class="font-bold text-purple-200 flex items-center gap-2">📖 Cambios en NARRATIVAS <span class="text-xs bg-purple-900 text-purple-300 px-2 rounded-full">{{ logs_narrative|length }}</span></span>
@@ -462,7 +173,6 @@
                     </div>
                 </details>
 
-                <!-- IMAGE LOGS -->
                 <details class="group bg-card border border-pink-900/30 rounded-xl overflow-hidden shadow-lg">
                     <summary class="flex justify-between items-center p-4 cursor-pointer bg-pink-900/20 hover:bg-pink-900/30 transition list-none">
                         <span class="font-bold text-pink-200 flex items-center gap-2">🖼️ Cambios en IMÁGENES <span class="text-xs bg-pink-900 text-pink-300 px-2 rounded-full">{{ logs_image|length }}</span></span>
@@ -473,7 +183,6 @@
                     </div>
                 </details>
 
-                <!-- OTHER LOGS -->
                 <details class="group bg-card border border-gray-800 rounded-xl overflow-hidden shadow-lg">
                     <summary class="flex justify-between items-center p-4 cursor-pointer bg-gray-900/50 hover:bg-gray-800 transition list-none">
                         <span class="font-bold text-gray-400 flex items-center gap-2">⚙️ Otros Eventos <span class="text-xs bg-gray-800 text-gray-300 px-2 rounded-full">{{ logs_other|length }}</span></span>
@@ -487,7 +196,9 @@
 
         </form>
     </div>
+{% endblock %}
 
+{% block modals %}
     <script>
         function updateFloatingBar() {
             const checkboxes = document.querySelectorAll('.item-checkbox:checked');
@@ -506,13 +217,10 @@
             if (!section) return;
             
             const checkboxes = section.querySelectorAll('.item-checkbox');
-            // Check if all are currently checked to toggle
             const allChecked = Array.from(checkboxes).every(c => c.checked);
             
             checkboxes.forEach(c => c.checked = !allChecked);
             updateFloatingBar();
         }
     </script>
-
-</body>
-</html>
+{% endblock %}

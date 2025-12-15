@@ -1,0 +1,160 @@
+{% load static %}
+<!-- Component: Proposal Card -->
+<!-- Args: item, variant (pending|approved|rejected|archived), target_url_prefix (optional) -->
+<!-- Styling Variants -->
+
+{% with is_world=item.type|default:'WORLD' == 'WORLD' %}
+{% with is_delete=item.cambios.action|default:item.action == 'DELETE' %}
+{% with is_set_cover=item.cambios.action == 'SET_COVER' %}
+
+<div class="bg-card p-6 rounded-xl shadow-lg flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 relative group transition-all duration-300
+    {% if variant == 'rejected' %}grayscale hover:grayscale-0 opacity-60 hover:opacity-100 border border-red-900/20
+    {% elif variant == 'archived' %}opacity-50 hover:opacity-100 border border-gray-800
+    {% elif is_delete %}border border-red-600 bg-red-900/10
+    {% elif is_set_cover %}border border-yellow-600 bg-yellow-900/10
+    {% elif variant == 'approved' %}border border-green-900/30 opacity-75 hover:opacity-100
+    {% elif is_world %}border border-blue-900/30
+    {% else %}border border-purple-900/30
+    {% endif %}">
+
+    <!-- Status Badges (Absolute) -->
+    {% if is_delete %}
+        <div class="absolute -top-3 left-6 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg z-20">
+            🗑️ SOLICITUD DE ELIMINACIÓN
+        </div>
+    {% elif is_set_cover %}
+        <div class="absolute -top-3 left-6 bg-yellow-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg z-20">
+            📸 PROPUESTA DE PORTADA
+        </div>
+    {% elif item.cambios.action == 'TOGGLE_VISIBILITY' %}
+        <div class="absolute -top-3 left-6 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg z-20">
+            👁️ CAMBIO VISIBILIDAD
+        </div>
+    {% elif item.cambios.properties %}
+         <div class="absolute -top-3 left-6 {% if variant == 'approved' %}bg-green-600{% else %}bg-purple-600{% endif %} text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg z-20">
+            🧬 PROPUESTA DE METADATOS
+        </div>
+    {% elif item.cambios.action == 'RESTORE' %}
+         <div class="absolute -top-3 left-6 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg z-20">
+            ♻️ SOLICITUD DE RESTAURACIÓN
+        </div>
+    {% endif %}
+
+    <!-- Checkbox -->
+    <div class="absolute top-4 right-4 lg:static lg:mr-2">
+        <input type="checkbox" name="{% if is_world %}selected_ids{% else %}selected_narr_ids{% endif %}" value="{{ item.id }}" class="w-5 h-5 accent-red-600 cursor-pointer item-checkbox" onchange="updateFloatingBar()">
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-grow min-w-0">
+        <div class="flex items-center gap-3 mb-1 flex-wrap">
+            <span class="{% if variant == 'approved' %}bg-green-900/30 text-green-500 border-green-800
+                         {% elif variant == 'rejected' %}text-red-500
+                         {% elif variant == 'archived' %}bg-gray-800 text-gray-400 border-gray-700
+                         {% else %}bg-yellow-900/30 text-yellow-500 border-yellow-800{% endif %} 
+                         text-xs font-bold px-2 py-1 rounded border">v{{ item.version_number }}</span>
+            
+            {% if item.parent_context %}
+                <span class="bg-indigo-900/30 text-indigo-300 text-xs font-mono px-2 py-1 rounded border border-indigo-800 flex items-center gap-1">
+                    📍 {{ item.parent_context }}
+                </span>
+            {% endif %}
+            
+            <h2 class="text-xl font-bold {% if variant == 'archived' or variant == 'rejected' %}text-gray-300{% else %}text-white{% endif %} break-all">{{ item.target_name }}</h2>
+            
+            {% if is_world %}
+                <span class="text-gray-500 text-sm">para <a href="{% url 'ver_mundo' item.target_link %}" class="text-accent hover:underline">{{ item.world.name }}</a></span>
+                <span class="text-xs bg-blue-900/30 text-blue-400 px-2 py-0.5 rounded border border-blue-800">{{ item.type_label }}</span>
+            {% else %}
+                <span class="text-gray-500 text-sm">en <a href="{% url 'ver_mundo' item.narrative.world.public_id|default:item.narrative.world.id %}" class="text-accent hover:underline">{{ item.narrative.world.name }}</a></span>
+                <span class="text-xs bg-purple-900/30 text-purple-400 px-2 py-0.5 rounded border border-purple-800">{{ item.type_label }}</span>
+            {% endif %}
+        </div>
+        
+        <p class="text-gray-400 text-sm mb-2 line-clamp-2 break-words">{{ item.target_desc|striptags|truncatewords:20 }}</p>
+        
+        <div class="flex gap-4 text-xs text-gray-500 font-mono">
+            <span>👤 {{ item.author.username|default:"Sistema" }}</span>
+            <span>📅 {{ item.created_at|date:"d/m/Y H:i" }}</span>
+            {% if variant == 'rejected' %}<span>❌ Rechazado el {{ item.created_at|date:"d/m/Y" }}</span>{% endif %}
+            {% if variant == 'archived' %}<span>📦 Archivado el {{ item.created_at|date:"d/m/Y" }}</span>{% endif %}
+        </div>
+
+        <!-- Metadata Changes -->
+        {% if item.cambios.properties %}
+        <div class="mt-3 bg-opacity-10 border rounded p-3 {% if variant == 'approved' %}bg-purple-900 border-green-500/20{% else %}bg-purple-900 border-purple-500/20{% endif %}">
+            <h4 class="text-[10px] {% if variant == 'approved' %}text-green-400{% else %}text-purple-400{% endif %} font-bold uppercase tracking-widest mb-2">🧬 Cambios en Estructura</h4>
+            <div class="flex flex-wrap gap-x-4 gap-y-2 text-xs font-mono text-gray-300">
+                {% for prop in item.cambios.properties %}
+                <div class="flex gap-1">
+                    <span class="opacity-60 {% if variant == 'approved' %}text-green-500{% else %}text-purple-500{% endif %}">{{ prop.key }}:</span>
+                    <span class="text-white">{{ prop.value }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if item.change_log %}
+        <div class="mt-2 text-sm {% if variant == 'rejected' %}text-gray-400 bg-gray-900/30{% else %}text-gray-300 bg-gray-900/50{% endif %} p-2 rounded border border-gray-700">
+            <span class="text-xs text-gray-500 font-bold uppercase block mb-1">Razón:</span>
+            "{{ item.change_log }}"
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Actions Buttons -->
+    <div class="flex gap-3 shrink-0">
+        <!-- VIEW BUTTON -->
+        {% if is_world %}
+            <a href="{% url 'revisar_version' item.id %}" class="px-4 py-2 bg-blue-900/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg border border-blue-900/50 transition font-bold text-sm">👁️ {% if variant == 'pending' %}Revisar{% else %}Ver{% endif %}</a>
+        {% else %}
+            <a href="{% url 'revisar_narrativa_version' item.id %}" class="px-4 py-2 bg-blue-900/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg border border-blue-900/50 transition font-bold text-sm">👁️ {% if variant == 'pending' %}Ver{% else %}Ver{% endif %}</a>
+        {% endif %}
+
+        <!-- CONTEXTUAL BUTTONS -->
+        {% if variant == 'pending' %}
+            {% if is_world %}
+                <a href="{% url 'aprobar_propuesta' item.id %}" class="px-4 py-2 bg-green-900/20 hover:bg-green-600 text-green-400 hover:text-white rounded-lg border border-green-900/50 transition font-bold shadow-lg shadow-green-900/20">✅ Aprobar</a>
+                <a href="{% url 'rechazar_propuesta' item.id %}" class="px-4 py-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg border border-red-900/50 transition font-bold" onclick="return confirm('¿Rechazar esta propuesta?')">✕ Rechazar</a>
+            {% else %}
+                <a href="{% url 'aprobar_narrativa' item.id %}" class="px-4 py-2 bg-green-900/20 hover:bg-green-600 text-green-400 hover:text-white rounded-lg border border-green-900/50 transition font-bold shadow-lg shadow-green-900/20">✅ Aprobar</a>
+                <a href="{% url 'rechazar_narrativa' item.id %}" class="px-4 py-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg border border-red-900/50 transition font-bold" onclick="return confirm('¿Rechazar esta narrativa?')">✕ Rechazar</a>
+            {% endif %}
+        
+        {% elif variant == 'approved' %}
+             {% if is_world %}
+                <a href="{% url 'publicar_version' item.id %}" class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg shadow-lg shadow-green-900/50 transition font-bold flex items-center gap-2" onclick="return confirm('¿PUBLICAR esta versión a LIVE? Esto sobreescribirá los datos actuales.')">
+                    🚀 PUBLICAR
+                </a>
+            {% else %}
+                <a href="{% url 'publicar_narrativa' item.id %}" class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg shadow-lg shadow-green-900/50 transition font-bold flex items-center gap-2" onclick="return confirm('¿PUBLICAR esta narrativa a LIVE?')">
+                    🚀 PUBLICAR
+                </a>
+            {% endif %}
+
+        {% elif variant == 'archived' %}
+            {% if is_world %}
+                <a href="{% url 'restaurar_version' item.id %}" class="px-3 py-1 bg-yellow-900/20 hover:bg-yellow-600 text-yellow-500 hover:text-white rounded border border-yellow-900/50 text-xs font-bold transition" onclick="return confirm('¿RESTAURAR esta versión? Se creará una nueva propuesta basada en ella.')">
+                    🔄 Restaurar
+                </a>
+            {% else %}
+                 <a href="{% url 'restaurar_narrativa' item.id %}" class="px-3 py-1 bg-yellow-900/20 hover:bg-yellow-600 text-yellow-500 hover:text-white rounded border border-yellow-900/50 text-xs font-bold transition" onclick="return confirm('¿RESTAURAR esta versión? Se creará una nueva propuesta basada en ella.')">
+                    🔄 Restaurar
+                </a>
+            {% endif %}
+        {% endif %}
+
+        <!-- DELETE ALWAYS AVAILABLE -->
+        {% if is_world %}
+            <a href="{% url 'borrar_propuesta' item.id %}" class="px-4 py-2 bg-gray-800 hover:bg-red-600 text-gray-400 hover:text-white rounded-lg border border-gray-700 transition font-bold" onclick="return confirm('¿BORRAR DEFINITIVAMENTE? No se podrá recuperar.')">🗑️</a>
+        {% else %}
+             <a href="{% url 'borrar_narrativa_version' item.id %}" class="px-4 py-2 bg-gray-800 hover:bg-red-600 text-gray-400 hover:text-white rounded-lg border border-gray-700 transition font-bold" onclick="return confirm('¿BORRAR DEFINITIVAMENTE?')">🗑️</a>
+        {% endif %}
+    </div>
+
+</div>
+
+{% endwith %}
+{% endwith %}
+{% endwith %}

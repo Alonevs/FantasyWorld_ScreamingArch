@@ -1,53 +1,35 @@
+{% extends "layouts/base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Biblioteca | {{ world.name }}</title>
-    <style>
-        body { background-color: #0a0a12; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; padding: 20px 40px; }
-        a { text-decoration: none; color: inherit; }
-        
-        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; background: #0e0e16; padding: 15px 20px; border-radius: 10px; border-bottom: 1px solid #333; }
-        .nav-btn { background: #333; color: #fff; padding: 8px 15px; border-radius: 5px; border: 1px solid #444; cursor: pointer; margin-left: 5px; }
-        .nav-btn:hover { background: #555; }
 
-        .container { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr 300px; gap: 30px; }
+{% block title %}Biblioteca | {{ world.name }}{% endblock %}
 
-        .sidebar { background: #13131f; padding: 20px; border-radius: 10px; height: fit-content; }
+{% block extra_head %}
+<style>
+    /* Estilos específicos que no están en base */
+    .lore-card { transition: 0.2s; }
+    .lore-card:hover { transform: translateX(5px); }
+</style>
+{% endblock %}
 
-        h1 { color: #d633ff; margin-top: 0; border-bottom: 2px solid #333; padding-bottom: 10px; }
-        h2 { color: #a0a0ff; border-bottom: 1px solid #333; padding-bottom: 5px; margin-top: 30px; font-size: 1.2em; }
-
-        .lore-card { background: #1f1f2e; border: 1px solid #333; padding: 15px; margin-bottom: 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
-        .lore-card:hover { border-color: #d633ff; transform: translateX(5px); }
-        .lore-title { font-weight: bold; font-size: 1.1em; }
-        .lore-meta { font-size: 0.8em; color: #888; }
-        .tag { font-size: 0.7em; padding: 2px 6px; background: #000; border-radius: 4px; color: #d633ff; border: 1px solid #444; margin-right: 10px; }
-
-        .btn-create { display: block; width: 100%; padding: 10px; background: #d633ff; color: white; text-align: center; border-radius: 5px; font-weight: bold; margin-bottom: 10px; border: none; cursor: pointer; }
-        .btn-create:hover { background: #b02ce0; }
-        
-        select, input { width: 100%; padding: 8px; background: #000; border: 1px solid #444; color: white; margin-bottom: 10px; box-sizing: border-box; }
-        .chapter-card { border-left: 3px solid #d633ff; background: #16161f; }
-    </style>
-</head>
-<body>
-    <div class="top-bar">
-        <div style="font-weight:bold; font-size:1.5em;">BIBLIOTECA</div>
-        <div>
-            <a href="{% url 'ver_mundo' world.id %}" class="nav-btn">⬅ Volver al Mundo</a>
-            <a href="{% url 'home' %}" class="nav-btn">🏠 Inicio</a>
+{% block content %}
+    <!-- TOP BAR -->
+    <div class="flex justify-between items-center mb-6 bg-gray-900/80 p-4 rounded-xl border border-gray-800 backdrop-blur-md">
+        <div class="text-xl font-bold tracking-widest text-white">BIBLIOTECA</div>
+        <div class="flex gap-2">
+            <a href="{% url 'ver_mundo' world.id %}" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm border border-gray-700 transition">⬅ Volver al Mundo</a>
+            <a href="{% url 'home' %}" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm border border-gray-700 transition">🏠 Inicio</a>
         </div>
     </div>
 
-    <div class="container">
-        <div class="main-col">
-            <h1>{{ world.name }} <span style="font-size:0.5em; color:#666;">ARCHIVO</span></h1>
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8 max-w-[1400px] mx-auto">
+        <!-- MAIN CONTENT -->
+        <div class="col-span-1 lg:col-span-3">
+            <h1 class="text-3xl font-bold text-accent mb-2">{{ world.name }} <span class="text-sm text-gray-600 ml-2">ARCHIVO</span></h1>
+            <div class="h-1 w-full bg-gray-800 mb-8"></div>
             
             {% if lores %}
-                <h2>📜 Lores & Fundamentos</h2>
-                <div class="narrative-tree">
+                <h2 class="text-xl font-bold text-indigo-400 mb-4 pb-2 border-b border-gray-800">📜 Lores & Fundamentos</h2>
+                <div class="space-y-2 mb-8">
                     {% for l in lores %}
                         {% include "components/_narrativa_tree_item.html" with node=l %}
                     {% endfor %}
@@ -55,8 +37,8 @@
             {% endif %}
 
             {% if historias %}
-                <h2>📖 Historias & Capítulos</h2>
-                <div class="narrative-tree">
+                <h2 class="text-xl font-bold text-indigo-400 mb-4 pb-2 border-b border-gray-800">📖 Historias & Capítulos</h2>
+                <div class="space-y-2 mb-8">
                     {% for h in historias %}
                         {% include "components/_narrativa_tree_item.html" with node=h %}
                     {% endfor %}
@@ -64,48 +46,47 @@
             {% endif %}
 
             {% if not lores and not historias %}
-                <div style="text-align:center; padding:50px; color:#666; border:2px dashed #333;">La biblioteca está vacía.</div>
+                <div class="text-center py-16 border-2 border-dashed border-gray-800 rounded-xl text-gray-500">
+                    <p class="mb-4 text-4xl">📚</p>
+                    <p>La biblioteca está vacía.</p>
+                </div>
             {% endif %}
         </div>
 
-        <div class="sidebar">
-            <h3 style="margin-top:0; color:#fff;">Crear Rápido</h3>
-            
-            <a href="{% url 'pre_crear_root' world.id 'L' %}" class="btn-create" style="background:#8e44ad; text-align:center; display:block; margin-bottom:5px; text-decoration:none;">+ 📜 LORE</a>
-            <a href="{% url 'pre_crear_root' world.id 'H' %}" class="btn-create" style="background:#2980b9; text-align:center; display:block; margin-bottom:5px; text-decoration:none;">+ 📖 HISTORIA</a>
-
+        <!-- SIDEBAR -->
+        <div class="col-span-1">
+            <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-800 sticky top-24">
+                <h3 class="text-white font-bold mb-4">Crear Rápido</h3>
+                
+                <a href="{% url 'pre_crear_root' world.id 'L' %}" class="block w-full py-3 mb-3 bg-purple-700 hover:bg-purple-600 text-white font-bold text-center rounded-lg transition shadow-lg">
+                    + 📜 LORE
+                </a>
+                <a href="{% url 'pre_crear_root' world.id 'H' %}" class="block w-full py-3 bg-blue-700 hover:bg-blue-600 text-white font-bold text-center rounded-lg transition shadow-lg">
+                    + 📖 HISTORIA
+                </a>
+            </div>
         </div>
     </div>
 
-    <!-- Removed Creation Modal -->
-
     <script>
-        // Tree Interaction Logic
-        // Tree Interaction Logic
         function toggleNarrative(event, nid, hasChildren) {
-            // Prevent event from bubbling so clicking arrow doesn't trigger card navigation
             event.stopPropagation(); 
-
-            // Only toggle if there are children
             if (!hasChildren) return;
-
             const childrenDiv = document.getElementById('children-' + nid);
             const chevron = document.getElementById('chevron-' + nid);
 
-            if (childrenDiv.style.display === 'none') {
-                // Expand
+            if (childrenDiv.style.display === 'none' || childrenDiv.classList.contains('hidden')) {
                 childrenDiv.style.display = 'block';
+                childrenDiv.classList.remove('hidden');
                 if(chevron) chevron.style.transform = 'rotate(90deg)';
             } else {
-                // Collapse
                 childrenDiv.style.display = 'none';
+                childrenDiv.classList.add('hidden');
                 if(chevron) chevron.style.transform = 'rotate(0deg)';
             }
         }
-
         function navigateToNarrative(url) {
             window.location.href = url;
         }
     </script>
-</body>
-</html>
+{% endblock %}

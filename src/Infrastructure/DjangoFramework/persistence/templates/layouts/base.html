@@ -1,0 +1,68 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ECLAI Universe{% endblock %}</title>
+    
+    <!-- Shared Tailwind Config -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#0a0a12',
+                        card: '#161625',
+                        accent: '#d633ff',
+                        'accent-hover': '#b02ce0',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Global Styles -->
+    <style>
+        body { 
+            background-color: #0a0a12; 
+            color: #eee; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+        }
+        /* Scrollbar personalizada */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0a0a12; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-dark text-gray-300 min-h-screen">
+
+    <!-- Toast Notifications -->
+    {% if messages %}
+    <div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none">
+        {% for message in messages %}
+        <div class="px-4 py-2 rounded shadow-lg text-white font-bold backdrop-blur border border-white/20
+            {% if message.tags == 'success' %}bg-green-600/90{% else %}bg-red-600/90{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    <script>setTimeout(() => { 
+        const el = document.getElementById('toast-container');
+        if(el) el.remove(); 
+    }, 3000);</script>
+    {% endif %}
+
+    <!-- Main Content -->
+    {% block content %}
+    {% endblock %}
+
+    <!-- Modals Area -->
+    {% block modals %}
+    {% endblock %}
+
+</body>
+</html>

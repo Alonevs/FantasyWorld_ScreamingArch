@@ -1,60 +1,16 @@
+{% extends "layouts/base.html" %}
 {% load static %}
 {% load metadata_tags %}
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ECLAI v5.0 | {{ name }}</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
+
+{% block title %}ECLAI v5.0 | {{ name }}{% endblock %}
+
+{% block extra_head %}
     <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
-    
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        dark: '#0a0a12',
-                        card: '#161625',
-                        accent: '#d633ff',
-                        'accent-hover': '#b02ce0',
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        /* Scrollbar personalizada */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #0a0a12; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #555; }
-    </style>
-</head>
-<body class="bg-dark text-gray-300 font-sans min-h-screen p-4 selection:bg-accent selection:text-white">
+{% endblock %}
 
-    {% if messages %}
-    <div id="toast-container" class="fixed top-10 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 items-center w-full max-w-md pointer-events-none">
-        {% for message in messages %}
-        <div class="toast-message px-4 py-3 rounded shadow-lg text-white font-medium transform transition-all duration-500 hover:scale-105
-            {% if message.tags == 'success' %}bg-green-600{% elif message.tags == 'error' %}bg-red-600{% elif message.tags == 'warning' %}bg-yellow-600{% else %}bg-blue-600{% endif %}">
-            {{ message }}
-        </div>
-        {% endfor %}
-    </div>
-    <script>
-        setTimeout(() => {
-            const toasts = document.querySelectorAll('.toast-message');
-            for (let el of toasts) {
-                el.style.opacity = '0';
-                setTimeout(() => el.remove(), 500);
-            }
-        }, 2000);
-    </script>
-    {% endif %}
-
-    <div class="flex justify-between items-center mb-6 bg-gray-900/80 p-4 rounded-xl border border-gray-800 backdrop-blur-md">
+{% block content %}
+    <!-- HEADER NAV -->
+    <div class="flex justify-between items-center mb-6 bg-gray-900/80 p-4 rounded-xl border border-gray-800 backdrop-blur-md mx-4 mt-4 max-w-[1600px] xl:mx-auto">
         <div class="text-xl font-bold tracking-widest text-white">
             ECLAI <span class="text-xs text-green-400 ml-2 bg-green-900/30 px-2 py-1 rounded border border-green-800">
                 {% if user.is_authenticated %}👤 {{ user.username|upper }}{% else %}👻 ANÓNIMO{% endif %}
@@ -66,8 +22,10 @@
         </div>
     </div>
 
-    <div class="bg-card border border-gray-800 rounded-2xl max-w-7xl mx-auto overflow-hidden shadow-2xl grid grid-cols-1 lg:grid-cols-4">
+    <!-- MAIN GRID -->
+    <div class="bg-card border border-gray-800 rounded-2xl max-w-[1600px] mx-4 xl:mx-auto overflow-hidden shadow-2xl grid grid-cols-1 lg:grid-cols-4 mb-10">
         
+        <!-- HEADER SECTION -->
         <div class="col-span-1 lg:col-span-4 bg-gradient-to-r from-indigo-950 to-gray-900 p-6 border-b border-indigo-900 flex flex-col md:flex-row justify-between items-start gap-4">
             <div>
                 <div class="flex items-center flex-wrap gap-2 text-xs text-gray-400 mb-4">
@@ -108,15 +66,10 @@
                 </div>
             </div>
             
-            <!-- IMAGEN DE PORTADA ELIMINADA POR USUARIO -->
-            
             {% if not is_preview %}
             <div class="flex gap-2">
                 <a href="{% url 'dashboard' %}" class="p-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition shadow-md flex items-center gap-2" title="Panel de Control">
                     🚀 <span class="hidden sm:inline text-xs font-bold">DASHBOARD</span>
-                </a>
-                <a href="#" class="p-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg transition border border-gray-600" title="Historial (Próximamente)">
-                    📜
                 </a>
                 <button onclick="openEditModal()" class="p-2 bg-blue-900/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg transition border border-blue-900/50" title="Editar">
                     ✏️
@@ -128,32 +81,22 @@
             {% endif %}
         </div>
 
+        <!-- CONTENT AREA (Left Column) -->
         <div class="col-span-1 lg:col-span-3 p-6 lg:p-8 border-r border-gray-800">
             
-            <!-- LISTA DE HIJOS -->
+            <!-- CHILD ENTITIES LIST -->
             {% if hijos %}
             <div class="mb-8">
                 <h3 class="text-accent font-bold tracking-wider text-sm uppercase mb-4">Entidades Contenidas</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {% for h in hijos %}
-                    <a href="{% url 'ver_mundo' h.public_id %}" class="block bg-gray-900/50 hover:bg-gray-800 border border-gray-700 hover:border-accent rounded-lg p-3 transition flex items-center gap-3 group">
-                        <div class="w-12 h-12 rounded bg-black border border-gray-800 overflow-hidden shrink-0">
-                            {% if h.img %}
-                            <img src="{% static 'persistence/img/'|add:h.img %}" class="w-full h-full object-cover">
-                            {% else %}
-                            <div class="w-full h-full flex items-center justify-center text-xl">🪐</div>
-                            {% endif %}
-                        </div>
-                        <div>
-                            <div class="font-bold text-gray-200 group-hover:text-white">{{ h.name }}</div>
-                            <div class="text-xs text-gray-500 font-mono">{{ h.short }}</div>
-                        </div>
-                    </a>
+                        {% include "components/_entity_card.html" with entity=h variant="horizontal" %}
                     {% endfor %}
                 </div>
             </div>
             {% endif %}
 
+            <!-- VISUAL DATABASE HEADER -->
             <div class="flex justify-between items-end mb-4 border-b border-gray-800 pb-2">
                 <h3 class="text-accent font-bold tracking-wider text-sm uppercase">Visual Database</h3>
                 {% if not is_preview %}
@@ -171,6 +114,7 @@
                 {% endif %}
             </div>
 
+            <!-- GALLERY STRIP -->
             <div class="flex gap-4 overflow-x-auto pb-4 mb-8 snap-x min-h-[140px]">
                 {% for img in imagenes %}
                 <div class="snap-start shrink-0 relative group w-40 h-56">
@@ -186,23 +130,17 @@
                     <span class="text-2xl mb-2">🖼️</span>
                     <p class="text-xs">No hay imágenes visualizadas.</p>
                 </div>
-                {% endfor %} </div>
+                {% endfor %} 
+            </div>
 
-
-
+            <!-- DESCRIPTION -->
             <div class="prose prose-invert max-w-none mt-8">
                 <h3 class="text-white font-bold mb-2">Descripción</h3>
                 <div class="bg-gray-900/50 p-4 rounded-lg border border-gray-800 text-gray-300 leading-relaxed whitespace-pre-wrap">{{ description|default:"Sin descripción disponible." }}</div>
             </div>
-
-
-
-
-            
         </div>
-            
-            <!-- Block Moved Inside -->
         
+        <!-- SIDEBAR (Right Column) -->
         <div class="col-span-1 p-6 lg:p-8 bg-gray-900/30">
             <h3 class="text-gray-500 text-xs font-bold uppercase mb-4">Información</h3>
             <div class="space-y-3 text-sm text-gray-400">
@@ -217,8 +155,6 @@
                     📖 Narrativa
                 </a>
                 
-
-                
                 <a href="{% url 'mapa_arbol' public_id %}" class="block w-full px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded flex items-center gap-2 transition border border-gray-700 text-sm">
                     🌳 Mapa Árbol
                 </a>
@@ -228,420 +164,15 @@
                         ✨ GENERAR ENTORNO
                     </button>
 
-
                     <!-- Metadata Viewer (HUD) -->
                     {% include 'partials/_metadata_viewer.html' %}
                 </div>
             </div>
-
-            <!-- Block Form Removed (Moved to Modal effectively) -->
-            
-            <!-- Block Moved -->
         </div>
     </div>
+{% endblock %}
 
-    <div id="editModal" class="hidden fixed inset-0 bg-black/90 z-50 items-center justify-center backdrop-blur-sm">
-        <div class="bg-card border border-indigo-500/50 rounded-2xl p-6 max-w-lg w-full shadow-2xl">
-            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">✏️ Editar Mundo</h2>
-            
-            <form method="POST" action="{% url 'editar_mundo' jid %}">
-                {% csrf_token %}
-                <div class="mb-4">
-                    <label class="block text-xs text-gray-500 uppercase font-bold mb-1">Nombre</label>
-                    <input type="text" name="name" value="{{ name }}" class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none">
-                </div>
-                <div class="mb-4">
-                    <label class="block text-xs text-gray-500 uppercase font-bold mb-1">Descripción</label>
-                    <textarea name="description" rows="5" class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none">{{ description }}</textarea>
-                </div>
-                <div class="mb-4">
-                    <label class="block text-xs text-gray-500 uppercase font-bold mb-1">Razón del cambio (Obligatorio)</label>
-                    <input type="text" name="reason" placeholder="Ej: Corrección, expansión..." class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none" required>
-                </div>
-                <div class="mb-6 bg-gray-800/50 p-3 rounded border border-gray-700">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="use_ai_edit" class="accent-accent w-4 h-4">
-                        <span class="text-sm text-gray-300">✨ Refinar descripción con IA</span>
-                    </label>
-                </div>
-                <div class="flex gap-3">
-                    <button type="button" onclick="closeEditModal()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700 transition">Cancelar</button>
-                    <button type="submit" class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg shadow-lg transition">💾 GUARDAR CAMBIOS</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="createModal" class="hidden fixed inset-0 bg-black/90 z-50 items-center justify-center backdrop-blur-sm">
-        <div class="bg-card border border-accent rounded-2xl p-6 max-w-lg w-full shadow-2xl shadow-purple-900/20">
-            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">✨ Generar Entorno / Entidad</h2>
-            
-            <form method="POST" action="{% url 'ver_mundo' public_id %}">
-                {% csrf_token %}
-                
-                <div class="mb-4">
-                    <label class="block text-xs text-gray-500 uppercase font-bold mb-1">Tipo de Entidad</label>
-                    <!-- LEVEL SELECTOR (Deep Creation) -->
-                    <select name="target_level" class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none mb-4">
-                        {% for lvl in available_levels %}
-                        <option value="{{ lvl.level }}" {% if lvl.is_next %}selected{% endif %}>
-                            {% if lvl.is_next %}📍 Siguiente: {{ lvl.label }} (Nivel {{ lvl.level }}){% else %}🕳️ Salto a: {{ lvl.label }} (Nivel {{ lvl.level }}){% endif %}
-                        </option>
-                        {% endfor %}
-                    </select>
-                    
-                    <!-- Legacy Type Selector (Optional/Cosmetic now if level drives logic, but kept for reasoning) -->
-                    <input type="text" name="entity_type_desc" placeholder="Tipo (ej: Lugar, Personaje...)" class="w-full bg-black border border-gray-700 rounded p-2 text-white text-xs mb-2">
-                </div>
-
-                <div class="mb-4">
-                    <label class="block text-xs text-gray-500 uppercase font-bold mb-1">Nombre</label>
-                    <input type="text" name="child_name" placeholder="Nombre de la nueva entidad..." class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none" required>
-                </div>
-                
-                <div class="mb-4">
-                    <label class="block text-xs text-gray-500 uppercase font-bold mb-1">Descripción Inicial</label>
-                    <textarea name="child_desc" rows="3" placeholder="Breve descripción..." class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none"></textarea>
-                </div>
-
-                <div class="mb-4">
-                    <label class="block text-xs text-gray-500 uppercase font-bold mb-1">Razón de Creación</label>
-                    <input type="text" name="reason" placeholder="Ej: Expansión del mapa, nuevo enemigo..." class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none" required>
-                </div>
-
-                <div class="mb-6 bg-gray-800/50 p-3 rounded border border-gray-700">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="use_ai_gen" class="accent-accent w-4 h-4">
-                        <span class="text-sm text-gray-300">🤖 Generar detalles con IA (Beta)</span>
-                    </label>
-                </div>
-
-                <div class="flex gap-3">
-                    <button type="button" onclick="closeCreateModal()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700 transition">Cancelar</button>
-                    <button type="submit" class="flex-1 py-2 bg-accent hover:bg-accent-hover text-white font-bold rounded-lg shadow-lg transition">🚀 GENERAR</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="uploadModal" class="hidden fixed inset-0 bg-black/90 z-50 items-center justify-center backdrop-blur-sm">
-        <div class="bg-card border border-gray-700 rounded-2xl p-6 max-w-lg w-full shadow-2xl text-center">
-            <h2 class="text-xl font-bold text-white mb-4">Confirmar Subida</h2>
-            <div id="file-info" class="text-xs font-mono text-accent mb-2"></div>
-            <!-- Previews Container -->
-            <div id="upload-previews" class="grid grid-cols-3 gap-2 mb-4 max-h-48 overflow-y-auto"></div>
-            <img id="preview-img" class="hidden"> <!-- Legacy support removed/hidden -->
-            
-            <div class="bg-gray-950 p-4 rounded-lg border border-gray-800 text-left mb-4">
-                <label class="flex items-center gap-2 mb-3 cursor-pointer group">
-                    <input type="checkbox" id="chk-original-name" onchange="toggleCustomName()" class="accent-accent w-4 h-4">
-                    <span class="text-sm text-gray-300 group-hover:text-white transition">Usar nombre original</span>
-                </label>
-                <input type="text" id="inp-custom-name" placeholder="O escribe un nombre..." class="w-full bg-black border border-gray-700 rounded p-2 text-sm text-white focus:border-accent focus:outline-none transition">
-            </div>
-
-            <div id="scan-status" class="text-xs font-bold mb-4 tracking-widest h-4"></div>
-
-            <div class="flex gap-3 justify-center">
-                <button onclick="closeUploadModal()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded text-gray-300">Cancelar</button>
-                <button id="btn-confirm-upload" onclick="confirmUpload()" class="px-6 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded shadow-lg hidden">🚀 SUBIR</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="aiModal" class="hidden fixed inset-0 bg-black/90 z-50 items-center justify-center backdrop-blur-sm">
-        <div class="bg-card border border-purple-500/50 rounded-2xl p-6 max-w-lg w-full shadow-2xl">
-            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">🎨 Generador de Imágenes IA</h2>
-            
-            <!-- Step 1: Generate Options -->
-            <div id="ai-step-1">
-                <div class="mb-4">
-                    <label class="block text-xs text-gray-500 uppercase font-bold mb-1">Cantidad</label>
-                    <input type="number" id="batch-size" value="1" min="1" max="5" class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none">
-                </div>
-                <div class="flex gap-3">
-                    <button type="button" onclick="closeAiModal()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700 transition">Cancelar</button>
-                    <button type="button" onclick="generateBatch()" class="flex-1 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg shadow-lg transition">✨ GENERAR</button>
-                </div>
-            </div>
-
-            <!-- Step Loading -->
-            <div id="ai-step-loading" class="hidden text-center py-8">
-                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mx-auto mb-4"></div>
-                <p class="text-gray-400 animate-pulse">Imaginando nuevos mundos...</p>
-            </div>
-
-            <!-- Step Result (Staging Area) -->
-            <div id="ai-step-result" class="hidden">
-                <div id="staging-area" class="grid grid-cols-2 gap-2 mb-4 max-h-60 overflow-y-auto p-2 bg-black/30 rounded border border-gray-800">
-                    <!-- Generated images will appear here -->
-                </div>
-                <div class="flex gap-3">
-                    <button type="button" onclick="resetAiModal()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700 transition">Descartar Todo</button>
-                    <button type="button" id="btn-submit-batch" onclick="saveBatch()" class="flex-1 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg shadow-lg transition">💾 GUARDAR</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- LIGHTBOX -->
-    <div id="lightbox" class="hidden fixed inset-0 bg-black/95 z-[60] flex-col items-center justify-center p-4 backdrop-blur-md" onclick="closeLightbox()">
-        <img id="lb-img" class="max-w-full max-h-[80vh] rounded-lg shadow-2xl border border-gray-800 mb-4 object-contain" onclick="event.stopPropagation()">
-        
-        <div class="bg-gray-900/80 p-4 rounded-xl border border-gray-700 text-center min-w-[300px] backdrop-blur" onclick="event.stopPropagation()">
-            <h3 id="lb-title" class="text-xl font-bold text-white mb-1 cursor-pointer hover:text-accent flex items-center justify-center gap-2" onclick="editImageTitle()" title="Clic para editar título">
-                Título
-                <span class="text-xs text-gray-500">✏️</span>
-            </h3>
-            <p id="lb-name" class="text-xs font-mono text-gray-500 mb-4">filename.jpg</p>
-            
-            <div class="grid grid-cols-2 gap-4 text-xs text-gray-400 mb-4 text-left">
-                <div>Subido por: <span id="lb-uploader" class="text-white">User</span></div>
-                <div>Fecha: <span id="lb-date" class="text-white">Date</span></div>
-            </div>
-
-            <div class="flex gap-2 justify-center">
-                <button onclick="setAsCover()" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-xs font-bold transition">⭐ Portada</button>
-                <button onclick="closeLightbox()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs transition">Cerrar</button>
-            </div>
-        </div>
-    </div>
-
-    {{ imagenes|json_script:"imagenes-data" }}
-    <script>
-        // Initialize Gallery Log from Server Data
-        const galleryLog = {};
-        const imgsData = JSON.parse(document.getElementById('imagenes-data').textContent);
-        
-        imgsData.forEach(img => {
-            galleryLog[img.filename] = {
-                uploader: img.author || '-',
-                date: img.date || '-',
-                title: img.title || img.filename
-            };
-        });
-
-        // MODAL LOGIC
-        function openEditModal() {
-            document.getElementById('editModal').classList.remove('hidden');
-            document.getElementById('editModal').classList.add('flex');
-        }
-        function closeEditModal() {
-            document.getElementById('editModal').classList.add('hidden');
-            document.getElementById('editModal').classList.remove('flex');
-        }
-
-        function openCreateModal() {
-            document.getElementById('createModal').classList.remove('hidden');
-            document.getElementById('createModal').classList.add('flex');
-        }
-        function closeCreateModal() {
-            document.getElementById('createModal').classList.add('hidden');
-            document.getElementById('createModal').classList.remove('flex');
-        }
-
-        // AI MODAL LOGIC (Client-side Staging)
-        let generatedImages = []; // Array of { base64, title }
-
-        function openAiModal() {
-            document.getElementById('aiModal').classList.remove('hidden');
-            document.getElementById('aiModal').classList.add('flex');
-            resetAiModal();
-        }
-        function closeAiModal() {
-            document.getElementById('aiModal').classList.add('hidden');
-            document.getElementById('aiModal').classList.remove('flex');
-        }
-        
-        function resetAiModal() {
-            document.getElementById('ai-step-1').classList.remove('hidden');
-            document.getElementById('ai-step-loading').classList.add('hidden');
-            document.getElementById('ai-step-result').classList.add('hidden');
-            generatedImages = [];
-            document.getElementById('staging-area').innerHTML = "";
-        }
-
-        async function generateBatch() {
-            const count = parseInt(document.getElementById('batch-size').value) || 1;
-            document.getElementById('ai-step-1').classList.add('hidden');
-            document.getElementById('ai-step-loading').classList.remove('hidden');
-            
-            for(let i=0; i<count; i++) {
-                try {
-                    const r = await fetch("{% url 'api_preview_foto' jid %}");
-                    const d = await r.json();
-                    if(d.status === 'ok') {
-                        generatedImages.push({ base64: d.image, title: "" });
-                    }
-                } catch(e) { console.error(e); }
-            }
-
-            document.getElementById('ai-step-loading').classList.add('hidden');
-            document.getElementById('ai-step-result').classList.remove('hidden');
-            renderStagingArea();
-        }
-
-        function renderStagingArea() {
-            const container = document.getElementById('staging-area');
-            container.innerHTML = "";
-            
-            if(generatedImages.length === 0) {
-                container.innerHTML = `<div class="text-gray-500 text-xs italic">No hay imágenes generadas.</div>`;
-                return;
-            }
-
-            generatedImages.forEach((img, idx) => {
-                const div = document.createElement('div');
-                div.className = "relative group border border-gray-700 rounded overflow-hidden";
-                div.innerHTML = `
-                    <img src="data:image/webp;base64,${img.base64}" class="w-full h-32 object-cover">
-                    <button onclick="removeImage(${idx})" class="absolute top-1 right-1 bg-red-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition shadow">✕</button>
-                    <input type="text" placeholder="Título..." class="w-full bg-black text-xs text-white p-1 border-t border-gray-700 focus:outline-none" value="${img.title}" onchange="updateTitle(${idx}, this.value)">
-                `;
-                container.appendChild(div);
-            });
-            
-            document.getElementById('btn-submit-batch').innerText = `💾 GUARDAR (${generatedImages.length})`;
-        }
-
-        function removeImage(idx) {
-            generatedImages.splice(idx, 1);
-            renderStagingArea();
-            if(generatedImages.length === 0) resetAiModal();
-        }
-
-        function updateTitle(idx, val) {
-            generatedImages[idx].title = val;
-        }
-        
-        async function saveBatch() {
-            if(generatedImages.length === 0) return;
-            
-            const btn = document.getElementById('btn-submit-batch');
-            btn.disabled = true;
-
-            let successCount = 0;
-            let total = generatedImages.length;
-
-            for(let i=0; i<total; i++) {
-                const img = generatedImages[i];
-                btn.innerText = `Enviando ${i+1}/${total}...`;
-                try {
-                    const t = img.title || "Generado por IA";
-                    const response = await fetch("{% url 'api_save_foto' jid %}", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token }}" },
-                        body: JSON.stringify({ image: img.base64, title: t })
-                    });
-                    
-                    if (response.ok) {
-                        successCount++;
-                    } else {
-                        console.error(`Error saving image ${i+1}: ${response.status} ${response.statusText}`);
-                    }
-                } catch(e) { 
-                    console.error(`Exception saving image ${i+1}:`, e); 
-                }
-            }
-            
-            btn.innerText = "Finalizado";
-            alert(`✅ ${successCount}/${total} imágenes enviadas a revisión.`);
-            location.reload();
-        }
-        
-        function toggleCustomName() {
-            const chk = document.getElementById('chk-original-name');
-            const inp = document.getElementById('inp-custom-name');
-            inp.disabled = chk.checked;
-            inp.style.opacity = chk.checked ? 0.5 : 1;
-        }
-        
-        function confirmUpload() {
-            document.getElementById('hidden-use-original').value = document.getElementById('chk-original-name').checked ? 'true' : 'false';
-            document.getElementById('hidden-custom-name').value = document.getElementById('inp-custom-name').value;
-            document.getElementById('form-manual-upload').submit();
-        }
-        
-        function openUploadModal(input) {
-            if (input.files && input.files.length > 0) {
-                const modal = document.getElementById('uploadModal');
-                const previewContainer = document.getElementById('upload-previews');
-                const fileInfo = document.getElementById('file-info');
-                const btn = document.getElementById('btn-confirm-upload');
-                
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
-                btn.classList.remove('hidden');
-                
-                previewContainer.innerHTML = '';
-                fileInfo.innerText = `${input.files.length} archivo(s) seleccionado(s)`;
-                
-                Array.from(input.files).forEach(file => {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        const img = document.createElement('img');
-                        img.src = e.target.result;
-                        img.className = "w-full h-24 object-cover rounded border border-gray-700";
-                        previewContainer.appendChild(img);
-                    }
-                    reader.readAsDataURL(file);
-                });
-            }
-        }
-        
-        function closeUploadModal() {
-            document.getElementById('uploadModal').classList.add('hidden');
-            document.getElementById('uploadModal').classList.remove('flex');
-            document.getElementById('file-upload').value = "";
-        }
-
-        // LIGHTBOX LOGIC
-        function openLightbox(url, fn) {
-            const lb = document.getElementById('lightbox');
-            lb.classList.remove('hidden');
-            lb.classList.add('flex');
-            document.getElementById('lb-img').src = url;
-            document.getElementById('lb-name').innerText = fn;
-            
-            const d = galleryLog[fn] || {};
-            document.getElementById('lb-title').innerText = d.title || fn;
-            document.getElementById('lb-uploader').innerText = d.uploader || "-";
-            document.getElementById('lb-date').innerText = d.date || "-";
-            document.getElementById('lb-title').dataset.filename = fn;
-        }
-        
-        function closeLightbox() { 
-            const lb = document.getElementById('lightbox');
-            lb.classList.add('hidden');
-            lb.classList.remove('flex');
-        }
-        
-        function editImageTitle() {
-            const el = document.getElementById('lb-title');
-            const fn = el.dataset.filename;
-            const nt = prompt("Nuevo título:", el.innerText);
-            if(nt) {
-                fetch("{% url 'api_update_image_metadata' jid %}", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token }}" },
-                    body: JSON.stringify({ filename: fn, title: nt })
-                })
-                .then(r => r.json())
-                .then(d => {
-                    if(d.status === 'ok') {
-                        el.innerText = nt;
-                        if(!galleryLog[fn]) galleryLog[fn] = {};
-                        galleryLog[fn].title = nt;
-                    } else alert(d.message);
-                });
-            }
-        }
-        
-        function setAsCover() {
-            const filename = document.getElementById('lb-name').innerText;
-            if(filename !== "-") window.location.href = "{% url 'set_cover_image' jid '123456' %}".replace('123456', encodeURIComponent(filename));
-        }
-    </script>
-    {% include 'partials/_modal_metadata.html' %}
-</body>
-</html>
+{% block modals %}
+    {% include "partials/_world_modals.html" %}
+    {% include "partials/_world_scripts.html" %}
+{% endblock %}

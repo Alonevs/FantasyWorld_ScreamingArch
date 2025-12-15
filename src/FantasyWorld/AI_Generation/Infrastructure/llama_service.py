@@ -8,7 +8,7 @@ from src.FantasyWorld.AI_Generation.Domain.interfaces import LoreGenerator
 class Llama3Service(LoreGenerator):
     def __init__(self):
         # Use settings or fallback (Base URL)
-        base_url = getattr(settings, 'AI_API_BASE_URL', "http://127.0.0.1:5000")
+        base_url = getattr(settings, 'AI_API_BASE_URL', "http://127.0.0.1:7861")
         self.api_url_completion = f"{base_url}/v1/completions"
         self.api_url_chat = f"{base_url}/v1/chat/completions"
         self.timeout = getattr(settings, 'AI_TIMEOUT', 120)

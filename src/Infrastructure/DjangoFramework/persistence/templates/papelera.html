@@ -1,29 +1,8 @@
+{% extends "layouts/base.html" %}
 
-{% load static %}
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Papelera de Reciclaje | ECLAI</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        dark: '#0a0a12',
-                        card: '#161625',
-                        accent: '#d633ff',
-                        'accent-hover': '#b02ce0',
-                    }
-                }
-            }
-        }
-    </script>
-</head>
-<body class="bg-dark text-gray-200 font-sans p-4 lg:p-8 min-h-screen">
+{% block title %}Papelera de Reciclaje | ECLAI{% endblock %}
 
+{% block content %}
     <!-- HEADER -->
     <div class="flex justify-between items-center mb-6 bg-gray-900/80 p-4 rounded-xl border border-gray-800 backdrop-blur-md max-w-7xl mx-auto">
         <div class="text-xl font-bold tracking-widest text-white flex items-center gap-2">
@@ -37,17 +16,6 @@
 
     <div class="max-w-7xl mx-auto pb-24">
         
-        {% if messages %}
-            <div class="mb-6 space-y-2">
-                {% for message in messages %}
-                <div class="p-4 rounded-lg shadow-lg font-bold text-white text-center border border-white/20 
-                    {% if message.tags == 'success' %}bg-green-600/90{% elif 'info' in message.tags %}bg-blue-600/90{% else %}bg-red-600/90{% endif %}">
-                    {{ message }}
-                </div>
-                {% endfor %}
-            </div>
-        {% endif %}
-
         {% if deleted_items %}
             <div class="grid gap-4">
                 {% for item in deleted_items %}
@@ -80,6 +48,4 @@
             </div>
         {% endif %}
     </div>
-
-</body>
-</html>
+{% endblock %}
