@@ -10,12 +10,16 @@
 {% if variant == 'horizontal' %}
 <!-- HORIZONTAL VARIANT (List/Grid Compact) -->
 <a href="{% url 'ver_mundo' entity.public_id %}" class="block bg-gray-900/50 hover:bg-gray-800 border border-gray-700 hover:border-accent rounded-lg p-3 transition flex items-center gap-3 group">
-    <div class="w-12 h-12 rounded bg-black border border-gray-800 overflow-hidden shrink-0 relative">
-        {% if entity.img %}
-        <img src="{% static 'persistence/img/'|add:entity.img %}" class="w-full h-full object-cover">
+    <div class="w-12 h-12 rounded bg-black border border-gray-800 overflow-hidden shrink-0 relative group-hover:border-accent transition-colors duration-300">
+        {% with image=entity.img_file|default:entity.img %}
+        {% if image %}
+        <img src="{% static 'persistence/img/'|add:image %}" class="w-full h-full object-cover transition-transform duration-[10000ms] ease-linear group-hover:scale-125" onerror="this.parentElement.innerHTML='<div class=\'w-full h-full flex items-center justify-center text-xl text-gray-700\'>🪐</div>'">
         {% else %}
         <div class="w-full h-full flex items-center justify-center text-xl text-gray-700 group-hover:text-accent transition">🪐</div>
         {% endif %}
+        {% endwith %}
+        <!-- Reflection/Shine overlay -->
+        <div class="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
     </div>
     <div>
         <div class="font-bold text-gray-200 group-hover:text-white transition-colors">{{ entity.name }}</div>
@@ -29,13 +33,43 @@
     <div class="bg-[#161625] border border-[#2a2a40] rounded-xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_10px_20px_rgba(0,0,0,0.5)] hover:border-accent h-full flex flex-col relative">
         
         <!-- Image Container -->
-        <div class="w-full h-40 bg-black relative border-b border-[#333] group-hover:border-accent/50 transition-colors">
-            {% if entity.has_img %}
-            <img src="{% static 'persistence/img/'|add:entity.img_file %}" class="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition">
+        <div class="w-full h-40 bg-black relative border-b border-[#333] group-hover:border-accent/50 transition-colors card-structure overflow-hidden">
+            <!-- LOGIC: If multiple images -> Slideshow. Else -> Static Image. -->
+            {% if entity.images and entity.images|length > 1 %}
+                <!-- Alpine.js Zen Slideshow (Wave Effect) [25s Interval] -->
+                <div x-data="{ current: 0, total: {{ entity.images|length }} }" 
+                     x-init="
+                        setTimeout(() => {
+                            setInterval(() => { 
+                                current = (current + 1) % total 
+                            }, 25000); 
+                        }, {{ forloop.counter0|default:0 }} * 1000);
+                     " 
+                     class="absolute inset-0 w-full h-full z-10">
+                    
+                    {% for img_url in entity.images %}
+                    <img src="{% static 'persistence/img/'|add:img_url %}" 
+                         class="absolute inset-0 w-full h-full object-cover transition-opacity duration-[2000ms] ease-in-out"
+                         :class="current == {{ forloop.counter0 }} ? 'opacity-100 scale-110' : 'opacity-0 scale-100'"
+                         loading="lazy"
+                         style="transition: opacity 2000ms ease-in-out, transform 20000ms linear;"> 
+                    {% endfor %}
+                    
+                    <!-- Gradient Overlay -->
+                    <div class="absolute inset-0 bg-gradient-to-t from-[#161625] via-transparent to-transparent opacity-60"></div>
+                </div>
             {% else %}
-            <div class="w-full h-full flex items-center justify-center text-4xl text-gray-800 group-hover:text-accent/50 transition">
-                🪐
-            </div>
+                <!-- Static Image (Single or Fallback) -->
+                {% if entity.has_img or entity.img %}
+                    {% with image=entity.img_file|default:entity.img %}
+                    <img src="{% static 'persistence/img/'|add:image %}" class="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-transform duration-[10000ms] ease-linear group-hover:scale-125">
+                    {% endwith %}
+                {% else %}
+                    <!-- No Image Fallback -->
+                    <div class="w-full h-full flex items-center justify-center text-4xl text-gray-800 group-hover:text-accent/50 transition">
+                        🪐
+                    </div>
+                {% endif %}
             {% endif %}
             
             <!-- Floating Status Indicators -->

@@ -2,41 +2,36 @@
 {% load static %}
 
 {% block content %}
-    <div class="relative bg-gradient-to-b from-[#1a1a2e] to-dark border-b border-gray-800 p-10 text-center mb-8">
-        <h1 class="text-5xl font-bold text-accent mb-2 drop-shadow-[0_0_15px_rgba(214,51,255,0.5)]">ECLAI UNIVERSE</h1>
-        <p class="text-gray-400 text-lg">Sistema de Gestión de Realidades - v5.0 (Base)</p>
+    <!-- BACKGROUND SLIDESHOW -->
+    <!-- BACKGROUND SLIDESHOW (Alpine.js) -->
+    {% include "components/_global_background.html" %}
+
+    <!-- HERO SECTION -->
+    <div class="relative p-10 text-center mb-8">
+        <h1 class="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-accent via-white to-purple-400 mb-2 drop-shadow-[0_0_25px_rgba(214,51,255,0.6)] animate-pulse">
+            ECLAI UNIVERSE
+        </h1>
+        <p class="text-gray-300 text-lg tracking-[0.5em] font-light uppercase opacity-80">Sistema de Gestión de Realidades</p>
         
-        <!-- Admin Status Indicator -->
-        <div class="mt-4 text-xs font-mono uppercase tracking-widest">
-            {% if user.is_authenticated %}
-                <span class="text-green-500">🟢 Operador: {{ user.username }}</span>
-                {% if user.is_superuser %} <span class="text-accent border border-accent/30 px-1 rounded ml-1">ADMIN</span>{% endif %}
-            {% else %}
-                <span class="text-red-500">🔴 Acceso Público (Solo Lectura)</span>
-                <a href="{% url 'login' %}" class="ml-2 text-gray-400 hover:text-white underline">Iniciar Sesión</a>
-            {% endif %}
-        </div>
-        
-        <div class="flex justify-center gap-4 mt-6">
+        <div class="flex justify-center gap-4 mt-8">
             <button onclick="document.getElementById('createModal').classList.remove('hidden');document.getElementById('createModal').classList.add('flex')" 
-               class="px-6 py-2 bg-accent hover:bg-accent-hover text-white font-bold rounded-full transition transform hover:scale-105 shadow-lg shadow-purple-900/40">
-               + NUEVO MUNDO
+               class="px-8 py-3 bg-gradient-to-r from-accent to-purple-600 hover:from-accent-hover hover:to-purple-500 text-white font-bold rounded-full transition transform hover:scale-110 shadow-[0_0_30px_rgba(214,51,255,0.4)] border border-white/20">
+               + CREAR NUEVO MUNDO
             </button>
-            <a href="{% url 'dashboard' %}" class="px-6 py-2 bg-gray-800 hover:bg-gray-700 text-white font-bold rounded-full border border-gray-600 transition">
-               🎛️ GESTIÓN
-            </a>
         </div>
     </div>
 
-    <div class="max-w-[1600px] mx-auto px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-        {% for m in mundos %}
-            {% include "components/_entity_card.html" with entity=m variant="vertical" %}
-        {% empty %}
-        <div class="col-span-full py-20 text-center text-gray-500">
-            <h2 class="text-2xl font-bold mb-2">El vacío es absoluto.</h2>
-            <p>No existen mundos en este sector. Crea el primero.</p>
-        </div>
-        {% endfor %}
+
+
+    <div class="max-w-[1600px] mx-auto px-6">
+        {% if mundos %}
+            {% include "components/children_tabs.html" with children=mundos %}
+        {% else %}
+            <div class="py-20 text-center text-gray-500">
+                <h2 class="text-2xl font-bold mb-2">El vacío es absoluto.</h2>
+                <p>No existen mundos en este sector. Crea el primero.</p>
+            </div>
+        {% endif %}
     </div>
 {% endblock %}
 

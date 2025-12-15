@@ -85,16 +85,21 @@
         <!-- CONTENT AREA (Left Column) -->
         <div class="col-span-1 lg:col-span-3 p-6 lg:p-8 border-r border-gray-800">
             
-            <!-- CHILD ENTITIES LIST -->
+            <!-- CHILD ENTITIES LIST (Single Collapsible) -->
             {% if hijos %}
-            <div class="mb-8">
-                <h3 class="text-accent font-bold tracking-wider text-sm uppercase mb-4">Entidades Contenidas</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <details class="group mb-8" open>
+                <summary class="flex justify-between items-center bg-[#1a1a2e] p-4 rounded-t-lg cursor-pointer border border-gray-800 hover:border-gray-600 transition list-none sticky top-0 z-10">
+                    <h3 class="text-accent font-bold tracking-wider text-sm uppercase flex items-center gap-2">
+                        📂 Entidades Contenidas ({{ hijos|length }})
+                    </h3>
+                    <span class="text-gray-500 transform group-open:rotate-180 transition duration-300">▼</span>
+                </summary>
+                <div class="p-4 border-l border-r border-b border-gray-800 rounded-b-lg bg-black/20 grid grid-cols-1 md:grid-cols-2 gap-4 animate-wave">
                     {% for h in hijos %}
                         {% include "components/_entity_card.html" with entity=h variant="horizontal" %}
                     {% endfor %}
                 </div>
-            </div>
+            </details>
             {% endif %}
 
             <!-- VISUAL DATABASE HEADER -->

@@ -17,6 +17,15 @@
                         card: '#161625',
                         accent: '#d633ff',
                         'accent-hover': '#b02ce0',
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    },
+                    animation: {
+                        'fade-in-up': 'fadeInUp 0.6s ease-out forwards',
                     }
                 }
             }
@@ -37,6 +46,8 @@
         ::-webkit-scrollbar-thumb:hover { background: #555; }
     </style>
     {% block extra_head %}{% endblock %}
+    <!-- Alpine.js -->
+    <script src="//unpkg.com/alpinejs" defer></script>
 </head>
 <body class="bg-dark text-gray-300 min-h-screen">
 
@@ -65,6 +76,50 @@
     <!-- Modals Area -->
     {% block modals %}
     {% endblock %}
+
+    <!-- Global Scripts -->
+    <script>
+            // Card Slideshow Logic - OVERLAPPING WAVE (SMOOTH RIPPLE)
+            const slideshows = document.querySelectorAll('.card-slideshow');
+            if (slideshows.length > 0) {
+                console.log('Initializing ' + slideshows.length + ' card slideshows with SMOOTH WAVE effect');
+                
+                // Stagger Time: 1000ms (1s)
+                // Creates a clear wave. Transition is 3s, so Card A is 1s into transition when Card B starts.
+                const staggerDelay = 1000;
+                
+                // Fixed Cycle: 25s
+                // We ensure the interval is long enough to finish the wave if there are many cards.
+                const userInterval = 25000; 
+                const intervalDur = Math.max(userInterval, slideshows.length * staggerDelay + 2000); 
+                
+                console.log(`🌊 Wave Config: Stagger ${staggerDelay}ms | Total Interval ${intervalDur}ms`);
+
+                slideshows.forEach((container, index) => {
+                    const images = container.querySelectorAll('.slide-img');
+                    if (images.length < 2) return;
+                    
+                    let current = 0;
+                    
+                    // Initial Delay based on index
+                    setTimeout(() => {
+                        setInterval(() => {
+                            // Fade out current
+                            images[current].classList.remove('opacity-100');
+                            images[current].classList.add('opacity-0');
+                            
+                            // Next index
+                            current = (current + 1) % images.length;
+                            
+                            // Fade in next
+                            images[current].classList.remove('opacity-0');
+                            images[current].classList.add('opacity-100');
+                        }, intervalDur);
+                    }, index * staggerDelay);
+                });
+            }
+        });
+    </script>
 
 </body>
 </html>

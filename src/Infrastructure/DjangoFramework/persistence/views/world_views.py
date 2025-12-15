@@ -77,6 +77,7 @@ def home(request):
         ms = ms.filter(visible_publico=True)
 
     l = []
+    background_images = []
     for m in ms:
         imgs = get_world_images(m.id)
         cover = imgs[0]['url'] if imgs else None
@@ -85,18 +86,32 @@ def home(request):
             found = next((i for i in imgs if i['filename'] == target), None)
             if found: cover = found['url']
         
+        if cover:
+            background_images.append(cover)
+
+        # Collect up to 5 images for the slideshow
+        entity_images = [i['url'] for i in imgs][:5] if imgs else []
+
         pid = m.public_id if m.public_id else m.id
         l.append({
             'id': m.id, 
             'public_id': pid, 
             'name': m.name, 
             'status': m.status, 
-            'img_file': cover, 
+            'img_file': cover,
+            'img': cover, # Fallback/Primary key to prevent VariableDoesNotExist in template
+            'images': entity_images, 
             'has_img': bool(cover), 
             'visible': m.visible_publico,
             'is_locked': m.status == 'LOCKED'
         })
-    return render(request, 'index.html', {'mundos': l})
+    
+    # Shuffle backgrounds for variety? Optional.
+    import random
+    random.shuffle(background_images)
+    
+    # Return all images (unrestricted)
+    return render(request, 'index.html', {'mundos': l, 'background_images': background_images[:10]}) # Limit to 10 to save bandwidth
 
 def ver_mundo(request, public_id):
     repo = DjangoCaosRepository()

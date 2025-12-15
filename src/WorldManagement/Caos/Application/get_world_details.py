@@ -113,6 +113,7 @@ class GetWorldDetailsUseCase:
                 'name': h.name, 
                 'short': h.id[len(jid):], 
                 'img': img_url,
+                'images': [i['url'] for i in imgs][:5] if imgs else [],
                 'is_hoisted': is_deep
             })
 

@@ -1,0 +1,32 @@
+{% load static %}
+<div 
+    class="fixed inset-0 -z-50 bg-black"
+    x-data="{ 
+        active: 0,
+        images: [
+            {% for img in background_images %}
+            '{% static 'persistence/img/' %}{{ img }}',
+            {% empty %}
+            // Fallback defaults if no dynamic images
+            '/static/persistence/img/default_bg_1.jpg',
+            '/static/persistence/img/default_bg_2.jpg'
+            {% endfor %}
+        ],
+        timer: null
+    }"
+    x-init="if(images.length > 1) timer = setInterval(() => { active = (active + 1) % images.length }, 30000)"
+>
+    <!-- Dark Overlay -->
+    <div class="absolute inset-0 bg-black/70 z-10 transition-opacity duration-1000"></div>
+
+    <template x-for="(img, index) in images" :key="index">
+        <img 
+            :src="img" 
+            class="absolute inset-0 w-full h-full object-cover transition-opacity duration-[3000ms] ease-in-out"
+            :class="active === index ? 'opacity-40 z-0' : 'opacity-0 -z-10'"
+        >
+    </template>
+    
+    <!-- Fallback Gradient if no images -->
+    <div x-show="images.length === 0" class="absolute inset-0 bg-gradient-to-br from-[#0a0a12] via-[#1a1a2e] to-[#000000] -z-20"></div>
+</div>
