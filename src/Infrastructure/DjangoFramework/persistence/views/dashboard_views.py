@@ -279,9 +279,9 @@ def aprobar_narrativa(request, id):
     try:
         v = CaosNarrativeVersionORM.objects.get(id=id)
         if v.action == 'DELETE':
-            narr = v.narrative; title = narr.titulo; narr.delete()
-            log_event(request.user, "NARRATIVE_DELETE", f"Title: {title}", "Deleted narrative")
-            messages.success(request, f"🗑️ Narrativa '{title}' eliminada definitivamente.")
+            narr = v.narrative; title = narr.titulo; narr.soft_delete()
+            log_event(request.user, "NARRATIVE_DELETE", f"Title: {title}", "Soft deleted narrative")
+            messages.success(request, f"🗑️ Narrativa '{title}' movida a la papelera.")
         else:
             ApproveNarrativeVersionUseCase().execute(id)
             PublishNarrativeToLiveUseCase().execute(id)
@@ -362,7 +362,8 @@ def rechazar_imagen(request, id):
 def ver_papelera(request):
     try:
         # All inactive worlds
-        deleted_items = CaosWorldORM.objects.filter(is_active=False).order_by('-deleted_at')
+        # All inactive worlds that have content
+        deleted_items = CaosWorldORM.objects.filter(is_active=False).exclude(description__isnull=True).exclude(description__exact='').exclude(description__iexact='None').order_by('-deleted_at')
         return render(request, 'papelera.html', {'deleted_items': deleted_items})
     except Exception as e:
         print(e)

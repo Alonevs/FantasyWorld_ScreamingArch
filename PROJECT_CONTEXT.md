@@ -52,7 +52,16 @@ Located in `src/Infrastructure/DjangoFramework`, this module handles:
 -   **Versioning System**: Implementation of `CaosVersionORM` and `CaosNarrativeVersionORM` to handle the draft/live workflow.
 -   **NanoID Strategy**: Plan to move towards NanoIDs for public-facing URLs (partially implemented).
 
+## 📚 Project Documentation Map
+
+*   [**CODE_STRUCTURE.md**](./CODE_STRUCTURE.md): Detailed explanation of **Screaming Architecture**, Clean Architecture principles, and the Django folder structure.
+*   [**WORLD_LOGIC.md**](./WORLD_LOGIC.md): The core logical rules of the universe, including **J-IDs** (Hierarchical IDs), **Level Tables**, **Zero Padding**, and **Soft Delete** flows.
+*   [**AI_SPECS.md**](./AI_SPECS.md): Specifications for the **AI Brain**, including Context Inheritance rules and Llama 3 Prompt Templates.
+*   [**WORKFLOW.md**](./WORKFLOW.md): Detailed guide on the Approval and Versioning Workflow.
+*   [**SETUP.md**](./SETUP.md): Installation and Env configuration.
+*   [**TASKS.md**](./TASKS.md): Current roadmap and active todo list.
+
 ## Next Steps
--   **Refine AI Integration**: Improve prompt engineering and model selection.
+-   **Refine AI Integration**: Implement the specs defined in `AI_SPECS.md`.
 -   **Enhance Scanner**: Implement actual analysis logic for the "Scanner" feature.
 -   **Mobile Optimization**: Improve UI responsiveness for smaller screens.

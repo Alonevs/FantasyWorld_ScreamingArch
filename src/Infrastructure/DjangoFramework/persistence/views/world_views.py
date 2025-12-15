@@ -18,7 +18,9 @@ from src.WorldManagement.Caos.Application.generate_lore import GenerateWorldLore
 from src.WorldManagement.Caos.Application.generate_map import GenerateWorldMapUseCase
 from src.WorldManagement.Caos.Application.generate_creature_usecase import GenerateCreatureUseCase
 from src.WorldManagement.Caos.Application.initialize_hemispheres import InitializeHemispheresUseCase
+from src.WorldManagement.Caos.Application.initialize_hemispheres import InitializeHemispheresUseCase
 from src.WorldManagement.Caos.Application.restore_version import RestoreVersionUseCase
+from src.FantasyWorld.Domain.Services.EntityService import EntityService
 from src.WorldManagement.Caos.Application.common import resolve_world_id
 from src.WorldManagement.Caos.Application.toggle_visibility import ToggleWorldVisibilityUseCase
 from src.WorldManagement.Caos.Application.toggle_lock import ToggleWorldLockUseCase
@@ -55,6 +57,8 @@ def resolve_jid(identifier):
         except: return None
     return None
 
+from django.db.models.functions import Length
+
 def home(request):
     if request.method == 'POST':
         repo = DjangoCaosRepository()
@@ -62,8 +66,9 @@ def home(request):
         messages.success(request, "✨ Mundo propuesto. Ve al Dashboard para aprobarlo.")
         return redirect('dashboard')
     
-    # Show ALL live worlds (User requested "see the rest")
-    ms = CaosWorldORM.objects.exclude(status='DRAFT').order_by('id')
+    # Show ALL live worlds that have CONTENT (Description is not empty)
+    # This hides "gap" levels or empty containers, but shows deep entities like "Plataforma 1º"
+    ms = CaosWorldORM.objects.exclude(status='DRAFT').exclude(description__isnull=True).exclude(description__exact='').exclude(description__iexact='None').order_by('id')
     l = []
     for m in ms:
         imgs = get_world_images(m.id)
@@ -97,9 +102,9 @@ def ver_mundo(request, public_id):
             reason = request.POST.get('reason', "Creación vía Wizard")
             use_ai = request.POST.get('use_ai_gen') == 'on'
             
-            # Use universal creation with optional target_level
-            uc = CreateChildWorldUseCase(repo)
-            new_id = uc.execute(
+            # Use EntityService for unified creation
+            service = EntityService()
+            new_id = service.create_entity(
                 parent_id=jid, 
                 name=c_name, 
                 description=c_desc, 

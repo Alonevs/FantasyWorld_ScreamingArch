@@ -5,8 +5,8 @@ class DeleteNarrativeUseCase:
         try:
             narrativa = CaosNarrativeORM.objects.get(nid=nid)
             world_id = narrativa.world.id # Guardamos el ID del mundo para volver
-            narrativa.delete()
-            print(f" 🗑️ Narrativa {nid} eliminada.")
+            narrativa.soft_delete()
+            print(f" 🗑️ Narrativa {nid} movida a papelera (Soft Delete).")
             return world_id
         except CaosNarrativeORM.DoesNotExist:
             raise Exception("Narrativa no encontrada.")

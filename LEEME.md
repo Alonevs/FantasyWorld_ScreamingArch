@@ -48,9 +48,11 @@
 ## 📚 Documentación
 La documentación detallada se encuentra en `/docs`:
 
--   [**Arquitectura**](docs/ARQUITECTURA.md): Explicación de DDD, Screaming Architecture y estructura.
--   [**Guía de Instalación**](docs/INSTALACION.md): Configuración de PostgreSQL y entorno.
--   [**Flujo Narrativo**](docs/FLUJO_NARRATIVO.md): Cómo crear y aprobar contenido.
+-   [**Estructura de Código**](CODE_STRUCTURE.md): Explicación de DDD, Screaming Architecture y estructura.
+-   [**Lógica del Mundo**](WORLD_LOGIC.md): IDs Jerárquicos y Reglas.
+-   [**Especificaciones IA**](AI_SPECS.md): Prompts y Herencia.
+-   [**Guía de Instalación**](SETUP.md): Configuración de PostgreSQL y entorno.
+-   [**Flujo Narrativo**](WORKFLOW.md): Cómo crear y aprobar contenido.
 
 ## 🛠️ Características Clave v5.0
 -   **Aprobación Estricta**: Todo cambio (Crear, Editar, Borrar, Visibilidad) genera una **Propuesta** que debe ser aprobada en el Dashboard.
@@ -59,4 +61,4 @@ La documentación detallada se encuentra en `/docs`:
 -   **NanoIDs**: Identificadores únicos seguros para URLs públicas.
 
 ## 🤝 Contribuir
-Lee la [Guía de Arquitectura](docs/ARQUITECTURA.md) antes de contribuir.
+Lee la [Guía de Estructura](CODE_STRUCTURE.md) antes de contribuir.

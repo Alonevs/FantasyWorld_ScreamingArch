@@ -100,6 +100,23 @@ class CaosNarrativeORM(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
     current_version_number = models.IntegerField(default=1)
+    
+    # CONTROL DE BORRADO LÓGICO (SOFT DELETE)
+    is_active = models.BooleanField(default=True, help_text="Si es False, está en la papelera.")
+    deleted_at = models.DateTimeField(null=True, blank=True)
+
+    def soft_delete(self):
+        """Mueve a la papelera sin destruir datos."""
+        self.is_active = False
+        self.deleted_at = datetime.now()
+        self.save()
+
+    def restore(self):
+        """Recupera de la papelera."""
+        self.is_active = True
+        self.deleted_at = None
+        self.save()
+
     class Meta: db_table = 'caos_narratives'; ordering = ['nid']
 
 class CaosNarrativeVersionORM(models.Model):
