@@ -16,7 +16,15 @@
 -   **ECLAI Core**: Generación de imágenes y textos con IA.
 -   **Flujo de Aprobación**: Todo cambio requiere validación en Dashboard.
 
-## 🛠️ Características Clave
+## � Documentación (Español)
+La documentación ha sido consolidada y traducida:
+
+-   [**📘 Manual Técnico**](MANUAL_TECNICO.md): Arquitectura, Instalación y Lógica J-ID.
+-   [**🤖 Manual IA**](MANUAL_IA.md): Prompts, Auto-Noos y Herencia.
+-   [**🧭 Guía de Usuario**](GUIA_USUARIO.md): Flujo de Propuestas, Dashboard y Edición.
+-   [**🗺️ Roadmap**](ROADMAP.md): Hoja de ruta del proyecto.
+
+## �🛠️ Características Clave
 -   **Screaming Architecture**: Lógica de negocio pura.
 -   **NanoIDs**: URLs seguras (`/mundo/JhZCO1vxI7/`).
 -   **Sistema de Propuestas**: Integridad de datos garantizada.
