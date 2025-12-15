@@ -6,7 +6,7 @@ from src.Shared.Domain.value_objects import WorldID
 from src.WorldManagement.Caos.Domain.repositories import CaosRepository
 from src.FantasyWorld.AI_Generation.Domain.interfaces import ImageGenerator
 from src.FantasyWorld.AI_Generation.Infrastructure.llama_service import Llama3Service 
-from src.Shared.Domain import eclai_core
+
 
 class GenerateWorldMapUseCase:
     def __init__(self, repository: CaosRepository, image_service: ImageGenerator):

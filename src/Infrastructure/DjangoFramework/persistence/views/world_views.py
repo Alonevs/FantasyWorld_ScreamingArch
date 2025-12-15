@@ -9,7 +9,6 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 
 from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosVersionORM, CaosNarrativeORM, CaosEventLog, MetadataTemplate
-from src.Shared.Domain import eclai_core
 from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
 from src.WorldManagement.Caos.Application.create_world import CreateWorldUseCase
 from src.WorldManagement.Caos.Application.create_child import CreateChildWorldUseCase
@@ -79,7 +78,7 @@ def home(request):
             if found: cover = found['url']
         
         pid = m.public_id if m.public_id else m.id
-        l.append({'id': m.id, 'public_id': pid, 'name': m.name, 'status': m.status, 'code': eclai_core.encode_eclai126(m.id), 'img_file': cover, 'has_img': bool(cover)})
+        l.append({'id': m.id, 'public_id': pid, 'name': m.name, 'status': m.status, 'img_file': cover, 'has_img': bool(cover)})
     return render(request, 'index.html', {'mundos': l})
 
 def ver_mundo(request, public_id):
@@ -277,7 +276,7 @@ def comparar_version(request, version_id):
             'version_live': w.current_version_number,
             'author_live': v.author.username if v.author else "Desconocido",
             'created_at': v.created_at, 'updated_at': v.created_at,
-            'visible': False, 'code_entity': eclai_core.encode_eclai126(jid),
+            'visible': False, 
             'nid_lore': w.id_lore, 'metadata': meta_str, 
             'metadata_obj': w.metadata, 'imagenes': imgs, 'hijos': [], 
             'breadcrumbs': generate_breadcrumbs(jid), 

@@ -1,7 +1,7 @@
 from src.Shared.Domain.value_objects import WorldID
 from src.WorldManagement.Caos.Domain.entities import CaosWorld
 from src.WorldManagement.Caos.Domain.repositories import CaosRepository
-from src.Shared.Domain import eclai_core
+
 
 class CreateChildWorldUseCase:
     def __init__(self, repository: CaosRepository):
@@ -103,8 +103,7 @@ class CreateChildWorldUseCase:
             traceback.print_exc()
 
         # Codificación para mostrar en log
-        code = eclai_core.encode_eclai126(new_child_id)
         print(f" ✨ [ECLAI] Sub-Mundo creado: {name}")
-        print(f"    └── J-ID: {new_child_id} | CODE: {code}")
+        print(f"    └── J-ID: {new_child_id}")
         
         return new_child_id

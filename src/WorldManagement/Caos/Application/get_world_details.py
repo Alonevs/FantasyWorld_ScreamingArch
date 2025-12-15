@@ -1,6 +1,5 @@
 from src.WorldManagement.Caos.Domain.repositories import CaosRepository
 from src.WorldManagement.Caos.Application.common import resolve_world_id
-from src.Shared.Domain import eclai_core
 import json
 
 class GetWorldDetailsUseCase:
@@ -140,7 +139,6 @@ class GetWorldDetailsUseCase:
             'updated_at': date_live,
             'visible': w.visible_publico, 
             'is_locked': w.is_locked, 
-            'code_entity': eclai_core.encode_eclai126(jid),
             'nid_lore': w.id_lore, 
             'metadata': meta_str, 
             'metadata_obj': w.metadata, 

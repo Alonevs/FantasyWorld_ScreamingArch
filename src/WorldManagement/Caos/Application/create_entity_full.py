@@ -3,7 +3,7 @@ from src.WorldManagement.Caos.Domain.entities import CaosWorld
 from src.WorldManagement.Caos.Domain.repositories import CaosRepository
 from src.FantasyWorld.AI_Generation.Infrastructure.llama_service import Llama3Service
 from src.FantasyWorld.AI_Generation.Infrastructure.sd_service import StableDiffusionService
-from src.Shared.Domain import eclai_core
+
 
 class CreateEntityFullUseCase:
     def __init__(self, repository: CaosRepository):

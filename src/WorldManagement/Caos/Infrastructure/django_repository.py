@@ -13,7 +13,8 @@ from src.WorldManagement.Caos.Domain.repositories import CaosRepository
 from src.WorldManagement.Caos.Domain.entities import CaosWorld, VersionStatus
 from src.WorldManagement.Caos.Domain.creature import Creature
 from src.Shared.Domain.value_objects import WorldID
-from src.Shared.Domain import eclai_core
+from src.Shared.Domain import id_utils
+
 from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM
 
 class DjangoCaosRepository(CaosRepository):
@@ -127,7 +128,7 @@ class DjangoCaosRepository(CaosRepository):
                 'status': 'DRAFT',
                 'current_version_number': 1,
                 'current_author_name': 'AI_Genesis',
-                'id_codificado': eclai_core.encode_eclai126(creature.eclai_id)
+                'id_codificado': None
             }
         )
         print(f" 🧬 [DB] Criatura guardada: {creature.name}")
@@ -229,7 +230,7 @@ class DjangoCaosRepository(CaosRepository):
 
     def get_next_child_id(self, parent_id_str: str, target_level: int = None) -> str:
         len_parent = len(parent_id_str)
-        nivel_padre = eclai_core.get_level_from_jid_length(len_parent)
+        nivel_padre = id_utils.get_level_u(parent_id_str)
         
         # Calculate Target Level logic
         if target_level:

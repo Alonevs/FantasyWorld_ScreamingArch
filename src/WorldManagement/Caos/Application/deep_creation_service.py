@@ -1,7 +1,7 @@
 from src.Shared.Domain.value_objects import WorldID
 from src.WorldManagement.Caos.Domain.entities import CaosWorld
 from src.WorldManagement.Caos.Domain.repositories import CaosRepository
-from src.Shared.Domain import eclai_core
+
 from src.WorldManagement.Caos.Application.create_child import CreateChildWorldUseCase
 
 class DeepCreationService:

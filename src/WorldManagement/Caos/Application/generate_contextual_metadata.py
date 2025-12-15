@@ -6,7 +6,7 @@ from src.Shared.Domain.value_objects import WorldID
 from src.WorldManagement.Caos.Domain.metadata import (
     METADATA_SCHEMAS, TYPE_MAPPING, get_schema_for_type, get_schema_for_hierarchy
 )
-from src.Shared.Domain.eclai_core import get_level_from_jid_length
+
 
 class GenerateContextualMetadataUseCase:
     def __init__(self, repository: CaosRepository, ai_service: LoreGenerator):
@@ -25,7 +25,7 @@ class GenerateContextualMetadataUseCase:
         
         # 2a. ESTRATEGIA DE JERARQUÍA + RAMAS (Prioridad 1)
         try:
-             level = get_level_from_jid_length(len(world_id))
+             level = len(world_id) // 2
              schema = get_schema_for_hierarchy(world_id, level)
              
              if schema:
