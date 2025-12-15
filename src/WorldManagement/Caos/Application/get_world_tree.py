@@ -34,11 +34,12 @@ class GetWorldTreeUseCase:
             
             tree_data.append({
                 'name': node.name,
-                'public_id': node.id.value, # Fallback to ID as we don't have public_id in Entity
-                'id_display': node.id.value,
+                'public_id': node.id.value, 
+                'id_display': f"..{node.id.value[-2:]}" if len(node.id.value) > 2 else node.id.value,
                 'indent_px': depth * 30,
                 'is_root': node.id.value == root.id.value,
-                'status': node.status.value if hasattr(node.status, 'value') else node.status
+                'status': node.status.value if hasattr(node.status, 'value') else node.status,
+                'visible': node.is_public
             })
             
         return {'root_name': root.name, 'tree': tree_data}

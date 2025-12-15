@@ -4,61 +4,23 @@
 **FantasyWorld** es una aplicación web integral para la creación, gestión y simulación de mundos de fantasía. Utiliza **Django** como infraestructura robusta y sigue el patrón de **Screaming Architecture** (Arquitectura Limpia) para mantener la lógica de dominio pura y desacoplada.
 
 **Versión Actual:** v5.0 (Base)
-**Estado:** Estable / Flujo de Aprobación Estricto / PostgreSQL
+**Estado:** Desarrollo Activo v5.2 / UI Premium / PostgreSQL
 
-## 🚀 Inicio Rápido
+## 🚀 Fase Actual (v5.2)
+-   **UI Overhaul**: Integración total de **Alpine.js** y **Tailwind CSS** para animaciones fluidas.
+-   **Zen Slideshows**: Tarjetas de entidad con efecto "Ola Sincronizada" y modo Zen (25s).
+-   **Roles & Visibilidad**:
+    -   Etiqueta **👑 SUPERADMIN** / **EXPLORER**.
+    -   Filtrado estricto de contenido Privado para usuarios no autorizados.
+    -   Botón de Logout integrado.
+-   **ECLAI Core**: Generación de imágenes y textos con IA.
+-   **Flujo de Aprobación**: Todo cambio requiere validación en Dashboard.
 
-### Requisitos
--   Python 3.10+
--   PostgreSQL (Recomendado) o SQLite
--   Entorno Virtual (venv)
-
-### Instalación
-
-1.  **Clonar el repositorio**:
-    ```bash
-    git clone https://github.com/Alonevs/FantasyWorld_ScreamingArch.git
-    cd FantasyWorld_ScreamingArch
-    ```
-
-2.  **Crear entorno virtual**:
-    ```bash
-    python -m venv venv
-    .\venv\Scripts\activate
-    ```
-
-3.  **Instalar dependencias**:
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-4.  **Configurar Base de Datos**:
-    -   Copiar `.env.example` a `.env` (si existe) y configurar credenciales.
-    -   Por defecto usa PostgreSQL.
-
-5.  **Migrar y Arrancar**:
-    ```bash
-    python src/Infrastructure/DjangoFramework/manage.py migrate
-    python src/Infrastructure/DjangoFramework/manage.py runserver
-    ```
-
-6.  **Acceder**:
-    Navega a `http://127.0.0.1:8000`.
-
-## 📚 Documentación
-La documentación detallada se encuentra en `/docs`:
-
--   [**Estructura de Código**](CODE_STRUCTURE.md): Explicación de DDD, Screaming Architecture y estructura.
--   [**Lógica del Mundo**](WORLD_LOGIC.md): IDs Jerárquicos y Reglas.
--   [**Especificaciones IA**](AI_SPECS.md): Prompts y Herencia.
--   [**Guía de Instalación**](SETUP.md): Configuración de PostgreSQL y entorno.
--   [**Flujo Narrativo**](WORKFLOW.md): Cómo crear y aprobar contenido.
-
-## 🛠️ Características Clave v5.0
--   **Aprobación Estricta**: Todo cambio (Crear, Editar, Borrar, Visibilidad) genera una **Propuesta** que debe ser aprobada en el Dashboard.
--   **Screaming Architecture**: Lógica de negocio aislada del Framework.
--   **Sistema ECLAI**: Integración con IA para generación de imágenes.
--   **NanoIDs**: Identificadores únicos seguros para URLs públicas.
+## 🛠️ Características Clave
+-   **Screaming Architecture**: Lógica de negocio pura.
+-   **NanoIDs**: URLs seguras (`/mundo/JhZCO1vxI7/`).
+-   **Sistema de Propuestas**: Integridad de datos garantizada.
+-   **Modo "Noos"**: Auto-generación de metadatos basada en narrativa.
 
 ## 🤝 Contribuir
 Lee la [Guía de Estructura](CODE_STRUCTURE.md) antes de contribuir.

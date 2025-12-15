@@ -11,9 +11,31 @@
 {% block content %}
     <!-- HEADER NAV -->
     <div class="flex justify-between items-center mb-6 bg-gray-900/80 p-4 rounded-xl border border-gray-800 backdrop-blur-md mx-4 mt-4 max-w-[1600px] xl:mx-auto">
-        <div class="text-xl font-bold tracking-widest text-white">
-            ECLAI <span class="text-xs text-green-400 ml-2 bg-green-900/30 px-2 py-1 rounded border border-green-800">
-                {% if user.is_authenticated %}👤 {{ user.username|upper }}{% else %}👻 ANÓNIMO{% endif %}
+        <div class="text-xl font-bold tracking-widest text-white flex items-center gap-3">
+            ECLAI 
+            <span class="text-xs text-gray-300 bg-gray-900/50 px-3 py-1.5 rounded-full border border-gray-700 flex items-center gap-3 shadow-inner">
+                {% if user.is_authenticated %}
+                    {% if user.is_superuser %}
+                        <span class="text-[10px] bg-yellow-500/20 text-yellow-400 border border-yellow-500/50 px-1.5 py-0.5 rounded font-bold tracking-wider shadow-[0_0_10px_rgba(234,179,8,0.2)]">
+                            👑 ADMIN
+                        </span>
+                    {% else %}
+                        <span class="text-[10px] bg-blue-500/20 text-blue-400 border border-blue-500/50 px-1.5 py-0.5 rounded font-bold tracking-wider">
+                            EXPLORER
+                        </span>
+                    {% endif %}
+                    
+                    <span class="font-bold tracking-wide">{{ user.username|upper }}</span>
+                    
+                    <form action="{% url 'logout' %}" method="post" class="inline flex items-center border-l border-gray-600 pl-2">
+                        {% csrf_token %}
+                        <button type="submit" class="text-red-400 hover:text-red-300 transition hover:scale-110" title="Cerrar Sesión">⏻</button>
+                    </form>
+                {% else %}
+                    <a href="{% url 'login' %}" class="hover:text-white transition flex items-center gap-2">
+                        <span class="text-gray-500">👻</span> ANÓNIMO <span class="text-[10px] bg-accent/20 text-accent px-1 rounded border border-accent/30">LOGIN</span>
+                    </a>
+                {% endif %}
             </span>
         </div>
         <div class="flex gap-2">
@@ -90,7 +112,7 @@
             <details class="group mb-8" open>
                 <summary class="flex justify-between items-center bg-[#1a1a2e] p-4 rounded-t-lg cursor-pointer border border-gray-800 hover:border-gray-600 transition list-none sticky top-0 z-10">
                     <h3 class="text-accent font-bold tracking-wider text-sm uppercase flex items-center gap-2">
-                        📂 Entidades Contenidas ({{ hijos|length }})
+                        🌌 COSMOLOGÍA & ESTRUCTURA ({{ hijos|length }})
                     </h3>
                     <span class="text-gray-500 transform group-open:rotate-180 transition duration-300">▼</span>
                 </summary>
