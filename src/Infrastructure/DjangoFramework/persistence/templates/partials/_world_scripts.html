@@ -12,19 +12,23 @@
         });
 
         function openEditModal() {
+            document.body.style.overflow = 'hidden';
             document.getElementById('editModal').classList.remove('hidden');
             document.getElementById('editModal').classList.add('flex');
         }
         function closeEditModal() {
+            document.body.style.overflow = '';
             document.getElementById('editModal').classList.add('hidden');
             document.getElementById('editModal').classList.remove('flex');
         }
 
         function openCreateModal() {
+            document.body.style.overflow = 'hidden';
             document.getElementById('createModal').classList.remove('hidden');
             document.getElementById('createModal').classList.add('flex');
         }
         function closeCreateModal() {
+            document.body.style.overflow = '';
             document.getElementById('createModal').classList.add('hidden');
             document.getElementById('createModal').classList.remove('flex');
         }
@@ -33,11 +37,13 @@
         let generatedImages = [];
 
         function openAiModal() {
+            document.body.style.overflow = 'hidden';
             document.getElementById('aiModal').classList.remove('hidden');
             document.getElementById('aiModal').classList.add('flex');
             resetAiModal();
         }
         function closeAiModal() {
+            document.body.style.overflow = '';
             document.getElementById('aiModal').classList.add('hidden');
             document.getElementById('aiModal').classList.remove('flex');
         }
@@ -144,6 +150,7 @@
         
         function openUploadModal(input) {
             if (input.files && input.files.length > 0) {
+                document.body.style.overflow = 'hidden';
                 const modal = document.getElementById('uploadModal');
                 const previewContainer = document.getElementById('upload-previews');
                 const fileInfo = document.getElementById('file-info');
@@ -170,6 +177,7 @@
         }
         
         function closeUploadModal() {
+            document.body.style.overflow = '';
             document.getElementById('uploadModal').classList.add('hidden');
             document.getElementById('uploadModal').classList.remove('flex');
             document.getElementById('file-upload').value = "";
@@ -177,6 +185,7 @@
 
         // LIGHTBOX LOGIC
         function openLightbox(url, fn) {
+            document.body.style.overflow = 'hidden';
             const lb = document.getElementById('lightbox');
             lb.classList.remove('hidden');
             lb.classList.add('flex');
@@ -190,6 +199,7 @@
         }
         
         function closeLightbox() { 
+            document.body.style.overflow = '';
             const lb = document.getElementById('lightbox');
             lb.classList.add('hidden');
             lb.classList.remove('flex');

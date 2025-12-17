@@ -15,9 +15,9 @@
             ECLAI 
             <span class="text-xs text-gray-300 bg-gray-900/50 px-3 py-1.5 rounded-full border border-gray-700 flex items-center gap-3 shadow-inner">
                 {% if user.is_authenticated %}
-                    {% if user.is_superuser %}
+                    {% if user.is_superuser or user.username == 'Alone' %}
                         <span class="text-[10px] bg-yellow-500/20 text-yellow-400 border border-yellow-500/50 px-1.5 py-0.5 rounded font-bold tracking-wider shadow-[0_0_10px_rgba(234,179,8,0.2)]">
-                            👑 ADMIN
+                            👑 SUPERADMIN
                         </span>
                     {% else %}
                         <span class="text-[10px] bg-blue-500/20 text-blue-400 border border-blue-500/50 px-1.5 py-0.5 rounded font-bold tracking-wider">
@@ -110,7 +110,7 @@
             </div>
             
             {% if not is_preview %}
-            {% if user.is_superuser %}
+            {% if can_edit %}
             <div class="flex gap-2">
                 <a href="{% url 'dashboard' %}" class="p-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition shadow-md flex items-center gap-2" title="Panel de Control">
                     🚀 <span class="hidden sm:inline text-xs font-bold">DASHBOARD</span>
@@ -150,10 +150,15 @@
             <div class="flex justify-between items-end mb-4 border-b border-gray-800 pb-2">
                 <h3 class="text-accent font-bold tracking-wider text-sm uppercase">Visual Database</h3>
                 {% if not is_preview %}
-                {% if user.is_superuser %}
+                {% if user.is_superuser or is_admin_role or is_author or allow_proposals %}
                 <div class="flex gap-2">
+                    {% if user.is_superuser or is_author %}
                     <button onclick="openAiModal()" class="px-3 py-1 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded transition shadow-lg shadow-purple-900/20">🎨 IA GENERATOR</button>
-                    <button onclick="document.getElementById('file-upload').click()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold rounded transition">📎 SUBIR</button>
+                    {% endif %}
+                    
+                    <button onclick="document.getElementById('file-upload').click()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold rounded transition flex items-center gap-1">
+                        📎 <span class="hidden sm:inline">SUBIR</span>
+                    </button>
                     
                     <form id="form-manual-upload" method="POST" action="{% url 'subir_imagen_manual' public_id %}" enctype="multipart/form-data" class="hidden">
                         {% csrf_token %}
@@ -179,8 +184,8 @@
                             <div class="text-gray-400 text-[10px]">{{ img.date|default:"-" }}</div>
                         </div>
                     </div>
-                    {% if user.is_superuser %}
-                    <a href="{% url 'borrar_foto' jid img.filename %}" class="absolute top-1 right-1 bg-red-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition hover:bg-red-500 shadow-lg" onclick="event.stopPropagation(); return confirm('¿Borrar?')">✕</a>
+                    {% if user.is_superuser or is_admin_role or is_author or allow_proposals %}
+                    <a href="{% url 'borrar_foto' jid img.filename %}" class="absolute top-1 right-1 bg-red-600/80 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition hover:bg-red-500 shadow-lg backdrop-blur" onclick="event.stopPropagation(); return confirm('¿Solicitar borrado de esta imagen?')">✕</a>
                     {% endif %}
                 </div>
                 {% empty %}
@@ -204,7 +209,7 @@
             <div class="space-y-3 text-sm text-gray-400">
                 <div class="flex justify-between border-b border-gray-800 pb-2"><span>Creado:</span> <span class="text-white">{{ created_at|date:"d/m/Y" }}</span></div>
                 <div class="flex justify-between border-b border-gray-800 pb-2"><span>Versión:</span> <span class="text-green-400 font-mono">LIVE (v{{ version_live }})</span></div>
-                <div class="flex justify-between border-b border-gray-800 pb-2"><span>Autor:</span> <span class="text-accent">{{ author_live|default:user.username }}</span></div>
+                <div class="flex justify-between border-b border-gray-800 pb-2"><span>Autor:</span> <span class="text-accent">{{ author_live|default:"Alone" }}</span></div>
             </div>
 
             <div class="mt-8 space-y-2">

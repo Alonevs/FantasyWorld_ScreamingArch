@@ -1,0 +1,100 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+{% load metadata_tags %}
+
+{% block title %}ECLAI | Propuestas{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-12 px-6">
+    <div class="flex justify-between items-center mb-8 bg-gray-900/50 p-6 rounded-2xl border border-gray-800">
+        <div>
+            <h1 class="text-3xl font-bold text-white tracking-wider flex items-center gap-3">
+                <span class="text-4xl">📬</span> INBOX DE PROPUESTAS
+            </h1>
+            <p class="text-gray-400 mt-2 text-sm">Gestiona contribuciones de la comunidad.</p>
+        </div>
+        <div class="flex gap-2">
+            {% if is_superuser_view %}
+            <a href="{% url 'user_management' %}" class="px-4 py-2 bg-purple-900/40 hover:bg-purple-900/70 border border-purple-800 text-purple-200 rounded-lg text-sm transition flex items-center gap-2">
+                👥 Usuarios
+            </a>
+            {% endif %}
+            <a href="{% url 'home' %}" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition border border-gray-700">
+                🏠 Inicio
+            </a>
+        </div>
+    </div>
+    
+    <!-- Pending Section -->
+    <div class="bg-card border border-gray-800 rounded-2xl overflow-hidden shadow-2xl p-6 min-h-[500px]">
+        {% if proposals %}
+        <div class="grid gap-4">
+            {% for p in proposals %}
+            <div class="bg-gray-900/40 border border-gray-700/50 rounded-xl p-4 flex items-center justify-between hover:bg-gray-800/40 transition group">
+                <div class="flex items-center gap-4">
+                    <!-- TYPE BADGE -->
+                    {% if p.is_image_proposal %}
+                        {% if p.contribution_type == 'IMAGE_ADD' %}
+                            <div class="w-10 h-10 rounded-full bg-pink-900/30 text-pink-400 flex items-center justify-center text-xl" title="Nueva Imagen">🖼️</div>
+                        {% else %}
+                            <div class="w-10 h-10 rounded-full bg-red-900/30 text-red-400 flex items-center justify-center text-xl" title="Borrar Imagen">🗑️</div>
+                        {% endif %}
+                    {% else %}
+                        {% if p.contribution_type == 'CREATE' %}
+                           <div class="w-10 h-10 rounded-full bg-green-900/30 text-green-400 flex items-center justify-center text-xl" title="Creación">✨</div>
+                        {% else %}
+                           <div class="w-10 h-10 rounded-full bg-blue-900/30 text-blue-400 flex items-center justify-center text-xl" title="Edición">📝</div>
+                        {% endif %}
+                    {% endif %}
+                    
+                    <div>
+                        <div class="text-white font-bold text-lg flex items-center gap-2">
+                            {% if p.is_image_proposal %}
+                                {{ p.proposed_payload.title }} 
+                                <span class="text-xs font-mono text-gray-500">({{ p.contribution_type }})</span>
+                            {% else %}
+                                {{ p.proposed_payload.titulo|default:"Propuesta" }}
+                            {% endif %}
+                        </div>
+                        <div class="text-xs text-gray-400 flex gap-4 mt-1">
+                            <span>🌍 {{ p.target_entity.name }}</span>
+                            <span>👤 {{ p.proposer.username|default:"Anónimo" }}</span>
+                            <span>📅 {{ p.created_at|date:"d M H:i" }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition">
+                     {% if p.is_image_proposal %}
+                         <!-- Image Actions -->
+                         {% if p.contribution_type == 'IMAGE_ADD' %}
+                             <a href="{% url 'revisar_imagen' p.id %}" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs font-bold text-white transition">👁️ VER</a>
+                             <a href="{% url 'aprobar_imagen' p.id %}" class="px-3 py-1 bg-green-600 hover:bg-green-500 rounded text-xs font-bold text-white transition">✅ APROBAR</a>
+                             <a href="{% url 'rechazar_imagen' p.id %}" class="px-3 py-1 bg-red-600 hover:bg-red-500 rounded text-xs font-bold text-white transition">❌ RECHAZAR</a>
+                         {% else %}
+                             <!-- DELETE -->
+                             <span class="text-xs text-red-400 flex items-center gap-2 mr-2">⚠️ Solicitud de borrado</span>
+                             <a href="{% url 'revisar_imagen' p.id %}" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs font-bold text-white transition">👁️ VER</a>
+                             <a href="{% url 'aprobar_imagen' p.id %}" class="px-3 py-1 bg-red-600 hover:bg-red-500 rounded text-xs font-bold text-white transition" onclick="return confirm('¿Confirmar borrado?')">🗑️ BORRAR</a>
+                             <a href="{% url 'rechazar_imagen' p.id %}" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs font-bold text-white transition">❌ MANTENER</a>
+                         {% endif %}
+                         
+                     {% else %}
+                         <!-- Text Actions -->
+                         <a href="{% url 'proposal_detail' p.id %}" class="px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-xs font-bold text-white transition shadow-lg shadow-blue-900/20">
+                            🔍 REVISAR CAMBIOS
+                         </a>
+                     {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+            <div class="flex flex-col items-center justify-center h-64 text-gray-500">
+                <span class="text-4xl mb-4 opacity-50">✨</span>
+                <p>No hay propuestas pendientes.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

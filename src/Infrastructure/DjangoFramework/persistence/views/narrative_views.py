@@ -107,9 +107,25 @@ def editar_narrativa(request, nid):
        try: n_orm = CaosNarrativeORM.objects.get(public_id=nid)
        except: n_orm = None
     
-    if n_orm and n_orm.world.status == 'LOCKED' and not request.user.is_superuser:
-        messages.error(request, "⛔ El mundo está BLOQUEADO. No se pueden editar narrativas.")
-        return redirect('leer_narrativa', nid=nid)
+    if n_orm:
+        # --- SECURITY CHECK ---
+        from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
+        try:
+             # Check ownership of the NARRATIVE (created_by) or the WORLD owner
+             # If strict direct ownership means "World Owner controls all", check world.
+             # Usually narr author can edit their own narr.
+             # check_ownership supports 'created_by'.
+             check_ownership(request.user, n_orm)
+        except:
+             messages.error(request, "⛔ Solo el autor o el dueño del mundo pueden editar esta narrativa.")
+             return redirect('leer_narrativa', nid=nid)
+        # ----------------------
+
+        if n_orm.world.status == 'LOCKED' and not request.user.is_superuser:
+            messages.error(request, "⛔ El mundo está BLOQUEADO. No se pueden editar narrativas.")
+            return redirect('leer_narrativa', nid=nid)
+    else:
+        return redirect('home')
 
     if request.method == 'POST':
         try:
@@ -134,6 +150,15 @@ def borrar_narrativa(request, nid):
         try: n = CaosNarrativeORM.objects.get(public_id=nid); real_nid = n.nid; w_pid = n.world.public_id
         except: n = CaosNarrativeORM.objects.get(nid=nid); real_nid = nid; w_pid = n.world.id
         
+        # --- SECURITY CHECK ---
+        from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
+        try:
+            check_ownership(request.user, n)
+        except:
+             messages.error(request, "⛔ No puedes borrar lo que no es tuyo.")
+             return redirect('leer_narrativa', nid=nid)
+        # ----------------------
+
         # Create Deletion Proposal (Version)
         CaosNarrativeVersionORM.objects.create(
             narrative=n,
@@ -275,8 +300,22 @@ def revisar_narrativa_version(request, version_id):
 def crear_nueva_narrativa(request, jid, tipo_codigo):
     try:
         repo = DjangoCaosRepository()
+        repo = DjangoCaosRepository()
         w = resolve_jid(jid)
-        real_jid = w.id if w else jid
+        if not w: return redirect('home')
+        real_jid = w.id
+        
+        # --- SECURITY CHECK (Strict: Only World Owner can add roots) ---
+        from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
+        try:
+             # Need ORM object for check_ownership
+             worm = CaosWorldORM.objects.get(id=real_jid)
+             check_ownership(request.user, worm)
+        except:
+             messages.error(request, "⛔ Solo el dueño del mundo puede crear nuevas narrativas raíz.")
+             return redirect('ver_mundo', public_id=jid)
+        # ----------------------
+
         user = request.user if request.user.is_authenticated else None
         
         # Extract POST data
@@ -302,8 +341,21 @@ def crear_nueva_narrativa(request, jid, tipo_codigo):
 def crear_sub_narrativa(request, parent_nid, tipo_codigo):
     try:
         repo = DjangoCaosRepository()
+        repo = DjangoCaosRepository()
         try: p = CaosNarrativeORM.objects.get(public_id=parent_nid); real_parent = p.nid
         except: p = CaosNarrativeORM.objects.get(nid=parent_nid); real_parent = parent_nid
+        
+        # --- SECURITY CHECK (Ownership of Parent or World) ---
+        from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
+        try:
+             # If you own the parent narrative OR the world, you can add children?
+             # Let's enforce strictness: You have to own the parent narrative (or be super)
+             check_ownership(request.user, p)
+        except:
+             messages.error(request, "⛔ No puedes añadir capítulos a una narrativa ajena.")
+             return redirect('leer_narrativa', nid=parent_nid)
+        # ----------------------
+
         user = request.user if request.user.is_authenticated else None
         
         # Extract POST data

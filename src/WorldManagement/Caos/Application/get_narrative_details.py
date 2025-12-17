@@ -8,13 +8,11 @@ class GetNarrativeDetailsUseCase:
     def execute(self, nid: str, user=None):
         # 1. Resolve Narrative
         try:
-            # Try public_id first if it looks like a NanoID
-            if len(nid) <= 12 and ('-' in nid or '_' in nid):
-                try:
-                    narr = CaosNarrativeORM.objects.get(public_id=nid)
-                except CaosNarrativeORM.DoesNotExist:
-                    narr = CaosNarrativeORM.objects.get(nid=nid)
-            else:
+            # Try public_id first (NanoID)
+            try:
+                narr = CaosNarrativeORM.objects.get(public_id=nid)
+            except:
+                # Fallback to internal NID (PK)
                 narr = CaosNarrativeORM.objects.get(nid=nid)
                 
             # --- VERSION 0 (DRAFT) HANDLING ---

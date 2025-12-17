@@ -136,19 +136,24 @@ def subir_imagen_manual(request, jid):
                     final = custom_base
                     if len(files) > 1: final = f"{custom_base}_{i+1}"
 
-                user = request.user if request.user.is_authenticated else None
-                # Create Proposal
-                CaosImageProposalORM.objects.create(
-                    world=w,
-                    image=f,
-                    title=final,
-                    author=user,
-                    status='PENDING',
-                    action='ADD'
-                )
-                log_event(request.user, "PROPOSE_PHOTO", real_jid, f"File: {final}")
+                # --- SECURITY CHECK ---
+                from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
+                try: check_ownership(request.user, w)
+                except: 
+                    messages.error(request, "⛔ Solo el dueño puede subir imágenes.")
+                    return redirect('ver_mundo', public_id=redirect_target)
+                # ----------------------
+
+                # DIRECT SAVE
+                repo = DjangoCaosRepository()
+                name_user = request.user.username
+                try:
+                    repo.save_manual_file(w.id, f, username=name_user, title=final)
+                    messages.success(request, f"✨ Imagen '{final}' guardada directamente.")
+                    log_event(request.user, "UPLOAD_PHOTO", real_jid, f"Direct Upload: {final}")
+                except Exception as e:
+                     messages.error(request, f"Error directo: {e}")
             
-            messages.success(request, f"✨ {len(files)} imagen(es) enviada(s) a revisión. Aprobar en Dashboard.")
         except Exception as e: messages.error(request, f"Error: {e}")
     return redirect('ver_mundo', public_id=redirect_target)
 
@@ -156,6 +161,14 @@ def set_cover_image(request, jid, filename):
     try:
         w = resolve_jid(jid)
         real_jid = w.id if w else jid
+        
+        # --- SECURITY CHECK ---
+        from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
+        try: check_ownership(request.user, w)
+        except: 
+            messages.error(request, "⛔ Solo el dueño puede cambiar la portada.")
+            return redirect('ver_mundo', public_id=jid)
+        # ----------------------
         
         # Calculate next version
         next_v = CaosVersionORM.objects.filter(world=w).count() + 1
@@ -182,6 +195,14 @@ def borrar_foto(request, jid, filename):
     try: 
         w = resolve_jid(jid)
         real_jid = w.id if w else jid
+        
+        # --- SECURITY CHECK ---
+        from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
+        try: check_ownership(request.user, w)
+        except: 
+            messages.error(request, "⛔ No tienes permiso para borrar esta imagen.")
+            return redirect('ver_mundo', public_id=w.public_id if w.public_id else w.id)
+        # ----------------------
         
         # Create Deletion Proposal
         CaosImageProposalORM.objects.create(

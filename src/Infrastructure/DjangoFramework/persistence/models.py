@@ -150,6 +150,20 @@ class CaosEventLog(models.Model):
 
     class Meta: db_table = 'caos_event_logs'; ordering = ['-timestamp']
 
+class ContributionProposal(models.Model):
+    id = models.AutoField(primary_key=True)
+    target_entity = models.ForeignKey(CaosWorldORM, on_delete=models.CASCADE, related_name='proposals')
+    proposer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='contributions')
+    proposed_payload = models.JSONField() # The full metadata or specific changes
+    status = models.CharField(max_length=20, default='PENDING') # PENDING, APPROVED_WAITING, REJECTED, PUBLISHED
+    reviewer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_proposals')
+    created_at = models.DateTimeField(auto_now_add=True)
+    contribution_type = models.CharField(max_length=20, default='EDIT') # EDIT, CREATE, TRANSLATE
+    
+    class Meta:
+        db_table = 'contribution_proposals'
+        ordering = ['-created_at']
+
 class CaosImageProposalORM(models.Model):
     id = models.AutoField(primary_key=True)
     world = models.ForeignKey(CaosWorldORM, on_delete=models.CASCADE, related_name='image_proposals')
@@ -173,3 +187,29 @@ class MetadataTemplate(models.Model):
 
     class Meta:
         db_table = 'metadata_templates'
+
+class UserProfile(models.Model):
+    RANK_CHOICES = [
+        ('ADMIN', 'Admin'),
+        ('SUBADMIN', 'Subadmin'),
+        ('USER', 'User')
+    ]
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    rank = models.CharField(max_length=20, choices=RANK_CHOICES, default='USER')
+    boss = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='minions')
+
+    def __str__(self):
+        return f"{self.user.username} ({self.rank})"
+
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        UserProfile.objects.get_or_create(user=instance)
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    if hasattr(instance, 'profile'):
+        instance.profile.save()

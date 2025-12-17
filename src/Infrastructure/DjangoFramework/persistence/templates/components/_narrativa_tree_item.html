@@ -1,41 +1,57 @@
 <div class="narrative-item" style="margin-bottom: 5px;">
     <!-- Main Card -->
     <!-- Interaction: Arrow Click = Toggle. Body Click = Navigate. -->
-    <div data-url="{% url 'leer_narrativa' node.nid %}"
+    <div data-url="{% url 'leer_narrativa' node.public_id %}"
          onclick="navigateToNarrative(this.dataset.url)"
          class="lore-card {% if node.tipo == 'CAPITULO' %}chapter-card{% endif %}" 
          id="card-{{ node.nid }}"
          style="margin-bottom: 5px; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
         
-        <div style="display:flex; align-items:center; flex-grow: 1;">
-            {% if node.tipo == 'CAPITULO' %}
-                <span style="color:#666; margin-right:10px; font-family:monospace;">↳</span>
-            {% endif %}
+        <div style="display:flex; flex-direction:column; flex-grow: 1;">
             
-            <!-- Chevron for expand/collapse indication -->
-            {% if node.children %}
-                <span id="chevron-{{ node.nid }}" 
-                      onclick="toggleNarrative(event, '{{ node.nid }}', true)"
-                      style="margin-right: 10px; color: #888; transition: transform 0.2s; display: inline-block; cursor: pointer; padding: 5px;">▶</span>
-            {% else %}
-                <span style="display:inline-block; width: 15px; margin-right: 10px;"></span> 
-            {% endif %}
+            <!-- ROW 1: Title & Badges -->
+            <div style="display:flex; align-items:center; justify-content: space-between;">
+                <div style="display:flex; align-items:center;">
+                    {% if node.tipo == 'CAPITULO' %}
+                        <span style="color:#666; margin-right:8px; font-family:monospace; font-size:1.2em;">↳</span>
+                    {% endif %}
+                    
+                    <!-- Chevron -->
+                    {% if node.children %}
+                        <span id="chevron-{{ node.nid }}" 
+                              onclick="toggleNarrative(event, '{{ node.nid }}', true)"
+                              style="margin-right: 8px; color: #d633ff; transition: transform 0.2s; cursor: pointer; padding: 2px;">▶</span>
+                    {% else %}
+                        <!-- Spacer equivalent to chevron -->
+                        <span style="display:inline-block; width: 20px;"></span> 
+                    {% endif %}
 
-            <div style="flex-grow: 1; display:flex; align-items:center;">
-                <span class="tag" style="display:inline-block; min-width:60px; text-align:center;">{{ node.nid }}</span>
-                <span class="lore-title" style="word-break: break-all;">{{ node.titulo }}</span>
-                {% if node.status == 'DRAFT' or node.current_version_number == 0 %}
-                    <span style="color:#f39c12; font-size:0.7em; margin-left:10px; border:1px solid #f39c12; padding:2px 4px; border-radius:3px;">BORRADOR</span>
-                {% endif %}
+                    <span class="lore-title" style="font-weight:bold; font-size:1.05em; color:#e0e0e0;">{{ node.titulo }}</span>
+                    
+                    {% if node.status == 'DRAFT' or node.current_version_number == 0 %}
+                        <span style="color:#f39c12; font-size:0.65em; margin-left:8px; border:1px solid #f39c12; padding:1px 4px; border-radius:3px;">BORRADOR</span>
+                    {% endif %}
+                </div>
+
+                <!-- Type Badge (Right aligned) -->
+                <span style="font-size:0.75em; color:#666; background:#1a1a20; padding:2px 6px; border-radius:4px; border:1px solid #333;">
+                    {{ node.tipo }}
+                    {% if node.children %}
+                        <span style="background:#d633ff; color:white; padding:0px 5px; border-radius:8px; font-size:0.9em; margin-left:5px;">{{ node.children|length }}</span>
+                    {% endif %}
+                </span>
+            </div>
+
+            <!-- ROW 2: Metadata (Author, Date, NanoID) -->
+            <div style="display:flex; justify-content: space-between; align-items: center; margin-top:4px; padding-left: 28px; font-size: 0.75em; color:#888;">
+                <div class="flex gap-3">
+                    <span title="Autor/Modificador">✍️ {{ node.created_by.username|default:"Alone" }}</span>
+                    <span title="Última Actualización">🕒 {{ node.updated_at|date:"d M Y" }}</span>
+                </div>
+                <span style="font-family:monospace; opacity:0.5;" title="Referencia Externa">🆔 {{ node.public_id }}</span>
             </div>
         </div>
 
-        <span class="lore-meta">
-            {{ node.tipo }}
-            {% if node.children %}
-                <span style="background:#333; color:white; padding:2px 6px; border-radius:10px; font-size:0.8em; margin-left:10px;">{{ node.children|length }}</span>
-            {% endif %}
-        </span>
     </div>
 
     <!-- Children Container (Hidden by default if has children) -->

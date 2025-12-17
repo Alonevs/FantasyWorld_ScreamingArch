@@ -13,7 +13,9 @@ from src.Infrastructure.DjangoFramework.persistence.views.ai_views import analyz
 from src.Infrastructure.DjangoFramework.persistence.views.dashboard_views import (
     dashboard, aprobar_propuesta, rechazar_propuesta, publicar_version, 
     restaurar_version, borrar_propuesta, borrar_propuestas_masivo,
+    aprobar_contribucion, rechazar_contribucion,
     aprobar_narrativa, rechazar_narrativa, publicar_narrativa, restaurar_narrativa, borrar_narrativa_version,
+    UserManagementView, toggle_admin_role, ImageProposalDetailView, ProposalDetailView,
     aprobar_imagen, rechazar_imagen, aprobar_propuestas_masivo,
     ver_papelera, restaurar_entidad_fisica  # NEW TRASH VIEWS
 )
@@ -32,7 +34,7 @@ urlpatterns = [
     path("__reload__/", include("django_browser_reload.urls")),
     
     # Admin y Autenticación
-    path('admin/', admin.site.urls),
+    path('bunker-xico/', admin.site.urls),
     path('accounts/', include('django.contrib.auth.urls')),
     
     # ==========================================
@@ -79,6 +81,10 @@ urlpatterns = [
     path('propuestas/borrar_masivo/', borrar_propuestas_masivo, name='borrar_propuestas_masivo'),
     path('propuestas/aprobar_masivo/', aprobar_propuestas_masivo, name='aprobar_propuestas_masivo'),
     
+    # Gestión de Usuarios (Superadmin)
+    path('usuarios/', UserManagementView.as_view(), name='user_management'),
+    path('usuarios/<int:user_id>/toggle-role/', toggle_admin_role, name='toggle_admin_role'),
+    
     # Rutas legacy
     path('revision/<int:version_id>/', comparar_version, name='revisar_version'),
     path('version/restaurar/<int:version_id>/', restaurar_version, name='restaurar_version'),
@@ -92,8 +98,14 @@ urlpatterns = [
     path('narrativa/version/<int:id>/borrar/', borrar_narrativa_version, name='borrar_narrativa_version'),
 
     # Acciones de Imágenes
+    path('imagen/propuesta/<int:id>/', ImageProposalDetailView.as_view(), name='revisar_imagen'),
     path('imagen/propuesta/<int:id>/aprobar/', aprobar_imagen, name='aprobar_imagen'),
     path('imagen/propuesta/<int:id>/rechazar/', rechazar_imagen, name='rechazar_imagen'),
+
+    # Acciones de Propuestas Texto
+    path('propuesta/<int:id>/', ProposalDetailView.as_view(), name='proposal_detail'),
+    path('propuesta/<int:id>/aprobar/', aprobar_contribucion, name='aprobar_contribucion'),
+    path('propuesta/<int:id>/rechazar/', rechazar_contribucion, name='rechazar_contribucion'),
 
     # ==========================================
     # NARRATIVA

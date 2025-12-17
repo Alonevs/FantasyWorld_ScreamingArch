@@ -12,16 +12,17 @@
 {% endblock %}
 
 {% block content %}
-    <!-- TOP BAR -->
-    <div class="flex justify-between items-center mb-6 bg-gray-900/80 p-4 rounded-xl border border-gray-800 backdrop-blur-md">
-        <div class="text-xl font-bold tracking-widest text-white">BIBLIOTECA</div>
-        <div class="flex gap-2">
-            <a href="{% url 'ver_mundo' world.id %}" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm border border-gray-700 transition">⬅ Volver al Mundo</a>
-            <a href="{% url 'home' %}" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm border border-gray-700 transition">🏠 Inicio</a>
+    <div class="container mx-auto px-4 md:px-8 max-w-[1400px]">
+        <!-- TOP BAR -->
+        <div class="flex justify-between items-center mb-6 bg-gray-900/80 p-4 rounded-xl border border-gray-800 backdrop-blur-md">
+            <div class="text-xl font-bold tracking-widest text-white">BIBLIOTECA</div>
+            <div class="flex gap-2">
+                <a href="{% url 'ver_mundo' world.id %}" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm border border-gray-700 transition">⬅ Volver al Mundo</a>
+                <a href="{% url 'home' %}" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm border border-gray-700 transition">🏠 Inicio</a>
+            </div>
         </div>
-    </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8 max-w-[1400px] mx-auto">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
         <!-- MAIN CONTENT -->
         <div class="col-span-1 lg:col-span-3">
             <h1 class="text-3xl font-bold text-accent mb-2">{{ world.name }} <span class="text-sm text-gray-600 ml-2">ARCHIVO</span></h1>
@@ -55,6 +56,7 @@
 
         <!-- SIDEBAR -->
         <div class="col-span-1">
+            {% if user.is_superuser or is_admin_role or is_author or allow_proposals %}
             <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-800 sticky top-24">
                 <h3 class="text-white font-bold mb-4">Crear Rápido</h3>
                 
@@ -65,6 +67,7 @@
                     + 📖 HISTORIA
                 </a>
             </div>
+            {% endif %}
         </div>
     </div>
 
@@ -89,4 +92,5 @@
             window.location.href = url;
         }
     </script>
+    </div>
 {% endblock %}

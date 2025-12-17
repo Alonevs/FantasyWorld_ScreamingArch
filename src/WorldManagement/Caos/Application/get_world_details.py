@@ -130,7 +130,18 @@ class GetWorldDetailsUseCase:
         props = w.versiones.filter(status='PENDING').order_by('-created_at')
         historial = w.versiones.exclude(status='PENDING').order_by('-created_at')
 
-        # 7. Construct Result Dict
+        # 7. Construct Permission Flags
+        is_author = (user and w.author == user)
+        is_super = (user and user.is_superuser)
+        is_subadmin = False
+        try:
+            if user and hasattr(user, 'profile') and user.profile.boss == w.author:
+                is_subadmin = True
+        except: pass
+        
+        can_edit = (is_author or is_super or is_subadmin)
+
+        # 8. Construct Result Dict
         return {
             'name': w.name, 
             'description': w.description, 
@@ -139,7 +150,7 @@ class GetWorldDetailsUseCase:
             'public_id': safe_pid,
             'status': w.status, 
             'version_live': w.current_version_number,
-            'author_live': getattr(w, 'current_author_name', 'Sistema'),
+            'author_live': w.author.username if w.author else 'Alone',
             'created_at': w.created_at, 
             'updated_at': date_live,
             'visible': w.visible_publico, 
@@ -152,5 +163,6 @@ class GetWorldDetailsUseCase:
             'breadcrumbs': generate_breadcrumbs(jid), 
             'propuestas': props, 
             'historial': historial,
-            'is_preview': False
+            'is_preview': False,
+            'can_edit': can_edit
         }

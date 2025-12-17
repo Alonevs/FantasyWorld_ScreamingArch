@@ -8,9 +8,10 @@
     /* Estilos específicos de modo lectura "Paper" */
     .paper { 
         max-width: 800px; 
+        width: 90%;
         margin: 80px auto 40px auto; 
         background: #161620; 
-        padding: 60px; 
+        /* Padding handled by Tailwind (p-8 md:p-12) */
         border-radius: 5px; 
         box-shadow: 0 0 50px rgba(0,0,0,0.5); 
         min-height: 80vh; 
@@ -22,13 +23,15 @@
         font-family: 'Segoe UI', sans-serif;
         color: #d633ff;
         border-bottom: 1px solid #333;
-        padding-bottom: 20px;
-        margin-bottom: 30px;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+        text-align: center;
     }
     .paper-content {
         font-size: 1.15em;
         color: #e0e0e0;
         white-space: pre-wrap;
+        text-align: justify;
     }
     .child-card-hover:hover {
         border-left-color: #d633ff;
@@ -47,16 +50,20 @@
             <button onclick="history.back()" class="bg-[#333] hover:bg-[#555] text-white px-3 py-1 rounded border border-[#444] transition">⬅ Atrás</button>
             <a href="{% url 'ver_narrativa_mundo' narr.world.id %}" class="bg-[#333] hover:bg-[#555] text-white px-3 py-1 rounded border border-[#444] transition">📜 Índice</a>
             
-            {% if not is_creation_mode %}
-            <a href="{% url 'pre_crear_child' narr.nid 'C' %}" class="bg-[#d633ff] hover:bg-[#b02ce0] text-white px-3 py-1 rounded font-bold transition shadow-lg shadow-purple-900/50">+ CAPÍTULO</a>
+            {% if user.is_superuser or is_admin_role or is_author or allow_proposals %}
+                {% if not is_creation_mode and narr.tipo != 'LORE' %}
+                <a href="{% url 'pre_crear_child' narr.nid 'C' %}" class="bg-[#d633ff] hover:bg-[#b02ce0] text-white px-3 py-1 rounded font-bold transition shadow-lg shadow-purple-900/50">+ CAPÍTULO</a>
+                {% endif %}
+                
+                <button onclick="toggleEdit()" class="bg-[#333] hover:bg-[#555] text-white px-3 py-1 rounded border border-[#444] transition">✏️ EDITAR</button>
             {% endif %}
-            
-            <button onclick="toggleEdit()" class="bg-[#333] hover:bg-[#555] text-white px-3 py-1 rounded border border-[#444] transition">✏️ EDITAR</button>
         </div>
     </div>
 
     <!-- DOCUMENTO PRINCIPAL -->
-    <div class="paper" data-world-id="{{ narr.world.id }}">
+    <div class="paper p-8 md:p-12 mb-20" data-world-id="{{ narr.world.id }}">
+        
+        <!-- PROPUESTA / DRAFT BANNERS -->
         {% if is_proposal %}
             <div class="bg-[#d633ff] text-white p-2 rounded mb-6 font-bold text-center shadow">
                 👁️ ESTÁS VIENDO UNA PROPUESTA (v{{ narr.version_id }})
@@ -69,31 +76,36 @@
             </div>
         {% endif %}
 
-        <div class="flex justify-between text-gray-500 font-mono text-xs mb-8">
-            <span>REF: {{ narr.nid }}</span>
-            <span>AUTOR: {{ narr.created_by.username|default:"Sistema" }}</span>
+        <!-- METADATA HEADER -->
+        <div class="flex flex-col md:flex-row justify-center items-center gap-4 text-gray-500 font-mono text-xs mb-8 border-b border-gray-800 pb-6">
+            <span class="bg-gray-900/50 px-2 py-1 rounded border border-gray-800">REF: {{ narr.public_id }}</span>
+            <span class="bg-gray-900/50 px-2 py-1 rounded border border-gray-800">AUTOR: <span class="text-gray-300">{{ narr.created_by.username|default:"Alone" }}</span></span>
         </div>
         
-        <h1 class="text-4xl font-bold break-words">{{ narr.titulo }}</h1>
+        <!-- TITLE & CONTENT -->
+        <h1 class="text-3xl font-bold break-words">{{ narr.titulo }}</h1>
         
         <div class="paper-content break-words">{{ narr.contenido|default:"(Escribe aquí tu historia...)" }}</div>
     </div>
 
     <!-- SECCIÓN DE HIJOS -->
     <div class="max-w-[800px] mx-auto border-t border-[#333] pt-6 mb-20 animate-fade-in-up">
-        <h3 class="text-gray-500 font-sans border-b border-[#333] pb-2 mb-4 font-bold tracking-widest text-sm">CONTINUACIÓN / SUB-CAPÍTULOS</h3>
-        
-        {% if published_chapters %}
+        {% if published_chapters and narr.tipo != 'LORE' %}
+            <h3 class="text-gray-500 font-sans border-b border-[#333] pb-2 mb-4 font-bold tracking-widest text-sm">CONTINUACIÓN / SUB-CAPÍTULOS</h3>
+            
             <div class="space-y-2">
             {% for c in published_chapters %}
-                <a href="{% url 'leer_narrativa' c.nid %}" class="block bg-[#111] p-4 text-gray-400 border-l-[3px] border-[#444] transition-all duration-200 child-card-hover rounded-r">
+                <a href="{% url 'leer_narrativa' c.public_id %}" class="block bg-[#111] p-4 text-gray-400 border-l-[3px] border-[#444] transition-all duration-200 child-card-hover rounded-r">
                     <strong class="text-gray-300">{{ c.titulo }}</strong> <span class="float-right text-xs opacity-50">{{ c.tipo }}</span>
                 </a>
             {% endfor %}
             </div>
-        {% else %}
-            <div class="text-center text-gray-600 italic py-8">No hay sub-capítulos aún.</div>
         {% endif %}
+
+        <!-- Footer Date (As requested: "deja la fecha de nuevo ahi") -->
+        <div class="text-right text-gray-600 text-xs mt-8 italic border-t border-gray-900 pt-4">
+            Última actualización: {{ narr.updated_at|date:"d M Y" }}
+        </div>
     </div>
 
 {% endblock %}

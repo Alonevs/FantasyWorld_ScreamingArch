@@ -111,11 +111,33 @@ def get_world_images(jid, world_instance=None):
                  # Using os.listdir for simple name string
                 if f.lower().endswith(('.png', '.webp', '.jpg', '.jpeg')): 
                     meta = gallery_log.get(f, {})
+                    
+                    # DATE LOGIC: Meta > File Creation Time > Today
+                    date_str = meta.get('date', '')
+                    if not date_str:
+                        try:
+                            import datetime
+                            file_path = os.path.join(str(target), f)
+                            timestamp = os.path.getmtime(file_path)
+                            dt = datetime.datetime.fromtimestamp(timestamp)
+                            date_str = dt.strftime('%d/%m/%Y')
+                        except:
+                            date_str = "??/??/????"
+
+                    # AUTHOR LOGIC: Meta > World Author > "Alone"
+                    author_str = meta.get('uploader')
+                    if not author_str or author_str == "Sistema":
+                         # Fallback to world author if possible, otherwise 'Alone'
+                         if world_instance and world_instance.author:
+                             author_str = world_instance.author.username
+                         else:
+                             author_str = "Alone"
+
                     imgs.append({
                         'url': f'{dname}/{f}', 
                         'filename': f,
-                        'author': meta.get('uploader', 'Sistema'),
-                        'date': meta.get('date', ''),
+                        'author': author_str,
+                        'date': date_str,
                         'title': meta.get('title', ''),
                         'is_cover': (f == cover_image)
                     })

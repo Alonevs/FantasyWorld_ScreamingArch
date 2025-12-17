@@ -167,13 +167,21 @@ def ver_mundo(request, public_id):
         # Resolve ID for parent (needed for creation)
         w = resolve_jid(public_id)
         if not w: return redirect('home') # Should handle better
+        
+        # --- SECURITY CHECK ---
+        # "Si no es tu mundo, no puedes crear hijos"
+        from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
+        try:
+            check_ownership(request.user, w)
+        except:
+             messages.error(request, "⛔ Solo el dueño puede expandir este mundo.")
+             return redirect('ver_mundo', public_id=public_id)
+        # ----------------------
+
         jid = w.id
         safe_pid = w.public_id if w.public_id else jid
 
         c_name = request.POST.get('child_name')
-        target_level_str = request.POST.get('target_level')
-        target_level = int(target_level_str) if target_level_str else None
-        
         if c_name:
             c_desc = request.POST.get('child_desc', "")
             reason = request.POST.get('reason', "Creación vía Wizard")
@@ -267,6 +275,15 @@ def editar_mundo(request, jid):
     if not w_domain: return redirect('home')
     real_jid = w_domain.id.value
     w_orm = CaosWorldORM.objects.get(id=real_jid)
+
+    # --- SECURITY CHECK ---
+    from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
+    try:
+        check_ownership(request.user, w_orm)
+    except:
+        messages.error(request, "⛔ ACCESO DENEGADO: No tienes permisos para editar este mundo.")
+        return redirect('ver_mundo', public_id=w_orm.public_id if w_orm.public_id else w_orm.id)
+    # ----------------------
 
     # LOCK CHECK (Block edits if locked, unless Superuser)
     if w_orm.status == 'LOCKED' and not request.user.is_superuser:
