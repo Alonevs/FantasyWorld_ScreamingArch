@@ -6,7 +6,8 @@ from django.conf.urls.static import static
 from src.Infrastructure.DjangoFramework.persistence.views.world_views import (
     home, ver_mundo, editar_mundo, borrar_mundo, 
     toggle_lock, toggle_visibilidad, init_hemisferios, escanear_planeta,
-    mapa_arbol, comparar_version, ver_metadatos, api_auto_noos
+    mapa_arbol, comparar_version, ver_metadatos, api_auto_noos,
+    toggle_entity_status
 )
 from src.Infrastructure.DjangoFramework.persistence.views.ai_views import analyze_metadata_api, edit_narrative_api, api_generate_title
 from src.Infrastructure.DjangoFramework.persistence.views.dashboard_views import (
@@ -52,6 +53,7 @@ urlpatterns = [
     # 🔒 BLOQUEO Y VISIBILIDAD
     path('lock/<str:jid>/', toggle_lock, name='toggle_lock'),
     path('toggle_visible/<str:jid>/', toggle_visibilidad, name='toggle_visibilidad'),
+    path('toggle_status/<str:jid>/', toggle_entity_status, name='toggle_status'),
     
     # FOTOS Y MEDIA
     path('escanear/<str:jid>/', escanear_planeta, name='escanear_planeta'),

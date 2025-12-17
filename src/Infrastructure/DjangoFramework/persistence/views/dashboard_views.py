@@ -23,18 +23,30 @@ def log_event(user, action, target_id, details=""):
         CaosEventLog.objects.create(user=u, action=action, target_id=target_id, details=details)
     except Exception as e: print(f"Log Error: {e}")
 
+from django.contrib.auth.decorators import login_required, user_passes_test
+from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
+
+def is_superuser(user): return user.is_superuser
+
+@login_required
+@user_passes_test(is_superuser) # Dashboard is admin/staff only for now, or allow authors? User said "USUARIO (Standard): Solo lectura". Dashboard is management. Let's restrict to Superuser/Staff or Authors? The view lists ALL versions. Maybe only show own proposals if not superuser?
+# For simplicity and security first: Restrict Dashboard to Staff/Superuser as requested "Implementar Control de Acceso real...".
+# User Request says: "AUTOR/ADMIN: Puede crear... usuarios (Standard): Solo lectura". 
+# Usually Dashboard is for approving/rejecting which is an Admin task. 
+# Authors create proposals. Admins approve.
 def dashboard(request):
     # 1. Fetch World Versions
-    w_pending = list(CaosVersionORM.objects.filter(status='PENDING').order_by('-created_at'))
-    w_approved = list(CaosVersionORM.objects.filter(status='APPROVED').order_by('-created_at'))
-    w_rejected = list(CaosVersionORM.objects.filter(status='REJECTED').order_by('-created_at')[:10])
-    w_archived = list(CaosVersionORM.objects.filter(status='ARCHIVED').order_by('-created_at')[:20])
+    # 1. Fetch World Versions
+    w_pending = list(CaosVersionORM.objects.filter(status='PENDING').select_related('world', 'author').order_by('-created_at'))
+    w_approved = list(CaosVersionORM.objects.filter(status='APPROVED').select_related('world', 'author').order_by('-created_at'))
+    w_rejected = list(CaosVersionORM.objects.filter(status='REJECTED').select_related('world', 'author').order_by('-created_at')[:10])
+    w_archived = list(CaosVersionORM.objects.filter(status='ARCHIVED').select_related('world', 'author').order_by('-created_at')[:20])
 
     # 2. Fetch Narrative Versions
-    n_pending = list(CaosNarrativeVersionORM.objects.filter(status='PENDING').order_by('-created_at'))
-    n_approved = list(CaosNarrativeVersionORM.objects.filter(status='APPROVED').order_by('-created_at'))
-    n_rejected = list(CaosNarrativeVersionORM.objects.filter(status='REJECTED').order_by('-created_at')[:10])
-    n_archived = list(CaosNarrativeVersionORM.objects.filter(status='ARCHIVED').order_by('-created_at')[:20])
+    n_pending = list(CaosNarrativeVersionORM.objects.filter(status='PENDING').select_related('narrative__world', 'author').order_by('-created_at'))
+    n_approved = list(CaosNarrativeVersionORM.objects.filter(status='APPROVED').select_related('narrative__world', 'author').order_by('-created_at'))
+    n_rejected = list(CaosNarrativeVersionORM.objects.filter(status='REJECTED').select_related('narrative__world', 'author').order_by('-created_at')[:10])
+    n_archived = list(CaosNarrativeVersionORM.objects.filter(status='ARCHIVED').select_related('narrative__world', 'author').order_by('-created_at')[:20])
 
     # 2.5 Pre-fetch Context Data for Performance
     all_worlds = {w.id: w.name for w in CaosWorldORM.objects.all()}
@@ -68,7 +80,7 @@ def dashboard(request):
         x.type_label = '📖 NARRATIVA'
         x.target_name = x.proposed_title
         x.target_desc = x.proposed_content
-        x.target_link = x.narrative.nid
+        x.target_link = x.narrative.public_id if hasattr(x.narrative, 'public_id') and x.narrative.public_id else x.narrative.nid
         
         # Determine Narrative Context
         wname = x.narrative.world.name
@@ -106,7 +118,7 @@ def dashboard(request):
         else: logs_other.append(l)
 
     # 6. Fetch Image Proposals
-    img_pending = CaosImageProposalORM.objects.filter(status='PENDING').order_by('-created_at')
+    img_pending = CaosImageProposalORM.objects.filter(status='PENDING').select_related('world', 'author').order_by('-created_at')
 
     context = {
         'pending': pending,
@@ -126,6 +138,8 @@ def centro_control(request):
 
 # --- WORLD ACTIONS ---
 
+@login_required
+@user_passes_test(is_superuser)
 def aprobar_propuesta(request, id):
     try:
         ApproveVersionUseCase().execute(id)
@@ -137,6 +151,8 @@ def aprobar_propuesta(request, id):
         messages.error(request, f"Error: {str(e)}")
         return redirect('dashboard')
 
+@login_required
+@user_passes_test(is_superuser)
 def rechazar_propuesta(request, id):
     try:
         RejectVersionUseCase().execute(id)
@@ -147,6 +163,8 @@ def rechazar_propuesta(request, id):
         messages.error(request, f"Error: {str(e)}")
         return redirect('dashboard')
 
+@login_required
+@user_passes_test(is_superuser)
 def publicar_version(request, version_id):
     try:
         PublishToLiveVersionUseCase().execute(version_id)
@@ -369,6 +387,8 @@ def ver_papelera(request):
         print(e)
         return redirect('dashboard')
 
+@login_required
+@user_passes_test(is_superuser)
 def restaurar_entidad_fisica(request, jid):
     try:
         w = CaosWorldORM.objects.get(id=jid, is_active=False)

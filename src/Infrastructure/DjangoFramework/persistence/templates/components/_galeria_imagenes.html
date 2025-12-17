@@ -18,7 +18,7 @@
 <div class="flex gap-4 overflow-x-auto pb-4 mb-8 snap-x">
     {% for img in imagenes %}
     <div class="snap-start shrink-0 relative group w-40 h-56">
-        <div class="w-full h-full rounded-lg overflow-hidden border border-gray-700 cursor-pointer hover:border-accent transition shadow-lg bg-black" onclick="openLightbox('{% static '/persistence/img/'|add:img.url %}', '{{ img.filename }}')">
+        <div class="w-full h-full rounded-lg overflow-hidden border border-gray-700 cursor-pointer hover:border-accent transition shadow-lg bg-black" onclick="openLightbox('{% static 'persistence/img/'|add:img.url %}', '{{ img.filename }}')">
             <img src="{% static 'persistence/img/'|add:img.url %}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500 opacity-90 group-hover:opacity-100">
         </div>
         {% if not is_preview %}

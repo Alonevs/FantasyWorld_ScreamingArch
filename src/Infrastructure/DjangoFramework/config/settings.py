@@ -45,11 +45,13 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'src.Infrastructure.DjangoFramework.config.middleware.PerformanceLoggingMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_browser_reload.middleware.BrowserReloadMiddleware',
@@ -149,6 +151,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'home'
+LOGIN_URL = 'login'
 
 # Tailwind Configuration
 TAILWIND_APP_NAME = 'theme'
@@ -213,3 +216,14 @@ AI_TIMEOUT = 120 # Segundos ("Pollo a 120s")
 # reload17
 # reload18
 # reload19
+
+def custom_show_toolbar(request):
+    # Solo mostrar si el usuario está autenticado y es Superusuario
+    if hasattr(request, 'user') and request.user.is_authenticated:
+        return request.user.is_superuser
+    return False
+
+DEBUG_TOOLBAR_CONFIG = {
+    'SHOW_TOOLBAR_CALLBACK': 'config.settings.custom_show_toolbar', # Use string path to avoid circular import issues if any
+    'INTERCEPT_REDIRECTS': False, # <--- CRITICAL FIX
+}

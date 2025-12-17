@@ -17,6 +17,7 @@ from src.FantasyWorld.Domain.Services.NarrativeService import NarrativeService
 
 @csrf_exempt
 @require_POST
+@login_required
 def import_narrative_file(request):
     try:
         if 'file' not in request.FILES:
@@ -38,10 +39,23 @@ def resolve_jid(identifier):
         except: return None
     return None
 
+from django.http import Http404
+
 def ver_narrativa_mundo(request, jid):
     try: 
         repo = DjangoCaosRepository()
-        context = GetWorldNarrativesUseCase(repo).execute(jid, request.user)
+        
+        # Visibility Check
+        w = resolve_jid(jid)
+        if w:
+            is_live = (w.status == 'LIVE')
+            is_author = (request.user.is_authenticated and w.author == request.user)
+            is_superuser = request.user.is_superuser
+        if not (is_live or is_author or is_superuser): 
+                return render(request, 'private_access.html', status=403)
+            
+        real_jid = w.id if w else jid
+        context = GetWorldNarrativesUseCase(repo).execute(real_jid, request.user)
         
         if not context: 
             print(f"❌ Mundo no encontrado para JID: {jid}")
@@ -57,6 +71,22 @@ def ver_narrativa_mundo(request, jid):
 def leer_narrativa(request, nid):
     try:
         repo = DjangoCaosRepository()
+        
+        # Visibility Check (via Narrative -> World)
+        # We need the narrative ORM to check world status
+        try:
+            n_orm = CaosNarrativeORM.objects.get(public_id=nid)
+        except:
+            n_orm = CaosNarrativeORM.objects.filter(nid=nid).first()
+
+        if n_orm:
+           w = n_orm.world
+           is_live = (w.status == 'LIVE')
+           is_author = (request.user.is_authenticated and w.author == request.user)
+           is_superuser = request.user.is_superuser
+           if not (is_live or is_author or is_superuser): 
+               return render(request, 'private_access.html', status=403)
+
         context = GetNarrativeDetailsUseCase(repo).execute(nid, request.user)
         
         if not context:
@@ -69,7 +99,18 @@ def leer_narrativa(request, nid):
         messages.error(request, f"Error interno al leer narrativa: {nid}")
         return redirect('home')
 
+@login_required
 def editar_narrativa(request, nid):
+    # Lock Check
+    try: n_orm = CaosNarrativeORM.objects.get(nid=nid) # Try internal ID first usually stored in logic, but here assume external input
+    except: 
+       try: n_orm = CaosNarrativeORM.objects.get(public_id=nid)
+       except: n_orm = None
+    
+    if n_orm and n_orm.world.status == 'LOCKED' and not request.user.is_superuser:
+        messages.error(request, "⛔ El mundo está BLOQUEADO. No se pueden editar narrativas.")
+        return redirect('leer_narrativa', nid=nid)
+
     if request.method == 'POST':
         try:
             NarrativeService.handle_edit_proposal(
@@ -87,6 +128,7 @@ def editar_narrativa(request, nid):
             messages.error(request, f"Error al editar: {e}")
     return redirect('leer_narrativa', nid=nid)
 
+@login_required
 def borrar_narrativa(request, nid):
     try:
         try: n = CaosNarrativeORM.objects.get(public_id=nid); real_nid = n.nid; w_pid = n.world.public_id
@@ -128,6 +170,7 @@ def get_full_type(code):
     m = {'L':'LORE', 'H':'HISTORIA', 'C':'CAPITULO', 'E':'EVENTO', 'M':'LEYENDA', 'R':'REGLA', 'B':'BESTIARIO'}
     return m.get(code.upper(), 'LORE')
 
+@login_required
 def pre_crear_root(request, jid, tipo_codigo):
     try:
         repo = DjangoCaosRepository()
@@ -159,6 +202,7 @@ def pre_crear_root(request, jid, tipo_codigo):
         print(f"Error pre-creating root: {e}")
         return redirect('home')
 
+@login_required
 def pre_crear_child(request, parent_nid, tipo_codigo):
     try:
         try: p = CaosNarrativeORM.objects.get(public_id=parent_nid)
@@ -191,6 +235,7 @@ def pre_crear_child(request, parent_nid, tipo_codigo):
         print(f"Error pre-creating child: {e}")
         return redirect('home')
 
+@login_required
 def revisar_narrativa_version(request, version_id):
     try:
         v = CaosNarrativeVersionORM.objects.get(id=version_id)
@@ -226,6 +271,7 @@ def revisar_narrativa_version(request, version_id):
         messages.error(request, f"Error al revisar versión: {e}")
         return redirect('dashboard')
 
+@login_required
 def crear_nueva_narrativa(request, jid, tipo_codigo):
     try:
         repo = DjangoCaosRepository()
@@ -252,6 +298,7 @@ def crear_nueva_narrativa(request, jid, tipo_codigo):
         print(f"Error creating narrative: {e}")
         return redirect('ver_mundo', public_id=jid)
 
+@login_required
 def crear_sub_narrativa(request, parent_nid, tipo_codigo):
     try:
         repo = DjangoCaosRepository()

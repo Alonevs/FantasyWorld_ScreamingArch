@@ -10,6 +10,9 @@ from django.contrib.auth.decorators import login_required
 
 from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosVersionORM, CaosNarrativeORM, CaosEventLog, MetadataTemplate
 from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
+# IMPORTE Q
+from django.db.models import Q
+from django.http import Http404
 from src.WorldManagement.Caos.Application.create_world import CreateWorldUseCase
 from src.WorldManagement.Caos.Application.create_child import CreateChildWorldUseCase
 from src.WorldManagement.Caos.Application.propose_change import ProposeChangeUseCase
@@ -19,6 +22,8 @@ from src.WorldManagement.Caos.Application.generate_creature_usecase import Gener
 from src.WorldManagement.Caos.Application.initialize_hemispheres import InitializeHemispheresUseCase
 from src.WorldManagement.Caos.Application.initialize_hemispheres import InitializeHemispheresUseCase
 from src.WorldManagement.Caos.Application.restore_version import RestoreVersionUseCase
+from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
+from django.contrib.auth.decorators import login_required, user_passes_test
 from src.FantasyWorld.Domain.Services.EntityService import EntityService
 from src.WorldManagement.Caos.Application.common import resolve_world_id
 from src.WorldManagement.Caos.Application.toggle_visibility import ToggleWorldVisibilityUseCase
@@ -60,26 +65,49 @@ from django.db.models.functions import Length
 
 def home(request):
     if request.method == 'POST':
+        if not request.user.is_authenticated:
+            return redirect('login')
+            
         repo = DjangoCaosRepository()
+        # For creation, author is current user
         jid = CreateWorldUseCase(repo).execute(request.POST.get('world_name'), request.POST.get('world_desc'))
+        
+        # Assign author to the new world (if UseCase doesn't do it, we patch it here or update UseCase)
+        # Assuming UseCase returns the ID, we can fetch and set author.
+        try:
+            w = CaosWorldORM.objects.get(id=jid)
+            w.author = request.user
+            w.save()
+        except: pass
+
         messages.success(request, "✨ Mundo propuesto. Ve al Dashboard para aprobarlo.")
         return redirect('dashboard')
     
-    # Show LIVE worlds based on user permissions
-    # Admins/Staff see EVERYTHING (including Private)
-    # Public users see ONLY visible_publico=True
-    
-    ms = CaosWorldORM.objects.exclude(status='DRAFT') \
+    # Show LIVE worlds (and DRAFTS for Author/Superuser)
+    # 1. Base: Exclude deleted or invalid
+    ms = CaosWorldORM.objects.exclude(status='DELETED') \
         .exclude(description__isnull=True).exclude(description__exact='') \
-        .exclude(description__iexact='None').order_by('id')
+        .exclude(description__iexact='None') \
+        .select_related('born_in_epoch', 'died_in_epoch') \
+        .prefetch_related('versiones', 'narrativas') \
+        .order_by('id')
 
-    if not (request.user.is_authenticated and (request.user.is_superuser or request.user.is_staff)):
-        ms = ms.filter(visible_publico=True)
+    # 2. Visibility Logic
+    if request.user.is_superuser:
+        pass # All
+    elif request.user.is_authenticated:
+        # User sees: LIVE OR (Their OWN content)
+        # We now use 'OFFLINE' for private content instead of 'DRAFT'
+        ms = ms.filter(Q(status='LIVE') | Q(author=request.user))
+    else:
+        # Anonymous: Only LIVE
+        ms = ms.filter(status='LIVE')
 
     l = []
     background_images = []
     for m in ms:
-        imgs = get_world_images(m.id)
+        # Pass world_instance=m to avoid re-fetching metadata from DB (N+1 fix)
+        imgs = get_world_images(m.id, world_instance=m)
         cover = imgs[0]['url'] if imgs else None
         if m.metadata and 'cover_image' in m.metadata:
             target = m.metadata['cover_image']
@@ -103,7 +131,8 @@ def home(request):
             'images': entity_images, 
             'has_img': bool(cover), 
             'visible': m.visible_publico,
-            'is_locked': m.status == 'LOCKED'
+            'is_locked': m.status == 'LOCKED',
+            'author': m.author,
         })
     
     # Shuffle backgrounds for variety? Optional.
@@ -116,8 +145,25 @@ def home(request):
 def ver_mundo(request, public_id):
     repo = DjangoCaosRepository()
     
+    # 0. RESOLVE & CHECK VISIBILITY BEFORE USE CASE
+    w_orm = resolve_jid(public_id)
+    if not w_orm:
+        return render(request, '404.html', {"jid": public_id})
+    
+    # Check Status
+    # Rule: LIVE is Public. OFFLINE is Private (Author/Superuser only).
+    is_live = (w_orm.status == 'LIVE')
+    is_author = (request.user.is_authenticated and w_orm.author == request.user)
+    is_superuser = request.user.is_superuser
+
+    if not (is_live or is_author or is_superuser):
+        return render(request, 'private_access.html', status=403)
+    
     # 1. Handle POST (Creation)
     if request.method == 'POST':
+        if not request.user.is_authenticated:
+            return redirect('login')
+            
         # Resolve ID for parent (needed for creation)
         w = resolve_jid(public_id)
         if not w: return redirect('home') # Should handle better
@@ -168,6 +214,8 @@ def ver_mundo(request, public_id):
 
     # --- HIERARCHY LABEL INJECTION ---
     context['hierarchy_label'] = get_readable_hierarchy(context['jid'])
+    context['status_str'] = w_orm.status
+    context['author_live_user'] = w_orm.author
     # ---------------------------------
     
     # --- DEEP CREATION OPTIONS ---
@@ -212,7 +260,19 @@ def ver_mundo(request, public_id):
 
     return render(request, 'ficha_mundo.html', context)
 
+@login_required
 def editar_mundo(request, jid):
+    repo = DjangoCaosRepository()
+    w_domain = resolve_world_id(repo, jid)
+    if not w_domain: return redirect('home')
+    real_jid = w_domain.id.value
+    w_orm = CaosWorldORM.objects.get(id=real_jid)
+
+    # LOCK CHECK (Block edits if locked, unless Superuser)
+    if w_orm.status == 'LOCKED' and not request.user.is_superuser:
+        messages.error(request, "⛔ Este mundo está BLOQUEADO por la Administración. No se permiten ediciones.")
+        return redirect('ver_mundo', public_id=w_orm.public_id if w_orm.public_id else w_orm.id)
+
     if request.method == 'POST':
         try:
             w = resolve_jid(jid); real_jid = w.id if w else jid
@@ -256,9 +316,45 @@ def editar_mundo(request, jid):
         except: return redirect('home')
     return redirect('home')
 
+def get_entity_smart(identifier):
+    """Ayuda a encontrar la entidad ya sea por ID (int) o Code (str)"""
+    # 1. Intentar por CÓDIGO (NanoID)
+    entity = CaosWorldORM.objects.filter(public_id=identifier).first()
+    if entity:
+        return entity
+    # 2. Intentar por ID (Legacy)
+    # En este proyecto el ID es CharField, así que buscamos directo
+    return CaosWorldORM.objects.filter(id=identifier).first()
+
+@login_required
+def toggle_entity_status(request, jid):
+    w = get_entity_smart(jid)
+    if not w:
+        raise Http404("Entidad no encontrada")
+
+    # 1. Verificar Permisos (Superuser o Autor)
+    if request.user.is_superuser or w.author == request.user:
+        # 2. Cambiar Estado
+        if w.status == 'LIVE':
+            w.status = 'OFFLINE'
+        else:
+            w.status = 'LIVE'
+        w.save()
+        messages.success(request, f"Estado actualizado a: {w.status}")
+    else:
+        messages.error(request, "Permiso denegado.")
+
+    # 3. REDIRECCIÓN ROBUSTA
+    return redirect(request.META.get('HTTP_REFERER', 'home'))
+
+@login_required
 def borrar_mundo(request, jid): 
     try: 
-        w = CaosWorldORM.objects.get(id=jid)
+        # Robust Lookup
+        w = CaosWorldORM.objects.filter(Q(id=jid) | Q(public_id=jid)).first()
+        if not w: w = get_object_or_404(CaosWorldORM, id=jid)
+        
+        check_ownership(request.user, w) # Security Check
         
         # Determine next version number
         last_v = w.versiones.order_by('-version_number').first()
@@ -282,11 +378,13 @@ def borrar_mundo(request, jid):
         print(f"Error requesting delete: {e}")
         return redirect('home')
 
+@login_required
 def toggle_visibilidad(request, jid):
     try: 
         repo = DjangoCaosRepository()
         w_domain = resolve_world_id(repo, jid)
         w = CaosWorldORM.objects.get(id=w_domain.id.value)
+        check_ownership(request.user, w) # Security Check
         
         next_v = CaosVersionORM.objects.filter(world=w).count() + 1
         current_vis = w.visible_publico
@@ -354,8 +452,13 @@ def comparar_version(request, version_id):
         print(e)
         return redirect('home')
 
+@login_required
 def init_hemisferios(request, jid):
-    try: w=resolve_jid(jid); InitializeHemispheresUseCase(DjangoCaosRepository()).execute(w.id); return redirect('ver_mundo', public_id=w.public_id)
+    try: 
+        w=resolve_jid(jid)
+        w_orm = CaosWorldORM.objects.get(id=w.id)
+        check_ownership(request.user, w_orm)
+        InitializeHemispheresUseCase(DjangoCaosRepository()).execute(w.id); return redirect('ver_mundo', public_id=w.public_id)
     except: return redirect('home')
 
 def escanear_planeta(request, jid): return redirect('ver_mundo', public_id=jid)
@@ -363,29 +466,55 @@ def escanear_planeta(request, jid): return redirect('ver_mundo', public_id=jid)
 def mapa_arbol(request, public_id):
     try:
         repo = DjangoCaosRepository()
+        # Security Check
+        w_orm = resolve_jid(public_id)
+        if not w_orm: return redirect('home')
+        is_live = (w_orm.status == 'LIVE')
+        is_author = (request.user.is_authenticated and w_orm.author == request.user)
+        is_superuser = request.user.is_superuser
+        if not (is_live or is_author or is_superuser): 
+             return render(request, 'private_access.html', status=403)
+
         result = GetWorldTreeUseCase(repo).execute(public_id)
         if not result: return redirect('home')
         return render(request, 'mapa_arbol.html', result)
+    except Http404: raise
     except: return redirect('ver_mundo', public_id=public_id)
 
-def toggle_lock(request, jid):
-    if not request.user.is_superuser:
-        return redirect('ver_mundo', public_id=jid)
-    
-    try:
-        repo = DjangoCaosRepository()
-        ToggleWorldLockUseCase(repo).execute(jid)
-        w = resolve_world_id(repo, jid)
-        w_orm = CaosWorldORM.objects.get(id=w.id.value)
-        if w_orm.is_locked: messages.warning(request, "🔒 Mundo BLOQUEADO.")
-        else: messages.success(request, "🔓 Mundo desbloqueado.")
-        return redirect('ver_mundo', public_id=w_orm.public_id if w_orm.public_id else w_orm.id)
-    except: return redirect('home')
-
 @login_required
+def toggle_lock(request, jid):
+    # Solo Superuser puede bloquear
+    if not request.user.is_superuser:
+        return redirect(request.META.get('HTTP_REFERER', 'home'))
+
+    w_orm = get_entity_smart(jid)
+    if not w_orm:
+        raise Http404("Entidad no encontrada")
+    
+    # Lógica de Bloqueo
+    if w_orm.status == 'LOCKED':
+        w_orm.status = 'OFFLINE' # Desbloquear a estado seguro
+        messages.success(request, "🔓 Mundo desbloqueado (OFFLINE).")
+    else:
+        w_orm.status = 'LOCKED'
+        messages.warning(request, "🔒 Mundo BLOQUEADO.")
+    
+    w_orm.save()
+    
+    # CRÍTICO: Redirigir a la página desde donde se hizo clic
+    return redirect(request.META.get('HTTP_REFERER', 'home'))
+
+# @login_required (Removed for Public Live Access)
 def ver_metadatos(request, public_id):
     w = resolve_jid(public_id)
     if not w: return redirect('home')
+
+    # Security Check
+    is_live = (w.status == 'LIVE')
+    is_author = (request.user.is_authenticated and w.author == request.user)
+    is_superuser = request.user.is_superuser
+    if not (is_live or is_author or is_superuser): 
+        return render(request, 'private_access.html', status=403)
     
     context = {
         'name': w.name,

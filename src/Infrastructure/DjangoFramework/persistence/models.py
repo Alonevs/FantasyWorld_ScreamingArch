@@ -43,6 +43,9 @@ class CaosWorldORM(models.Model):
     born_in_epoch = models.ForeignKey(CaosEpochORM, on_delete=models.SET_NULL, null=True, blank=True, related_name='entities_born')
     died_in_epoch = models.ForeignKey(CaosEpochORM, on_delete=models.SET_NULL, null=True, blank=True, related_name='entities_died')
     
+    # OWNER / AUTHOR
+    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_entities')
+    
     # CONTROL DE BORRADO LÓGICO (SOFT DELETE)
     is_active = models.BooleanField(default=True, help_text="Si es False, está en la papelera.")
     deleted_at = models.DateTimeField(null=True, blank=True)
@@ -62,6 +65,11 @@ class CaosWorldORM(models.Model):
     @property
     def is_locked(self):
         return self.status == 'LOCKED'
+
+    def get_absolute_url(self):
+        from django.urls import reverse
+        return reverse('ver_mundo', args=[str(self.public_id)]) # Use public_id (NanoID)
+
 
     class Meta: db_table = 'caos_worlds'
 

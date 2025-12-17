@@ -68,15 +68,33 @@
                     <h1 class="text-3xl lg:text-4xl font-bold text-white">{{ name }}</h1>
                     
                     {% if user.is_authenticated %}
-                        <a href="{% url 'toggle_visibilidad' jid %}" class="text-xs px-2 py-1 rounded border transition {% if visible %}bg-green-900/30 border-green-700 text-green-400{% else %}bg-red-900/30 border-red-700 text-red-400{% endif %}">
-                            {% if visible %}🌐 PÚBLICO{% else %}👻 PRIVADO{% endif %}
-                        </a>
-                        
+                        <!-- New Status Toggle (Consistent with Card) -->
+                        <div class="inline-block">
+                            {% if user.is_superuser or user == author_live_user %}
+                            <form action="{% url 'toggle_status' public_id %}" method="POST" class="inline-block">
+                                {% csrf_token %}
+                                <!-- No need for next, view handles referer -->
+                                <button type="submit"  
+                                    class="text-xs px-2 py-1 rounded border transition font-bold uppercase
+                                    {% if status_str == 'LIVE' %}bg-green-900/30 border-green-700 text-green-400 hover:bg-green-900/50
+                                    {% else %}bg-red-900/30 border-red-700 text-red-400 hover:bg-red-900/50{% endif %}">
+                                    {% if status_str == 'LIVE' %}🌐 PÚBLICO{% else %}⛔ OFFLINE{% endif %}
+                                </button>
+                            </form>
+                            {% else %}
+                                <!-- Read Only Badge for non-authors -->
+                                <span class="text-xs px-2 py-1 rounded border 
+                                    {% if status_str == 'LIVE' %}bg-green-900/30 border-green-700 text-green-400
+                                    {% else %}bg-red-900/30 border-red-700 text-red-400{% endif %}">
+                                    {% if status_str == 'LIVE' %}🌐 PÚBLICO{% else %}⛔ OFFLINE{% endif %}
+                                </span>
+                            {% endif %}
+                        </div>
+
                         {% if user.is_superuser %}
-                        <a href="{% url 'toggle_lock' jid %}" class="text-xs px-2 py-1 rounded border border-gray-600 bg-gray-800 text-gray-400 hover:bg-gray-700">
+                        <a href="{% url 'toggle_lock' public_id %}" class="text-xs px-2 py-1 rounded border border-gray-600 bg-gray-800 text-gray-400 hover:bg-gray-700">
                             {% if is_locked %}🔓 Desbloquear{% else %}🔒 Bloquear{% endif %}
                         </a>
-                        <!-- Also allow admin to toggle visibility directly here if needed, or keep it separate -->
                         {% endif %}
                     {% endif %}
 
@@ -100,7 +118,7 @@
                 <button onclick="openEditModal()" class="p-2 bg-blue-900/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg transition border border-blue-900/50" title="Editar">
                     ✏️
                 </button>
-                <a href="{% url 'borrar_mundo' jid %}" onclick="return confirm('¿Borrar mundo?')" class="p-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg transition border border-red-900/50" title="Borrar">
+                <a href="{% url 'borrar_mundo' public_id %}" onclick="return confirm('¿Borrar mundo?')" class="p-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg transition border border-red-900/50" title="Borrar">
                     🗑️
                 </a>
             </div>
@@ -152,7 +170,7 @@
             <div class="flex gap-4 overflow-x-auto pb-4 mb-8 snap-x min-h-[140px]">
                 {% for img in imagenes %}
                 <div class="snap-start shrink-0 relative group w-40 h-56">
-                    <div class="w-full h-full rounded-lg overflow-hidden border border-gray-700 cursor-pointer hover:border-accent transition shadow-lg bg-black relative" onclick="openLightbox('{% static '/persistence/img/' %}{{ img.url }}', '{{ img.filename|escapejs }}')">
+                    <div class="w-full h-full rounded-lg overflow-hidden border border-gray-700 cursor-pointer hover:border-accent transition shadow-lg bg-black relative" onclick="openLightbox('{% static 'persistence/img/' %}{{ img.url }}', '{{ img.filename|escapejs }}')">
                         <img src="{% static 'persistence/img/' %}{{ img.url }}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500 opacity-90 group-hover:opacity-100">
                         
                         <!-- Metadata Overlay -->
@@ -191,7 +209,7 @@
 
             <div class="mt-8 space-y-2">
                 <h3 class="text-gray-500 text-xs font-bold uppercase mb-4">Acciones</h3>
-                <a href="{% url 'ver_narrativa_mundo' jid %}" class="block w-full px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded flex items-center gap-2 transition border border-gray-700 text-sm">
+                <a href="{% url 'ver_narrativa_mundo' public_id %}" class="block w-full px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded flex items-center gap-2 transition border border-gray-700 text-sm">
                     📖 Narrativa
                 </a>
                 
