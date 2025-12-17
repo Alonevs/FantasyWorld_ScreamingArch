@@ -14,10 +14,14 @@ def check_ownership(user, obj):
     # Check for 'author' field
     if hasattr(obj, 'author'):
         if obj.author == user: return True
-        # SUBADMIN CHECK: Edit Boss's stuff
+        # COLLABORATOR CHECK: Edit Boss's stuff
+        # If I am in the author's collaborators list?
+        # WAIT! The logic is: Admin (Author) has Collaborators (Me).
+        # So "Am I in obj.author.profile.collaborators?"
         try:
-            if hasattr(user, 'profile') and user.profile.boss == obj.author:
-                return True
+            if hasattr(obj.author, 'profile'):
+                if user.profile in obj.author.profile.collaborators.all():
+                    return True
         except: pass
 
     # Check for 'created_by' field (Narratives)

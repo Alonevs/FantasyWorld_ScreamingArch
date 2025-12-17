@@ -15,15 +15,10 @@
             ECLAI 
             <span class="text-xs text-gray-300 bg-gray-900/50 px-3 py-1.5 rounded-full border border-gray-700 flex items-center gap-3 shadow-inner">
                 {% if user.is_authenticated %}
-                    {% if user.is_superuser or user.username == 'Alone' %}
-                        <span class="text-[10px] bg-yellow-500/20 text-yellow-400 border border-yellow-500/50 px-1.5 py-0.5 rounded font-bold tracking-wider shadow-[0_0_10px_rgba(234,179,8,0.2)]">
-                            👑 SUPERADMIN
-                        </span>
-                    {% else %}
-                        <span class="text-[10px] bg-blue-500/20 text-blue-400 border border-blue-500/50 px-1.5 py-0.5 rounded font-bold tracking-wider">
-                            EXPLORER
-                        </span>
-                    {% endif %}
+                     <span class="{{ role_badge_class }} px-1.5 py-0.5 rounded font-bold tracking-wider shadow-sm flex items-center gap-1 text-[10px]">
+                        <span>{{ role_icon }}</span>
+                        <span>{{ role_label }}</span>
+                    </span>
                     
                     <span class="font-bold tracking-wide">{{ user.username|upper }}</span>
                     

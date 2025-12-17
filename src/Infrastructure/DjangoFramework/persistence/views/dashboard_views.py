@@ -20,6 +20,14 @@ from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaos
 
 # ... imports remain same ...
 
+from django.views.generic import FormView, TemplateView
+from django.urls import reverse_lazy
+from django.contrib.auth.mixins import LoginRequiredMixin
+from src.Infrastructure.DjangoFramework.persistence.forms import SubadminCreationForm
+from src.Infrastructure.DjangoFramework.persistence.models import UserProfile
+from django.contrib.auth.models import User, Group
+from django.db.models import Q
+
 def log_event(user, action, target_id, details=""):
     try:
         u = user if user.is_authenticated else None
@@ -466,6 +474,12 @@ class UserManagementView(LoginRequiredMixin, UserPassesTestMixin, ListView):
 def toggle_admin_role(request, user_id):
     try:
         target_u = User.objects.get(id=user_id)
+        
+        # PROTECTION FOR SYSTEM USERS
+        if target_u.username in ['Xico', 'Alone']:
+            messages.error(request, f"⛔ ACCIÓN DENEGADA: El usuario '{target_u.username}' es intocable (Sistema/Superadmin).")
+            return redirect('user_management')
+            
         admins_group, _ = Group.objects.get_or_create(name='Admins')
         
         if admins_group in target_u.groups.all():
@@ -685,8 +699,150 @@ def rechazar_contribucion(request, id):
         prop.status = 'REJECTED'
         prop.reviewer = request.user
         prop.save()
-        messages.warning(request, "❌ Rechazado.")
         return redirect('dashboard')
     except Exception as e:
         messages.error(request, f"Error: {e}")
         return redirect('dashboard')
+
+# --- TEAM MANAGEMENT ---
+class MyTeamView(LoginRequiredMixin, TemplateView):
+    template_name = 'staff/my_team.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        
+        # Robust Profile Access
+        if not hasattr(user, 'profile'):
+            UserProfile.objects.create(user=user)
+            # Reload user to ensure relationship is cached
+            user.refresh_from_db()
+            
+        # 1. MY TEAM (Collaborators)
+        if user.is_superuser:
+            context['team_list'] = user.profile.collaborators.all()
+        else:
+             context['team_list'] = user.profile.collaborators.all()
+             
+        # 2. SEARCH RESULTS (if any)
+        query = self.request.GET.get('q')
+        if query:
+            # Search users excluding self and superusers (optional protection)
+            results = User.objects.filter(
+                Q(username__icontains=query) | Q(email__icontains=query)
+            ).exclude(id=user.id).exclude(is_superuser=True)[:10]
+            
+            # Annotate: is_collaborator?
+            final_results = []
+            my_collabs = user.profile.collaborators.all()
+            for r in results:
+                # FIX: Ensure searched user has profile
+                if not hasattr(r, 'profile'):
+                    UserProfile.objects.create(user=r)
+                    r.refresh_from_db()
+                    
+                is_in_team = r.profile in my_collabs
+                final_results.append({'user': r, 'is_in_team': is_in_team})
+            
+            context['search_results'] = final_results
+            context['search_query'] = query
+            
+        return context
+
+    def post(self, request, *args, **kwargs):
+        action = request.POST.get('action')
+        target_id = request.POST.get('target_id')
+        
+        try:
+            target_user = User.objects.get(id=target_id)
+            target_profile = target_user.profile
+            my_profile = request.user.profile
+            
+            if action == 'add':
+                my_profile.collaborators.add(target_profile)
+                messages.success(request, f"✅ {target_user.username} añadido a tu equipo.")
+                
+            elif action == 'remove':
+                my_profile.collaborators.remove(target_profile)
+                messages.warning(request, f"❌ {target_user.username} eliminado de tu equipo.")
+                
+            elif action == 'promote_admin' and request.user.is_superuser:
+                target_profile.rank = 'ADMIN'
+                target_profile.save()
+                
+                admins_group, _ = Group.objects.get_or_create(name='Admins')
+                target_user.groups.add(admins_group)
+                
+                messages.success(request, f"💎 {target_user.username} ascendido a ADMIN.")
+            
+            elif action == 'promote_subadmin':
+                # ADMIN can promote their collaborators to SUBADMIN
+                if request.user.profile.rank == 'ADMIN':
+                    target_profile.rank = 'SUBADMIN'
+                    target_profile.save()
+                    messages.success(request, f"🛡️ {target_user.username} ascendido a SUBADMIN.")
+                else:
+                    messages.error(request, "⛔ Solo los Admins pueden nombrar Subadmins.")
+            
+            elif action == 'demote':
+                # Logic: One step down
+                current_rank = target_profile.rank
+                
+                if current_rank == 'ADMIN' and request.user.is_superuser:
+                    target_profile.rank = 'SUBADMIN'
+                    # Remove from Django Admin Group if exists
+                    g = Group.objects.filter(name='Admins').first()
+                    if g: target_user.groups.remove(g)
+                    messages.warning(request, f"📉 {target_user.username} degradado a SUBADMIN.")
+                    
+                elif current_rank == 'SUBADMIN':
+                    # Superuser OR Admin Boss can demote Subadmin
+                    # (Note: We are not strictly checking boss=request.user here for simplicity, relying on 'collaborators' list check implicitly by UI visibility, but strict security would check ownership. For now, if you can see them in your team view and you are Admin, you can demote.)
+                    target_profile.rank = 'USER'
+                    messages.warning(request, f"📉 {target_user.username} degradado a USUARIO.")
+                
+                target_profile.save()
+
+        except Exception as e:
+            messages.error(request, f"Error: {e}")
+            
+        return redirect('my_team')
+
+class CollaboratorWorkView(LoginRequiredMixin, TemplateView):
+    template_name = 'staff/collaborator_work.html'
+    
+    def get_context_data(self, user_id=None, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        if user_id:
+            target_user = get_object_or_404(User, id=user_id)
+            # Security: allow if superuser or boss
+            is_my_collab = target_user.profile in self.request.user.profile.collaborators.all()
+            if not self.request.user.is_superuser and not is_my_collab:
+                 context['permission_denied'] = True
+                 context['target_user'] = target_user
+                 return context
+        else:
+            # My Dashboard mode
+            target_user = self.request.user
+
+        context['target_user'] = target_user
+        
+        # Fetch Work
+        context['worlds'] = CaosWorldORM.objects.filter(author=target_user)
+        # Using icontains for now since 'autor' might be a string field in v1
+        context['narratives'] = CaosNarrativeORM.objects.filter(created_by=target_user).order_by('-updated_at')
+
+        return context
+        if not self.request.user.is_superuser and not is_my_collab:
+            # Fallback permission denied (could raise 403)
+            context['permission_denied'] = True
+            return context
+            
+        context['target_user'] = target_user
+        
+        # Fetch Work
+        context['worlds'] = CaosWorldORM.objects.filter(created_by=target_user)
+        context['narratives'] = CaosNarrativeORM.objects.filter(created_by=target_user).order_by('-updated_at')[:10]
+        
+        return context

@@ -196,7 +196,8 @@ class UserProfile(models.Model):
     ]
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     rank = models.CharField(max_length=20, choices=RANK_CHOICES, default='USER')
-    boss = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='minions')
+    # M2M Relationship: A user can have multiple collaborators (minions/partners)
+    collaborators = models.ManyToManyField('self', symmetrical=False, related_name='bosses', blank=True)
 
     def __str__(self):
         return f"{self.user.username} ({self.rank})"

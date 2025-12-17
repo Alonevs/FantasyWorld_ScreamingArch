@@ -1,0 +1,59 @@
+{% if show_bar %}
+<div class="w-full h-11 {{ bar_style }} flex items-center justify-between px-6 z-50 relative sticky top-0 backdrop-blur-sm">
+    
+    <!-- Left: Rank & User -->
+    <div class="flex items-center gap-4">
+        <!-- Badge -->
+        <div class="{{ role_badge_class }} px-3 py-1 rounded text-xs font-bold tracking-widest uppercase flex items-center gap-2 transition-all hover:scale-105 select-none">
+            <span>{{ role_icon }}</span>
+            <span>{{ role_label }}</span>
+        </div>
+        
+        <!-- User Info -->
+        <span class="text-gray-400 text-sm font-medium">
+            {{ user.username }}
+        </span>
+
+        {% if user.profile.rank == 'SUBADMIN' %}
+            <!-- Subadmin Indicator (Clean) -->
+        {% endif %}
+    </div>
+
+    <!-- Right: Actions -->
+    <div class="flex items-center gap-6 text-sm font-medium">
+        <!-- HOME LINK -->
+        <a href="{% url 'home' %}" class="text-gray-400 hover:text-white transition-colors flex items-center gap-2">
+            <span>🏠</span>
+            <span class="hidden md:inline">Inicio</span>
+        </a>
+
+        {% if user.is_superuser %}
+            <a href="{% url 'my_team' %}" class="text-gray-400 hover:text-yellow-400 transition-colors flex items-center gap-2">
+                <span>👥</span> 
+                <span class="hidden md:inline">Jerarquía</span>
+            </a>
+
+            <a href="{% url 'dashboard' %}" class="text-gray-400 hover:text-purple-400 transition-colors flex items-center gap-2">
+                <span>🛠️</span> 
+                <span class="hidden md:inline">Panel Global</span>
+            </a>
+        
+        {% elif user.profile.rank == 'ADMIN' %}
+             <a href="{% url 'my_team' %}" class="text-gray-400 hover:text-emerald-400 transition-colors flex items-center gap-2">
+                <span>👥</span> 
+                <span class="hidden md:inline">Mi Equipo</span>
+            </a>
+            <a href="{% url 'my_work' %}" class="text-gray-400 hover:text-emerald-400 transition-colors flex items-center gap-2">
+                <span>🏰</span> 
+                <span class="hidden md:inline">Mis Mundos</span>
+            </a>
+
+        {% elif user.profile.rank == 'SUBADMIN' %}
+            <a href="{% url 'my_work' %}" class="text-gray-400 hover:text-blue-400 transition-colors flex items-center gap-2">
+                <span>🛡️</span> 
+                <span class="hidden md:inline">Sala de Trabajo</span>
+            </a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}

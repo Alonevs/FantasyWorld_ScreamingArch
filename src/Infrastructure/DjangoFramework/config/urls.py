@@ -17,7 +17,8 @@ from src.Infrastructure.DjangoFramework.persistence.views.dashboard_views import
     aprobar_narrativa, rechazar_narrativa, publicar_narrativa, restaurar_narrativa, borrar_narrativa_version,
     UserManagementView, toggle_admin_role, ImageProposalDetailView, ProposalDetailView,
     aprobar_imagen, rechazar_imagen, aprobar_propuestas_masivo,
-    ver_papelera, restaurar_entidad_fisica  # NEW TRASH VIEWS
+    ver_papelera, restaurar_entidad_fisica,  # NEW TRASH VIEWS
+    MyTeamView, CollaboratorWorkView  # Team Management
 )
 from src.Infrastructure.DjangoFramework.persistence.views.media_views import (
     api_preview_foto, api_save_foto, api_update_image_metadata, 
@@ -84,6 +85,12 @@ urlpatterns = [
     # Gestión de Usuarios (Superadmin)
     path('usuarios/', UserManagementView.as_view(), name='user_management'),
     path('usuarios/<int:user_id>/toggle-role/', toggle_admin_role, name='toggle_admin_role'),
+    
+    # Team Management
+    # Team Management
+    path('dashboard/team/', MyTeamView.as_view(), name='my_team'),
+    path('dashboard/team/work/<int:user_id>/', CollaboratorWorkView.as_view(), name='collaborator_work'),
+    path('dashboard/my-work/', CollaboratorWorkView.as_view(), name='my_work'),
     
     # Rutas legacy
     path('revision/<int:version_id>/', comparar_version, name='revisar_version'),
