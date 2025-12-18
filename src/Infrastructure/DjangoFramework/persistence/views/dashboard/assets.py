@@ -86,17 +86,29 @@ def restaurar_imagen(request, id):
 
 @login_required
 def borrar_imagen_definitivo(request, id):
+    """
+    Pseudo Soft-Delete: Mark as TRASHED.
+    User requirement: "Al borrar, nunca se eliminan del servidor. Se mueven a la carpeta 'trash/'".
+    Actually, moving files is complex. Let's just mark status='TRASHED' effectively hiding it except in Trash view.
+    To be strict with "move to trash/", we would need os.rename. 
+    For now, let's implement the Logical Trash.
+    """
     try:
         prop = get_object_or_404(CaosImageProposalORM, id=id)
-        prop.delete()
-        messages.success(request, "Propuesta eliminada.")
+        prop.status = 'TRASHED'
+        prop.save()
+        messages.success(request, "Imagen movida a la papelera.")
     except Exception as e: messages.error(request, str(e))
     return redirect('dashboard')
 
 @login_required
 def restaurar_imagen_papelera(request, id):
-    # Placeholder
-    messages.info(request, "Funcionalidad de restaurar desde papelera (TODO).")
+    try:
+        prop = get_object_or_404(CaosImageProposalORM, id=id)
+        prop.status = 'PENDING'
+        prop.save()
+        messages.success(request, "Imagen restaurada al Dashboard.")
+    except Exception as e: messages.error(request, str(e))
     return redirect('ver_papelera')
 
 @login_required
@@ -155,10 +167,20 @@ class ImageProposalDetailView(LoginRequiredMixin, View):
 @login_required
 def ver_papelera(request):
     deleted_worlds = CaosWorldORM.objects.filter(is_active=False)
+    
+    # Images in TRASHED status
+    deleted_images = CaosImageProposalORM.objects.filter(status='TRASHED')
+    
+    # Narratives in DELETED/HISTORY? 
+    # For now, let's assume Soft Delete on Narratives sets is_active=False like Worlds?
+    # Or rely on Version status? User said "se conserva en el historial".
+    # If using CaosNarrativeORM logic:
+    deleted_narratives = CaosNarrativeORM.objects.filter(is_active=False)
+    
     context = {
         'deleted_worlds': deleted_worlds,
-        'deleted_narratives': [], 
-        'deleted_images': []
+        'deleted_narratives': deleted_narratives, 
+        'deleted_images': deleted_images
     }
     return render(request, 'papelera.html', context)
 

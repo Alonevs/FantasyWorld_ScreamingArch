@@ -71,8 +71,12 @@ def get_available_levels(current_jid):
     
     # Rango de búsqueda: Niveles siguientes hasta un tope razonable (ej: Nivel 16)
     # Start at current_level + 1
+    # Start at current_level + 1
     for lvl in range(current_level + 1, 17):
-        label = labels_map.get(lvl)
+        # Fallback to top-level labels (for Level 2, etc.)
+        label = labels_map.get(lvl, HIERARCHY_LABELS.get(lvl))
+        if isinstance(label, dict): label = None # Safety if key exists but is a dict (like PHYSICS)
+        
         if label:
             options.append({
                 'level': lvl,

@@ -14,20 +14,19 @@ class PublishToLiveVersionUseCase:
         try:
             old_live = CaosVersionORM.objects.filter(world=version.world, status='LIVE').exclude(id=version.id)
             for old in old_live:
-                old.status = 'ARCHIVED'
+                old.status = 'HISTORY'
                 old.save()
-                print(f" 📦 Versión v{old.version_number} archivada.")
+                print(f" 📦 Versión v{old.version_number} archivada como HISTORY.")
         except Exception as e:
             print(f"Error archivando versión anterior: {e}")
 
-        # 0.5 CHECK FOR DELETE ACTION
         # 0.5 CHECK FOR DELETE ACTION
         if version.cambios and version.cambios.get('action') == 'DELETE':
             print(f" 🗑️ Ejecutando eliminación lógica de mundo '{version.world.name}' (v{version.version_number})")
             version.world.soft_delete()
             # Also mark version as ARCHIVED or LIVE?
             # It was approved, so it is technically "Executed". But since the world is gone (logically), maybe we keep the version as record.
-            version.status = 'ARCHIVED' 
+            version.status = 'HISTORY' 
             version.save()
             return
 

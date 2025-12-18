@@ -31,8 +31,17 @@ class CreateWorldUseCase:
             str: El J-ID del mundo creado (ej. "01").
         """
         # --- PASO 1: GENERACIÓN DEL J-ID (ENTIDAD) ---
-        # Nivel 1 (Caos) -> "01"
-        jid_entidad = "01"
+        # Buscar primer ID libre (Gap Filling) para Nivel 1 (2 caracteres)
+        from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM
+        from django.db.models.functions import Length
+        
+        existing = set(CaosWorldORM.objects.annotate(ilen=Length('id')).filter(ilen=2).values_list('id', flat=True))
+        
+        next_val = 1
+        while f"{next_val:02d}" in existing:
+            next_val += 1
+            
+        jid_entidad = f"{next_val:02d}"
         
         # --- PASO 3: PERSISTENCIA ---
         new_world = CaosWorld(

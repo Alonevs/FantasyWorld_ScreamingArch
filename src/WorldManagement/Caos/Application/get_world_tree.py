@@ -21,24 +21,29 @@ class GetWorldTreeUseCase:
         base_len = len(root.id.value)
         
         for node in descendants:
+            node_id_str = node.id.value
+            
+            # GHOST LOGIC: Hide "00" nodes unless they are materialized (Renamed)
+            is_ghost = node_id_str.endswith("00") and (node.name.startswith(("Ghost", "Nexo Fantasma")) or node.name in ("Placeholder", ""))
+            if is_ghost:
+                continue
+
+            # FILTER DRAFTS (User "borradas" feedback likely refers to Drafts hidden in main view)
+            status_val = node.status.value if hasattr(node.status, 'value') else str(node.status)
+            if status_val == 'DRAFT':
+                continue
+
             # Calculate depth based on ID length
             # Assuming ID structure: Root(2) -> Child(4) -> Grandchild(6) ...
-            depth = (len(node.id.value) - base_len) // 2
-            
-            # Note: We don't have public_id in the Entity yet (we just added is_public).
-            # But the repository implementation of find_descendants *could* populate it if we added it to Entity.
-            # For now, we rely on the fact that we might need to fetch it or just use ID.
-            # Wait, our Entity definition doesn't have public_id.
-            # We should probably add it to Entity for full DDD compliance.
-            # But for now, let's just use ID. The view can handle missing public_id or we assume ID is fine for internal tree.
+            depth = (len(node_id_str) - base_len) // 2
             
             tree_data.append({
                 'name': node.name,
-                'public_id': node.id.value, 
-                'id_display': f"..{node.id.value[-2:]}" if len(node.id.value) > 2 else node.id.value,
+                'public_id': node_id_str, 
+                'id_display': f"..{node_id_str[-2:]}" if len(node_id_str) > 2 else node_id_str,
                 'indent_px': depth * 30,
-                'is_root': node.id.value == root.id.value,
-                'status': node.status.value if hasattr(node.status, 'value') else node.status,
+                'is_root': node_id_str == root.id.value,
+                'status': status_val,
                 'visible': node.is_public
             })
             

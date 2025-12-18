@@ -24,27 +24,27 @@ class ContextBuilder:
 
         hierarchy = []
         
-        # 2. Recorrer hacia arriba (usando id_codificado)
-        # Asumimos que id_codificado es jerárquico (ej: "0102" -> padre "01")
-        if current_entity.id_codificado:
+        # 2. Recorrer hacia arriba (usando id)
+        # Asumimos que ID es jerárquico (ej: "0102" -> padre "01")
+        if current_entity.id:
             # Añadir actual
             hierarchy.append(current_entity)
             
-            current_code = current_entity.id_codificado
+            current_code = current_entity.id
             while len(current_code) > 2: # Asumiendo chunks de 2 chars o al menos que raíz es algo
                 # Cortar los últimos caracteres para obtener padre
                 # Estrategia: Si es "0102", padre es "01". Si es "010205", padre "0102".
                 # Asumimos bloques de 2 digitos por nivel.
                 parent_code = current_code[:-2] 
                 
-                parent = CaosWorldORM.objects.filter(id_codificado=parent_code).first()
+                parent = CaosWorldORM.objects.filter(id=parent_code).first()
                 if parent:
                     hierarchy.append(parent)
                     current_code = parent_code
                 else:
                     break
         else:
-            # Fallback: Solo la entidad actual si no tiene código jerárquico
+            # Fallback: Solo la entidad actual
             hierarchy.append(current_entity)
 
         # 3. Construir Texto (Desde Raíz a Hijo)
@@ -66,8 +66,7 @@ class ContextBuilder:
         # Misma lógica de resolución "cascada" que en ai_views
         criteria = [
             {'id': raw_id},
-            {'public_id': raw_id},
-            {'id_codificado': raw_id}
+            {'public_id': raw_id}
         ]
         
         for criterion in criteria:

@@ -3,8 +3,8 @@
 {% block content %}
 <div class="min-h-screen bg-[#050510] pb-32"> <!-- Padding bottom for sticky footer -->
     
-    <!-- HEADER -->
-    <div class="bg-gray-900 border-b border-gray-800 p-6">
+    <!-- HEADER (Sticky) -->
+    <div class="sticky top-16 z-[60] bg-gray-900/95 backdrop-blur border-b border-gray-800 p-6 shadow-xl transition-all">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
             <div>
                 <a href="{% url 'dashboard' %}" class="text-gray-500 hover:text-white mb-2 inline-flex items-center gap-1 text-sm bg-gray-800 px-3 py-1 rounded-full transition-colors">
@@ -29,15 +29,34 @@
                 </div>
 
                 <!-- TOP ACTIONS (Backup for Footer) -->
+                <!-- TOP ACTIONS -->
+                {% if is_pending %}
                 <form method="post" class="flex items-center gap-2">
                     {% csrf_token %}
-                    <button name="action" value="reject" class="px-4 py-2 rounded-lg bg-red-900/20 text-red-400 border border-red-900/50 hover:bg-red-900/50 hover:text-white font-bold transition-all text-sm">
-                        Rechazar
-                    </button>
-                    <button name="action" value="approve" class="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-500 font-bold shadow-lg transition-all text-sm flex items-center gap-1">
-                        <span>✓</span> Aprobar
-                    </button>
+                    {% if is_delete %}
+                        <!-- DELETE CONTEXT: REJECT = KEEP (Safe), APPROVE = DELETE (Destructive) -->
+                        <button name="action" value="reject" class="px-4 py-2 rounded-lg bg-green-900/20 text-green-400 border border-green-900/50 hover:bg-green-900/50 hover:text-white font-bold transition-all text-sm flex items-center gap-2" title="Cancelar borrado">
+                            <span>🛡️</span> Mantener
+                        </button>
+                        <button name="action" value="approve" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-500 font-bold shadow-lg transition-all text-sm flex items-center gap-1" onclick="return confirm('¿Confirmar ELIMINACIÓN de esta entidad?')">
+                            <span>💀</span> Confirmar Borrado
+                        </button>
+                    {% else %}
+                        <!-- STANDARD CONTEXT -->
+                        <button name="action" value="reject" class="px-4 py-2 rounded-lg bg-red-900/20 text-red-400 border border-red-900/50 hover:bg-red-900/50 hover:text-white font-bold transition-all text-sm">
+                            Rechazar
+                        </button>
+                        <button name="action" value="approve" class="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-500 font-bold shadow-lg transition-all text-sm flex items-center gap-1">
+                            <span>✓</span> Aprobar
+                        </button>
+                    {% endif %}
                 </form>
+                {% else %}
+                    <!-- READ ONLY BADGE -->
+                    <div class="px-4 py-2 rounded-lg bg-gray-800 border border-gray-700 text-gray-400 font-bold text-sm select-none cursor-default shadow-inner">
+                        {% if proposal.status == 'APPROVED' %}✅ APROBADO{% elif proposal.status == 'REJECTED' %}✕ RECHAZADO{% else %}ℹ️ {{ proposal.status }}{% endif %}
+                    </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -124,10 +143,31 @@
                 Estas a punto de modificar datos en <span class="text-white font-bold">Producción</span>.
             </div>
             
-            <!-- Footer Actions Removed as per request -->
-            <div class="flex items-center gap-4 opacity-50">
-                 <span class="text-xs text-gray-500">Usa los controles superiores para gestionar.</span>
-            </div>
+            <!-- FOOTER ACTIONS (Restored & Context Aware) -->
+            {% if is_pending %}
+            <form method="post" class="flex items-center gap-4">
+                 {% csrf_token %}
+                 {% if is_delete %}
+                    <button name="action" value="reject" class="px-6 py-3 rounded-xl bg-gray-800 text-green-400 border border-green-900/30 hover:bg-green-900/20 hover:border-green-500 transition-all font-bold flex items-center gap-2">
+                        <span>🛡️</span> MANTENER (Rechazar Borrado)
+                    </button>
+                    <button name="action" value="approve" class="px-6 py-3 rounded-xl bg-red-600 text-white shadow-[0_0_20px_rgba(220,38,38,0.4)] hover:shadow-[0_0_30px_rgba(220,38,38,0.6)] hover:scale-105 transition-all font-bold flex items-center gap-2" onclick="return confirm('⚠️ ¿CONFIRMAR BORRADO DEFINITIVO DE ESTE ITEM?')">
+                        <span>💀</span> CONFIRMAR BORRADO
+                    </button>
+                 {% else %}
+                    <button name="action" value="reject" class="px-6 py-3 rounded-xl bg-gray-800 text-red-400 border border-red-900/30 hover:bg-red-900/20 hover:border-red-500 transition-all font-bold">
+                        ✕ Rechazar Propuesta
+                    </button>
+                    <button name="action" value="approve" class="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.4)] hover:shadow-[0_0_30px_rgba(37,99,235,0.6)] hover:scale-105 transition-all font-bold flex items-center gap-2">
+                        <span>✓</span> APROBAR CAMBIOS
+                    </button>
+                 {% endif %}
+            </form>
+            {% else %}
+                 <div class="px-6 py-3 rounded-xl bg-gray-800/50 border border-gray-700/50 text-gray-500 font-bold flex items-center gap-2 cursor-not-allowed">
+                    <span>🔒</span> Esta propuesta ya ha sido procesada ({% if proposal.status == 'APPROVED' %}Aprobada{% elif proposal.status == 'REJECTED' %}Rechazada{% else %}{{proposal.status}}{% endif %}).
+                 </div>
+            {% endif %}
         </div>
     </div>
 

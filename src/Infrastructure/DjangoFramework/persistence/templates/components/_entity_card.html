@@ -22,10 +22,12 @@
         <div class="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
     </div>
     <div>
-        <div class="font-bold text-gray-200 group-hover:text-white transition-colors">{{ entity.name }}</div>
+        <div class="font-bold text-gray-200 group-hover:text-white transition-colors flex items-center">{{ entity.name }}</div>
         {% if user.is_superuser %}
         <div class="text-xs text-gray-500 font-mono">{{ entity.short|default:entity.public_id }}</div>
         {% endif %}
+        
+
     </div>
 </a>
 

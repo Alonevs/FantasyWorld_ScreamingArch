@@ -99,6 +99,17 @@
                             <span>✅</span> Aprobar (<span x-text="selectionCount"></span>)
                         </button>
                         {% endif %}
+                        <!-- BULK AGREGADO: RECHAZAR/BORRAR PROPUESTA -->
+                        {% if request.user.is_superuser or request.user.profile.rank == 'ADMIN' %}
+                        <button type="submit" form="bulk-approve-form" 
+                                formaction="{% url 'borrar_propuestas_masivo' %}"
+                                class="text-xs bg-red-900/30 hover:bg-red-600 text-red-400 hover:text-white px-3 py-1.5 rounded border border-red-900/50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                :disabled="selectionCount === 0"
+                                title="Rechazar/Borrar seleccionados"
+                                onclick="return confirm('¿RECHAZAR/BORRAR todas las propuestas seleccionadas? (Se eliminarán de la lista)')">
+                            <span>✕</span> Rechazar (<span x-text="selectionCount"></span>)
+                        </button>
+                        {% endif %}
                     </div>
                 </h2>
                 <p class="text-gray-500 mb-6 text-sm">Propuestas de tu equipo que requieren revisión y aprobación.</p>
@@ -192,10 +203,10 @@
                                             </form>
                                             
                                             <!-- RESTORE BUTTON (Active only) -->
-                                        <form method="post" action="{% if item.type == 'WORLD' %}{% url 'restaurar_version' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'restaurar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'restaurar_imagen' item.id %}{% endif %}">
+                                        <form method="post" action="{% if item.type == 'WORLD' %}{% url 'aprobar_version' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'aprobar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'aprobar_imagen' item.id %}{% endif %}">
                                             {% csrf_token %}
-                                            <button type="submit" class="text-blue-500 hover:text-white hover:bg-blue-600 px-3 py-1.5 rounded text-xs font-bold transition-all border border-blue-900/30 hover:border-blue-500 shadow-lg shadow-blue-900/10 flex items-center gap-1" title="Restaurar a Pendientes" onclick="return confirm('¿Restaurar esta propuesta a PENDIENTES?')">
-                                                <span>🔄</span> Restaurar
+                                            <button type="submit" class="text-red-500 hover:text-white hover:bg-red-600 px-3 py-1.5 rounded text-xs font-bold transition-all border border-red-900/30 hover:border-red-500 shadow-lg shadow-red-900/10 flex items-center gap-1" title="Confirmar Borrado Definitivo" onclick="return confirm('⚠️ ¿CONFIRMAR BORRADO? Esta acción eliminará el elemento.')">
+                                                <span>💀</span> Borrar
                                             </button>
                                         </form>
 
@@ -402,15 +413,143 @@
             </div>
             {% endif %}
     
-            <!-- RECHAZADAS -->
+            <!-- RECHAZADAS (REJECTED) -->
             {% if rejected %}
-            <div class="mb-16">
+            <div class="mb-16" x-data="{ selectionCount: 0 }" @change="selectionCount = document.querySelectorAll('.rejected-check:checked').length">
+                
+                <form id="bulk-rejected-form" method="post" action="{% url 'borrar_propuestas_masivo' %}">{% csrf_token %}</form>
+
                 <h2 class="text-2xl font-bold text-red-400 mb-4 flex justify-between items-center">
-                    <span>❌ Rechazadas (Últimas 10)</span>
-                    <button type="button" onclick="toggleSelectSection('rejected-list')" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded border border-gray-700 transition">Seleccionar Todo</button>
+                     <div class="flex items-center gap-3">
+                        <span>❌ Rechazadas (Últimas 10)</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                        <!-- BULK RESTORE -->
+                        <button type="submit" form="bulk-rejected-form" 
+                                formaction="{% url 'borrar_propuestas_masivo' %}" 
+                                name="action_type" value="restore" 
+                                class="text-xs bg-blue-900/30 hover:bg-blue-600 text-blue-400 hover:text-white px-3 py-1.5 rounded border border-blue-900/50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                :disabled="selectionCount === 0"
+                                onclick="return confirm('¿Restaurar seleccionados a PENDIENTES?')">
+                            <span>🔄</span> Restaurar (<span x-text="selectionCount"></span>)
+                        </button>
+
+                        <!-- BULK HARD DELETE (Superuser only) -->
+                        {% if request.user.is_superuser %}
+                        <button type="submit" form="bulk-rejected-form" 
+                                formaction="{% url 'borrar_propuestas_masivo' %}" 
+                                name="action_type" value="hard_delete" 
+                                class="text-xs bg-red-900/30 hover:bg-red-600 text-red-500 hover:text-white px-3 py-1.5 rounded border border-red-900/50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-900/20"
+                                :disabled="selectionCount === 0"
+                                onclick="return confirm('⚠️ PELIGRO ⚠️\n\n¿BORRAR DEFINITIVAMENTE del registro?\n\nEsta acción NO se puede deshacer.')">
+                            <span>💀</span> Borrar (<span x-text="selectionCount"></span>)
+                        </button>
+                        {% endif %}
+                    </div>
                 </h2>
-                <div id="rejected-list">
-                     {% include "components/_proposal_table.html" with items=rejected variant="rejected" %}
+
+                <div class="space-y-6">
+                    {% if grouped_rejected %}
+                        {% for group in grouped_rejected %}
+                        <div x-data="{ expanded: true }" class="flex flex-col bg-[#0f111a] border border-gray-800 rounded-xl overflow-hidden shadow-lg transition-all duration-300 opacity-80 hover:opacity-100">
+                            
+                            <!-- TOP: AUTHOR HEADER (HORIZONTAL) -->
+                            <div @click="expanded = !expanded" class="w-full bg-gray-900/80 p-3 flex items-center justify-between border-b border-gray-800 cursor-pointer hover:bg-gray-800/80 transition-colors select-none">
+                                <div class="flex items-center gap-3">
+                                    <div class="relative">
+                                        <div class="w-10 h-10 rounded-full bg-red-900/20 flex items-center justify-center text-sm text-red-400 font-bold shadow-lg ring-1 ring-red-500/30">
+                                            {% if group.author %}{{ group.author.username|slice:":1"|upper }}{% else %}?{% endif %}
+                                        </div>
+                                        <span class="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[10px] text-white font-mono border border-gray-900">
+                                            {{ group.count }}
+                                        </span>
+                                    </div>
+                                    <div class="flex flex-col leading-tight">
+                                        <span class="text-red-400 font-bold text-sm" title="{% if group.author %}{{ group.author.username }}{% else %}Sistema{% endif %}">
+                                            {% if group.author %}{{ group.author.username }}{% else %}Sistema{% endif %}
+                                        </span>
+                                        <span class="text-xs text-gray-500 font-mono">
+                                            {{ group.proposals|length }} rechazadas
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-gray-400 transition-transform duration-300" :class="{'rotate-180': expanded}">
+                                    ▼
+                                </button>
+                            </div>
+
+                            <!-- BOTTOM: PROPOSALS LIST -->
+                            <div x-show="expanded" class="flex-1 divide-y divide-gray-800/50 bg-black/20">
+                                {% for item in group.proposals %}
+                                <div class="p-4 hover:bg-white/5 transition-colors flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 group">
+                                    <!-- CHECKBOX -->
+                                    <div class="flex items-center justify-center pt-1 pl-1">
+                                        <input type="checkbox" form="bulk-rejected-form" 
+                                               name="{% if item.type == 'WORLD' %}selected_ids{% elif item.type == 'NARRATIVE' %}selected_narr_ids{% else %}selected_img_ids{% endif %}" 
+                                               value="{{ item.id }}" 
+                                               class="rejected-check w-4 h-4 rounded border-gray-600 bg-gray-700 text-red-500 focus:ring-red-500/50 cursor-pointer transition">
+                                    </div>
+
+                                    <!-- INFO -->
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold border opacity-60 grayscale
+                                                {% if item.type == 'WORLD' %} bg-blue-900/20 text-blue-400 border-blue-900/50
+                                                {% elif item.type == 'NARRATIVE' %} bg-purple-900/20 text-purple-400 border-purple-900/50
+                                                {% elif item.type == 'IMAGE' %} bg-pink-900/20 text-pink-400 border-pink-900/50
+                                                {% else %} bg-gray-800 text-gray-400 border-gray-700 {% endif %}">
+                                                {{ item.type_label }}
+                                            </span>
+                                            
+                                            <a href="{% url 'review_proposal' item.type item.id %}" class="text-gray-400 font-bold hover:text-white hover:underline truncate transition-colors text-sm line-through decoration-red-900/50">
+                                                {{ item.target_name|default:"(Sin Nombre)" }}
+                                            </a>
+                                            <span class="text-[10px] text-red-500 font-mono border border-red-900/30 px-1 rounded bg-red-900/10">REJECTED</span>
+                                        </div>
+                                        
+                                        <div class="flex items-center gap-2 text-xs text-gray-600 italic">
+                                            <span>v{{ item.version_number }}</span>
+                                            <span>-</span>
+                                            <span>{{ item.created_at|timesince }} ago</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- QUICK ACTIONS -->
+                                    <div class="flex items-center gap-2 shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
+                                        
+                                        <!-- Review -->
+                                        <a href="{% url 'review_proposal' item.type item.id %}" class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold px-3 py-2 rounded border border-gray-700 transition-all shadow-lg" title="Ver detalle">
+                                            <span>👁️</span>
+                                        </a>
+
+                                        <!-- Restore Button -->
+                                        <form method="post" action="{% if item.type == 'WORLD' %}{% url 'restaurar_version' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'restaurar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'restaurar_imagen' item.id %}{% endif %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="flex items-center gap-2 bg-blue-900/20 hover:bg-blue-600 text-blue-500 hover:text-white text-xs font-bold px-3 py-2 rounded border border-blue-900/50 transition-all shadow-lg" title="Restaurar a Pendientes" onclick="return confirm('¿Restaurar esta propuesta a PENDIENTES?')">
+                                                <span>🔄</span>
+                                            </button>
+                                        </form>
+
+                                        {% if request.user.is_superuser %}
+                                        <!-- Delete Forever -->
+                                        <form method="post" action="{% if item.type == 'WORLD' %}{% url 'borrar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'borrar_narrativa_version' item.id %}{% elif item.type == 'IMAGE' %}{% url 'borrar_imagen_definitivo' item.id %}{% endif %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="flex items-center gap-2 bg-red-900/20 hover:bg-red-600 text-red-500 hover:text-white text-xs font-bold px-3 py-2 rounded border border-red-900/50 transition-all shadow-lg" title="ELIMINAR DEFINITIVAMENTE" onclick="return confirm('⚠️ IRREVERSIBLE: ¿Borrar definitivamente?')">
+                                                <span>💀</span>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-gray-600 text-sm italic">No hay propuestas rechazadas recientes.</p>
+                    {% endif %}
                 </div>
             </div>
             {% endif %}

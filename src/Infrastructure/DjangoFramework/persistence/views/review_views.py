@@ -103,7 +103,15 @@ def review_proposal(request, type, id):
         ctx['is_image'] = True
 
 
-    # 2. HANDLE POST (APPROVE/REJECT)
+    # 2. DETECT DELETE INTENT
+    change_log_str = str(ctx.get('change_log', '') or "")
+    action_str = str(getattr(proposal, 'action', '') or "")
+    ctx['is_delete'] = ('DELETE' in action_str) or ('Eliminación' in change_log_str) or ('Borrar' in change_log_str)
+    
+    # 3. DETECT PENDING STATUS
+    ctx['is_pending'] = (getattr(proposal, 'status', 'PENDING') == 'PENDING')
+
+    # 4. HANDLE POST (APPROVE/REJECT)
     if request.method == 'POST':
         action = request.POST.get('action') # 'approve' or 'reject'
         

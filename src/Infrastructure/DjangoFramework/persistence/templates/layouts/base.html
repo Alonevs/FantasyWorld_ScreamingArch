@@ -49,13 +49,13 @@
     <!-- Alpine.js -->
     <script src="//unpkg.com/alpinejs" defer></script>
 </head>
-<body class="bg-dark text-gray-300 min-h-screen {% if user.is_authenticated %}pt-24{% endif %}">
+<body class="bg-dark text-gray-300 min-h-screen {% if user.is_authenticated %}pt-14{% endif %}">
     {% include 'components/_admin_bar.html' %}
 
     <!-- Toast Notifications -->
     <!-- Toast Notifications -->
     {% if messages %}
-    <div id="toast-container" class="fixed top-16 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4 pointer-events-none">
+    <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4 pointer-events-none">
         {% for message in messages %}
         <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)" 
              x-transition:enter="transition ease-out duration-300"

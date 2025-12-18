@@ -189,5 +189,5 @@ class CollaboratorWorkView(LoginRequiredMixin, TemplateView):
         # Assuming simple filter
         context['worlds'] = CaosWorldORM.objects.filter(author=target_user)
         # Using filter logic for narratives
-        context['narratives'] = CaosNarrativeORM.objects.filter(world__author=target_user).order_by('-id')[:10] # Approximation
+        context['narratives'] = CaosNarrativeORM.objects.filter(created_by=target_user).order_by('-created_at')[:10] # Approximation
         return context

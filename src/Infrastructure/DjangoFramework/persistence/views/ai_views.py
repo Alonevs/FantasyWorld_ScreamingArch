@@ -32,21 +32,17 @@ def analyze_metadata_api(request):
                     break
 
 
-        # RESOLUCION DE MUNDO POR ID_CODIFICADO (Jerárquico)
+        # RESOLUCION DE MUNDO POR ID (Jerárquico)
         w_orm = None
         
-        # Buscar por id_codificado (0101, 01, etc.)
+        # Intentar por ID (J-ID), PK o PublicID
         try:
-            w_orm = CaosWorldORM.objects.get(id_codificado=world_code)
+            w_orm = CaosWorldORM.objects.get(id=world_code)
         except CaosWorldORM.DoesNotExist:
-            # Fallback: intentar por PK o public_id si no es código jerárquico
             try:
-                w_orm = CaosWorldORM.objects.get(id=world_id_raw)
+                w_orm = CaosWorldORM.objects.get(public_id=world_id_raw)
             except CaosWorldORM.DoesNotExist:
-                try:
-                    w_orm = CaosWorldORM.objects.get(public_id=world_id_raw)
-                except CaosWorldORM.DoesNotExist:
-                    pass
+                pass
                 
         if not w_orm:
             return JsonResponse({

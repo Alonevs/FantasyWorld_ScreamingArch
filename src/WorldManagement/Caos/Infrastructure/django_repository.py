@@ -127,8 +127,7 @@ class DjangoCaosRepository(CaosRepository):
                 'metadata': creature.to_metadata_dict(),
                 'status': 'DRAFT',
                 'current_version_number': 1,
-                'current_author_name': 'AI_Genesis',
-                'id_codificado': None
+                'current_author_name': 'AI_Genesis'
             }
         )
         print(f" 🧬 [DB] Criatura guardada: {creature.name}")
@@ -264,12 +263,20 @@ class DjangoCaosRepository(CaosRepository):
         # Expected total len = len(prefix) + segment_len
         target_len = len(prefix) + segment_len
         
-        ultimo_hijo = CaosWorldORM.objects.filter(id__startswith=prefix).annotate(id_len=Length('id')).filter(id_len=target_len).aggregate(Max('id'))['id__max']
-
-        if not ultimo_hijo: siguiente_seq = 1
-        else:
-            segmento = ultimo_hijo[-segment_len:]
-            siguiente_seq = int(segmento) + 1
+        # GAP FILLING LOGIC: Find the first available number
+        siblings = CaosWorldORM.objects.filter(id__startswith=prefix).annotate(id_len=Length('id')).filter(id_len=target_len).values_list('id', flat=True)
+        
+        existing_nums = set()
+        for s_id in siblings:
+            try:
+                # Extract last N chars
+                seg = s_id[-segment_len:]
+                existing_nums.add(int(seg))
+            except: pass
+            
+        siguiente_seq = 1
+        while siguiente_seq in existing_nums:
+            siguiente_seq += 1
 
         if es_entidad: nuevo_segmento = f"{siguiente_seq:04d}"
         else: nuevo_segmento = f"{siguiente_seq:02d}"

@@ -26,96 +26,153 @@ class GetWorldDetailsUseCase:
         jid = w.id
         safe_pid = w.public_id if w.public_id else jid
         
-        # 3. Get Children
-        len_h = len(jid) + 2
-        raw_hijos = CaosWorldORM.objects.filter(id__startswith=jid, id__regex=r'^.{'+str(len_h)+r'}$').order_by('id')
-        
-        # Filter DRAFTs to ensure Live view only shows approved items
-        # if user and not user.is_superuser: (Removed user check to enforce strict view)
-        raw_hijos = raw_hijos.exclude(status='DRAFT')
-        
-        # Helper for images (this logic is currently in utils, we can import it or replicate)
+        # Helper for images
         from src.Infrastructure.DjangoFramework.persistence.utils import get_world_images, generate_breadcrumbs
         
-        hijos = []
-        hijos = []
+        # --- GHOST LOGIC (Transparent '00' Bridges) ---
+        # 1. Fetch ALL descendants
+        all_descendants = CaosWorldORM.objects.filter(id__startswith=jid, is_active=True).exclude(id=jid).order_by('id')
         
-        # --- DIRECT LINK / PADDED CHILDREN LOGIC ---
-        # We need to find all descendants that conceptually belong to THIS parent.
-        # This includes:
-        # 1. Direct children (len = parent + 2)
-        # 2. Deep children (len > parent + 2) whose intermediate ancestors DO NOT EXIST.
-        
-        # Fetch all descendants
-        all_descendants = CaosWorldORM.objects.filter(id__startswith=jid, is_active=True).exclude(id=jid).exclude(status='DRAFT').order_by('id')
-        
-        # Privacy Logic: Hide private entities for non-admins
+        # Strict Workflow: DRAFTS are pending proposals and should NOT be seen in "Live" view.
+        # Use Dashboard to review/approve them.
+        all_descendants = all_descendants.exclude(status='DRAFT')
+
+        # Privacy Logic (Visibility)
         if not (user and (user.is_superuser or user.is_staff)):
              all_descendants = all_descendants.filter(visible_publico=True)
+
+        nodes_map = {d.id: d for d in all_descendants}
+
+        # --- SOLIDIFY GHOSTS (Folder Logic) ---
+        # Identify Ghosts that contain Real Children and make them SOLID (Visible)
+        # This prevents "Hoisted" children from appearing in the wrong list.
+        solid_ghost_ids = set()
         
-        # Build a set of existing IDs for fast "parent exists" check
-        existing_ids = set(d.id for d in all_descendants)
-        existing_ids.add(jid) # Parent exists obviously
+        # Sort by length descending (Deepest first) to propagate solidity up
+        sorted_desc = sorted(all_descendants, key=lambda x: len(x.id), reverse=True)
         
+        # We need a quick lookup for immediate children existence of a specific ID?
+        # Actually, implied logic: If I am Solid, I mark my parent as "Contains Solid".
+        # But only if my parent is a Ghost that needs solidifying.
+        
+        # Helper to determine if a node is conceptually a ghost
+        def is_conceptually_ghost(node):
+            return node.id.endswith("00") and (node.name.startswith(("Ghost", "Nexo Fantasma")) or node.name in ("Placeholder", ""))
+
+        solid_ids = set() # IDs that are Real OR Solid Ghosts
+        
+        for d in sorted_desc:
+            is_ghost = is_conceptually_ghost(d)
+            
+            if not is_ghost:
+                # Real Node: It counts as Content.
+                solid_ids.add(d.id)
+                # Mark parent as having content (if parent exists and is within scope)
+                # Parent ID is strictly shorter.
+                if len(d.id) > len(jid): 
+                    # Assuming 2-char step.
+                    pid = d.id[:-2]
+                    # We add pid to 'needs_check' or 'solid_ids'? 
+                    # Actually, if we just check "If d in solid_ids, mark parent".
+                    pass
+            
+            # Propagation Logic
+            if d.id in solid_ids:
+                # If I am solid, my parent should be solid (if it's a ghost).
+                if len(d.id) > len(jid):
+                    pid = d.id[:-2]
+                    # If we don't know if parent is ghost yet, just mark it as "containing solid".
+                    # We can use a separate set "ids_with_content".
+                    solid_ids.add(pid) 
+                    # Wait, if parent is REAL, it's already in solid_ids (or will be).
+                    # If parent is GHOST, adding it to solid_ids makes it Visible.
+                    # This achieves exactly what we want.
+                    
+        # Now solid_ids contains everything that should be visible.
+        # But we must be careful not to make '00' visible if it has NO content.
+
         visible_children = []
         
         for d in all_descendants:
-            # Check "Immediate Parent"
-            # If my logical parent exists in the set, then I am NOT a direct child of 'jid' (I belong to them).
-            # If my logical parent DOES NOT exist, then I am orphaned -> show me here.
-            
-            # Determine logical parent ID (slice off last segment)
-            # Segments: usually 2 chars. Level 16 (Entity) might be 4 chars.
-            # We can try assuming 2 chars removal first.
-            # ID: ...0101 -> Parent: ...01 (exists?)
-            # ID: ...000001 -> Parent: ...0000 (does not exist?) -> GranParent: ...00 (no) -> JID (yes)
-            
-            # Simplified logic:
-            # Cut off 2 chars. If result exists in `existing_ids` AND result != jid, then this entity has a closer parent.
-            # So hide it.
-            # If result == jid, show it (direct child).
-            # If result not in existing_ids, try cutting 4 chars?
-            # Actually, we just need to know if there is ANY ancestor between JID and Child.
-            
-            # Better approach:
-            # Iterate potential ancestors from JID_LEN + 2 up to CHILD_LEN - 2.
-            # If any of those IDs exist in `existing_ids`, then this child is shadowed.
-            
+            # RULE 1: Ghosts themselves are INVISIBLE in the list
+            # Smart Ghost: Only if '00' AND name implies it's a generated ghost.
+            # But if it is in solid_ids (has real content), we SHOW it.
+            is_ghost_node = is_conceptually_ghost(d) and (d.id not in solid_ids)
+            if is_ghost_node:
+                continue
+
+            # RULE 2: Transparency Check
             is_shadowed = False
-            # Check for regular intermediate ancestors (step 2)
             for l in range(len(jid) + 2, len(d.id), 2):
                 intermediate_id = d.id[:l]
-                if intermediate_id in existing_ids:
-                    is_shadowed = True
-                    break
+                
+                # We check if the ancestor exists in our fetched descendants (or is the root, but root is excluded from all_descendants)
+                # If ancestor is in nodes_map, we check if it is SOLID.
+                ancestor = nodes_map.get(intermediate_id)
+                if ancestor:
+                    # If ancestor is NOT a ghost, it blocks view (Shadows the child)
+                    anc_raw_ghost = is_conceptually_ghost(ancestor)
+                    # If ancestor is a ghost BUT is solid (has content), it ALSO blocks view (acts as folder).
+                    # So we ignore it (is transparent) ONLY if it is a NON-SOLID Ghost.
+                    
+                    anc_is_transparent = anc_raw_ghost and (ancestor.id not in solid_ids)
+                    
+                    if not anc_is_transparent:
+                        is_shadowed = True
+                        break
             
             if not is_shadowed:
+                # Calculate levels for UI (Badge logic)
+                d.visual_level = len(d.id) // 2
+                
+                # Relative level for context 
+                parent_level = len(jid) // 2
+                d.relative_level = d.visual_level - parent_level
+                
+                # Detect Hoisting (Materialization Opportunity)
+                # If relative_level > 1, it means we skipped a level.
+                if d.relative_level > 1:
+                    # The immediate parent that SHOULD exist
+                    d.missing_parent_id = d.id[:(parent_level + 1) * 2] 
+                else:
+                    d.missing_parent_id = None
+
                 visible_children.append(d)
 
+        # SORTING: Prioritize "Real" Branches over "Ghost" Branches (starts with '00')
+        visible_children.sort(key=lambda x: (x.id[len(jid):len(jid)+2] == '00', x.id))
+
+        hijos = []
         for h in visible_children:
             h_pid = h.public_id if h.public_id else h.id
             imgs = get_world_images(h.id)
             
-            # Buscar portada primero, luego primera imagen
+            # Buscar portada
             img_url = None
             if imgs:
                 cover_img = next((img for img in imgs if img.get('is_cover')), None)
                 img_url = cover_img['url'] if cover_img else imgs[0]['url']
             
-            # Determine if it's a deep/padded child for UI hint
-            is_deep = (len(h.id) > len(jid) + 2) and (len(h.id) != 34) # Exclude standard Level 16 if parent is 15 (len 30->34)
-            # Actually level 16 logic: 30 chars -> 34 chars. +4.
-            # Just comparing len > len(jid)+2 is decent indicator of "something special" or deep.
+            # Calculate Absolute Level from JID length
+            level = len(h.id) // 2
             
-            hijos.append({
+            # Calculate Relative Level (0 based) for indentation
+            parent_level = len(jid) // 2
+            relative_level = level - parent_level
+            
+            child_data = {
                 'id': h.id, 
                 'public_id': h_pid, 
                 'name': h.name, 
                 'short': h.id[len(jid):], 
                 'img': img_url,
                 'images': [i['url'] for i in imgs][:5] if imgs else [],
-                'is_hoisted': is_deep
-            })
+                'level': level,
+                'relative_level': relative_level,
+                'missing_parent_id': getattr(h, 'missing_parent_id', None)
+            }
+            
+            hijos.append(child_data)
 
         # 4. Get Images
         imgs = get_world_images(jid)
@@ -146,7 +203,7 @@ class GetWorldDetailsUseCase:
             'name': w.name, 
             'description': w.description, 
             'jid': jid, 
-            'id_codificado': w.id_codificado,  # NUEVO: Para Auto-Noos correcto
+            'id_codificado': jid,  # Referencia al J-ID para compatibilidad de componentes JS
             'public_id': safe_pid,
             'status': w.status, 
             'version_live': w.current_version_number,
@@ -158,6 +215,7 @@ class GetWorldDetailsUseCase:
             'nid_lore': w.id_lore, 
             'metadata': meta_str, 
             'metadata_obj': w.metadata, 
+            'imagenes': imgs, 
             'imagenes': imgs, 
             'hijos': hijos, 
             'breadcrumbs': generate_breadcrumbs(jid), 

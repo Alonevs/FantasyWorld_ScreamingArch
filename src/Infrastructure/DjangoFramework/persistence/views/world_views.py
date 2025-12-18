@@ -84,10 +84,13 @@ def home(request):
         return redirect('dashboard')
     
     # Show LIVE worlds (and DRAFTS for Author/Superuser)
-    # 1. Base: Exclude deleted or invalid
-    ms = CaosWorldORM.objects.exclude(status='DELETED') \
+    # 1. Base: Exclude deleted, invalid, and DRAFTS (Strict Workflow)
+    ms = CaosWorldORM.objects.filter(is_active=True).exclude(status='DELETED').exclude(status='DRAFT') \
         .exclude(description__isnull=True).exclude(description__exact='') \
         .exclude(description__iexact='None') \
+        .exclude(id__endswith='00', name__startswith='Nexo Fantasma') \
+        .exclude(id__endswith='00', name__startswith='Ghost') \
+        .exclude(id__endswith='00', name='Placeholder') \
         .select_related('born_in_epoch', 'died_in_epoch') \
         .prefetch_related('versiones', 'narrativas') \
         .order_by('id')
@@ -181,13 +184,8 @@ def ver_mundo(request, public_id):
         if not w: return redirect('home') # Should handle better
         
         # --- SECURITY CHECK ---
-        # "Si no es tu mundo, no puedes crear hijos"
-        from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
-        try:
-            check_ownership(request.user, w)
-        except:
-             messages.error(request, "⛔ Solo el dueño puede expandir este mundo.")
-             return redirect('ver_mundo', public_id=public_id)
+        # Allow proposals from any authenticated user (Status will be PENDING)
+        # We removed the strict check_ownership() here to enable the "Suggestion/Proposal" workflow.
         # ----------------------
 
         jid = w.id
@@ -309,12 +307,8 @@ def editar_mundo(request, jid):
     w_orm = CaosWorldORM.objects.get(id=real_jid)
 
     # --- SECURITY CHECK ---
-    from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
-    try:
-        check_ownership(request.user, w_orm)
-    except:
-        messages.error(request, "⛔ ACCESO DENEGADO: No tienes permisos para editar este mundo.")
-        return redirect('ver_mundo', public_id=w_orm.public_id if w_orm.public_id else w_orm.id)
+    # We remove strict check_ownership() to allow PROPOSALS from any authenticated user.
+    # The actual edit action (ProposeChangeUseCase) is safe (PENDING status).
     # ----------------------
 
     # LOCK CHECK (Block edits if locked, unless Superuser)
@@ -732,3 +726,4 @@ def api_auto_noos(request, jid):
         import traceback
         traceback.print_exc()
         return JsonResponse({'status': 'error', 'message': f"Server Error: {str(e)}"})
+

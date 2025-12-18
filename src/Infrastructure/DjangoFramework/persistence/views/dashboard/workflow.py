@@ -118,6 +118,11 @@ def dashboard(request):
             x.target_desc = f"📸 Cambio: {x.cambios.get('cover_image')}"
         elif x.cambios.get('action') == 'TOGGLE_VISIBILITY':
             x.target_desc = f"👁️ Visibilidad"
+        
+        # Detect Deletion
+        if x.change_log and ("Eliminación" in x.change_log or "Borrar" in x.change_log):
+            x.action = 'DELETE'
+            
         x.target_link = x.world.public_id if x.world.public_id else x.world.id
 
     for x in n_pending + n_approved + n_rejected + n_archived:
@@ -127,6 +132,9 @@ def dashboard(request):
         x.target_desc = x.proposed_content
         x.target_link = x.narrative.public_id if hasattr(x.narrative, 'public_id') and x.narrative.public_id else x.narrative.nid
         x.parent_context = x.narrative.world.name
+        
+        if x.change_log and ("Eliminación" in x.change_log or "Borrar" in x.change_log):
+             x.action = 'DELETE'
 
     for x in i_pending + i_approved + i_rejected + i_archived:
         x.type = 'IMAGE'
@@ -136,6 +144,7 @@ def dashboard(request):
         if not hasattr(x, 'version_number'): x.version_number = 1 
         x.parent_context = x.world.name if x.world else "Global"
         x.change_log = x.target_desc
+        if "Borrar" in x.change_log: x.action = 'DELETE'
 
     pending = sorted(w_pending + n_pending + i_pending, key=lambda x: x.created_at, reverse=True)
     approved = sorted(w_approved + n_approved + i_approved, key=lambda x: x.created_at, reverse=True)
@@ -150,13 +159,15 @@ def dashboard(request):
 
     grouped_inbox = group_items_by_author(pending)
     grouped_approved = group_items_by_author(approved)
+    grouped_rejected = group_items_by_author(rejected)
     grouped_archived = group_items_by_author(archived)
     
     kpis = calculate_kpis(pending, logs_base)
 
     context = {
         'pending': pending, 'approved': approved, 'rejected': rejected, 'archived': archived,
-        'grouped_inbox': grouped_inbox, 'grouped_approved': grouped_approved, 'grouped_archived': grouped_archived,
+        'grouped_inbox': grouped_inbox, 'grouped_approved': grouped_approved, 
+        'grouped_rejected': grouped_rejected, 'grouped_archived': grouped_archived,
         'logs_world': logs_world, 'logs_narrative': logs_narrative, 'logs_image': logs_image, 'logs_other': logs_other,
         'total_pending_count': kpis['total_pending_count'], 'total_activity_count': kpis['total_activity_count'],
         'available_authors': allowed_authors, 'current_author': int(filter_author_id) if filter_author_id else None,
@@ -167,132 +178,115 @@ def dashboard(request):
 def centro_control(request):
     return redirect('dashboard')
 
-# --- ACTIONS ---
+# --- ACTIONS (Refactored) ---
+from .utils import execute_use_case_action, execute_orm_status_change, execute_orm_delete
 
+# --- WORLD ACTIONS ---
 @login_required
 @admin_only
 def aprobar_propuesta(request, id):
-    try:
-        if request.method == 'POST':
-            use_case = ApproveVersionUseCase(DjangoCaosRepository())
-            use_case.execute(id, request.user)
-            messages.success(request, "Propuesta aprobada.")
-            log_event(request.user, "APPROVE_WORLD_VERSION", id)
-    except Exception as e: messages.error(request, f"Error: {e}")
-    return redirect('dashboard')
+    # Allow GET for redirects from Review System
+    return execute_use_case_action(request, ApproveVersionUseCase, id, "Propuesta aprobada.", "APPROVE_WORLD_VERSION")
 
 @login_required
 @admin_only
 def rechazar_propuesta(request, id):
-    try:
-        use_case = RejectVersionUseCase(DjangoCaosRepository())
-        use_case.execute(id, request.user, reason="Rechazado Dashboard")
-        messages.success(request, "Rechazada.")
-        log_event(request.user, "REJECT_WORLD_VERSION", id)
-    except Exception as e: messages.error(request, str(e))
-    return redirect('dashboard')
+    return execute_use_case_action(request, RejectVersionUseCase, id, "Rechazada.", "REJECT_WORLD_VERSION")
 
 @login_required
 @admin_only
 def publicar_version(request, version_id):
-    try:
-        use_case = PublishToLiveVersionUseCase(DjangoCaosRepository())
-        use_case.execute(version_id, request.user)
-        messages.success(request, "¡LIVE!")
-        log_event(request.user, "PUBLISH_WORLD_VERSION", version_id)
-    except Exception as e: messages.error(request, str(e))
-    return redirect('dashboard')
+    return execute_use_case_action(request, PublishToLiveVersionUseCase, version_id, f"Versión {version_id} publicada LIVE.", "PUBLISH_LIVE")
 
 @login_required
 def archivar_propuesta(request, id):
-    try:
-        v = get_object_or_404(CaosVersionORM, id=id)
-        v.status = 'ARCHIVED'; v.save()
-        messages.success(request, "Archivado.")
-    except Exception as e: messages.error(request, str(e))
-    return redirect('dashboard')
+    return execute_orm_status_change(request, CaosVersionORM, id, 'ARCHIVED', "Archivado.", "ARCHIVE_VERSION")
 
 @login_required
 def restaurar_version(request, version_id):
-    try:
-        use_case = RestoreVersionUseCase(DjangoCaosRepository())
-        use_case.execute(version_id, request.user)
-        messages.success(request, "Restaurado.")
-    except Exception as e: messages.error(request, str(e))
-    return redirect('dashboard')
+    return execute_use_case_action(request, RestoreVersionUseCase, version_id, "Restaurado.", "RESTORE_VERSION")
 
 @login_required
 def borrar_propuesta(request, version_id):
-    try:
-        v = get_object_or_404(CaosVersionORM, id=version_id)
-        v.delete()
-        messages.success(request, "Eliminado.")
-    except Exception as e: messages.error(request, str(e))
-    return redirect('dashboard')
+    return execute_orm_delete(request, CaosVersionORM, version_id, "Eliminado.", "DELETE_VERSION")
+
+# --- NARRATIVE ACTIONS ---
 
 @login_required
 @admin_only
 def aprobar_narrativa(request, id):
-    try:
-        use_case = ApproveNarrativeVersionUseCase(DjangoCaosRepository())
-        use_case.execute(id, request.user)
-        messages.success(request, "Narrativa aprobada.")
-        log_event(request.user, "APPROVE_NARRATIVE", id)
-    except Exception as e: messages.error(request, str(e))
-    return redirect('dashboard')
+    return execute_use_case_action(request, ApproveNarrativeVersionUseCase, id, "Narrativa aprobada.", "APPROVE_NARRATIVE")
 
 @login_required
 @admin_only
 def rechazar_narrativa(request, id):
-    try:
-        use_case = RejectNarrativeVersionUseCase(DjangoCaosRepository())
-        use_case.execute(id, request.user, "Rechazado")
-        messages.success(request, "Narrativa rechazada.")
-    except Exception as e: messages.error(request, str(e))
-    return redirect('dashboard')
+    return execute_use_case_action(request, RejectNarrativeVersionUseCase, id, "Narrativa rechazada.", "REJECT_NARRATIVE")
 
 @login_required
 @admin_only
 def publicar_narrativa(request, id):
-    try:
-        use_case = PublishNarrativeToLiveUseCase(DjangoCaosRepository())
-        use_case.execute(id, request.user)
-        messages.success(request, "Narrativa LIVE.")
-    except Exception as e: messages.error(request, str(e))
-    return redirect('dashboard')
+    return execute_use_case_action(request, PublishNarrativeToLiveUseCase, id, "Narrativa LIVE.", "PUBLISH_NARRATIVE_LIVE")
 
 @login_required
 def archivar_narrativa(request, id):
-    try:
-        n = get_object_or_404(CaosNarrativeVersionORM, id=id)
-        n.status = 'ARCHIVED'; n.save()
-        messages.success(request, "Archivado.")
-    except Exception as e: messages.error(request, str(e))
-    return redirect('dashboard')
+    return execute_orm_status_change(request, CaosNarrativeVersionORM, id, 'ARCHIVED', "Archivado.", "ARCHIVE_NARRATIVE")
 
 @login_required
 def restaurar_narrativa(request, id):
-    try:
-        use_case = RestoreNarrativeVersionUseCase(DjangoCaosRepository())
-        use_case.execute(id, request.user)
-        messages.success(request, "Restaurada.")
-    except Exception as e: messages.error(request, str(e))
-    return redirect('dashboard')
+    return execute_use_case_action(request, RestoreNarrativeVersionUseCase, id, "Restaurada.", "RESTORE_NARRATIVE")
 
 @login_required
 def borrar_narrativa_version(request, id):
-    try:
-        v = get_object_or_404(CaosNarrativeVersionORM, id=id)
-        v.delete()
-        messages.success(request, "Versión eliminada.")
-    except Exception as e: messages.error(request, str(e))
+    return execute_orm_delete(request, CaosNarrativeVersionORM, id, "Versión eliminada.", "DELETE_NARRATIVE")
+
+# Bulk Logic
+@login_required
+def borrar_propuestas_masivo(request): 
+    # MULTI-PURPOSE BULK ACTION (Reject, Restore, Hard Delete)
+    if request.method == 'POST':
+        action_type = request.POST.get('action_type', 'reject')
+        w_ids = request.POST.getlist('selected_ids')
+        n_ids = request.POST.getlist('selected_narr_ids')
+        i_ids = request.POST.getlist('selected_img_ids')
+        
+        count = len(w_ids) + len(n_ids) + len(i_ids)
+        
+        if action_type == 'restore':
+            for id in w_ids: execute_use_case_action(request, RestoreVersionUseCase, id, "", "")
+            for id in n_ids: execute_use_case_action(request, RestoreNarrativeVersionUseCase, id, "", "")
+            CaosImageProposalORM.objects.filter(id__in=i_ids).update(status='PENDING')
+            messages.success(request, f"🔄 {count} Elementos restaurados a Pendientes.")
+            
+        elif action_type == 'hard_delete':
+            # Hard Delete
+            if request.user.is_superuser:
+                CaosVersionORM.objects.filter(id__in=w_ids).delete()
+                CaosNarrativeVersionORM.objects.filter(id__in=n_ids).delete()
+                CaosImageProposalORM.objects.filter(id__in=i_ids).delete()
+                messages.success(request, f"💀 {count} Elementos eliminados definitivamente.")
+            else:
+                messages.error(request, "⛔ Solo Superusuarios pueden borrar definitivamente.")
+                
+        else: # Default: REJECT (Cancel)
+            for id in w_ids: execute_use_case_action(request, RejectVersionUseCase, id, "", "")
+            for id in n_ids: execute_use_case_action(request, RejectNarrativeVersionUseCase, id, "", "")
+            CaosImageProposalORM.objects.filter(id__in=i_ids).update(status='REJECTED')
+            messages.success(request, f"✕ {count} Elementos rechazados.")
+
     return redirect('dashboard')
 
-# Bulk Placeholders
 @login_required
-def borrar_propuestas_masivo(request): return redirect('dashboard')
-@login_required
-def aprobar_propuestas_masivo(request): return redirect('dashboard')
+def aprobar_propuestas_masivo(request):
+    if request.method == 'POST':
+        w_ids = request.POST.getlist('selected_ids')
+        n_ids = request.POST.getlist('selected_narr_ids')
+        
+        for id in w_ids: execute_use_case_action(request, ApproveVersionUseCase, id, "", "")
+        for id in n_ids: execute_use_case_action(request, ApproveNarrativeVersionUseCase, id, "", "")
+        
+        messages.success(request, f"✅ {len(w_ids)+len(n_ids)} Propuestas aprobadas.")
+    return redirect('dashboard')
+
 @login_required
 def archivar_propuestas_masivo(request): return redirect('dashboard')
 @login_required

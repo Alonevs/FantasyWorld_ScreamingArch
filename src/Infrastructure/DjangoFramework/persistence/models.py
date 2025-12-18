@@ -30,7 +30,6 @@ class CaosWorldORM(models.Model):
         editable=False
     )
     
-    id_codificado = models.CharField(max_length=30, blank=True, null=True)
     name = models.CharField(max_length=150)
     description = models.TextField(null=True, blank=True)
     id_lore = models.CharField(max_length=40, null=True, blank=True)
@@ -45,6 +44,9 @@ class CaosWorldORM(models.Model):
     
     # OWNER / AUTHOR
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_entities')
+    
+    # PERMISSIONS
+    allow_proposals = models.BooleanField(default=True, help_text="Si True, permite propuestas de terceros.")
     
     # CONTROL DE BORRADO LÓGICO (SOFT DELETE)
     is_active = models.BooleanField(default=True, help_text="Si es False, está en la papelera.")
