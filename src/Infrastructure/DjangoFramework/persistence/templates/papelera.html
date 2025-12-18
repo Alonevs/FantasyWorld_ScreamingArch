@@ -16,25 +16,99 @@
 
     <div class="max-w-7xl mx-auto pb-24">
         
-        {% if deleted_items %}
-            <div class="grid gap-4">
-                {% for item in deleted_items %}
-                <div class="bg-card border border-red-900/30 p-6 rounded-xl shadow-lg flex flex-col md:flex-row justify-between items-center gap-4 group hover:border-red-500/50 transition">
-                    <div class="flex-grow">
-                        <h3 class="text-xl font-bold text-white mb-1">{{ item.name }}</h3>
-                        <div class="text-sm text-gray-500 font-mono mb-2">
-                            ID: {{ item.id }} <span class="mx-2">|</span> PID: {{ item.public_id }}
+        {% if grouped_trash %}
+            <div class="flex flex-col gap-8">
+                {% for author, types in grouped_trash.items %}
+                    <div class="bg-card/50 border border-gray-800 rounded-xl overflow-hidden p-6">
+                        <!-- Author Header -->
+                        <div class="flex items-center gap-3 mb-4 border-b border-gray-800 pb-2">
+                            <span class="text-2xl">👤</span>
+                            <h2 class="text-xl font-bold text-white">{{ author }}</h2>
                         </div>
-                        <p class="text-red-400 text-xs flex items-center gap-2">
-                            🗑️ Eliminado el: {{ item.deleted_at|date:"d/m/Y H:i" }}
-                        </p>
+
+                        <!-- WORLDS -->
+                        {% if types.Mundos %}
+                            <h3 class="text-sm uppercase tracking-widest text-gray-500 font-bold mb-3 pl-2 border-l-2 border-blue-500">🌍 Mundos</h3>
+                            <div class="grid gap-3 mb-6">
+                                {% for item in types.Mundos %}
+                                    <div class="bg-gray-900/40 border border-red-900/30 p-4 rounded-lg flex justify-between items-center group hover:border-red-500/50 transition">
+                                        <div>
+                                            <h4 class="font-bold text-white">{{ item.name }}</h4>
+                                            <div class="text-xs text-red-400 flex gap-2">
+                                                <span>{{ item.deleted_at|date:"d/m/Y H:i" }}</span>
+                                                <span class="text-gray-600">|</span>
+                                                <span>ID: {{ item.public_id }}</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <a href="{% url 'borrar_mundo_definitivo' item.id %}" onclick="return confirm('⚠️ ¿Estás seguro? Esto borrará el mundo y todo su contenido PARA SIEMPRE. No se puede deshacer.')" class="px-3 py-1.5 bg-red-600/10 hover:bg-red-600 text-red-400 hover:text-white text-xs font-bold rounded border border-red-600/30 transition">
+                                                ELIMINAR
+                                            </a>
+                                            <a href="{% url 'restaurar_entidad_fisica' item.id %}" class="px-4 py-1.5 bg-green-600/20 hover:bg-green-600 text-green-400 hover:text-white text-xs font-bold rounded border border-green-600/30 transition">
+                                                RESTAURAR
+                                            </a>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <!-- NARRATIVES -->
+                        {% if types.Narrativas %}
+                            <h3 class="text-sm uppercase tracking-widest text-gray-500 font-bold mb-3 pl-2 border-l-2 border-purple-500">📜 Narrativas</h3>
+                            <div class="grid gap-3">
+                                {% for item in types.Narrativas %}
+                                    <div class="bg-gray-900/40 border border-red-900/30 p-4 rounded-lg flex justify-between items-center group hover:border-red-500/50 transition">
+                                        <div>
+                                            <h4 class="font-bold text-white">{{ item.titulo }}</h4>
+                                            <div class="text-xs text-red-400 flex gap-2">
+                                                <span>{{ item.deleted_at|date:"d/m/Y H:i" }}</span>
+                                                <span class="text-gray-600">|</span>
+                                                <span>Tipo: {{ item.tipo }}</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <a href="{% url 'borrar_narrativa_definitivo' item.nid %}" onclick="return confirm('⚠️ ¿Estás seguro? Esto borrará la narrativa PARA SIEMPRE.')" class="px-3 py-1.5 bg-red-600/10 hover:bg-red-600 text-red-400 hover:text-white text-xs font-bold rounded border border-red-600/30 transition">
+                                                ELIMINAR
+                                            </a>
+                                            <a href="{% url 'restaurar_narrativa' item.nid %}" class="px-4 py-1.5 bg-green-600/20 hover:bg-green-600 text-green-400 hover:text-white text-xs font-bold rounded border border-green-600/30 transition">
+                                                RESTAURAR
+                                            </a>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <!-- IMAGES -->
+                        {% if types.Imagenes %}
+                            <h3 class="text-sm uppercase tracking-widest text-gray-500 font-bold mb-3 pl-2 border-l-2 border-yellow-500">🖼️ Imágenes</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {% for item in types.Imagenes %}
+                                    <div class="bg-gray-900/40 border border-red-900/30 p-3 rounded-lg group hover:border-red-500/50 transition">
+                                        <div class="relative aspect-video mb-3 bg-black/50 rounded overflow-hidden border border-gray-800">
+                                            <img src="{{ item.trash_path }}" alt="Trash Preview" class="w-full h-full object-contain opacity-75 group-hover:opacity-100 transition">
+                                        </div>
+                                        <div class="flex justify-between items-start mb-3">
+                                            <div>
+                                                <h4 class="font-bold text-white text-sm truncate w-40" title="{{ item.target_filename }}">{{ item.target_filename }}</h4>
+                                                <div class="text-xs text-red-400">
+                                                    {{ item.created_at|date:"d/m/Y H:i" }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="flex gap-2 justify-end">
+                                            <a href="{% url 'borrar_imagen_definitivo' item.id %}" onclick="return confirm('⚠️ ¿Borrar imagen permanentemente?')" class="px-3 py-1 bg-red-600/10 hover:bg-red-600 text-red-400 hover:text-white text-xs font-bold rounded border border-red-600/30 transition">
+                                                ELIMINAR
+                                            </a>
+                                            <a href="{% url 'restaurar_imagen_papelera' item.id %}" class="px-3 py-1 bg-green-600/20 hover:bg-green-600 text-green-400 hover:text-white text-xs font-bold rounded border border-green-600/30 transition">
+                                                RESTAURAR
+                                            </a>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
-                    <div>
-                        <a href="{% url 'restaurar_entidad_fisica' item.id %}" class="px-6 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg font-bold shadow-lg shadow-green-900/20 transition flex items-center gap-2">
-                            ♻️ RESTAURAR
-                        </a>
-                    </div>
-                </div>
                 {% endfor %}
             </div>
         {% else %}

@@ -4,144 +4,407 @@
 {% block title %}ECLAI | Dashboard{% endblock %}
 
 {% block content %}
-    <!-- DASHBOARD HEADER -->
-    <div class="flex justify-between items-center mb-6 bg-gray-900/80 p-4 rounded-xl border border-gray-800 backdrop-blur-md mx-4 mt-4 max-w-7xl xl:mx-auto">
-        <div class="text-xl font-bold tracking-widest text-white">
-            ECLAI <span class="text-xs text-accent ml-2 bg-purple-900/30 px-2 py-1 rounded border border-purple-800">DASHBOARD</span>
-        </div>
-        <div class="flex gap-2">
-            <a href="{% url 'ver_papelera' %}" class="px-4 py-2 bg-red-900/40 hover:bg-red-900/70 border border-red-800 text-red-200 rounded-lg text-sm transition flex items-center gap-2">
-                🗑️ Papelera
-            </a>
-            <a href="{% url 'home' %}" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm border border-gray-700 transition">🏠 Inicio</a>
-        </div>
-    </div>
-
-    <div class="max-w-7xl mx-auto pb-24 px-4">
+    <div class="max-w-7xl mx-auto pb-24 px-4 pt-6">
         
         <form id="bulk-delete-form" method="POST" action="{% url 'borrar_propuestas_masivo' %}">
             {% csrf_token %}
             
-            <!-- Floating Action Bar -->
-            <div id="floating-bar" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900/95 backdrop-blur-md border border-gray-700 px-6 py-3 rounded-full shadow-2xl z-40 flex items-center gap-4 transition-transform duration-300 translate-y-32">
-                <span class="text-white font-bold text-sm"><span id="selected-count">0</span> seleccionados</span>
-                
-                <button type="submit" formaction="{% url 'aprobar_propuestas_masivo' %}" class="bg-green-600 hover:bg-green-500 text-white font-bold px-4 py-1.5 rounded-full text-sm transition shadow-lg flex items-center gap-2">
-                    ✅ APROBAR SELECCIONADOS
-                </button>
-                
-                <button type="submit" formaction="{% url 'borrar_propuestas_masivo' %}" class="bg-red-600 hover:bg-red-500 text-white font-bold px-4 py-1.5 rounded-full text-sm transition shadow-lg flex items-center gap-2" onclick="return confirm('¿Estás seguro de borrar los elementos seleccionados? Esta acción es irreversible.')">
-                    🗑️ BORRAR
-                </button>
-            </div>
-
-            <!-- IMÁGENES PENDIENTES -->
-            {% if img_pending %}
-            <h1 class="text-3xl font-bold text-white mb-6 flex justify-between items-center">
-                <span>🖼️ Imágenes Pendientes</span>
-                <button type="button" onclick="toggleSelectSection('img-pending-list')" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded border border-gray-700 transition">Seleccionar Todo</button>
-            </h1>
-            <div id="img-pending-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-                {% for img in img_pending %}
-                <div class="bg-card border border-pink-900/30 rounded-xl overflow-hidden shadow-lg relative group">
-                    <div class="absolute top-2 right-2 z-10">
-                        <input type="checkbox" name="selected_img_ids" value="{{ img.id }}" class="w-5 h-5 accent-green-500 cursor-pointer item-checkbox" onchange="updateFloatingBar()">
-                    </div>
-
-                    <div class="h-48 overflow-hidden bg-black relative">
-                        {% if img.image %}
-                            <img src="{{ img.image.url }}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition">
-                        {% elif img.action == 'DELETE' %}
-                            <div class="relative w-full h-full">
-                                <img src="/static/persistence/img/{{ img.world.id }}/{{ img.target_filename }}" class="w-full h-full object-cover opacity-50 grayscale group-hover:grayscale-0 transition">
-                                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                    <span class="text-6xl drop-shadow-lg">🗑️</span>
-                                </div>
-                            </div>
-                        {% else %}
-                            <div class="w-full h-full flex items-center justify-center bg-red-900/20 text-red-500 font-bold text-4xl">?</div>
-                        {% endif %}
-                        
-                        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                            <span class="text-xs text-white font-bold">
-                                {% if img.action == 'DELETE' %}🗑️ BORRAR: {{ img.target_filename }}{% else %}{{ img.title }}{% endif %}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="p-4">
-                        <p class="text-xs text-gray-500 mb-2">Para: {{ img.world.name }}</p>
-                        <div class="flex justify-between items-center text-xs text-gray-600 font-mono mb-4">
-                            <span>👤 {{ img.author.username|default:"Anónimo" }}</span>
-                            <span>{{ img.created_at|date:"d/m H:i" }}</span>
-                        </div>
-                        <div class="flex gap-2">
-                            {% if img.action == 'DELETE' %}
-                                <a href="{% url 'rechazar_imagen' img.id %}" class="flex-1 py-2 bg-green-900/20 hover:bg-green-600 text-green-400 hover:text-white rounded text-center font-bold transition border border-green-900/50">✅ Mantener</a>
-                                <a href="{% url 'aprobar_imagen' img.id %}" class="flex-1 py-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded text-center font-bold transition border border-red-900/50" onclick="return confirm('¿Confirmar borrado definitivo?')">🗑️ Borrar</a>
-                            {% else %}
-                                <a href="{% url 'aprobar_imagen' img.id %}" class="flex-1 py-2 bg-green-900/20 hover:bg-green-600 text-green-400 hover:text-white rounded text-center font-bold transition border border-green-900/50">✅ Aprobar</a>
-                                <a href="{% url 'rechazar_imagen' img.id %}" class="flex-1 py-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded text-center font-bold transition border border-red-900/50" onclick="return confirm('¿Rechazar y borrar?')">✕ Rechazar</a>
-                            {% endif %}
-                        </div>
-                    </div>
+            <!-- FILTER BAR (UNIFIED CONTROL CENTER) -->
+            <div class="mb-8 bg-gray-900/50 p-4 rounded-xl border border-white/5 backdrop-blur-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div class="flex items-center gap-2 w-full md:w-auto">
+                    <span class="text-2xl">🎛️</span>
+                    <h2 class="text-lg font-bold text-white">Centro de Control</h2>
                 </div>
-                {% endfor %}
-            </div>
-            {% endif %}
 
-            <!-- PENDIENTES -->
-            <h1 class="text-3xl font-bold text-white mb-6 flex justify-between items-center">
-                <span>⚡ Propuestas Pendientes</span>
-                <button type="button" onclick="toggleSelectSection('pending-list')" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded border border-gray-700 transition">Seleccionar Todo</button>
-            </h1>
-    
-            {% if pending %}
-            <div id="pending-list" class="grid gap-4">
-                {% for item in pending %}
-                    {% include "components/_proposal_card.html" with item=item variant="pending" %}
-                {% endfor %}
+                <div class="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+                    <!-- 1. SEARCH -->
+                    <div class="relative group">
+                        <span class="absolute left-3 top-2.5 text-gray-500 group-focus-within:text-blue-400">🔍</span>
+                        <input type="text" name="q" value="{{ search_query|default:'' }}" 
+                               form="filter-form"
+                               placeholder="Buscar por nombre..." 
+                               class="bg-black/40 border border-white/10 rounded-lg py-2 pl-9 pr-4 text-sm text-white w-full md:w-64 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all">
+                    </div>
+
+                    <!-- 2. FILTER BY USER (Jurisdiction) -->
+                    <select name="author" form="filter-form" class="bg-black/40 border border-white/10 rounded-lg py-2 px-3 text-sm text-gray-300 focus:border-blue-500 outline-none cursor-pointer hover:bg-white/5 transition-colors [&>option]:bg-gray-900 [&>option]:text-gray-300">
+                        <option value="">👤 Todos los Autores</option>
+                        {% for user in available_authors %}
+                            <option value="{{ user.id }}" {% if current_author == user.id %}selected{% endif %}>
+                                {{ user.username }} {% if user == request.user %}(Tú){% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+
+                    <!-- 3. FILTER BY TYPE -->
+                    <select name="type" form="filter-form" class="bg-black/40 border border-white/10 rounded-lg py-2 px-3 text-sm text-gray-300 focus:border-blue-500 outline-none cursor-pointer hover:bg-white/5 transition-colors [&>option]:bg-gray-900 [&>option]:text-gray-300">
+                        <option value="">📂 Todo el Contenido</option>
+                        <option value="WORLD" {% if current_type == 'WORLD' %}selected{% endif %}>🌍 Mundos</option>
+                        <option value="NARRATIVE" {% if current_type == 'NARRATIVE' %}selected{% endif %}>📖 Narrativas</option>
+                        <option value="IMAGE" {% if current_type == 'IMAGE' %}selected{% endif %}>🖼️ Imágenes</option>
+                    </select>
+
+                    <!-- SUBMIT -->
+                    <button type="submit" form="filter-form" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition shadow-lg">
+                        Filtrar
+                    </button>
+                    
+                    {% if search_query or current_author or current_type %}
+                    <a href="{% url 'dashboard' %}" class="bg-red-900/40 hover:bg-red-900/60 text-red-300 py-2 px-3 rounded-lg text-sm transition border border-red-800/50 flex items-center justify-center">
+                        ✕
+                    </a>
+                    {% endif %}
+                </div>
             </div>
-            {% else %}
-            <div class="text-center py-20 bg-card border border-dashed border-gray-800 rounded-xl">
-                <div class="text-6xl mb-4">🎉</div>
-                <h3 class="text-xl font-bold text-white mb-2">Todo al día</h3>
-                <p class="text-gray-500">No hay propuestas pendientes de revisión.</p>
+            
+            <!-- Hidden Form for GET Filters -->
+            <form id="filter-form" method="GET" action="{% url 'dashboard' %}"></form>
+
+
+
+
+
+            <!-- METRICS SUMMARY (KPIs) -->
+            {% include "components/_dashboard_metrics.html" %}
+
+            <!-- INBOX (PENDING) -->
+            <div class="mb-12" x-data="{ selectionCount: 0 }" @change="selectionCount = document.querySelectorAll('.pending-check:checked').length">
+                
+                <form id="bulk-approve-form" method="post" action="{% url 'aprobar_propuestas_masivo' %}">{% csrf_token %}</form>
+
+                <h2 class="text-2xl font-bold text-white mb-6 flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <span>📬 Propuestas Pendientes</span>
+                        <span class="text-xs bg-blue-900/50 text-blue-300 px-3 py-1 rounded-full border border-blue-800">{{ total_pending_count }}</span>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <!-- BULK VIEW (Images only) -->
+                        <button type="submit" form="bulk-approve-form" 
+                                formaction="{% url 'batch_revisar_imagenes' %}"
+                                class="text-xs bg-indigo-900/30 hover:bg-indigo-600 text-indigo-400 hover:text-white px-3 py-1.5 rounded border border-indigo-900/50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                :disabled="selectionCount === 0"
+                                title="Ver imágenes seleccionadas">
+                            <span>👁️</span> Ver (<span x-text="selectionCount"></span>)
+                        </button>
+
+                        <!-- BULK APPROVE BUTTON -->
+                        <button type="submit" form="bulk-approve-form" 
+                                class="text-xs bg-green-900/30 hover:bg-green-600 text-green-400 hover:text-white px-3 py-1.5 rounded border border-green-900/50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                :disabled="selectionCount === 0"
+                                title="Aprobar seleccionados"
+                                onclick="return confirm('¿Aprobar todas las propuestas seleccionadas?')">
+                            <span>✅</span> Aprobar (<span x-text="selectionCount"></span>)
+                        </button>
+                    </div>
+                </h2>
+                <p class="text-gray-500 mb-6 text-sm">Propuestas de tu equipo que requieren revisión y aprobación.</p>
+
+                {% if pending and grouped_inbox %}
+
+                    <div class="space-y-6">
+                        {% for group in grouped_inbox %}
+                        <div x-data="{ expanded: true }" class="flex flex-col bg-[#0f111a] border border-gray-800 rounded-xl overflow-hidden shadow-lg transition-all duration-300">
+                            
+                            <!-- TOP: AUTHOR HEADER (HORIZONTAL) -->
+                            <div @click="expanded = !expanded" class="w-full bg-gray-900/80 p-3 flex items-center justify-between border-b border-gray-800 cursor-pointer hover:bg-gray-800/80 transition-colors select-none">
+                                <div class="flex items-center gap-3">
+                                    <div class="relative">
+                                        <div class="w-10 h-10 rounded-full bg-indigo-900 flex items-center justify-center text-sm text-white font-bold shadow-lg ring-2 ring-indigo-500/30">
+                                            {% if group.author %}{{ group.author.username|slice:":1"|upper }}{% else %}?{% endif %}
+                                        </div>
+                                        <span class="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[10px] text-white font-mono border border-gray-900">
+                                            {{ group.count }}
+                                        </span>
+                                    </div>
+                                    <div class="flex flex-col leading-tight">
+                                        <span class="text-blue-400 font-bold text-sm" title="{% if group.author %}{{ group.author.username }}{% else %}Sistema{% endif %}">
+                                            {% if group.author %}{{ group.author.username }}{% else %}Sistema{% endif %}
+                                        </span>
+                                        <span class="text-xs text-gray-500 font-mono">
+                                            {{ group.proposals|length }} propuestas pendientes
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Toggle Icon -->
+                                <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-gray-400 transition-transform duration-300" :class="{'rotate-180': expanded}">
+                                    ▼
+                                </button>
+                            </div>
+
+                            <!-- BOTTOM: PROPOSALS LIST -->
+                            <div class="flex-1 divide-y divide-gray-800/50 bg-black/20">
+                                {% for item in group.proposals %}
+                                <!-- Item Container: 5 items always visible, others toggle -->
+                                <div {% if forloop.counter > 5 %}x-show="expanded" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2"{% endif %} class="p-4 hover:bg-white/5 transition-colors flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 group">
+                                    <!-- CHECKBOX -->
+                                    <div class="flex items-center justify-center pt-1 pl-1">
+                                        <input type="checkbox" form="bulk-approve-form" 
+                                               name="{% if item.type == 'WORLD' %}selected_ids{% elif item.type == 'NARRATIVE' %}selected_narr_ids{% else %}selected_img_ids{% endif %}" 
+                                               value="{{ item.id }}" 
+                                               class="pending-check w-4 h-4 rounded border-gray-600 bg-gray-700 text-green-500 focus:ring-green-500/50 cursor-pointer transition">
+                                    </div>
+
+                                    <!-- INFO -->
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <!-- TYPE BADGE -->
+                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold border opacity-80
+                                                {% if item.type == 'WORLD' %} bg-blue-900/20 text-blue-400 border-blue-900/50
+                                                {% elif item.type == 'NARRATIVE' %} bg-purple-900/20 text-purple-400 border-purple-900/50
+                                                {% elif item.type == 'IMAGE' %} bg-pink-900/20 text-pink-400 border-pink-900/50
+                                                {% else %} bg-gray-800 text-gray-400 border-gray-700 {% endif %}">
+                                                {{ item.type_label }}
+                                            </span>
+                                            
+                                            <a href="{% if item.type == 'IMAGE' %}{% url 'revisar_imagen' item.id %}{% else %}{% url 'review_proposal' item.type item.id %}{% endif %}" class="text-gray-200 font-bold hover:text-blue-400 hover:underline truncate transition-colors text-sm">
+                                                {{ item.target_name|default:"(Sin Nombre)" }}
+                                            </a>
+                                            <span class="text-[10px] text-gray-600 font-mono">v{{ item.version_number }}</span>
+                                        </div>
+                                        
+                                        <div class="flex items-center gap-2 text-xs text-gray-500">
+                                            {% if item.change_log %}
+                                            <span class="italic text-gray-400">"{{ item.change_log|truncatechars:60 }}"</span>
+                                            {% endif %}
+                                            
+                                            <!-- Time Ago (New) -->
+                                            <span class="ml-auto text-[10px] text-gray-600 font-mono">{{ item.created_at|timesince }} ago</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- QUICK ACTIONS -->
+                                    <div class="flex items-center gap-2 shrink-0 opacity-80 group-hover:opacity-100 transition-opacity">
+                                        
+                                        {% if item.action == 'DELETE' %}
+                                            <!-- DELETE LOGIC: Green=Keep (Reject Proposal), Red=Delete (Approve Proposal) -->
+                                            
+                                            <!-- Green: MANTENER (Reject deletion) -->
+                                            <form method="post" action="{% if item.type == 'WORLD' %}{% url 'rechazar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'rechazar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'rechazar_imagen' item.id %}{% endif %}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="text-green-500 hover:text-white hover:bg-green-600 px-3 py-1.5 rounded text-xs font-bold transition-all border border-green-900/30 hover:border-green-500 shadow-lg shadow-green-900/10 flex items-center gap-1" title="Mantener (Rechazar borrado)" onclick="return confirm('¿Mantener este elemento y cancelar el borrado?')">
+                                                    <span>🛡️</span> Mantener
+                                                </button>
+                                            </form>
+                                            
+                                            <!-- RESTORE BUTTON (Active only) -->
+                                        <form method="post" action="{% if item.type == 'WORLD' %}{% url 'restaurar_version' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'restaurar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'restaurar_imagen' item.id %}{% endif %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="text-blue-500 hover:text-white hover:bg-blue-600 px-3 py-1.5 rounded text-xs font-bold transition-all border border-blue-900/30 hover:border-blue-500 shadow-lg shadow-blue-900/10 flex items-center gap-1" title="Restaurar a Pendientes" onclick="return confirm('¿Restaurar esta propuesta a PENDIENTES?')">
+                                                <span>🔄</span> Restaurar
+                                            </button>
+                                        </form>
+
+                                        {% else %}
+                                            <!-- STANDARD LOGIC: Green=Approve, Red=Reject -->
+                                            
+                                            <!-- Approve (Step 1) -->
+                                            <form method="post" action="{% if item.type == 'WORLD' %}{% url 'aprobar_version' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'aprobar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'aprobar_imagen' item.id %}{% endif %}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="text-green-500 hover:text-white hover:bg-green-600 px-3 py-1.5 rounded text-xs font-bold transition-all border border-green-900/30 hover:border-green-500 shadow-lg shadow-green-900/10" title="Aprobar" onclick="return confirm('¿Aprobar esta propuesta?')">
+                                                    Aprobar
+                                                </button>
+                                            </form>
+                                            
+                                            <!-- Review (Images in New Tab) -->
+                                            <a href="{% url 'review_proposal' item.type item.id %}" {% if item.type == 'IMAGE' %}target="_blank"{% endif %} class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold px-3 py-2 rounded border border-gray-700 transition-all shadow-lg" title="Ver detalle">
+                                                <span>👁️</span> <span class="hidden sm:inline">Ver</span>
+                                            </a>
+
+                                            <!-- Reject (New) -->
+                                            <form method="post" action="{% if item.type == 'WORLD' %}{% url 'rechazar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'rechazar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'rechazar_imagen' item.id %}{% endif %}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="text-red-500 hover:text-white hover:bg-red-600 px-3 py-1.5 rounded text-xs font-bold transition-all border border-red-900/30 hover:border-red-500 shadow-lg shadow-red-900/10" onclick="return confirm('¿Rechazar definitivamente?')">
+                                                    ✕
+                                                </button>
+                                            </form>
+                                        {% endif %}
+
+                                        <!-- Review Button for DELETE? Usually helpful to see what is being deleted.
+                                             If in DELETE mode, I replaced the block, so button missing.
+                                             I should add "Ver" button to DELETE block too. -->
+                                        {% if item.action == 'DELETE' %}
+                                            <a href="{% url 'review_proposal' item.type item.id %}" {% if item.type == 'IMAGE' %}target="_blank"{% endif %} class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold px-3 py-2 rounded border border-gray-700 transition-all shadow-lg" title="Ver detalle">
+                                                <span>👁️</span>
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-12 bg-card border border-dashed border-gray-800 rounded-xl">
+                        <div class="text-4xl mb-4 opacity-50">📭</div>
+                        <h3 class="text-lg font-bold text-gray-400 mb-1">Buzón vacío</h3>
+                        <p class="text-gray-600 text-sm">No hay propuestas de tu equipo pendientes de revisión.</p>
+                    </div>
+                {% endif %}
             </div>
-            {% endif %}
-    
-            <!-- APROBADAS -->
-            <h2 class="text-2xl font-bold text-green-400 mt-12 mb-4 flex justify-between items-center">
-                <span>✅ Aprobadas (Listas para Live)</span>
-                <button type="button" onclick="toggleSelectSection('approved-list')" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded border border-gray-700 transition">Seleccionar Todo</button>
-            </h2>
+
+            <!-- APROBADAS (READY TO PUBLISH/LIVE) -->
             {% if approved %}
-            <div id="approved-list" class="grid gap-4">
-                {% for item in approved %}
-                    {% include "components/_proposal_card.html" with item=item variant="approved" %}
-                {% endfor %}
+            <div class="mb-16" x-data="{ selectionCount: 0 }" @change="selectionCount = document.querySelectorAll('.approved-check:checked').length">
+                
+                <form id="bulk-archive-approved-form" method="post" action="{% url 'archivar_propuestas_masivo' %}">{% csrf_token %}</form>
+
+                <h2 class="text-2xl font-bold text-green-400 mb-4 flex justify-between items-center">
+                     <div class="flex items-center gap-3">
+                        <span>✅ Aprobadas (Listas para Live)</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                        <!-- BULK VIEW (Images only) -->
+                        <button type="submit" form="bulk-archive-approved-form" 
+                                formaction="{% url 'batch_revisar_imagenes' %}"
+                                class="text-xs bg-indigo-900/30 hover:bg-indigo-600 text-indigo-400 hover:text-white px-3 py-1.5 rounded border border-indigo-900/50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                :disabled="selectionCount === 0"
+                                title="Ver imágenes seleccionadas">
+                            <span>👁️</span> Ver (<span x-text="selectionCount"></span>)
+                        </button>
+
+                        <!-- BULK ARCHIVE -->
+                        <button type="submit" form="bulk-archive-approved-form" 
+                                formaction="{% url 'archivar_propuestas_masivo' %}"
+                                class="text-xs bg-yellow-900/30 hover:bg-yellow-600 text-yellow-500 hover:text-white px-3 py-1.5 rounded border border-yellow-900/50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                :disabled="selectionCount === 0"
+                                title="Archivar seleccionados"
+                                onclick="return confirm('¿Archivar propuestas seleccionadas? (Se moverán al historial sin publicar)')">
+                            <span>📦</span> Archivar (<span x-text="selectionCount"></span>)
+                        </button>
+
+                        <!-- BULK PUBLISH -->
+                        <button type="submit" form="bulk-archive-approved-form" 
+                                formaction="{% url 'publicar_propuestas_masivo' %}"
+                                class="text-xs bg-blue-900/30 hover:bg-blue-600 text-blue-400 hover:text-white px-3 py-1.5 rounded border border-blue-900/50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                :disabled="selectionCount === 0"
+                                title="Publicar seleccionados a LIVE"
+                                onclick="return confirm('¿PUBLICAR seleccionados a LIVE? (Se archivarán las versiones actuales)')">
+                            <span>🚀</span> Publicar (<span x-text="selectionCount"></span>)
+                        </button>
+                    </div>
+                </h2>
+                <div id="approved-list" class="space-y-6">
+                    {% if grouped_approved %}
+                        {% for group in grouped_approved %}
+                        <div x-data="{ expanded: false }" class="flex flex-col bg-[#0f111a] border border-gray-800 rounded-xl overflow-hidden shadow-lg transition-all duration-300 opacity-90 hover:opacity-100">
+                            
+                            <!-- TOP: AUTHOR HEADER (HORIZONTAL) -->
+                            <div @click="expanded = !expanded" class="w-full bg-gray-900/80 p-3 flex items-center justify-between border-b border-gray-800 cursor-pointer hover:bg-gray-800/80 transition-colors select-none">
+                                <div class="flex items-center gap-3">
+                                    <div class="relative">
+                                        <div class="w-10 h-10 rounded-full bg-indigo-900 flex items-center justify-center text-sm text-white font-bold shadow-lg ring-2 ring-indigo-500/30">
+                                            {% if group.author %}{{ group.author.username|slice:":1"|upper }}{% else %}?{% endif %}
+                                        </div>
+                                        <span class="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[10px] text-white font-mono border border-gray-900">
+                                            {{ group.count }}
+                                        </span>
+                                    </div>
+                                    <div class="flex flex-col leading-tight">
+                                        <span class="text-blue-400 font-bold text-sm" title="{% if group.author %}{{ group.author.username }}{% else %}Sistema{% endif %}">
+                                            {% if group.author %}{{ group.author.username }}{% else %}Sistema{% endif %}
+                                        </span>
+                                        <span class="text-xs text-gray-500 font-mono">
+                                            {{ group.proposals|length }} aprobadas, listas para live
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Toggle Icon -->
+                                <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-gray-400 transition-transform duration-300" :class="{'rotate-180': expanded}">
+                                    ▼
+                                </button>
+                            </div>
+
+                            <!-- BOTTOM: PROPOSALS LIST -->
+                            <div class="flex-1 divide-y divide-gray-800/50 bg-black/20">
+                                {% for item in group.proposals %}
+                                <!-- Item Container: 5 visible -->
+                                <div {% if forloop.counter > 5 %}x-show="expanded" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2"{% endif %} class="p-4 hover:bg-white/5 transition-colors flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 group">
+                                    <!-- CHECKBOX -->
+                                    <div class="flex items-center justify-center pt-1 pl-1">
+                                        <input type="checkbox" form="bulk-archive-approved-form" 
+                                               name="{% if item.type == 'WORLD' %}selected_ids{% elif item.type == 'NARRATIVE' %}selected_narr_ids{% else %}selected_img_ids{% endif %}" 
+                                               value="{{ item.id }}" 
+                                               class="approved-check w-4 h-4 rounded border-gray-600 bg-gray-700 text-yellow-500 focus:ring-yellow-500/50 cursor-pointer transition">
+                                    </div>
+
+                                    <!-- INFO -->
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold border opacity-80
+                                                {% if item.type == 'WORLD' %} bg-blue-900/20 text-blue-400 border-blue-900/50
+                                                {% elif item.type == 'NARRATIVE' %} bg-purple-900/20 text-purple-400 border-purple-900/50
+                                                {% elif item.type == 'IMAGE' %} bg-pink-900/20 text-pink-400 border-pink-900/50
+                                                {% else %} bg-gray-800 text-gray-400 border-gray-700 {% endif %}">
+                                                {{ item.type_label }}
+                                            </span>
+                                            
+                                            <a href="{% url 'review_proposal' item.type item.id %}" class="text-white font-bold hover:text-green-400 hover:underline truncate transition-colors text-sm">
+                                                {{ item.target_name|default:"(Sin Nombre)" }}
+                                            </a>
+                                            <span class="text-[10px] text-green-500 font-mono border border-green-500/30 px-1 rounded bg-green-900/20">READY</span>
+                                            
+                                            <!-- Time Ago -->
+                                            <span class="ml-auto text-[10px] text-gray-600 font-mono">{{ item.created_at|timesince }} ago</span>
+                                        </div>
+                                        
+
+                                    </div>
+
+                                    <!-- QUICK ACTIONS (APPROVED) -->
+                                    <div class="flex items-center gap-2 shrink-0">
+                                         <!-- Preview -->
+                                        <a href="{% if item.type == 'IMAGE' %}{% url 'revisar_imagen' item.id %}{% else %}{% url 'review_proposal' item.type item.id %}{% endif %}" class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold px-3 py-2 rounded border border-gray-700 transition-all shadow-lg" title="Ver detalle sin publicar">
+                                            <span>👁️</span> <span class="hidden sm:inline">Ver</span>
+                                        </a>
+
+                                         <!-- Archive -->
+                                        <form method="post" action="{% if item.type == 'WORLD' %}{% url 'archivar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'archivar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'archivar_imagen' item.id %}{% endif %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="flex items-center gap-2 bg-gray-800 hover:bg-yellow-900/30 text-yellow-500 hover:text-yellow-300 text-xs font-bold px-3 py-2 rounded border border-gray-700 hover:border-yellow-700/50 transition-all shadow-lg" title="Archivar (Quitar de la lista)" onclick="return confirm('¿Archivar esta propuesta? (Podrás verla en el historial)')">
+                                                <span>📦</span>
+                                            </button>
+                                        </form>
+
+                                         <!-- Publish (Step 2) -->
+                                        <form method="post" action="{% if item.type == 'WORLD' %}{% url 'publicar_version' item.id %}{% elif item.type == 'IMAGE' %}{% url 'publicar_imagen' item.id %}{% else %}{% url 'publicar_narrativa' item.id %}{% endif %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-all hover:-translate-y-0.5" onclick="return confirm('¿PUBLICAR v{{ item.version_number }} EN LIVE? (Se archivará la versión actual)')">
+                                                <span>🚀</span> Publicar LIVE
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-gray-600 text-sm italic">No hay propuestas aprobadas listas para publicar.</p>
+                    {% endif %}
+                </div>
             </div>
-            {% else %}
-            <p class="text-gray-600 italic">No hay propuestas aprobadas pendientes de publicación.</p>
             {% endif %}
     
             <!-- RECHAZADAS -->
-            <h2 class="text-2xl font-bold text-red-400 mt-12 mb-4 flex justify-between items-center">
-                <span>❌ Rechazadas (Últimas 10)</span>
-                <button type="button" onclick="toggleSelectSection('rejected-list')" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded border border-gray-700 transition">Seleccionar Todo</button>
-            </h2>
             {% if rejected %}
-            <div id="rejected-list" class="grid gap-4">
-                {% for item in rejected %}
-                    {% include "components/_proposal_card.html" with item=item variant="rejected" %}
-                {% endfor %}
+            <div class="mb-16">
+                <h2 class="text-2xl font-bold text-red-400 mb-4 flex justify-between items-center">
+                    <span>❌ Rechazadas (Últimas 10)</span>
+                    <button type="button" onclick="toggleSelectSection('rejected-list')" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded border border-gray-700 transition">Seleccionar Todo</button>
+                </h2>
+                <div id="rejected-list">
+                     {% include "components/_proposal_table.html" with items=rejected variant="rejected" %}
+                </div>
             </div>
-            {% else %}
-            <p class="text-gray-600 italic">No hay propuestas rechazadas recientes.</p>
             {% endif %}
     
             <!-- ARCHIVADAS (HISTORIAL) -->
-            <!-- ARCHIVADAS (HISTORIAL) -->
-            <details class="group mt-12 mb-4 bg-gray-900/20 rounded-xl border border-gray-800/50 overflow-hidden">
+            <details class="group mt-8 mb-4 bg-gray-900/20 rounded-xl border border-gray-800/50 overflow-hidden">
                 <summary class="flex justify-between items-center p-4 cursor-pointer hover:bg-gray-800/50 transition list-none select-none">
                     <h2 class="text-xl font-bold text-gray-500 flex items-center gap-3">
                         <span>📜 Historial (Versiones Archivadas)</span>
@@ -150,19 +413,127 @@
                     <span class="text-gray-500 transform group-open:rotate-180 transition">▼</span>
                 </summary>
 
-                <div class="p-4 border-t border-gray-800/50 bg-black/20">
-                    <div class="flex justify-end mb-4">
-                        <button type="button" onclick="toggleSelectSection('archived-list')" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded border border-gray-700 transition">Seleccionar Todo</button>
+                <div class="p-4 border-t border-gray-800/50 bg-black/20 space-y-4" x-data="{ selectionCount: 0 }" @change="selectionCount = document.querySelectorAll('.archive-check:checked').length">
+                    <!-- BULK FORM DEFINITION -->
+                    <form id="bulk-archive-form" method="post" action="{% url 'borrar_propuestas_masivo' %}">{% csrf_token %}</form>
+
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs text-gray-500 italic">Selecciona varios para borrar de una vez.</span>
+                        
+                        {% if request.user.is_superuser %}
+                        <div class="flex gap-2">
+                            <!-- EXECUTE DELETE -->
+                            <button type="submit" form="bulk-archive-form" 
+                                    class="text-xs bg-red-900/30 hover:bg-red-600 text-red-400 hover:text-white px-3 py-1.5 rounded border border-red-900/50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    :disabled="selectionCount === 0"
+                                    onclick="return confirm('⚠️ ESTÁS A PUNTO DE BORRAR ELEMENTOS DEFINITIVAMENTE.\n\n¿Proceder?')">
+                                <span>💀</span> Borrar (<span x-text="selectionCount"></span>)
+                            </button>
+                        </div>
+                        {% endif %}
                     </div>
 
-                    {% if archived %}
-                    <div id="archived-list" class="grid gap-4">
-                        {% for item in archived %}
-                            {% include "components/_proposal_card.html" with item=item variant="archived" %}
+                    {% if grouped_archived %}
+                        {% for group in grouped_archived %}
+                        <!-- AUTHOR GROUP CARD -->
+                        <div x-data="{ expanded: false }" class="flex flex-col bg-[#0f111a] border border-gray-800 rounded-xl overflow-hidden shadow-lg transition-all duration-300 opacity-80 hover:opacity-100">
+                            
+                            <!-- HEADER -->
+                            <div @click="expanded = !expanded" class="w-full bg-gray-900/60 p-3 flex items-center justify-between border-b border-gray-800 cursor-pointer hover:bg-gray-800/80 transition-colors select-none">
+                                <div class="flex items-center gap-3">
+                                    <div class="relative">
+                                        <div class="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-xs text-gray-500 font-bold">
+                                            {% if group.author %}{{ group.author.username|slice:":1"|upper }}{% else %}?{% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="flex flex-col leading-tight">
+                                        <span class="text-gray-400 font-bold text-sm">
+                                            {% if group.author %}{{ group.author.username }}{% else %}Sistema{% endif %}
+                                        </span>
+                                        <span class="text-[10px] text-gray-600 font-mono">
+                                            {{ group.count }} archivados
+                                        </span>
+                                    </div>
+                                </div>
+                                <button class="w-6 h-6 flex items-center justify-center rounded-full text-gray-600 transition-transform duration-300" :class="{'rotate-180': expanded}">▼</button>
+                            </div>
+
+                            <!-- LIST -->
+                            <div class="divide-y divide-gray-800/30">
+                                {% for item in group.proposals %}
+                                <div class="p-3 hover:bg-white/5 transition flex flex-col sm:flex-row gap-3" {% if forloop.counter > 5 %}x-show="expanded"{% endif %}>
+                                    
+                                    <!-- CHECKBOX (Superuser Only) -->
+                                    {% if request.user.is_superuser %}
+                                    <div class="flex items-center justify-center pt-1 pl-1">
+                                        <input type="checkbox" form="bulk-archive-form" 
+                                               name="{% if item.type == 'WORLD' %}selected_ids{% elif item.type == 'NARRATIVE' %}selected_narr_ids{% else %}selected_img_ids{% endif %}" 
+                                               value="{{ item.id }}" 
+                                               class="archive-check w-4 h-4 rounded border-gray-600 bg-gray-700 text-red-500 focus:ring-red-500/50 cursor-pointer transition">
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- INFO -->
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold border 
+                                                {% if item.type == 'WORLD' %}bg-blue-900/20 text-blue-400 border-blue-900/30
+                                                {% elif item.type == 'NARRATIVE' %}bg-purple-900/20 text-purple-400 border-purple-900/30
+                                                {% elif item.type == 'IMAGE' %}bg-pink-900/20 text-pink-400 border-pink-900/30{% endif %}">
+                                                {{ item.type_label }}
+                                            </span>
+                                            <h4 class="text-gray-400 font-bold text-sm truncate decoration-slice decoration-gray-700 line-through opacity-70">
+                                                {{ item.target_name }}
+                                            </h4>
+                                        </div>
+                                        <p class="text-xs text-gray-500 truncate mb-1">{{ item.target_desc|default:"Sin descripción" }}</p>
+                                        <div class="flex items-center gap-2 text-[10px] text-gray-600 font-mono">
+                                            <span>v{{ item.version_number }}</span>
+                                            <span>•</span>
+                                            <span x-data="{ timeAgo: '' }" x-init="timeAgo = new Date('{{ item.created_at|date:'Y-m-d H:i:s' }}').toLocaleDateString()">
+                                                <span x-text="timeAgo"></span>
+                                            </span>
+                                            {% if item.change_log %}
+                                            <span>•</span>
+                                            <span class="italic text-gray-700 max-w-[150px] truncate" title="{{ item.change_log }}">{{ item.change_log }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    <!-- ACTIONS -->
+                                    <div class="flex items-center gap-2 shrink-0">
+                                         <!-- Preview -->
+                                         <a href="{% url 'review_proposal' item.type item.id %}" {% if item.type == 'IMAGE' %}target="_blank"{% endif %} class="text-gray-600 hover:text-gray-300 transition" title="Ver Snapshot">
+                                            👁️
+                                        </a>
+                                        
+                                        <!-- RESTORE -->
+                                        <form method="post" action="{% if item.type == 'WORLD' %}{% url 'restaurar_version' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'restaurar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'restaurar_imagen' item.id %}{% endif %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="flex items-center gap-1.5 bg-blue-900/20 hover:bg-blue-600 text-blue-500 hover:text-white text-xs font-bold px-3 py-1.5 rounded border border-blue-900/50 transition-all shadow-lg" title="Restaurar a Pendientes" onclick="return confirm('¿Restaurar esto a Pendientes?')">
+                                                <span>🔄</span> Restaurar
+                                            </button>
+                                        </form>
+
+                                        <!-- DELETE FOREVER (Superuser Only) -->
+                                        {% if request.user.is_superuser %}
+                                        <form method="post" action="{% if item.type == 'WORLD' %}{% url 'borrar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'borrar_narrativa_version' item.id %}{% elif item.type == 'IMAGE' %}{% url 'borrar_imagen_definitivo' item.id %}{% endif %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="flex items-center gap-1.5 bg-red-900/20 hover:bg-red-600 text-red-500 hover:text-white text-xs font-bold px-3 py-1.5 rounded border border-red-900/50 transition-all shadow-lg" title="ELIMINAR DEFINITIVAMENTE" onclick="return confirm('⚠️ PELIGRO ⚠️\n\n¿Estás seguro de ELIMINAR DEFINITIVAMENTE este registro del historial?\n\nEsta acción NO SE PUEDE DESHACER.')">
+                                                <span>💀</span>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            
+                            <!-- PREVIEW (Collapsed State: Show summary only?) User asked for grouped style. -->
+                        </div>
                         {% endfor %}
-                    </div>
                     {% else %}
-                    <p class="text-gray-600 italic text-center py-4">No hay historial de versiones archivadas.</p>
+                        <p class="text-gray-600 italic text-center py-4">No hay historial de versiones archivadas.</p>
                     {% endif %}
                 </div>
             </details>
@@ -217,28 +588,5 @@
 {% endblock %}
 
 {% block modals %}
-    <script>
-        function updateFloatingBar() {
-            const checkboxes = document.querySelectorAll('.item-checkbox:checked');
-            const bar = document.getElementById('floating-bar');
-            document.getElementById('selected-count').innerText = checkboxes.length;
-            
-            if(checkboxes.length > 0) {
-                bar.classList.remove('translate-y-32');
-            } else {
-                bar.classList.add('translate-y-32');
-            }
-        }
 
-        function toggleSelectSection(sectionId) {
-            const section = document.getElementById(sectionId);
-            if (!section) return;
-            
-            const checkboxes = section.querySelectorAll('.item-checkbox');
-            const allChecked = Array.from(checkboxes).every(c => c.checked);
-            
-            checkboxes.forEach(c => c.checked = !allChecked);
-            updateFloatingBar();
-        }
-    </script>
 {% endblock %}

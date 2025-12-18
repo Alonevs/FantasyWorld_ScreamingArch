@@ -17,11 +17,20 @@
                     Supervisando a <span class="text-blue-400">{{ target_user.context_username|default:target_user.username }}</span>
                 {% endif %}
             </h2>
-            <p class="text-gray-400 text-sm overflow-hidden">
-                <span class="bg-gray-800 px-2 py-0.5 rounded text-xs font-mono uppercase tracking-widest text-gray-300">
-                    {{ target_user.profile.get_rank_display }}
-                </span>
-            </p>
+            <div class="flex items-center gap-3 mt-1">
+                <p class="text-gray-400 text-sm">
+                    <span class="bg-gray-800 px-2 py-0.5 rounded text-xs font-mono uppercase tracking-widest text-gray-300">
+                        {{ target_user.profile.get_rank_display }}
+                    </span>
+                </p>
+                <!-- MANAGE LINK -->
+                {% if target_user != user %}
+                <a href="{% url 'dashboard' %}?author={{ target_user.id }}" class="text-xs bg-blue-900/30 hover:bg-blue-600 border border-blue-900/50 text-blue-300 hover:text-white px-3 py-1 rounded-full transition flex items-center gap-1 group">
+                    <span>🎛️ Gestionar Propuestas</span>
+                    <span class="opacity-50 group-hover:opacity-100">→</span>
+                </a>
+                {% endif %}
+            </div>
         </div>
     </div>
 

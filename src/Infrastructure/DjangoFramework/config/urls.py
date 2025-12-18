@@ -11,19 +11,21 @@ from src.Infrastructure.DjangoFramework.persistence.views.world_views import (
 )
 from src.Infrastructure.DjangoFramework.persistence.views.ai_views import analyze_metadata_api, edit_narrative_api, api_generate_title
 from src.Infrastructure.DjangoFramework.persistence.views.dashboard_views import (
-    dashboard, aprobar_propuesta, rechazar_propuesta, publicar_version, 
+    dashboard, aprobar_propuesta, rechazar_propuesta, publicar_version, archivar_propuesta,
     restaurar_version, borrar_propuesta, borrar_propuestas_masivo,
     aprobar_contribucion, rechazar_contribucion,
-    aprobar_narrativa, rechazar_narrativa, publicar_narrativa, restaurar_narrativa, borrar_narrativa_version,
+    aprobar_narrativa, rechazar_narrativa, publicar_narrativa, archivar_narrativa,
+    aprobar_imagen, rechazar_imagen, archivar_imagen, restaurar_imagen, borrar_imagen_definitivo, restaurar_narrativa, borrar_narrativa_version, publicar_imagen,
     UserManagementView, toggle_admin_role, ImageProposalDetailView, ProposalDetailView,
-    aprobar_imagen, rechazar_imagen, aprobar_propuestas_masivo,
-    ver_papelera, restaurar_entidad_fisica,  # NEW TRASH VIEWS
+    aprobar_propuestas_masivo, archivar_propuestas_masivo, publicar_propuestas_masivo, batch_revisar_imagenes,
+    ver_papelera, restaurar_entidad_fisica, borrar_mundo_definitivo, borrar_narrativa_definitivo, restaurar_imagen_papelera, # NEW TRASH VIEWS
     MyTeamView, CollaboratorWorkView  # Team Management
 )
 from src.Infrastructure.DjangoFramework.persistence.views.media_views import (
     api_preview_foto, api_save_foto, api_update_image_metadata, 
     subir_imagen_manual, set_cover_image, borrar_foto, generar_foto_extra
 )
+from src.Infrastructure.DjangoFramework.persistence.views import review_views # NEW
 from src.Infrastructure.DjangoFramework.persistence.views.narrative_views import (
     ver_narrativa_mundo, leer_narrativa, editar_narrativa, borrar_narrativa, 
     crear_nueva_narrativa, crear_sub_narrativa, revisar_narrativa_version,
@@ -72,15 +74,22 @@ urlpatterns = [
     path('control/', dashboard, name='dashboard'), 
     path('papelera/', ver_papelera, name='ver_papelera'),
     path('papelera/restaurar/<str:jid>/', restaurar_entidad_fisica, name='restaurar_entidad_fisica'), 
+    path('papelera/borrar_mundo/<str:id>/', borrar_mundo_definitivo, name='borrar_mundo_definitivo'), # HARD DELETE
+    path('papelera/borrar_narrativa/<str:nid>/', borrar_narrativa_definitivo, name='borrar_narrativa_definitivo'), # HARD DELETE
+    path('papelera/restaurar_imagen/<int:id>/', restaurar_imagen_papelera, name='restaurar_imagen_papelera'), # NEW
     
     # Acciones de Propuestas (Aprobar/Rechazar)
     path('propuesta/<int:id>/aprobar/', aprobar_propuesta, name='aprobar_propuesta'),
     path('propuesta/<int:id>/rechazar/', rechazar_propuesta, name='rechazar_propuesta'),
     path('propuesta/<int:version_id>/comparar/', comparar_version, name='comparar_version'),
     path('version/<int:version_id>/publicar/', publicar_version, name='publicar_version'),
+    path('propuesta/<int:id>/archivar/', archivar_propuesta, name='archivar_propuesta'),
     path('propuesta/<int:version_id>/borrar/', borrar_propuesta, name='borrar_propuesta'),
+    path('script/version/<int:id>/aprobar/', aprobar_propuesta, name='aprobar_version'), # New Alias
     path('propuestas/borrar_masivo/', borrar_propuestas_masivo, name='borrar_propuestas_masivo'),
     path('propuestas/aprobar_masivo/', aprobar_propuestas_masivo, name='aprobar_propuestas_masivo'),
+    path('propuestas/archivar_masivo/', archivar_propuestas_masivo, name='archivar_propuestas_masivo'),
+    path('propuestas/publicar_masivo/', publicar_propuestas_masivo, name='publicar_propuestas_masivo'),
     
     # Gestión de Usuarios (Superadmin)
     path('usuarios/', UserManagementView.as_view(), name='user_management'),
@@ -100,14 +109,20 @@ urlpatterns = [
     # Acciones de Narrativas
     path('narrativa/propuesta/<int:id>/aprobar/', aprobar_narrativa, name='aprobar_narrativa'),
     path('narrativa/propuesta/<int:id>/rechazar/', rechazar_narrativa, name='rechazar_narrativa'),
+    path('narrativa/propuesta/<int:id>/archivar/', archivar_narrativa, name='archivar_narrativa'),
     path('narrativa/version/<int:id>/publicar/', publicar_narrativa, name='publicar_narrativa'),
-    path('narrativa/version/<int:id>/restaurar/', restaurar_narrativa, name='restaurar_narrativa'),
+    path('narrativa/restaurar/<str:nid>/', restaurar_narrativa, name='restaurar_narrativa'),
     path('narrativa/version/<int:id>/borrar/', borrar_narrativa_version, name='borrar_narrativa_version'),
 
     # Acciones de Imágenes
     path('imagen/propuesta/<int:id>/', ImageProposalDetailView.as_view(), name='revisar_imagen'),
     path('imagen/propuesta/<int:id>/aprobar/', aprobar_imagen, name='aprobar_imagen'),
+    path('imagen/propuesta/<int:id>/publicar/', publicar_imagen, name='publicar_imagen'),
     path('imagen/propuesta/<int:id>/rechazar/', rechazar_imagen, name='rechazar_imagen'),
+    path('imagen/propuesta/<int:id>/archivar/', archivar_imagen, name='archivar_imagen'),
+    path('imagen/propuesta/<int:id>/restaurar/', restaurar_imagen, name='restaurar_imagen'),
+    path('imagen/propuesta/<int:id>/borrar/', borrar_imagen_definitivo, name='borrar_imagen_definitivo'),
+    path('imagen/revisar_lote/', batch_revisar_imagenes, name='batch_revisar_imagenes'),
 
     # Acciones de Propuestas Texto
     path('propuesta/<int:id>/', ProposalDetailView.as_view(), name='proposal_detail'),
@@ -140,7 +155,11 @@ urlpatterns = [
     path('api/ai/generate-title/', api_generate_title, name='api_generate_title'),
     path('api/narrative/import-file/', import_narrative_file, name='import_narrative_file'),
     path('api/auto_noos/<str:jid>/', api_auto_noos, name='api_auto_noos'),
+    
+    # 🌟 NEW UNIFIED REVIEW VIEW 🌟
+    path('revisar/<str:type>/<int:id>/', review_views.review_proposal, name='review_proposal'),
 ]
+
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

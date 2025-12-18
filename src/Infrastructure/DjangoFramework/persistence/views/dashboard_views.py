@@ -4,7 +4,8 @@ from django.conf import settings
 from django.views import View
 from django.db.models import Q
 import os
-from src.Infrastructure.DjangoFramework.persistence.models import ContributionProposal, CaosVersionORM, CaosEventLog, CaosNarrativeVersionORM, CaosImageProposalORM, CaosWorldORM, CaosNarrativeORM
+import shutil
+from src.Infrastructure.DjangoFramework.persistence.models import ContributionProposal, CaosVersionORM, CaosEventLog, CaosNarrativeVersionORM, CaosImageProposalORM, CaosWorldORM, CaosNarrativeORM, generate_nanoid
 from src.Shared.Services.DiffService import DiffService
 from src.WorldManagement.Caos.Application.approve_version import ApproveVersionUseCase
 from src.WorldManagement.Caos.Application.reject_version import RejectVersionUseCase
@@ -21,7 +22,7 @@ from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaos
 # ... imports remain same ...
 
 from django.views.generic import FormView, TemplateView
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.contrib.auth.mixins import LoginRequiredMixin
 from src.Infrastructure.DjangoFramework.persistence.forms import SubadminCreationForm
 from src.Infrastructure.DjangoFramework.persistence.models import UserProfile
@@ -31,34 +32,127 @@ from django.db.models import Q
 def log_event(user, action, target_id, details=""):
     try:
         u = user if user.is_authenticated else None
-        CaosEventLog.objects.create(user=u, action=action, target_id=target_id, details=details)
+        tid = str(target_id) if target_id else None
+        CaosEventLog.objects.create(user=u, action=action, target_id=tid, details=details)
     except Exception as e: print(f"Log Error: {e}")
 
 from django.contrib.auth.decorators import login_required, user_passes_test
 from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
 
+def is_admin_or_staff(user):
+    return user.is_authenticated and (user.is_superuser or user.is_staff or (hasattr(user, 'profile') and user.profile.rank in ['ADMIN', 'SUBADMIN']))
+
 def is_superuser(user): return user.is_superuser
 
 @login_required
-@user_passes_test(is_superuser) # Dashboard is admin/staff only for now, or allow authors? User said "USUARIO (Standard): Solo lectura". Dashboard is management. Let's restrict to Superuser/Staff or Authors? The view lists ALL versions. Maybe only show own proposals if not superuser?
+@login_required
 # For simplicity and security first: Restrict Dashboard to Staff/Superuser as requested "Implementar Control de Acceso real...".
 # User Request says: "AUTOR/ADMIN: Puede crear... usuarios (Standard): Solo lectura". 
 # Usually Dashboard is for approving/rejecting which is an Admin task. 
 # Authors create proposals. Admins approve.
 def dashboard(request):
-    # 1. Fetch World Versions
-    # 1. Fetch World Versions
-    w_pending = list(CaosVersionORM.objects.filter(status='PENDING').select_related('world', 'author').order_by('-created_at'))
-    w_approved = list(CaosVersionORM.objects.filter(status='APPROVED').select_related('world', 'author').order_by('-created_at'))
-    w_rejected = list(CaosVersionORM.objects.filter(status='REJECTED').select_related('world', 'author').order_by('-created_at')[:10])
-    w_archived = list(CaosVersionORM.objects.filter(status='ARCHIVED').select_related('world', 'author').order_by('-created_at')[:20])
+    # =========================================================================
+    # 0. JURISDICTION & ACCESS CONTROL
+    # =========================================================================
+    user = request.user
+    allowed_authors = User.objects.none()
+    
+    allowed_authors = User.objects.all() # Trusted Mode: Everyone sees everyone
 
-    # 2. Fetch Narrative Versions
-    n_pending = list(CaosNarrativeVersionORM.objects.filter(status='PENDING').select_related('narrative__world', 'author').order_by('-created_at'))
-    n_approved = list(CaosNarrativeVersionORM.objects.filter(status='APPROVED').select_related('narrative__world', 'author').order_by('-created_at'))
-    n_rejected = list(CaosNarrativeVersionORM.objects.filter(status='REJECTED').select_related('narrative__world', 'author').order_by('-created_at')[:10])
-    n_archived = list(CaosNarrativeVersionORM.objects.filter(status='ARCHIVED').select_related('narrative__world', 'author').order_by('-created_at')[:20])
+    # =========================================================================
+    # 1. GET PARAMETERS (FILTERS)
+    # =========================================================================
+    filter_author_id = request.GET.get('author')
+    filter_type = request.GET.get('type') # WORLD, NARRATIVE, IMAGE
+    search_query = request.GET.get('q')
 
+    # =========================================================================
+    # 2. BASE QUERYSETS (Hierarchy Mode)
+    # =========================================================================
+    # Logic:
+    # - Superuser/Admin: Sees EVERYTHING (or at least their subordinates + their own).
+    # - Subadmin: Sees THEIR OWN + THEIR BOSSES (to propose changes).
+    # - User: Sees ONLY THEIR OWN.
+    
+    # Let's align with Request: "Admin sees Superior's work".
+    
+    if request.user.is_superuser:
+        # SUPERUSER SEES ALL
+        w_qs = CaosVersionORM.objects.all().select_related('world', 'author')
+        n_qs = CaosNarrativeVersionORM.objects.all().select_related('narrative__world', 'author')
+        i_qs = CaosImageProposalORM.objects.all().select_related('world', 'author')
+    else:
+        # HIERARCHY FILTER
+        my_bosses = []
+        if hasattr(request.user, 'profile'):
+            # bosses = profiles that listing ME as collaborator
+            boss_profiles = request.user.profile.bosses.all()
+            my_bosses = [bp.user for bp in boss_profiles if bp.user]
+
+        visible_users = [request.user] + my_bosses
+        
+        # Q Objects
+        q_filter = Q(author__in=visible_users)
+        
+        w_qs = CaosVersionORM.objects.filter(q_filter).select_related('world', 'author')
+        i_qs = CaosImageProposalORM.objects.filter(q_filter).select_related('world', 'author')
+        
+        # Narratives are tricky if Version doesn't have author set correctly sometimes? 
+        # But assuming it does:
+        n_qs = CaosNarrativeVersionORM.objects.filter(q_filter).select_related('narrative__world', 'author')
+
+    # =========================================================================
+    # 3. APPLY DYNAMIC FILTERS
+    # =========================================================================
+    
+    # A) Filter by Author
+    if filter_author_id:
+        try:
+            current_target_author = int(filter_author_id)
+            w_qs = w_qs.filter(author_id=current_target_author)
+            n_qs = n_qs.filter(author_id=current_target_author)
+            i_qs = i_qs.filter(author_id=current_target_author)
+        except ValueError: pass
+
+    # B) Filter by Search Query
+    if search_query:
+        w_qs = w_qs.filter(Q(proposed_name__icontains=search_query) | Q(change_log__icontains=search_query))
+        n_qs = n_qs.filter(Q(proposed_title__icontains=search_query) | Q(proposed_content__icontains=search_query))
+        i_qs = i_qs.filter(title__icontains=search_query)
+
+    # C) Filter by Type (World/Narc/Img)
+    if filter_type == 'WORLD':
+        n_qs = n_qs.none()
+        i_qs = i_qs.none()
+    elif filter_type == 'NARRATIVE':
+        w_qs = w_qs.none()
+        i_qs = i_qs.none()
+    elif filter_type == 'IMAGE':
+        w_qs = w_qs.none()
+        n_qs = n_qs.none()
+
+    # =========================================================================
+    # 4. EXECUTE & SEGMENT (Pending/Approved/etc)
+    # =========================================================================
+    
+    # 4.1 Worlds
+    w_pending = list(w_qs.filter(status='PENDING').order_by('-created_at'))
+    w_approved = list(w_qs.filter(status='APPROVED').order_by('-created_at'))
+    w_rejected = list(w_qs.filter(status='REJECTED').order_by('-created_at')[:10])
+    w_archived = list(w_qs.filter(status='ARCHIVED').order_by('-created_at')[:20])
+
+    # 4.2 Narratives
+    n_pending = list(n_qs.filter(status='PENDING').order_by('-created_at'))
+    n_approved = list(n_qs.filter(status='APPROVED').order_by('-created_at'))
+    n_rejected = list(n_qs.filter(status='REJECTED').order_by('-created_at')[:10])
+    n_archived = list(n_qs.filter(status='ARCHIVED').order_by('-created_at')[:20])
+
+    # 4.3 Images
+    i_pending = list(i_qs.filter(status='PENDING').order_by('-created_at'))
+    i_approved = list(i_qs.filter(status='APPROVED').order_by('-created_at'))
+    i_rejected = list(i_qs.filter(status='REJECTED').order_by('-created_at')[:10])
+    i_archived = list(i_qs.filter(status='ARCHIVED').exclude(action='DELETE').order_by('-created_at'))
+    
     # 2.5 Pre-fetch Context Data for Performance
     all_worlds = {w.id: w.name for w in CaosWorldORM.objects.all()}
     # Dictionary for narratives might be heavy, fetching on demand or optimizing later
@@ -71,13 +165,16 @@ def dashboard(request):
         x.target_desc = x.proposed_description
         
         # Determine World Parent Context
-        wid = x.world.id
-        x.parent_context = "Raíz (Universo)"
-        if len(wid) > 2:
-            pid = wid[:-2]
-            pname = all_worlds.get(pid, "Desconocido")
-            x.parent_context = f"Orbitando: {pname}"
-        
+        if x.world.id.endswith("00"): # Root world heuristic if JID structure used
+            x.parent_context = "Universo Raíz"
+        else:
+            # Simple parent check or just usage of Name
+            # If we want the parent world name, we need to fetch it.
+            # But 'x.world' IS the world being edited.
+            # For a World edit, the context IS the world itself or its parent if nested.
+            # Assuming flat worlds for now or simple "Universe" context if it's a World.
+            x.parent_context = "Universo"
+
         if x.cambios.get('action') == 'SET_COVER':
             x.target_desc = f"📸 Cambio de portada a: {x.cambios.get('cover_image')}"
         elif x.cambios.get('action') == 'TOGGLE_VISIBILITY':
@@ -86,6 +183,7 @@ def dashboard(request):
             
         x.target_link = x.world.public_id if x.world.public_id else x.world.id
     
+    # Map Narratives
     for x in n_pending + n_approved + n_rejected + n_archived:
         x.type = 'NARRATIVE'
         x.type_label = '📖 NARRATIVA'
@@ -95,27 +193,53 @@ def dashboard(request):
         
         # Determine Narrative Context
         wname = x.narrative.world.name
-        x.parent_context = f"Mundo: {wname}"
-        
-        # Try to find parent narrative title if it's a sub-chapter/node
+        x.parent_context = wname
         nid = x.narrative.nid
         if '.' in nid:
             try:
                 parent_nid = nid.rsplit('.', 1)[0]
-                # Optimizable: fetch only needed
                 parent_n = CaosNarrativeORM.objects.filter(nid=parent_nid).first()
                 if parent_n:
-                    x.parent_context = f"Mundo: {wname} > {parent_n.titulo}"
+                    x.parent_context = f"{wname} > {parent_n.titulo}"
             except: pass
 
-    # 4. Merge and Sort
-    pending = sorted(w_pending + n_pending, key=lambda x: x.created_at, reverse=True)
-    approved = sorted(w_approved + n_approved, key=lambda x: x.created_at, reverse=True)
-    rejected = sorted(w_rejected + n_rejected, key=lambda x: x.created_at, reverse=True)
-    archived = sorted(w_archived + n_archived, key=lambda x: x.created_at, reverse=True)
+    # Map Images (NEW)
+    # Ensure i_pending/i_approved are lists.
+    for x in i_pending + i_approved + i_rejected + i_archived:
+        x.type = 'IMAGE'
+        x.type_label = '🖼️ IMAGEN'
+        x.target_name = x.title or "(Sin Título)"
+        
+        # Derive description from action since no 'reason' field exists
+        if x.action == 'DELETE':
+            desc = f"🗑️ Borrar: {x.target_filename}"
+        else:
+            desc = "📸 Nueva Imagen"
+            
+        x.target_desc = desc
+        
+        # version_number might be missing on ImageProposal? It has 'id'.
+        # Let's ensure it doesn't crash if version_number is missing.
+        if not hasattr(x, 'version_number'): x.version_number = 1 
+        
+        x.parent_context = x.world.name if x.world else "Global"
+        x.change_log = desc # Reuse desc for change_log
 
-    # 5. Fetch Event Logs & Categorize
-    all_logs = CaosEventLog.objects.all().order_by('-timestamp')[:100]
+    # 4. Merge and Sort (Include Images)
+    pending = sorted(w_pending + n_pending + i_pending, key=lambda x: x.created_at, reverse=True)
+    approved = sorted(w_approved + n_approved + i_approved, key=lambda x: x.created_at, reverse=True)
+    rejected = sorted(w_rejected + n_rejected + i_rejected, key=lambda x: x.created_at, reverse=True)
+    archived = sorted(w_archived + n_archived + i_archived, key=lambda x: x.created_at, reverse=True)
+
+    # 5. Fetch Event Logs & Categorize (Also filtered?)
+    # Ideally logs should also be filtered by jurisdiction for security
+    # Fetch logs where actor IS in allowed_authors OR target is owned by allowed_authors?
+    # For now, simplistic approach: Filter logs where user is in allowed_authors
+    if not user.is_superuser:
+        all_logs = CaosEventLog.objects.filter(user__in=allowed_authors).order_by('-timestamp')[:100]
+    else:
+        all_logs = CaosEventLog.objects.all().order_by('-timestamp')[:100]
+
     logs_world = []
     logs_narrative = []
     logs_image = []
@@ -128,19 +252,95 @@ def dashboard(request):
         elif 'IMAGE' in act or 'PHOTO' in act or 'IMAGEN' in act: logs_image.append(l)
         else: logs_other.append(l)
 
-    # 6. Fetch Image Proposals
-    img_pending = CaosImageProposalORM.objects.filter(status='PENDING').select_related('world', 'author').order_by('-created_at')
+    # SPLIT PENDING REMOVED (UNIFIED VIEW)
+    
+    # GROUP INBOX (ALL PENDING) BY AUTHOR
+    # Structure: [{'author': user, 'proposals': [list], 'count': int}, ...]
+    from collections import defaultdict
+    grouped_map = defaultdict(list)
+    for item in pending:
+        grouped_map[item.author].append(item)
+    
+    grouped_inbox_list = []
+    for author, items in grouped_map.items():
+        grouped_inbox_list.append({
+            'author': author,
+            'proposals': items,
+            'count': len(items)
+        })
+    
+    # Sort items within each group by created_at DESC (Newest First) as requested
+    for group in grouped_inbox_list:
+        group['proposals'].sort(key=lambda x: x.created_at, reverse=True)
+
+    # Sort groups by author username
+    grouped_inbox_list.sort(key=lambda x: x['author'].username if x['author'] else "")
+
+    # 4. GROUP APPROVED BY AUTHOR (Same logic)
+    grouped_approved_map = defaultdict(list)
+    for item in approved:
+         grouped_approved_map[item.author].append(item)
+    
+    grouped_approved_list = []
+    for author, items in grouped_approved_map.items():
+        grouped_approved_list.append({
+            'author': author,
+            'proposals': items,
+            'count': len(items)
+        })
+    
+    # Sort items within each group by created_at DESC
+    for group in grouped_approved_list:
+        group['proposals'].sort(key=lambda x: x.created_at, reverse=True)
+        
+    # Sort groups by author username
+    grouped_approved_list.sort(key=lambda x: x['author'].username if x['author'] else "")
+
+    # 4. GROUP ARCHIVED BY AUTHOR (New)
+    grouped_archived_map = defaultdict(list)
+    for item in archived:
+         grouped_archived_map[item.author].append(item)
+    
+    grouped_archived_list = []
+    for author, items in grouped_archived_map.items():
+        grouped_archived_list.append({
+            'author': author,
+            'proposals': items,
+            'count': len(items)
+        })
+    
+    # Sort items within each group
+    for group in grouped_archived_list:
+        group['proposals'].sort(key=lambda x: x.created_at, reverse=True)
+        
+    grouped_archived_list.sort(key=lambda x: x['author'].username if x['author'] else "")
+
+    # METRICS CALCULATION
+    total_pending_count = len(pending) 
+    total_activity_count = len(logs_world) + len(logs_narrative) + len(logs_image) + len(logs_other)
 
     context = {
-        'pending': pending,
-        'approved': approved,
+        'pending': pending, 
+        'grouped_inbox': grouped_inbox_list, 
+        'grouped_approved': grouped_approved_list,
+        'grouped_archived': grouped_archived_list,
+        'approved': approved, # Needed for Metrics Count
         'rejected': rejected,
         'archived': archived,
         'logs_world': logs_world,
         'logs_narrative': logs_narrative,
         'logs_image': logs_image,
         'logs_other': logs_other,
-        'img_pending': img_pending,
+        
+        # NEW FOR METRICS
+        'total_pending_count': total_pending_count,
+        'total_activity_count': total_activity_count,
+        
+        # Context for Filter Sidebar
+        'available_authors': allowed_authors,
+        'current_author': int(filter_author_id) if filter_author_id else None,
+        'current_type': filter_type,
+        'search_query': search_query,
     }
     return render(request, 'dashboard.html', context)
 
@@ -150,20 +350,34 @@ def centro_control(request):
 # --- WORLD ACTIONS ---
 
 @login_required
-@user_passes_test(is_superuser)
+@user_passes_test(is_admin_or_staff)
 def aprobar_propuesta(request, id):
     try:
-        ApproveVersionUseCase().execute(id)
         v = CaosVersionORM.objects.get(id=id)
-        log_event(request.user, "WORLD_APPROVE", v.world.id, f"Approved v{v.version_number} of {v.proposed_name}")
-        messages.success(request, f"✅ Propuesta v{v.version_number} de '{v.proposed_name}' APROBADA (Lista para Live).")
+        
+        # Check for DELETE action
+        if v.cambios.get('action') == 'DELETE':
+            # 1. Soft Delete the World
+            v.world.soft_delete()
+            # 2. Archive the proposal (It's done history)
+            v.status = 'ARCHIVED'
+            v.save()
+            
+            log_event(request.user, "WORLD_DELETE_CONFIRM", v.world.id, f"Confirmed deletion of {v.world.name}")
+            messages.success(request, f"🗑️ Mundo '{v.world.name}' borrado y propuesta archivada.")
+        else:
+            # Normal Approval
+            ApproveVersionUseCase().execute(id)
+            log_event(request.user, "WORLD_APPROVE", v.world.id, f"Approved v{v.version_number} of {v.proposed_name}")
+            messages.success(request, f"✅ Propuesta v{v.version_number} de '{v.proposed_name}' APROBADA (Lista para Live).")
+            
         return redirect('dashboard')
     except Exception as e:
         messages.error(request, f"Error: {str(e)}")
         return redirect('dashboard')
 
 @login_required
-@user_passes_test(is_superuser)
+@user_passes_test(is_admin_or_staff)
 def rechazar_propuesta(request, id):
     try:
         RejectVersionUseCase().execute(id)
@@ -175,7 +389,7 @@ def rechazar_propuesta(request, id):
         return redirect('dashboard')
 
 @login_required
-@user_passes_test(is_superuser)
+@user_passes_test(is_admin_or_staff)
 def publicar_version(request, version_id):
     try:
         PublishToLiveVersionUseCase().execute(version_id)
@@ -187,8 +401,21 @@ def publicar_version(request, version_id):
         messages.error(request, str(e))
         return redirect('dashboard')
 
-def aprobar_version(request, version_id): return redirect('aprobar_propuesta', id=version_id)
-def rechazar_version(request, version_id): return redirect('rechazar_propuesta', id=version_id)
+@login_required
+@user_passes_test(is_admin_or_staff)
+def archivar_propuesta(request, id):
+    try:
+        v = CaosVersionORM.objects.get(id=id)
+        v.status = 'ARCHIVED'
+        v.save()
+        log_event(request.user, "WORLD_ARCHIVE", v.world.id, f"Archived proposal v{v.version_number}")
+        messages.success(request, f"📦 Propuesta v{v.version_number} archivada correctamente.")
+        return redirect('dashboard')
+    except Exception as e:
+        messages.error(request, f"Error al archivar: {str(e)}")
+        return redirect('dashboard')
+
+# DELETED: aprobar_version, rechazar_version (Redundant redirects)
 
 def restaurar_version(request, version_id):
     try:
@@ -241,8 +468,10 @@ def borrar_propuestas_masivo(request):
                 messages.warning(request, "No has seleccionado nada.")
         except Exception as e:
             messages.error(request, f"Error al borrar masivamente: {str(e)}")
-    return redirect('dashboard')
+    return redirect(reverse('dashboard') + '#archived-list')
 
+@login_required
+@user_passes_test(is_admin_or_staff)
 def aprobar_propuestas_masivo(request):
     if request.method == 'POST':
         try:
@@ -278,21 +507,28 @@ def aprobar_propuestas_masivo(request):
 
             # 3. Approve Images
             if img_ids:
-                repo = DjangoCaosRepository()
                 props = CaosImageProposalORM.objects.filter(id__in=img_ids)
                 for prop in props:
                     try:
                         if prop.action == 'DELETE':
-                            base = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img', prop.world.id)
-                            target = os.path.join(base, prop.target_filename)
-                            if os.path.exists(target): os.remove(target)
-                            prop.status = 'APPROVED'; prop.save()
-                            count_i += 1
+                             # Direct execution for DELETE -> Move to Trash
+                             base = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img', str(prop.world.id))
+                             trash_dir = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/trash', str(prop.world.id))
+                             target = os.path.join(base, prop.target_filename)
+                             
+                             if os.path.exists(target):
+                                 os.makedirs(trash_dir, exist_ok=True)
+                                 # Rename if exists in trash?
+                                 trash_target = os.path.join(trash_dir, prop.target_filename)
+                                 if os.path.exists(trash_target): os.remove(trash_target) # Overwrite old trash
+                                 shutil.move(target, trash_target)
+                             
+                             prop.status = 'ARCHIVED'
                         else:
-                            user_name = prop.author.username if prop.author else "Anónimo"
-                            repo.save_manual_file(prop.world.id, prop.image, username=user_name, title=prop.title)
-                            prop.status = 'APPROVED'; prop.save()
-                            count_i += 1
+                             # ADD keeps standard flow
+                             prop.status = 'APPROVED'
+                        prop.save()
+                        count_i += 1
                     except Exception as e: print(f"Error {e}")
                 log_event(request.user, "IMAGE_BULK_APPROVE", "Multiple", f"Approved {count_i} images")
 
@@ -304,6 +540,8 @@ def aprobar_propuestas_masivo(request):
 
 # --- NARRATIVE ACTIONS ---
 
+@login_required
+@user_passes_test(is_admin_or_staff)
 def aprobar_narrativa(request, id):
     try:
         v = CaosNarrativeVersionORM.objects.get(id=id)
@@ -313,20 +551,25 @@ def aprobar_narrativa(request, id):
             messages.success(request, f"🗑️ Narrativa '{title}' movida a la papelera.")
         else:
             ApproveNarrativeVersionUseCase().execute(id)
-            PublishNarrativeToLiveUseCase().execute(id)
-            log_event(request.user, "NARRATIVE_APPROVE_PUBLISH", id, f"Approved & Published v{v.version_number}")
-            messages.success(request, f"✅ Narrativa APROBADA y PUBLICADA.")
+            # PublishNarrativeToLiveUseCase().execute(id) <--- REMOVED AUTO PUBLISH
+            log_event(request.user, "NARRATIVE_APPROVE", id, f"Approved v{v.version_number} (Pending Publish)")
+            messages.success(request, f"✅ Narrativa APROBADA (Lista para Live).")
         return redirect('dashboard')
     except Exception as e: 
         messages.error(request, f"Error: {e}"); return redirect('dashboard')
 
+@login_required
+@user_passes_test(is_admin_or_staff)
 def rechazar_narrativa(request, id):
     try:
-        RejectNarrativeVersionUseCase().execute(id)
-        log_event(request.user, "NARRATIVE_REJECT", id, "Rejected narrative")
-        messages.warning(request, "❌ Narrativa rechazada.")
-        return redirect('dashboard')
-    except Exception as e: messages.error(request, f"Error: {e}"); return redirect('dashboard')
+        # Logic: Set status to REJECTED
+        v = CaosNarrativeVersionORM.objects.get(id=id)
+        v.status = 'REJECTED'
+        v.save()
+        log_event(request.user, "NARRATIVE_REJECT", v.narrative.nid, f"Rejected {v.proposed_title}")
+    except Exception as e:
+        messages.error(request, f"Error al rechazar narrativa: {str(e)}")
+    return redirect('dashboard')
 
 def publicar_narrativa(request, id):
     try:
@@ -336,6 +579,16 @@ def publicar_narrativa(request, id):
         messages.success(request, f"🚀 Narrativa v{v.version_number} PUBLICADA LIVE.")
         return redirect('dashboard')
     except Exception as e: messages.error(request, str(e)); return redirect('dashboard')
+
+def archivar_narrativa(request, id):
+    try:
+        v = CaosNarrativeVersionORM.objects.get(id=id)
+        v.status = 'ARCHIVED'
+        v.save()
+        log_event(request.user, "NARRATIVE_ARCHIVE", id, f"Archived narrative proposal v{v.version_number}")
+        messages.success(request, f"📦 Narrativa v{v.version_number} archivada correctamente.")
+        return redirect('dashboard')
+    except Exception as e: messages.error(request, f"Error: {e}"); return redirect('dashboard')
 
 def restaurar_narrativa(request, id):
     try:
@@ -355,26 +608,41 @@ def borrar_narrativa_version(request, id):
 
 # --- IMAGE ACTIONS ---
 
+@login_required
+@user_passes_test(is_admin_or_staff)
 def aprobar_imagen(request, id):
     try:
         prop = CaosImageProposalORM.objects.get(id=id)
-        repo = DjangoCaosRepository()
+        
         if prop.action == 'DELETE':
-            base = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img', prop.world.id)
-            target = os.path.join(base, prop.target_filename)
-            if os.path.exists(target): os.remove(target)
-            prop.status = 'APPROVED'; prop.save()
-            log_event(request.user, "IMAGE_DELETE", prop.world.id, f"Deleted image {prop.target_filename}")
-            messages.success(request, f"🗑️ Imagen '{prop.target_filename}' borrada.")
+             # Direct execution for DELETE -> Move to Trash
+             base = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img', str(prop.world.id))
+             trash_dir = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/trash', str(prop.world.id))
+             target = os.path.join(base, prop.target_filename)
+             
+             if os.path.exists(target): 
+                 os.makedirs(trash_dir, exist_ok=True)
+                 trash_target = os.path.join(trash_dir, prop.target_filename)
+                 if os.path.exists(trash_target): os.remove(trash_target)
+                 shutil.move(target, trash_target)
+             
+             prop.status = 'ARCHIVED'
+             prop.save()
+             log_event(request.user, "IMAGE_DELETE_TRASH", prop.world.id, f"Moved image {prop.target_filename} to trash")
+             messages.success(request, f"🗑️ Imagen '{prop.target_filename}' movida a la papelera.")
         else:
-            user_name = prop.author.username if prop.author else "Anónimo"
-            repo.save_manual_file(prop.world.id, prop.image, username=user_name, title=prop.title)
-            prop.status = 'APPROVED'; prop.save()
-            log_event(request.user, "IMAGE_APPROVE", prop.world.id, f"Approved image {prop.title}")
-            messages.success(request, f"✅ Imagen '{prop.title}' APROBADA.")
-        return redirect('dashboard')
+             # Standard flow for ADD
+             prop.status = 'APPROVED'; prop.save()
+             log_event(request.user, "IMAGE_APPROVE", prop.world.id, f"Approved image {prop.title}")
+             messages.success(request, f"✅ Imagen '{prop.title}' APROBADA (Pendiente de Publicar).")
+        
+        next_url = request.GET.get('next')
+        if next_url: return redirect(next_url)
+        return redirect(request.META.get('HTTP_REFERER', 'dashboard'))
     except Exception as e: messages.error(request, f"Error: {e}"); return redirect('dashboard')
 
+@login_required
+@user_passes_test(is_admin_or_staff)
 def rechazar_imagen(request, id):
     try:
         prop = CaosImageProposalORM.objects.get(id=id)
@@ -383,23 +651,154 @@ def rechazar_imagen(request, id):
         prop.delete()
         log_event(request.user, "IMAGE_REJECT", prop.world.id, "Rejected image")
         messages.warning(request, "❌ Imagen rechazada.")
+        
+        next_url = request.GET.get('next')
+        if next_url: return redirect(next_url)
+        return redirect(request.META.get('HTTP_REFERER', 'dashboard'))
+    except Exception as e: messages.error(request, f"Error: {e}"); return redirect('dashboard')
+
+@login_required
+@user_passes_test(is_admin_or_staff)
+def archivar_imagen(request, id):
+    try:
+        prop = CaosImageProposalORM.objects.get(id=id)
+        prop.status = 'ARCHIVED'
+        prop.save()
+        log_event(request.user, "IMAGE_ARCHIVE", prop.world.id, f"Archived image proposal {prop.title}")
+        messages.success(request, f"📦 Imagen archivada correctamente.")
+        
+        next_url = request.GET.get('next')
+        if next_url: return redirect(next_url)
+        return redirect(request.META.get('HTTP_REFERER', 'dashboard'))
+    except Exception as e: messages.error(request, f"Error: {e}"); return redirect('dashboard')
+
+@login_required
+@user_passes_test(is_admin_or_staff)
+def restaurar_imagen_papelera(request, id):
+    try:
+        # Get the original DELETE proposal that put it in trash
+        original_prop = CaosImageProposalORM.objects.get(id=id)
+        
+        # Verify file exists in trash
+        trash_dir = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/trash', str(original_prop.world.id))
+        trash_file = os.path.join(trash_dir, original_prop.target_filename)
+        
+        if not os.path.exists(trash_file):
+            messages.error(request, "❌ El archivo ya no existe en la papelera.")
+            return redirect('ver_papelera')
+            
+        # Create NEW Proposal for restoration
+        # We need to move/copy the file to temp_proposals so it can be 'Added' again
+        temp_filename = f"restore_{generate_nanoid()}_{original_prop.target_filename}"
+        temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp_proposals')
+        os.makedirs(temp_dir, exist_ok=True)
+        temp_path = os.path.join(temp_dir, temp_filename)
+        
+        shutil.copy2(trash_file, temp_path)
+        
+        # Create DB Entry
+        new_prop = CaosImageProposalORM.objects.create(
+            world=original_prop.world,
+            title=f"Restauración: {original_prop.target_filename}",
+            action='ADD',
+            status='PENDING',
+            author=request.user,
+            image=f"temp_proposals/{temp_filename}"
+        )
+        
+        log_event(request.user, "IMAGE_RESTORE_PROPOSAL", original_prop.world.id, f"Proposed restore for {original_prop.target_filename}")
+        messages.success(request, f"♻️ Se ha creado una propuesta para restaurar '{original_prop.target_filename}'.")
+        return redirect('ver_papelera')
+        
+    except Exception as e:
+        messages.error(request, f"Error al restaurar: {str(e)}")
+        return redirect('ver_papelera')
+
+@login_required
+@user_passes_test(is_admin_or_staff)
+def restaurar_imagen(request, id):
+    try:
+        prop = CaosImageProposalORM.objects.get(id=id)
+        prop.status = 'PENDING'
+        prop.save()
+        log_event(request.user, "IMAGE_RESTORE", prop.world.id, f"Restored image proposal {prop.title} to PENDING")
+        messages.success(request, f"🔄 Imagen restaurada a Pendientes.")
         return redirect('dashboard')
+    except Exception as e: messages.error(request, f"Error: {e}"); return redirect('dashboard')
+
+@login_required
+@user_passes_test(is_admin_or_staff)
+def borrar_imagen_definitivo(request, id):
+    try:
+        prop = CaosImageProposalORM.objects.get(id=id)
+        
+        # Cleanup trash file if it's a deleted image
+        if prop.action == 'DELETE' and prop.status == 'ARCHIVED':
+             trash_dir = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/trash', str(prop.world.id))
+             trash_file = os.path.join(trash_dir, prop.target_filename)
+             if os.path.exists(trash_file):
+                 os.remove(trash_file)
+
+        # Cleanup Standard File
+        if prop.image: 
+            prop.image.delete()
+            
+        prop.delete()
+        log_event(request.user, "IMAGE_NUKE", prop.world.id if prop.world else "global", "Permanently deleted image proposal")
+        messages.success(request, f"💥 Imagen eliminada definitivamente del historial.")
+        return redirect(request.META.get('HTTP_REFERER', 'dashboard'))
     except Exception as e: messages.error(request, f"Error: {e}"); return redirect('dashboard')
 
 # --- TRASH / PAPELERA ---
 
 def ver_papelera(request):
     try:
-        # All inactive worlds
-        # All inactive worlds that have content
-        deleted_items = CaosWorldORM.objects.filter(is_active=False).exclude(description__isnull=True).exclude(description__exact='').exclude(description__iexact='None').order_by('-deleted_at')
-        return render(request, 'papelera.html', {'deleted_items': deleted_items})
+        # 1. Fetch deleted items
+        deleted_worlds = CaosWorldORM.objects.filter(is_active=False).order_by('-deleted_at').select_related('author')
+        deleted_narratives = CaosNarrativeORM.objects.filter(is_active=False).order_by('-deleted_at').select_related('created_by')
+        deleted_images_props = CaosImageProposalORM.objects.filter(action='DELETE', status='ARCHIVED').order_by('-created_at').select_related('author')
+        
+        # 2. Structure Data
+        # Format: groups = { 'AuthorName': { 'Mundos': [], 'Narrativas': [], 'Imagenes': [] } }
+        groups = {}
+        
+        # Helper to add to groups
+        def add_to_group(author_obj, type_label, item):
+            a_name = author_obj.username if author_obj else "Desconocido"
+            if a_name not in groups:
+                groups[a_name] = {'Mundos': [], 'Narrativas': [], 'Imagenes': []}
+            if type_label not in groups[a_name]: groups[a_name][type_label] = []
+            groups[a_name][type_label].append(item)
+            
+        # Process Worlds
+        for w in deleted_worlds:
+            add_to_group(w.author, 'Mundos', w)
+            
+        # Process Narratives
+        for n in deleted_narratives:
+            add_to_group(n.created_by, 'Narrativas', n)
+
+        # Process Images (Verify file in Trash)
+        for i_prop in deleted_images_props:
+            trash_path = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/trash', str(i_prop.world.id), i_prop.target_filename)
+            if os.path.exists(trash_path):
+                # Attach extra data to object for template
+                i_prop.trash_path = f"/static/persistence/trash/{i_prop.world.id}/{i_prop.target_filename}"
+                add_to_group(i_prop.author, 'Imagenes', i_prop)
+            
+        # Sort authors? Maybe alphabetical or most recent activity?
+        # User said "lo separaramos por autor ... ademas de la fecha los mas nuevos delante"
+        # The items inside are already sorted by query order_by('-deleted_at').
+        # We can sort the authors themselves if needed, but dict order is insertion order in py3.7+.
+        # Let's simple pass the dict.
+        
+        return render(request, 'papelera.html', {'grouped_trash': groups})
     except Exception as e:
-        print(e)
+        print(f"Error in trash: {e}")
         return redirect('dashboard')
 
 @login_required
-@user_passes_test(is_superuser)
+@user_passes_test(is_admin_or_staff)
 def restaurar_entidad_fisica(request, jid):
     try:
         w = CaosWorldORM.objects.get(id=jid, is_active=False)
@@ -427,6 +826,56 @@ def restaurar_entidad_fisica(request, jid):
     except Exception as e:
         messages.error(request, str(e))
         return redirect('dashboard')
+
+
+@login_required
+@user_passes_test(is_admin_or_staff)
+def restaurar_narrativa(request, nid):
+    try:
+        n = CaosNarrativeORM.objects.get(nid=nid, is_active=False)
+        # Direct restore for now (Simpler than Version Proposal)
+        n.is_active = True
+        n.deleted_at = None
+        n.save()
+        
+        log_event(request.user, "NARRATIVE_RESTORE", n.nid, f"Restored narrative '{n.titulo}'")
+        messages.success(request, f"♻️ Narrativa '{n.titulo}' restaurada correctamente.")
+        return redirect('ver_papelera')
+    except Exception as e:
+        messages.error(request, str(e))
+        return redirect('ver_papelera')
+
+
+@login_required
+@user_passes_test(is_admin_or_staff)
+def borrar_mundo_definitivo(request, id):
+    try:
+        w = CaosWorldORM.objects.get(id=id, is_active=False)
+        name = w.name
+        # Hard Delete
+        w.delete()
+        log_event(request.user, "WORLD_HARD_DELETE", id, f"Permanently deleted world '{name}'")
+        messages.success(request, f"💥 Mundo '{name}' eliminado definitivamente.")
+        return redirect('ver_papelera')
+    except Exception as e:
+        messages.error(request, str(e))
+        return redirect('ver_papelera')
+
+
+@login_required
+@user_passes_test(is_admin_or_staff)
+def borrar_narrativa_definitivo(request, nid):
+    try:
+        n = CaosNarrativeORM.objects.get(nid=nid, is_active=False)
+        title = n.titulo
+        # Hard Delete
+        n.delete()
+        log_event(request.user, "NARRATIVE_HARD_DELETE", nid, f"Permanently deleted narrative '{title}'")
+        messages.success(request, f"💥 Narrativa '{title}' eliminada definitivamente.")
+        return redirect('ver_papelera')
+    except Exception as e:
+        messages.error(request, str(e))
+        return redirect('ver_papelera')
 
 
 # --- USER MANAGEMENT (SUPERUSER ONLY) ---
@@ -470,6 +919,171 @@ class UserManagementView(LoginRequiredMixin, UserPassesTestMixin, ListView):
         return context
 
 @login_required
+@user_passes_test(lambda u: u.is_staff or u.is_superuser)
+def archivar_propuestas_masivo(request):
+    if request.method == 'POST':
+        w_ids = request.POST.getlist('selected_ids')
+        n_ids = request.POST.getlist('selected_narr_ids')
+        i_ids = request.POST.getlist('selected_img_ids')
+        
+        count = 0
+        
+        if w_ids:
+            count += CaosVersionORM.objects.filter(id__in=w_ids, status='APPROVED').update(status='ARCHIVED')
+        if n_ids:
+            count += CaosNarrativeVersionORM.objects.filter(id__in=n_ids, status='APPROVED').update(status='ARCHIVED')
+        if i_ids:
+            count += CaosImageProposalORM.objects.filter(id__in=i_ids, status='APPROVED').update(status='ARCHIVED')
+
+        if count > 0:
+            messages.success(request, f"📦 {count} propuestas archivadas correctamente.")
+            log_event(request.user, "BULK_ARCHIVE", "dashboard", f"Archivadas {count} propuestas")
+        else:
+            messages.warning(request, "No se seleccionaron propuestas válidas.")
+            
+    return redirect(reverse('dashboard') + '#approved-list')
+
+@login_required
+def publicar_imagen(request, id):
+    try:
+        prop = CaosImageProposalORM.objects.get(id=id)
+        repo = DjangoCaosRepository()
+        
+        # APPLY CHANGES TO LIVE SYSTEM
+        if prop.action == 'DELETE':
+            base = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img', str(prop.world.id))
+            target = os.path.join(base, prop.target_filename)
+            if os.path.exists(target): os.remove(target)
+            msg = f"🗑️ Imagen '{prop.target_filename}' eliminada definitivamente (Live)."
+        else:
+            user_name = prop.author.username if prop.author else "Anónimo"
+            repo.save_manual_file(str(prop.world.id), prop.image, username=user_name, title=prop.title)
+            msg = f"🚀 Imagen '{prop.title}' PUBLICADA en Live."
+
+        prop.status = 'ARCHIVED'
+        prop.save()
+        log_event(request.user, "IMAGE_PUBLISH", prop.world.id, f"Published image {prop.title}")
+        messages.success(request, msg)
+        
+        next_url = request.GET.get('next')
+        if next_url: return redirect(next_url)
+        return redirect(request.META.get('HTTP_REFERER', 'dashboard'))
+    except Exception as e: messages.error(request, f"Error: {e}"); return redirect('dashboard')
+
+@login_required
+@user_passes_test(lambda u: u.is_staff or u.is_superuser)
+def publicar_propuestas_masivo(request):
+    if request.method == 'POST':
+        w_ids = request.POST.getlist('selected_ids')
+        n_ids = request.POST.getlist('selected_narr_ids')
+        i_ids = request.POST.getlist('selected_img_ids')
+        
+        count = 0
+        from src.WorldManagement.Caos.Application.publish_to_live_version import PublishToLiveVersionUseCase
+        from src.WorldManagement.Caos.Application.publish_narrative_to_live import PublishNarrativeToLiveUseCase
+        
+        # 1. Worlds
+        for wid in w_ids:
+            try:
+                PublishToLiveVersionUseCase().execute(wid)
+                count += 1
+            except Exception as e: print(f"Error publishing world {wid}: {e}")
+            
+        # 2. Narratives
+        for nid in n_ids:
+            try:
+                PublishNarrativeToLiveUseCase().execute(nid)
+                count += 1
+            except Exception as e: print(f"Error publishing narrative {nid}: {e}")
+            
+        # 3. Images
+        if i_ids:
+            repo = DjangoCaosRepository()
+            props = CaosImageProposalORM.objects.filter(id__in=i_ids) # Filter all selected, check status manually if needed
+            i_count = 0
+            for prop in props:
+                try:
+                    # Only publish if it was APPROVED
+                    if prop.status == 'APPROVED':
+                        if prop.action == 'DELETE':
+                            base = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img', str(prop.world.id))
+                            target = os.path.join(base, prop.target_filename)
+                            if os.path.exists(target): os.remove(target)
+                        else:
+                            user_name = prop.author.username if prop.author else "Anónimo"
+                            repo.save_manual_file(str(prop.world.id), prop.image, username=user_name, title=prop.title)
+                        
+                        prop.status = 'ARCHIVED'
+                        prop.save()
+                        i_count += 1
+                except Exception as e: print(f"Error publishing image {prop.id}: {e}")
+            
+            count += i_count
+            log_event(request.user, "IMAGE_BULK_PUBLISH", "Multiple", f"Published {i_count} images")
+
+        if count > 0:
+            messages.success(request, f"🚀 {count} elementos publicados correctamente.")
+        else:
+            messages.warning(request, "No se seleccionaron elementos válidos para publicar.")
+            
+    return redirect(reverse('dashboard') + '#approved-list')
+
+@login_required
+@user_passes_test(lambda u: u.is_staff or u.is_superuser)
+def batch_revisar_imagenes(request):
+    i_ids = []
+    
+    # 1. Try POST (Initial Selection)
+    if request.method == 'POST':
+        i_ids = request.POST.getlist('selected_img_ids')
+        
+    # 2. Try GET (Return from action)
+    if not i_ids:
+        ids_str = request.GET.get('ids', '')
+        if ids_str:
+            i_ids = ids_str.split(',')
+            
+    if not i_ids:
+        messages.warning(request, "No seleccionaste ninguna imagen para revisar.")
+        return redirect('dashboard')
+        
+    # Filter and fetch - EXCLUDE completed items (Archived/Rejected) so they "disappear" from the list
+    proposals = CaosImageProposalORM.objects.filter(id__in=i_ids).exclude(status__in=['ARCHIVED', 'REJECTED']).select_related('world', 'author')
+    
+    # Clean up IDs (in case some were deleted/published and are no longer found)
+    # We want to keep the "next" URL valid even if list shrinks, but for now we just pass the input IDs 
+    # or the found IDs? Better to pass found IDs so we don't loop on missing ones? 
+    # Actually, keep input IDs allows us to see "Empty State" if all are gone.
+    # But usually we want to persist the ones we are working on.
+    
+    # Pre-calculate previews for DELETE proposals
+    for p in proposals:
+        if p.action == 'DELETE' and not p.image:
+             # Construct URL manually: /static/persistence/img/<world_id>/<filename>
+             # This assumes standard static configuration
+             p.existing_image_url = f"{settings.STATIC_URL}persistence/img/{p.world.id}/{p.target_filename}"
+    
+    # We regenerate the CSV based on what is actually VISIBLE/VALID. 
+    # This effectively removes the done item from the next URL too.
+    current_ids_csv = ",".join([str(p.id) for p in proposals])
+
+    # Determine context for Back button
+    if proposals:
+        first_status = proposals[0].status
+    else:
+         first_status = 'PENDING'
+         
+    back_anchor = '#approved-list' if first_status == 'APPROVED' else '#pending-list'
+    
+    context = {
+        'proposals': proposals,
+        'is_superuser': request.user.is_superuser,
+        'back_anchor': back_anchor,
+        'current_ids_csv': current_ids_csv
+    }
+    return render(request, 'staff/batch_review_images.html', context)
+
+@login_required
 @user_passes_test(is_superuser)
 def toggle_admin_role(request, user_id):
     try:
@@ -494,83 +1108,6 @@ def toggle_admin_role(request, user_id):
         
     # Redirect to referer or default
     return redirect('user_management')
-
-# --- PROPOSAL DASHBOARD ---
-from django.views import View
-from django.db.models import Q
-from django.contrib.auth import get_user_model
-from src.Infrastructure.DjangoFramework.persistence.models import ContributionProposal, CaosImageProposalORM
-
-class ProposalDashboardView(LoginRequiredMixin, View):
-    def get(self, request, *args, **kwargs):
-        User = get_user_model()
-        status = request.GET.get('status', 'PENDING')
-        
-        # --- 1. TEXT PROPOSALS ---
-        if request.user.is_superuser:
-            text_props = ContributionProposal.objects.all().select_related('proposer', 'target_entity')
-        else:
-            text_props = ContributionProposal.objects.filter(
-                Q(target_entity__author=request.user) | Q(proposer=request.user)
-            ).select_related('proposer', 'target_entity')
-
-        # --- 2. IMAGE PROPOSALS ---
-        if request.user.is_superuser:
-            img_props = CaosImageProposalORM.objects.all().select_related('author', 'world')
-        else:
-            img_props = CaosImageProposalORM.objects.filter(
-                Q(world__author=request.user) | Q(author=request.user)
-            ).select_related('author', 'world')
-
-        # --- 3. FILTERING ---
-        # Filter by Proposer
-        proposer_id = request.GET.get('proposer_id')
-        if proposer_id:
-            text_props = text_props.filter(proposer__id=proposer_id)
-            img_props = img_props.filter(author__id=proposer_id)
-
-        # Filter by Target Owner (Mailbox)
-        target_author_id = request.GET.get('target_author_id')
-        if target_author_id:
-            text_props = text_props.filter(target_entity__author__id=target_author_id)
-            img_props = img_props.filter(world__author__id=target_author_id)
-
-        # Filter by Status
-        if status != 'ALL':
-            text_props = text_props.filter(status=status)
-            img_props = img_props.filter(status=status)
-
-        # --- 4. NORMALIZE & MERGE ---
-        combined = []
-        
-        for p in text_props:
-            combined.append(p)
-            
-        for p in img_props:
-            # Normalize to look like ContributionProposal for template
-            p.is_image_proposal = True
-            p.contribution_type = 'IMAGE_ADD' if p.action == 'ADD' else 'IMAGE_DELETE'
-            p.target_entity = p.world
-            p.proposer = p.author
-            p.proposed_payload = {
-                'title': p.title,
-                'filename': p.target_filename,
-                'image_url': p.image.url if p.image else None
-            }
-            combined.append(p)
-
-        # Sort by Date Descending
-        combined.sort(key=lambda x: x.created_at, reverse=True)
-
-        context = {
-            'proposals': combined,
-            'users': User.objects.all(),
-            'current_status': status,
-            'selected_proposer': int(proposer_id) if proposer_id else '',
-            'selected_target': int(target_author_id) if target_author_id else '',
-            'is_superuser_view': request.user.is_superuser
-        }
-        return render(request, 'staff/proposal_dashboard.html', context)
 
 # --- DETAIL & DIFF VIEW ---
 from src.Shared.Services.DiffService import DiffService
@@ -617,65 +1154,12 @@ class ImageProposalDetailView(LoginRequiredMixin, View):
         return render(request, 'staff/image_proposal_detail.html', context)
 
 @login_required
-def aprobar_imagen(request, id):
-    prop = get_object_or_404(CaosImageProposalORM, id=id)
-    if not (request.user.is_superuser or request.user == prop.world.author or request.user.groups.filter(name='Admins').exists()):
-        messages.error(request, "⛔ No tienes permiso.")
-        return redirect('dashboard')
-        
-    _approve_image_logic(request, prop)
-    return redirect('proposal_dashboard')
-
-@login_required
-def rechazar_imagen(request, id):
-    prop = get_object_or_404(CaosImageProposalORM, id=id)
-    if not (request.user.is_superuser or request.user == prop.world.author or request.user.groups.filter(name='Admins').exists()):
-        messages.error(request, "⛔ No tienes permiso.")
-        return redirect('dashboard')
-        
-    prop.status = 'REJECTED'
-    if prop.image: prop.image.delete()
-    prop.delete()
-    messages.info(request, "❌ Propuesta de imagen rechazada.")
-    return redirect('proposal_dashboard')
-
-def _approve_image_logic(request, prop):
-    try:
-        repo = DjangoCaosRepository()
-        if prop.action == 'ADD':
-             user_name = prop.author.username if prop.author else "Anónimo"
-             if prop.image:
-                 repo.save_manual_file(prop.world.id, prop.image, username=user_name, title=prop.title)
-             
-             prop.status = 'APPROVED'
-             prop.save()
-             messages.success(request, f"✅ Imagen {prop.title} aprobada.")
-             
-        elif prop.action == 'DELETE':
-             base = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img', prop.world.id)
-             target = os.path.join(base, prop.target_filename)
-             if os.path.exists(target): os.remove(target)
-             
-             w = prop.world
-             if w.metadata and 'imagenes' in w.metadata:
-                 w.metadata['imagenes'] = [
-                     img for img in w.metadata['imagenes'] 
-                     if img.get('filename') != prop.target_filename
-                 ]
-                 w.save()
-                 
-             prop.status = 'APPROVED'
-             prop.save()
-             messages.success(request, f"✅ Imagen borrada.")
-
-    except Exception as e:
-        messages.error(request, f"Error al procesar imagen: {e}")
-
-@login_required
+@user_passes_test(is_admin_or_staff)
 def aprobar_contribucion(request, id):
     try:
         prop = ContributionProposal.objects.get(id=id)
-        if not (request.user.is_superuser or prop.target_entity.author == request.user):
+        # Check permission for target world
+        if not (request.user.is_superuser or prop.target_entity.author == request.user or request.user.is_staff):
             messages.error(request, "⛔ Sin permiso.")
             return redirect('dashboard')
             
@@ -689,10 +1173,11 @@ def aprobar_contribucion(request, id):
         return redirect('dashboard')
 
 @login_required
+@user_passes_test(is_admin_or_staff)
 def rechazar_contribucion(request, id):
     try:
         prop = ContributionProposal.objects.get(id=id)
-        if not (request.user.is_superuser or prop.target_entity.author == request.user):
+        if not (request.user.is_superuser or prop.target_entity.author == request.user or request.user.is_staff):
             messages.error(request, "⛔ Sin permiso.")
             return redirect('dashboard')
             
@@ -715,37 +1200,53 @@ class MyTeamView(LoginRequiredMixin, TemplateView):
         # Robust Profile Access
         if not hasattr(user, 'profile'):
             UserProfile.objects.create(user=user)
-            # Reload user to ensure relationship is cached
             user.refresh_from_db()
             
-        # 1. MY TEAM (Collaborators)
-        if user.is_superuser:
-            context['team_list'] = user.profile.collaborators.all()
-        else:
-             context['team_list'] = user.profile.collaborators.all()
+        # 1. MY TEAM
+        # Optimized query with counts
+        context['team_list'] = user.profile.collaborators.select_related('user__profile').prefetch_related('collaborators').all()
              
-        # 2. SEARCH RESULTS (if any)
+        # 2. DIRECTORY / SEARCH
         query = self.request.GET.get('q')
-        if query:
-            # Search users excluding self and superusers (optional protection)
-            results = User.objects.filter(
-                Q(username__icontains=query) | Q(email__icontains=query)
-            ).exclude(id=user.id).exclude(is_superuser=True)[:10]
+        role_filter = self.request.GET.get('role')
+        mode = self.request.GET.get('mode')
+        
+        should_list = query or role_filter or mode == 'directory'
+        
+        if should_list:
+            qs = User.objects.filter(is_active=True).select_related('profile').exclude(id=user.id)
             
-            # Annotate: is_collaborator?
+            if query:
+                qs = qs.filter(Q(username__icontains=query) | Q(email__icontains=query))
+            if role_filter:
+                qs = qs.filter(profile__rank=role_filter)
+                
+            results = qs[:50]
+                
             final_results = []
-            my_collabs = user.profile.collaborators.all()
+            my_collabs = set(user.profile.collaborators.values_list('user__id', flat=True))
+            
             for r in results:
-                # FIX: Ensure searched user has profile
                 if not hasattr(r, 'profile'):
                     UserProfile.objects.create(user=r)
                     r.refresh_from_db()
-                    
-                is_in_team = r.profile in my_collabs
-                final_results.append({'user': r, 'is_in_team': is_in_team})
+                
+                # Extended Info
+                team_count = r.profile.collaborators.count()
+                boss = r.profile.bosses.first() # Get primary supervisor
+                boss_name = boss.user.username if boss else None
+                
+                final_results.append({
+                    'user': r,
+                    'is_in_team': r.id in my_collabs,
+                    'team_count': team_count,
+                    'boss_name': boss_name
+                })
             
             context['search_results'] = final_results
             context['search_query'] = query
+            context['current_role'] = role_filter
+            context['is_directory_mode'] = True
             
         return context
 

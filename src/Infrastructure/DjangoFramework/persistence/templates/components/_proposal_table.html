@@ -1,0 +1,133 @@
+```html
+<div class="overflow-x-auto rounded-xl border border-white/10">
+    <table class="w-full text-left border-collapse">
+        <thead>
+            <tr class="bg-gray-900/80 text-gray-400 text-xs uppercase border-b border-gray-800">
+                <th class="p-4 font-bold tracking-wider w-24">Tipo</th>
+                <th class="p-4 font-bold tracking-wider">Contexto</th>
+                <th class="p-4 font-bold tracking-wider">Cambio / Motivo</th>
+                {% if not hide_author %}<th class="p-4 font-bold tracking-wider">Autor</th>{% endif %}
+                <th class="p-4 font-bold tracking-wider text-right">Fecha</th>
+                
+                {% if variant == 'inbox' %}
+                    <th class="p-4 font-bold tracking-wider text-right">Acciones</th>
+                {% else %}
+                    <th class="p-4 font-bold tracking-wider text-right">Estado</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-800 bg-black/20 text-sm">
+            {% for item in items %}
+            <tr class="hover:bg-white/5 transition-colors group">
+                <!-- TYPE -->
+                <td class="p-4 align-top">
+                    <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold border
+                        {% if item.type == 'WORLD' %} bg-blue-900/20 text-blue-400 border-blue-900/50
+                        {% elif item.type == 'NARRATIVE' %} bg-purple-900/20 text-purple-400 border-purple-900/50
+                        {% elif item.type == 'IMAGE' %} bg-pink-900/20 text-pink-400 border-pink-900/50
+                        {% else %} bg-gray-800 text-gray-400 border-gray-700 {% endif %}">
+                        {{ item.type_label }}
+                    </span>
+                    <div class="mt-1 text-[10px] text-gray-600 font-mono">v{{ item.version_number|default:"-" }}</div>
+                </td>
+
+                <!-- CONTEXT (Parent) -->
+                <td class="p-4 align-top">
+                    <div class="flex items-start gap-2">
+                        <span class="text-lg opacity-30 mt-0.5">📂</span>
+                        <div>
+                            {% if item.type == 'IMAGE' %}
+                                <div class="w-16 h-10 bg-gray-800 rounded mb-1 overflow-hidden border border-white/10">
+                                    {% if item.image_url %}
+                                    <img src="{{ item.image_url }}" class="w-full h-full object-cover">
+                                    {% endif %}
+                                </div>
+                            {% else %}
+                                <div class="font-bold text-gray-300">{{ item.parent_context|default:item.target_name }}</div>
+                            {% endif %}
+                            
+                            <a href="{% url 'review_proposal' item.type item.id %}" class="text-xs text-blue-400 hover:text-blue-300 hover:underline">
+                                {{ item.target_name|default:"(Sin Nombre)" }}
+                            </a>
+                        </div>
+                    </div>
+                </td>
+
+                <!-- REASON / CHANGE LOG -->
+                <td class="p-4 align-top max-w-xs">
+                    <p class="text-sm text-gray-400 italic bg-black/30 p-2.5 rounded border border-white/5 relative">
+                        <span class="absolute top-2 left-1 text-gray-600 font-serif text-2xl leading-none">"</span>
+                        <span class="pl-3 block">{{ item.change_log|default:'Sin comentarios' }}</span>
+                    </p>
+                </td>
+
+                <!-- AUTHOR (Optional) -->
+                {% if not hide_author %}
+                <td class="p-4 align-top w-32">
+                    <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 rounded-full bg-indigo-900 flex items-center justify-center text-[9px] text-white font-bold">
+                            {{ item.author.username|slice:":1"|upper }}
+                        </div>
+                        <span class="text-xs text-gray-300">{{ item.author.username }}</span>
+                    </div>
+                </td>
+                {% endif %}
+
+                <!-- DATE -->
+                <td class="p-4 align-top text-right whitespace-nowrap text-xs text-gray-500 font-mono">
+                    {{ item.created_at|date:"d M H:i" }}
+                </td>
+
+                <!-- ACTIONS -->
+                {% if variant == 'inbox' %}
+                    <td class="p-4 align-top text-right">
+                        <div class="flex justify-end gap-2 text-right">
+                             <!-- Approve (Quick) -->
+                            <form method="post" action="{% if item.type == 'WORLD' %}{% url 'publicar_version' item.id %}{% else %}{% url 'publicar_narrativa' item.id %}{% endif %}">
+                                {% csrf_token %}
+                                <button type="submit" class="p-2 rounded-lg bg-green-900/20 hover:bg-green-600 text-green-400 hover:text-white border border-green-900/50 transition-all shadow-lg shadow-green-900/10" title="Aprobar Rápido" onclick="return confirm('¿Aprobar y publicar v{{ item.version_number }}?')">
+                                    ✅
+                                </button>
+                            </form>
+
+                            <!-- Review (Link) -->
+                            <a href="{% url 'review_proposal' item.type item.id %}" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-lg shadow-blue-900/20 transition-all hover:-translate-y-0.5 border border-blue-500/50">
+                                <span>🔍</span> Revisar
+                            </a>
+                        </div>
+                    </td>
+                {% elif variant == 'approved' %}
+                     <td class="p-4 align-top w-48 text-right">
+                        <div class="flex flex-col items-end gap-1">
+                            <span class="text-green-500 text-xs font-bold border border-green-500/30 px-2 py-1 rounded bg-green-900/20 mb-1">
+                                ✅ Aprobado
+                            </span>
+                             <!-- Publish to Live (Step 2) -->
+                            <form method="post" action="{% if item.type == 'WORLD' %}{% url 'publicar_version' item.id %}{% else %}{% url 'publicar_narrativa' item.id %}{% endif %}">
+                                {% csrf_token %}
+                                <button type="submit" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-1.5 rounded shadow transition-all hover:-translate-y-0.5" onclick="return confirm('¿PUBLICAR v{{ item.version_number }} EN LIVE? (Se archivará la versión actual)')">
+                                    <span>🚀</span> Publicar
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                {% else %}
+                    <!-- STATUS BADGE -->
+                    <td class="p-4 align-top w-32">
+                        {% if item.status == 'PENDING' %}<span class="text-yellow-500 text-xs font-bold border border-yellow-500/30 px-2 py-1 rounded bg-yellow-900/20">⏳ Pendiente</span>
+                        {% elif item.status == 'APPROVED' %}<span class="text-green-500 text-xs font-bold border border-green-500/30 px-2 py-1 rounded bg-green-900/20">✅ Aprobado</span>
+                        {% elif item.status == 'REJECTED' %}<span class="text-red-500 text-xs font-bold border border-red-500/30 px-2 py-1 rounded bg-red-900/20">❌ Rechazado</span>
+                        {% else %}<span class="text-gray-500 text-xs font-bold">{{ item.status }}</span>{% endif %}
+                    </td>
+                {% endif %}
+            </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="5" class="p-8 text-center text-gray-500 italic">
+                        No hay elementos que mostrar aquí.
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

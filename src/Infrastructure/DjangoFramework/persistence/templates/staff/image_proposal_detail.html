@@ -14,7 +14,7 @@
             <p class="text-gray-400 mt-2 text-sm">Validar contribución visual para: {{ proposal.world.name }}</p>
         </div>
         <div class="flex gap-2">
-            <a href="{% url 'proposal_dashboard' %}" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition border border-gray-700 flex items-center gap-2">
+            <a href="{% url 'dashboard' %}{% if proposal.status == 'APPROVED' %}#approved-list{% else %}#pending-list{% endif %}" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition border border-gray-700 flex items-center gap-2">
                 ⬅️ Volver
             </a>
         </div>
@@ -60,8 +60,13 @@
                      {% endif %}
                  </div>
                  <div class="bg-gray-900/60 p-3 rounded border border-gray-800">
-                     <span class="text-gray-500 block mb-1">Fecha</span>
-                     <span class="text-white">{{ proposal.created_at|date:"d M Y H:i" }}</span>
+                     <span class="text-gray-500 block mb-1">Estado</span>
+                     <span class="font-bold border px-2 py-0.5 rounded text-[10px]
+                        {% if proposal.status == 'PENDING' %} bg-yellow-900/20 text-yellow-500 border-yellow-900/50
+                        {% elif proposal.status == 'APPROVED' %} bg-green-900/20 text-green-500 border-green-900/50
+                        {% else %} bg-gray-800 text-gray-400 border-gray-700 {% endif %}">
+                        {{ proposal.status }}
+                     </span>
                  </div>
              </div>
         </div>
@@ -72,25 +77,63 @@
                 <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
                     ⚡ Decisiones
                 </h3>
-                <p class="text-gray-400 text-sm mb-6">
-                    Aprobar esta propuesta aplicará los cambios permanentemente en <strong>{{ proposal.world.name }}</strong>.
-                </p>
-
+                
                 <div class="flex flex-col gap-4">
-                    {% if proposal.action == 'ADD' %}
-                        <a href="{% url 'aprobar_imagen' proposal.id %}" class="w-full py-4 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-bold rounded-xl text-center shadow-lg transition transform hover:scale-[1.02] flex items-center justify-center gap-3">
-                            ✅ APROBAR Y PUBLICAR
-                        </a>
-                        <a href="{% url 'rechazar_imagen' proposal.id %}" class="w-full py-4 bg-gray-800 hover:bg-red-900/30 border border-gray-700 hover:border-red-800 text-gray-300 hover:text-red-300 font-bold rounded-xl text-center transition flex items-center justify-center gap-3" onclick="return confirm('¿Rechazar esta imagen?')">
-                            ❌ RECHAZAR
-                        </a>
-                    {% else %}
-                        <a href="{% url 'aprobar_imagen' proposal.id %}" class="w-full py-4 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-bold rounded-xl text-center shadow-lg transition transform hover:scale-[1.02] flex items-center justify-center gap-3" onclick="return confirm('¿Seguro quines BORRAR DEFINITIVAMENTE esta imagen?')">
-                            🗑️ CONFIRMAR BORRADO
-                        </a>
-                        <a href="{% url 'rechazar_imagen' proposal.id %}" class="w-full py-4 bg-gray-800 hover:bg-green-900/30 border border-gray-700 hover:border-green-800 text-gray-300 hover:text-green-300 font-bold rounded-xl text-center transition flex items-center justify-center gap-3">
-                            🛡️ RECHAZAR (MANTENER IMAGEN)
-                        </a>
+                    {% if proposal.status == 'PENDING' %}
+                        <p class="text-gray-400 text-sm mb-2">
+                            {% if proposal.action == 'DELETE' %}
+                                Esta es una solicitud de ELIMINACIÓN.
+                            {% else %}
+                                Aprobar moverá esta imagen a la lista de "Listas para publicar".
+                            {% endif %}
+                        </p>
+
+                        {% if proposal.action == 'DELETE' %}
+                             <!-- DELETE LOGIC: Approve=Delete(Red), Reject=Keep(Green) -->
+                            <form method="post" action="{% url 'aprobar_imagen' proposal.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-center shadow-lg transition transform hover:scale-[1.02] flex items-center justify-center gap-3">
+                                    🗑️ CONFIRMAR BORRADO (Aprobar)
+                                </button>
+                            </form>
+                            <form method="post" action="{% url 'rechazar_imagen' proposal.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="w-full py-4 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl text-center shadow-lg transition transform hover:scale-[1.02] flex items-center justify-center gap-3">
+                                    🛡️ MANTENER IMAGEN (Rechazar)
+                                </button>
+                            </form>
+                        {% else %}
+                             <!-- ADD LOGIC: Approve=Green, Reject=Red -->
+                            <form method="post" action="{% url 'aprobar_imagen' proposal.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="w-full py-4 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-bold rounded-xl text-center shadow-lg transition transform hover:scale-[1.02] flex items-center justify-center gap-3">
+                                    ✅ APROBAR PROPUESTA
+                                </button>
+                            </form>
+                            <form method="post" action="{% url 'rechazar_imagen' proposal.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="w-full py-4 bg-gray-800 hover:bg-red-900/30 border border-gray-700 hover:border-red-800 text-gray-300 hover:text-red-300 font-bold rounded-xl text-center transition flex items-center justify-center gap-3" onclick="return confirm('¿Rechazar esta imagen?')">
+                                    ❌ RECHAZAR
+                                </button>
+                            </form>
+                        {% endif %}
+
+                    {% elif proposal.status == 'APPROVED' %}
+                        <p class="text-gray-400 text-sm mb-2">
+                            Publicar hará que los cambios sean visibles en Staging/Live y archivará la propuesta.
+                        </p>
+                        <form method="post" action="{% url 'publicar_imagen' proposal.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-center shadow-[0_0_20px_rgba(37,99,235,0.3)] transition transform hover:scale-[1.02] flex items-center justify-center gap-3">
+                                🚀 PUBLICAR A LIVE
+                            </button>
+                        </form>
+                        <form method="post" action="{% url 'archivar_imagen' proposal.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="w-full py-4 bg-gray-800 hover:bg-yellow-900/30 border border-gray-700 hover:border-yellow-800 text-gray-300 hover:text-yellow-300 font-bold rounded-xl text-center transition flex items-center justify-center gap-3">
+                                📦 ARCHIVAR (Sin publicar)
+                            </button>
+                        </form>
                     {% endif %}
                 </div>
             </div>

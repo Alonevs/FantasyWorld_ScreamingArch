@@ -153,10 +153,22 @@ def ver_mundo(request, public_id):
     # Check Status
     # Rule: LIVE is Public. OFFLINE is Private (Author/Superuser only).
     is_live = (w_orm.status == 'LIVE')
-    is_author = (request.user.is_authenticated and w_orm.author == request.user)
+    is_strict_author = (request.user.is_authenticated and w_orm.author == request.user)
     is_superuser = request.user.is_superuser
+    
+    # Check Collaborator Status (Subadmin)
+    is_collaborator = False
+    if request.user.is_authenticated and not is_strict_author:
+        try:
+             # Am I a collaborator of the author?
+             if w_orm.author and hasattr(w_orm.author, 'profile'):
+                 if request.user.profile in w_orm.author.profile.collaborators.all():
+                     is_collaborator = True
+        except: pass
 
-    if not (is_live or is_author or is_superuser):
+    can_access = is_live or is_strict_author or is_superuser or is_collaborator
+
+    if not can_access:
         return render(request, 'private_access.html', status=403)
     
     # 1. Handle POST (Creation)
@@ -224,6 +236,22 @@ def ver_mundo(request, public_id):
     context['hierarchy_label'] = get_readable_hierarchy(context['jid'])
     context['status_str'] = w_orm.status
     context['author_live_user'] = w_orm.author
+    
+    # OVERRIDE is_author for Template Buttons
+    # If I am a collaborator, I should see the buttons (is_author=True in context)
+    # OR we use a separate 'can_edit' flag.
+    # checking template: uses 'is_author' OR 'allow_proposals'
+    
+    # Check Admin Role
+    is_admin_role = False
+    try: is_admin_role = (request.user.profile.rank == 'ADMIN')
+    except: pass
+
+    context['is_author'] = is_strict_author or is_collaborator or is_admin_role
+    context['can_edit'] = is_strict_author or is_collaborator or is_superuser or is_admin_role
+    context['allow_proposals'] = is_collaborator or is_admin_role # Explicit flag for subadmins/admins
+    context['is_admin_role'] = is_admin_role
+    # ---------------------------------
     # ---------------------------------
     
     # --- DEEP CREATION OPTIONS ---

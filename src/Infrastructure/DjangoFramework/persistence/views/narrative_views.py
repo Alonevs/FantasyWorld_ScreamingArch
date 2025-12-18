@@ -82,12 +82,34 @@ def leer_narrativa(request, nid):
         if n_orm:
            w = n_orm.world
            is_live = (w.status == 'LIVE')
-           is_author = (request.user.is_authenticated and w.author == request.user)
+           is_strict_author = (request.user.is_authenticated and w.author == request.user)
            is_superuser = request.user.is_superuser
-           if not (is_live or is_author or is_superuser): 
+           
+           # Check Collaborator Status
+           is_collaborator = False
+           if request.user.is_authenticated and not is_strict_author:
+               try:
+                    if w.author and hasattr(w.author, 'profile'):
+                        if request.user.profile in w.author.profile.collaborators.all():
+                            is_collaborator = True
+               except: pass
+
+           check_access = is_live or is_strict_author or is_superuser or is_collaborator
+           if not check_access: 
                return render(request, 'private_access.html', status=403)
 
         context = GetNarrativeDetailsUseCase(repo).execute(nid, request.user)
+        
+        # Patch Context with Permissions
+        if context:
+           # Check Admin Role
+           is_admin_role = False
+           try: is_admin_role = (request.user.profile.rank == 'ADMIN')
+           except: pass
+           
+           context['is_author'] = is_strict_author or is_collaborator or is_admin_role
+           context['allow_proposals'] = is_collaborator or is_admin_role
+           context['is_admin_role'] = is_admin_role
         
         if not context:
             messages.error(request, f"No se encontró la narrativa: {nid}")

@@ -27,10 +27,13 @@ def check_ownership(user, obj):
     # Check for 'created_by' field (Narratives)
     if hasattr(obj, 'created_by'):
         if obj.created_by == user: return True
-        # SUBADMIN CHECK
+        # SUBADMIN CHECK: Edit Boss's stuff
+        # If the creator of the narrative is one of my bosses?
+        # i.e. Am I in obj.created_by.profile.collaborators?
         try:
-            if hasattr(user, 'profile') and user.profile.boss == obj.created_by:
-                return True
+            if hasattr(obj.created_by, 'profile'):
+                if user.profile in obj.created_by.profile.collaborators.all():
+                    return True
         except: pass
         
     raise PermissionDenied("No tiene permiso para editar esta entidad.")

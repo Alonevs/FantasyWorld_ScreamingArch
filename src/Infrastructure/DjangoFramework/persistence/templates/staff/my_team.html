@@ -15,59 +15,117 @@
             </p>
         </div>
         
-        <!-- SEARCH BAR -->
-        <form method="get" class="w-full md:w-auto relative group">
-            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <span class="text-gray-500 group-focus-within:text-blue-400 transition-colors">🔍</span>
+        <!-- FILTER BAR -->
+        <form method="get" class="w-full md:w-auto flex flex-col md:flex-row gap-2">
+            <!-- Hidden Mode Trigger -->
+            <input type="hidden" name="mode" value="directory">
+
+            <!-- Role Filter -->
+            <select name="role" class="bg-black/30 border border-white/10 rounded-lg py-2 px-3 text-sm text-gray-300 focus:outline-none focus:border-blue-500 cursor-pointer [&>option]:bg-gray-900">
+                <option value="">👤 Todos los Roles</option>
+                <option value="ADMIN" {% if current_role == 'ADMIN' %}selected{% endif %}>💎 Admins</option>
+                <option value="SUBADMIN" {% if current_role == 'SUBADMIN' %}selected{% endif %}>🛡️ Subadmins</option>
+                <option value="USER" {% if current_role == 'USER' %}selected{% endif %}>👤 Usuarios</option>
+            </select>
+
+            <!-- Search Input -->
+            <div class="relative group">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span class="text-gray-500 group-focus-within:text-blue-400 transition-colors">🔍</span>
+                </div>
+                <input type="text" name="q" value="{{ search_query|default:'' }}" 
+                       placeholder="Buscar usuario..." 
+                       class="bg-black/30 w-full md:w-64 border border-white/10 rounded-lg py-2 pl-9 pr-4 text-sm text-white focus:outline-none focus:border-blue-500 transition-all">
             </div>
-            <input type="text" name="q" value="{{ search_query|default:'' }}" 
-                   placeholder="Buscar usuario o email..." 
-                   class="bg-black/30 w-full md:w-80 border border-white/10 rounded-full py-2 pl-10 pr-4 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all shadow-lg backdrop-blur-sm">
+
+            <!-- Submit -->
+            <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition">
+                Filtrar
+            </button>
+            
+            {% if is_directory_mode %}
+                <a href="{% url 'my_team' %}" class="bg-gray-800 hover:bg-gray-700 text-gray-400 py-2 px-3 rounded-lg text-sm transition text-center">
+                    Cerrar Directorio
+                </a>
+            {% endif %}
         </form>
     </div>
 
-    <!-- 1. SEARCH RESULTS SECTION -->
-    {% if search_results %}
+    <!-- 1. DIRECTORY / SEARCH RESULTS -->
+    {% if is_directory_mode %}
     <div class="mb-12 animate-fade-in-down">
         <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <span class="text-yellow-400">🕵️</span> Resultados de Búsqueda
+            <span class="text-yellow-400">📂</span> Directorio de Usuarios
+            {% if search_results %}
+                <span class="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">{{ search_results|length }}</span>
+            {% endif %}
         </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {% for item in search_results %}
-                <div class="bg-[#111] p-4 rounded-xl border border-white/10 flex items-center justify-between hover:border-white/30 transition-all group">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center text-white font-bold border border-white/10">
-                            {{ item.user.username|slice:":1"|upper }}
+        
+        {% if not search_results %}
+             <div class="text-center py-10 bg-white/5 rounded-xl border border-white/5 border-dashed">
+                <p class="text-gray-400">No se encontraron usuarios con estos filtros.</p>
+            </div>
+        {% else %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for item in search_results %}
+                    <div class="bg-[#111] p-4 rounded-xl border border-white/10 flex items-center justify-between hover:border-white/30 transition-all group">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center text-white font-bold border border-white/10">
+                                {{ item.user.username|slice:":1"|upper }}
+                            </div>
+                            <div>
+                                <a href="{% url 'collaborator_work' item.user.id %}" class="font-bold text-gray-200 hover:text-blue-400 transition-colors flex items-center gap-1 group/link">
+                                    {{ item.user.username }}
+                                    <span class="opacity-0 group-hover/link:opacity-100 text-[10px]">↗</span>
+                                </a>
+                                <div class="flex flex-col gap-0.5 mt-1">
+                                    <p class="text-xs text-gray-500">{{ item.user.profile.get_rank_display }}</p>
+                                    
+                                    <!-- HIERARCHY INFO -->
+                                    {% if item.boss_name %}
+                                        <p class="text-[10px] text-gray-600 flex items-center gap-1" title="Supervisado por">
+                                            <span>👑</span> <span class="text-gray-400">{{ item.boss_name }}</span>
+                                        </p>
+                                    {% endif %}
+                                    
+                                    {% if item.team_count > 0 %}
+                                        <p class="text-[10px] text-gray-600 flex items-center gap-1" title="Tamaño de equipo">
+                                            <span>👥</span> <span class="text-blue-400 font-bold max-w-[100px] truncate">{{ item.team_count }} colaboradores</span>
+                                        </p>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
+                        
                         <div>
-                            <p class="font-bold text-gray-200">{{ item.user.username }}</p>
-                            <p class="text-xs text-gray-500">{{ item.user.profile.get_rank_display }}</p>
+                            {% if item.is_in_team %}
+                                <span class="text-emerald-500 text-xs font-bold border border-emerald-500/30 px-2 py-1 rounded bg-emerald-500/10 cursor-default">
+                                    ✓ Equipo
+                                </span>
+                            {% else %}
+                                <form method="post" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="add">
+                                    <input type="hidden" name="target_id" value="{{ item.user.id }}">
+                                    <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-all shadow-md flex items-center gap-1">
+                                        <span>+</span> Añadir
+                                    </button>
+                                </form>
+                            {% endif %}
                         </div>
                     </div>
-                    
-                    <div>
-                        {% if item.is_in_team %}
-                            <span class="text-emerald-500 text-xs font-bold border border-emerald-500/30 px-2 py-1 rounded bg-emerald-500/10">
-                                ✓ En equipo
-                            </span>
-                        {% else %}
-                            <form method="post" class="inline">
-                                {% csrf_token %}
-                                <input type="hidden" name="action" value="add">
-                                <input type="hidden" name="target_id" value="{{ item.user.id }}">
-                                <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-all shadow-md flex items-center gap-1">
-                                    <span>+</span> Añadir
-                                </button>
-                            </form>
-                        {% endif %}
-                    </div>
-                </div>
-            {% endfor %}
-        </div>
+                {% endfor %}
+            </div>
+        {% endif %}
     </div>
-    {% elif search_query %}
-        <div class="mb-12 text-center py-10 bg-white/5 rounded-xl border border-white/5 border-dashed">
-            <p class="text-gray-400">No se encontraron usuarios con "{{ search_query }}"</p>
+    {% elif not team_list %}
+        <!-- EMPTY STATE (No Team + No Directory) -->
+        <div class="text-center py-20">
+            <h3 class="text-2xl font-bold text-gray-600 mb-4">Tu equipo está vacío</h3>
+            <p class="text-gray-500 mb-6">Usa los filtros de arriba para buscar usuarios y añadirlos a tu equipo.</p>
+            <a href="?mode=directory" class="bg-blue-900/40 text-blue-300 hover:bg-blue-900/60 border border-blue-800 px-6 py-2 rounded-lg font-bold transition">
+                👁️ Ver Directorio Completo
+            </a>
         </div>
     {% endif %}
 
@@ -98,7 +156,10 @@
                             <!-- Text -->
                             <div class="min-w-0">
                                 <div class="flex items-center gap-2">
-                                    <h4 class="text-sm font-bold text-gray-200 truncate">{{ profile.user.username }}</h4>
+                                    <a href="{% url 'collaborator_work' profile.user.id %}" class="text-sm font-bold text-gray-200 truncate hover:text-blue-400 transition-colors flex items-center gap-1 group/link">
+                                        {{ profile.user.username }}
+                                        <span class="opacity-0 group-hover/link:opacity-100 text-[10px]">↗</span>
+                                    </a>
                                     <!-- Tiny Badge -->
                                     <span class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border
                                         {% if profile.rank == 'ADMIN' %} bg-blue-500/10 text-blue-400 border-blue-500/30
@@ -107,6 +168,26 @@
                                     </span>
                                 </div>
                                 <p class="text-[10px] text-gray-500 truncate">{{ profile.user.email|default:"..." }}</p>
+                                
+                                <!-- Sub-Team Chips (Avatar + Name) -->
+                                {% if profile.collaborators.count > 0 %}
+                                <div class="mt-2 flex flex-wrap gap-1.5">
+                                    <span class="text-blue-500 font-bold text-[10px] self-center mr-0.5">↳</span>
+                                    {% for sub in profile.collaborators.all|slice:":3" %}
+                                        <a href="{% url 'collaborator_work' sub.user.id %}" class="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full pr-2 pl-0.5 py-0.5 hover:bg-white/10 hover:border-white/30 transition-colors group/chip" title="Ver trabajo de {{ sub.user.username }}">
+                                            <div class="w-4 h-4 rounded-full bg-gray-700 flex items-center justify-center text-[7px] text-white font-bold group-hover/chip:bg-blue-600 transition-colors">
+                                                {{ sub.user.username|slice:":1"|upper }}
+                                            </div>
+                                            <span class="text-[9px] text-gray-300 font-bold group-hover/chip:text-white transition-colors">{{ sub.user.username }}</span>
+                                        </a>
+                                    {% endfor %}
+                                    {% if profile.collaborators.count > 3 %}
+                                        <div class="px-1.5 py-0.5 rounded text-[9px] text-gray-500 font-bold border border-transparent self-center">
+                                            +{{ profile.collaborators.count|add:"-3" }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
 
