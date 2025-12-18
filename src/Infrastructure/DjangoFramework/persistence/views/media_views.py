@@ -14,16 +14,9 @@ from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, 
 from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
 from src.WorldManagement.Caos.Application.generate_map import GenerateWorldMapUseCase
 from src.FantasyWorld.AI_Generation.Infrastructure.sd_service import StableDiffusionService
+from .view_utils import resolve_jid_orm
 
-def resolve_jid(identifier):
-    try:
-        return CaosWorldORM.objects.get(public_id=identifier)
-    except CaosWorldORM.DoesNotExist:
-        pass 
-    try:
-        return CaosWorldORM.objects.get(id=identifier)
-    except CaosWorldORM.DoesNotExist:
-        return None
+# Removed local resolve_jid, using resolve_jid_orm instead
 
 def log_event(user, action, target_id, details=""):
     try:
@@ -35,7 +28,7 @@ def log_event(user, action, target_id, details=""):
 def api_preview_foto(request, jid):
     if request.method != 'GET': return JsonResponse({'success': False})
     try:
-        w = resolve_jid(jid); real_jid = w.id if w else jid
+        w = resolve_jid_orm(jid); real_jid = w.id if w else jid
         b64 = GenerateWorldMapUseCase(DjangoCaosRepository(), StableDiffusionService()).generate_preview(real_jid)
         return JsonResponse({'status': 'ok', 'success': True, 'image': b64})
     except Exception as e: return JsonResponse({'status': 'error', 'message': str(e)})
@@ -44,7 +37,7 @@ def api_preview_foto(request, jid):
 def api_save_foto(request, jid):
     print(f"DEBUG: api_save_foto called for jid={jid}")
     try:
-        w = resolve_jid(jid); real_jid = w.id if w else jid
+        w = resolve_jid_orm(jid); real_jid = w.id if w else jid
         print(f"DEBUG: Resolved world: {w}")
         
         data = json.loads(request.body)
@@ -104,7 +97,7 @@ def api_save_foto(request, jid):
 @csrf_exempt
 def api_update_image_metadata(request, jid):
     try:
-        w = resolve_jid(jid); real_jid = w.id if w else jid
+        w = resolve_jid_orm(jid); real_jid = w.id if w else jid
         data = json.loads(request.body)
         repo = DjangoCaosRepository()
         if hasattr(repo, 'update_image_metadata'):
@@ -114,7 +107,7 @@ def api_update_image_metadata(request, jid):
     except Exception as e: return JsonResponse({'status': 'error', 'message': str(e)})
 
 def subir_imagen_manual(request, jid):
-    w = resolve_jid(jid)
+    w = resolve_jid_orm(jid)
     real_jid = w.id if w else jid
     redirect_target = jid 
     if w and w.public_id: redirect_target = w.public_id
@@ -159,7 +152,7 @@ def subir_imagen_manual(request, jid):
 
 def set_cover_image(request, jid, filename):
     try:
-        w = resolve_jid(jid)
+        w = resolve_jid_orm(jid)
         real_jid = w.id if w else jid
         
         # --- SECURITY CHECK ---
@@ -193,7 +186,7 @@ def set_cover_image(request, jid, filename):
 
 def borrar_foto(request, jid, filename):
     try: 
-        w = resolve_jid(jid)
+        w = resolve_jid_orm(jid)
         real_jid = w.id if w else jid
         
         # --- SECURITY CHECK ---

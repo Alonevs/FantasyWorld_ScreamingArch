@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from typing import List, Dict
-from uuid import uuid4
+from src.Shared.Domain.value_objects import WorldID
 
 @dataclass
 class Creature:
@@ -9,8 +9,8 @@ class Creature:
     No depende de Django ni de la IA. Solo datos puros.
     """
     # Identificadores
-    eclai_id: str
-    parent_eclai_id: str # Puntero al mundo padre (Ej: 0101)
+    id: WorldID
+    parent_id: WorldID # Puntero al mundo padre (Ej: 0101)
 
     # Biología
     name: str = "Unknown"

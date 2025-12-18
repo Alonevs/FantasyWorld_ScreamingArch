@@ -54,13 +54,20 @@ def dashboard(request):
         n_qs = CaosNarrativeVersionORM.objects.all().select_related('narrative__world', 'author')
         i_qs = CaosImageProposalORM.objects.all().select_related('world', 'author')
     else:
-        # Hierarchy Filter
-        my_bosses = []
+        # Hierarchy Filter:
+        # 1. Myself
+        # 2. My Subordinates (If I am Admin) -> To review their work
+        # 3. My Bosses (If I am Subadmin) -> For collaborative work
+        visible_ids = [request.user.id]
         if hasattr(request.user, 'profile'):
-            boss_profiles = request.user.profile.bosses.all()
-            my_bosses = [bp.user for bp in boss_profiles if bp.user]
-        visible_users = [request.user] + my_bosses
-        q_filter = Q(author__in=visible_users)
+            # Subordinates
+            collab_ids = list(request.user.profile.collaborators.values_list('user__id', flat=True))
+            # Bosses
+            boss_ids = list(request.user.profile.bosses.values_list('user__id', flat=True))
+            visible_ids.extend(collab_ids)
+            visible_ids.extend(boss_ids)
+            
+        q_filter = Q(author_id__in=visible_ids)
         
         w_qs = CaosVersionORM.objects.filter(q_filter).select_related('world', 'author')
         i_qs = CaosImageProposalORM.objects.filter(q_filter).select_related('world', 'author')
@@ -120,7 +127,8 @@ def dashboard(request):
             x.target_desc = f"👁️ Visibilidad"
         
         # Detect Deletion
-        if x.change_log and ("Eliminación" in x.change_log or "Borrar" in x.change_log):
+        if (x.change_log and ("Eliminación" in x.change_log or "Borrar" in x.change_log)) or \
+           (x.cambios and x.cambios.get('action') == 'DELETE'):
             x.action = 'DELETE'
             
         x.target_link = x.world.public_id if x.world.public_id else x.world.id
@@ -133,7 +141,8 @@ def dashboard(request):
         x.target_link = x.narrative.public_id if hasattr(x.narrative, 'public_id') and x.narrative.public_id else x.narrative.nid
         x.parent_context = x.narrative.world.name
         
-        if x.change_log and ("Eliminación" in x.change_log or "Borrar" in x.change_log):
+        if (x.change_log and ("Eliminación" in x.change_log or "Borrar" in x.change_log)) or \
+           (hasattr(x, 'cambios') and x.cambios and x.cambios.get('action') == 'DELETE'):
              x.action = 'DELETE'
 
     for x in i_pending + i_approved + i_rejected + i_archived:
@@ -200,14 +209,25 @@ def publicar_version(request, version_id):
 
 @login_required
 def archivar_propuesta(request, id):
+    obj = get_object_or_404(CaosVersionORM, id=id)
+    # Security: Admins can archive team work, others only their own
+    from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
+    check_ownership(request.user, obj)
+    
     return execute_orm_status_change(request, CaosVersionORM, id, 'ARCHIVED', "Archivado.", "ARCHIVE_VERSION")
 
 @login_required
 def restaurar_version(request, version_id):
+    obj = get_object_or_404(CaosVersionORM, id=version_id)
+    from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
+    check_ownership(request.user, obj)
     return execute_use_case_action(request, RestoreVersionUseCase, version_id, "Restaurado.", "RESTORE_VERSION")
 
 @login_required
 def borrar_propuesta(request, version_id):
+    obj = get_object_or_404(CaosVersionORM, id=version_id)
+    from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
+    check_ownership(request.user, obj)
     return execute_orm_delete(request, CaosVersionORM, version_id, "Eliminado.", "DELETE_VERSION")
 
 # --- NARRATIVE ACTIONS ---
@@ -229,14 +249,23 @@ def publicar_narrativa(request, id):
 
 @login_required
 def archivar_narrativa(request, id):
+    obj = get_object_or_404(CaosNarrativeVersionORM, id=id)
+    from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
+    check_ownership(request.user, obj)
     return execute_orm_status_change(request, CaosNarrativeVersionORM, id, 'ARCHIVED', "Archivado.", "ARCHIVE_NARRATIVE")
 
 @login_required
 def restaurar_narrativa(request, id):
+    obj = get_object_or_404(CaosNarrativeVersionORM, id=id)
+    from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
+    check_ownership(request.user, obj)
     return execute_use_case_action(request, RestoreNarrativeVersionUseCase, id, "Restaurada.", "RESTORE_NARRATIVE")
 
 @login_required
 def borrar_narrativa_version(request, id):
+    obj = get_object_or_404(CaosNarrativeVersionORM, id=id)
+    from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
+    check_ownership(request.user, obj)
     return execute_orm_delete(request, CaosNarrativeVersionORM, id, "Versión eliminada.", "DELETE_NARRATIVE")
 
 # Bulk Logic
@@ -288,9 +317,60 @@ def aprobar_propuestas_masivo(request):
     return redirect('dashboard')
 
 @login_required
-def archivar_propuestas_masivo(request): return redirect('dashboard')
+def archivar_propuestas_masivo(request): 
+    if request.method == 'POST':
+        w_ids = request.POST.getlist('selected_ids')
+        n_ids = request.POST.getlist('selected_narr_ids')
+        i_ids = request.POST.getlist('selected_img_ids')
+        
+        count = 0
+        for vid in w_ids:
+            execute_orm_status_change(request, CaosVersionORM, vid, 'ARCHIVED', "", "")
+            count += 1
+        for nid in n_ids:
+            execute_orm_status_change(request, CaosNarrativeVersionORM, nid, 'ARCHIVED', "", "")
+            count += 1
+        for iid in i_ids:
+            execute_orm_status_change(request, CaosImageProposalORM, iid, 'ARCHIVED', "", "")
+            count += 1
+            
+        if count > 0:
+            messages.success(request, f"📦 {count} Propuestas archivadas correctamente.")
+            log_event(request.user, "BULK_ARCHIVE", f"Archivadas {count} propuestas mixtas.")
+            
+    return redirect('dashboard')
+
 @login_required
-def publicar_propuestas_masivo(request): return redirect('dashboard')
+def publicar_propuestas_masivo(request): 
+    if request.method == 'POST':
+        w_ids = request.POST.getlist('selected_ids')
+        n_ids = request.POST.getlist('selected_narr_ids')
+        i_ids = request.POST.getlist('selected_img_ids')
+        
+        count = 0
+        for vid in w_ids:
+            execute_use_case_action(request, PublishToLiveVersionUseCase, vid, "", "")
+            count += 1
+        for nid in n_ids:
+            execute_use_case_action(request, PublishNarrativeToLiveUseCase, nid, "", "")
+            count += 1
+            
+        # Image publishing
+        from .assets import publicar_imagen
+        for iid in i_ids:
+            # We skip the redirect by passing a custom flag or just ignoring the result
+            # But publicar_imagen returns a redirect. We can call the logic directly or 
+            # wrap it. For simplicity, we just call it and ignore the redirect.
+            try:
+                publicar_imagen(request, iid)
+                count += 1
+            except: pass
+        
+        if count > 0:
+            messages.success(request, f"🚀 {count} Propuestas ejecutadas correctamente (Publicadas/Borradas).")
+            log_event(request.user, "BULK_PUBLISH", f"Publicadas {count} propuestas mixtas.")
+            
+    return redirect('dashboard')
 
 # --- TEXT PROPOSAL CONTRIBUTIONS ---
 

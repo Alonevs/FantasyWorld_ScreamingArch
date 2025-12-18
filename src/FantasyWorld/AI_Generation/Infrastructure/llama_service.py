@@ -22,7 +22,7 @@ class Llama3Service(LoreGenerator):
         }
         try:
             print(f"📡 [LlamaService] POST {self.api_url_completion}")
-            r = requests.post(self.api_url_completion, headers=self.headers, json=payload, timeout=120)
+            r = requests.post(self.api_url_completion, headers=self.headers, json=payload, timeout=self.timeout)
             
             if r.status_code == 200: 
                 text = r.json()['choices'][0]['text'].strip()

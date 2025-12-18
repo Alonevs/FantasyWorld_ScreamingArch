@@ -3,9 +3,8 @@ from typing import Optional, Dict, Any
 from src.WorldManagement.Caos.Domain.repositories import CaosRepository
 from src.FantasyWorld.AI_Generation.Domain.interfaces import LoreGenerator
 from src.Shared.Domain.value_objects import WorldID
-from src.WorldManagement.Caos.Domain.metadata import (
-    METADATA_SCHEMAS, get_schema_for_type, get_schema_for_hierarchy
-)
+from src.WorldManagement.Caos.Domain.metadata import METADATA_SCHEMAS
+from src.WorldManagement.Caos.Domain.metadata_router import get_schema_for_type, get_schema_for_hierarchy
 
 
 # Derive mapping dynamically from schemas

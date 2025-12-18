@@ -105,8 +105,8 @@
                                 formaction="{% url 'borrar_propuestas_masivo' %}"
                                 class="text-xs bg-red-900/30 hover:bg-red-600 text-red-400 hover:text-white px-3 py-1.5 rounded border border-red-900/50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                 :disabled="selectionCount === 0"
-                                title="Rechazar/Borrar seleccionados"
-                                onclick="return confirm('¿RECHAZAR/BORRAR todas las propuestas seleccionadas? (Se eliminarán de la lista)')">
+                                title="Rechazar seleccionados"
+                                onclick="return confirm('¿RECHAZAR todas las propuestas seleccionadas? (Se eliminarán de la lista)')">
                             <span>✕</span> Rechazar (<span x-text="selectionCount"></span>)
                         </button>
                         {% endif %}
@@ -276,7 +276,7 @@
                         <span>✅ Aprobadas (Listas para Live)</span>
                     </div>
                     
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2" x-data="{ hasDeletions: false }" @change="hasDeletions = !![...document.querySelectorAll('.approved-check:checked')].find(el => el.dataset.action === 'DELETE')">
                         <!-- BULK VIEW (Images only) -->
                         <button type="submit" form="bulk-archive-approved-form" 
                                 formaction="{% url 'batch_revisar_imagenes' %}"
@@ -299,11 +299,13 @@
 
                         <button type="submit" form="bulk-archive-approved-form" 
                                 formaction="{% url 'publicar_propuestas_masivo' %}"
-                                class="text-xs bg-blue-900/30 hover:bg-blue-600 text-blue-400 hover:text-white px-3 py-1.5 rounded border border-blue-900/50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                class="text-xs bg-blue-900/30 hover:bg-blue-600 text-blue-400 hover:text-white px-3 py-1.5 rounded border border-blue-900/50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(59,130,246,0.1)]"
                                 :disabled="selectionCount === 0"
-                                title="Publicar seleccionados a LIVE"
-                                onclick="return confirm('¿PUBLICAR seleccionados a LIVE? (Se archivarán las versiones actuales)')">
-                            <span>🚀</span> Publicar (<span x-text="selectionCount"></span>)
+                                title="Publicar/Ejecutar seleccionados"
+                                onclick="return confirm('¿PROCEDER con las propuestas seleccionadas? (Publicar o Ejecutar Borrado)')">
+                            <span x-text="hasDeletions ? '💀' : '🚀'">🚀</span> 
+                            <span x-text="hasDeletions ? 'Ejecutar Borrado' : 'Publicar'">Publicar</span> 
+                            (<span x-text="selectionCount"></span>)
                         </button>
                         {% endif %}
                     </div>
@@ -350,6 +352,7 @@
                                         <input type="checkbox" form="bulk-archive-approved-form" 
                                                name="{% if item.type == 'WORLD' %}selected_ids{% elif item.type == 'NARRATIVE' %}selected_narr_ids{% else %}selected_img_ids{% endif %}" 
                                                value="{{ item.id }}" 
+                                               data-action="{{ item.action|default:'UPDATE' }}"
                                                class="approved-check w-4 h-4 rounded border-gray-600 bg-gray-700 text-yellow-500 focus:ring-yellow-500/50 cursor-pointer transition">
                                     </div>
 
@@ -395,9 +398,15 @@
                                         {% if user|can_publish:item %}
                                         <form method="post" action="{% if item.type == 'WORLD' %}{% url 'publicar_version' item.id %}{% elif item.type == 'IMAGE' %}{% url 'publicar_imagen' item.id %}{% else %}{% url 'publicar_narrativa' item.id %}{% endif %}">
                                             {% csrf_token %}
-                                            <button type="submit" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-all hover:-translate-y-0.5" onclick="return confirm('¿PUBLICAR v{{ item.version_number }} EN LIVE? (Se archivará la versión actual)')">
-                                                <span>🚀</span> Publicar LIVE
-                                            </button>
+                                            {% if item.action == 'DELETE' %}
+                                                <button type="submit" class="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-4 py-2 rounded shadow-[0_0_15px_rgba(220,38,38,0.3)] transition-all hover:-translate-y-0.5" onclick="return confirm('⚠️ ¿EFECTUAR BORRADO DEFINITIVO EN LIVE?')">
+                                                    <span>💀</span> Borrar LIVE
+                                                </button>
+                                            {% else %}
+                                                <button type="submit" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-all hover:-translate-y-0.5" onclick="return confirm('¿PUBLICAR v{{ item.version_number }} EN LIVE? (Se archivará la versión actual)')">
+                                                    <span>🚀</span> Publicar LIVE
+                                                </button>
+                                            {% endif %}
                                         </form>
                                         {% endif %}
                                     </div>

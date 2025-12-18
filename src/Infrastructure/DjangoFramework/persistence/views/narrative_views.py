@@ -11,6 +11,7 @@ from src.WorldManagement.Caos.Application.common import resolve_world_id
 from src.WorldManagement.Caos.Application.get_narrative_details import GetNarrativeDetailsUseCase
 from src.WorldManagement.Caos.Application.get_world_narratives import GetWorldNarrativesUseCase
 from src.FantasyWorld.Domain.Services.NarrativeService import NarrativeService
+from .view_utils import resolve_jid_orm, check_world_access, get_admin_status
 
 @csrf_exempt
 @require_POST
@@ -28,13 +29,7 @@ def import_narrative_file(request):
     except Exception as e:
         return JsonResponse({'success': False, 'error': f"Error interno: {str(e)}"}, status=500)
 
-def resolve_jid(identifier):
-    repo = DjangoCaosRepository()
-    w = resolve_world_id(repo, identifier)
-    if w:
-        try: return CaosWorldORM.objects.get(id=w.id.value)
-        except: return None
-    return None
+# Removed local resolve_jid, using resolve_jid_orm instead
 
 from django.http import Http404
 
@@ -43,13 +38,14 @@ def ver_narrativa_mundo(request, jid):
         repo = DjangoCaosRepository()
         
         # Visibility Check
-        w = resolve_jid(jid)
-        if w:
-            is_live = (w.status == 'LIVE')
-            is_author = (request.user.is_authenticated and w.author == request.user)
-            is_superuser = request.user.is_superuser
-        if not (is_live or is_author or is_superuser): 
-                return render(request, 'private_access.html', status=403)
+        w = resolve_jid_orm(jid)
+        if not w:
+             messages.error(request, f"Mundo no encontrado: {jid}")
+             return redirect('home')
+             
+        can_access, _ = check_world_access(request, w)
+        if not can_access:
+            return render(request, 'private_access.html', status=403)
             
         real_jid = w.id if w else jid
         context = GetWorldNarrativesUseCase(repo).execute(real_jid, request.user)
@@ -77,36 +73,18 @@ def leer_narrativa(request, nid):
             n_orm = CaosNarrativeORM.objects.filter(nid=nid).first()
 
         if n_orm:
-           w = n_orm.world
-           is_live = (w.status == 'LIVE')
-           is_strict_author = (request.user.is_authenticated and w.author == request.user)
-           is_superuser = request.user.is_superuser
-           
-           # Check Collaborator Status
-           is_collaborator = False
-           if request.user.is_authenticated and not is_strict_author:
-               try:
-                    if w.author and hasattr(w.author, 'profile'):
-                        if request.user.profile in w.author.profile.collaborators.all():
-                            is_collaborator = True
-               except: pass
-
-           check_access = is_live or is_strict_author or is_superuser or is_collaborator
-           if not check_access: 
+           can_access, is_author_or_team = check_world_access(request, n_orm.world)
+           if not can_access:
                return render(request, 'private_access.html', status=403)
 
         context = GetNarrativeDetailsUseCase(repo).execute(nid, request.user)
         
-        # Patch Context with Permissions
         if context:
-           # Check Admin Role
-           is_admin_role = False
-           try: is_admin_role = (request.user.profile.rank == 'ADMIN')
-           except: pass
-           
-           context['is_author'] = is_strict_author or is_collaborator or is_admin_role
-           context['allow_proposals'] = is_collaborator or is_admin_role
-           context['is_admin_role'] = is_admin_role
+           is_admin, is_team_member = get_admin_status(request.user)
+           # is_author_or_team from check_world_access is more robust for editing
+           context['is_author'] = is_author_or_team or is_team_member
+           context['allow_proposals'] = is_team_member
+           context['is_admin_role'] = is_admin
         
         if not context:
             messages.error(request, f"No se encontró la narrativa: {nid}")
@@ -319,8 +297,7 @@ def revisar_narrativa_version(request, version_id):
 def crear_nueva_narrativa(request, jid, tipo_codigo):
     try:
         repo = DjangoCaosRepository()
-        repo = DjangoCaosRepository()
-        w = resolve_jid(jid)
+        w = resolve_jid_orm(jid)
         if not w: return redirect('home')
         real_jid = w.id
         

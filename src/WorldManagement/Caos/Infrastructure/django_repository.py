@@ -42,34 +42,30 @@ class DjangoCaosRepository(CaosRepository):
         )
         print(f" 💾 [DB] Guardado: {world.name}")
 
+    def _to_domain(self, orm_obj: CaosWorldORM) -> CaosWorld:
+        """Helper to map ORM objects to Domain entities consistently."""
+        return CaosWorld(
+            id=WorldID(str(orm_obj.id)),
+            name=orm_obj.name,
+            lore_description=orm_obj.description or "",
+            status=getattr(VersionStatus, orm_obj.status, VersionStatus.DRAFT),
+            metadata=orm_obj.metadata or {},
+            is_public=orm_obj.visible_publico,
+            is_locked=orm_obj.is_locked
+        )
+
     def find_by_id(self, world_id) -> Optional[CaosWorld]:
         val = world_id.value if hasattr(world_id, 'value') else world_id
         try:
             orm_obj = CaosWorldORM.objects.get(id=val, is_active=True)
-            return CaosWorld(
-                id=WorldID(str(orm_obj.id)),
-                name=orm_obj.name,
-                lore_description=orm_obj.description,
-                status=getattr(VersionStatus, orm_obj.status, VersionStatus.DRAFT),
-                metadata=orm_obj.metadata or {},
-                is_public=orm_obj.visible_publico,
-                is_locked=orm_obj.is_locked
-            )
+            return self._to_domain(orm_obj)
         except CaosWorldORM.DoesNotExist:
             return None
 
     def get_by_public_id(self, public_id: str) -> Optional[CaosWorld]:
         try:
             orm_obj = CaosWorldORM.objects.get(public_id=public_id, is_active=True)
-            return CaosWorld(
-                id=WorldID(str(orm_obj.id)),
-                name=orm_obj.name,
-                lore_description=orm_obj.description,
-                status=getattr(VersionStatus, orm_obj.status, VersionStatus.DRAFT),
-                metadata=orm_obj.metadata or {},
-                is_public=orm_obj.visible_publico,
-                is_locked=orm_obj.is_locked
-            )
+            return self._to_domain(orm_obj)
         except CaosWorldORM.DoesNotExist:
             return None
 
@@ -77,18 +73,7 @@ class DjangoCaosRepository(CaosRepository):
         root_val = root_id.value if hasattr(root_id, 'value') else root_id
         # Filter by startswith and order by ID to maintain hierarchy
         orm_objs = CaosWorldORM.objects.filter(id__startswith=root_val, is_active=True).order_by('id')
-        results = []
-        for obj in orm_objs:
-            results.append(CaosWorld(
-                id=WorldID(str(obj.id)),
-                name=obj.name,
-                lore_description=obj.description,
-                status=getattr(VersionStatus, obj.status, VersionStatus.DRAFT),
-                metadata=obj.metadata or {},
-                is_public=obj.visible_publico,
-                is_locked=obj.is_locked
-            ))
-        return results
+        return [self._to_domain(obj) for obj in orm_objs]
 
     def get_ancestors_by_id(self, entity_id: str) -> List[CaosWorld]:
         # Generate potential ancestor IDs based on length
@@ -103,24 +88,11 @@ class DjangoCaosRepository(CaosRepository):
             return []
             
         orm_objs = CaosWorldORM.objects.filter(id__in=ids_to_fetch, is_active=True).order_by('id')
-        
-        results = []
-        for obj in orm_objs:
-             # Reuse standard mapping
-             results.append(CaosWorld(
-                id=WorldID(str(obj.id)),
-                name=obj.name,
-                lore_description=obj.description,
-                status=getattr(VersionStatus, obj.status, VersionStatus.DRAFT),
-                metadata=obj.metadata or {},
-                is_public=obj.visible_publico,
-                is_locked=obj.is_locked
-            ))
-        return results
+        return [self._to_domain(obj) for obj in orm_objs]
 
     def save_creature(self, creature: Creature):
         CaosWorldORM.objects.update_or_create(
-            id=creature.eclai_id,
+            id=creature.id.value,
             defaults={
                 'name': creature.name,
                 'description': creature.description,

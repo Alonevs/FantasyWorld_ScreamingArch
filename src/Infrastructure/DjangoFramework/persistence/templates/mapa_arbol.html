@@ -37,8 +37,8 @@
 
             <!-- Status Dot -->
             <span class="w-2.5 h-2.5 rounded-full ml-4 shadow-sm
-                {% if item.visible %}bg-green-500 shadow-green-500/50{% else %}bg-red-600 shadow-red-600/50{% endif %}" 
-                title="{% if item.visible %}Público{% else %}Privado/Oculto{% endif %}">
+                {% if item.status == 'LIVE' %}bg-green-500 shadow-green-500/50{% else %}bg-red-600 shadow-red-600/50{% endif %}" 
+                title="Status: {{ item.status|default:'OFFLINE' }}">
             </span>
         </a>
         {% empty %}

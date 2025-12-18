@@ -64,7 +64,7 @@
     <!-- DOCUMENTO PRINCIPAL -->
     <div class="paper p-8 md:p-12 mb-20" data-world-id="{{ narr.world.id }}">
         
-        <!-- PROPUESTA / DRAFT BANNERS -->
+        <!-- PROPUESTA BANNERS -->
         {% if is_proposal %}
             <div class="bg-[#d633ff] text-white p-2 rounded mb-6 font-bold text-center shadow">
                 👁️ ESTÁS VIENDO UNA PROPUESTA (v{{ narr.version_id }})
@@ -73,7 +73,7 @@
         
         {% if narr.is_draft %}
             <div class="bg-orange-500 text-black p-2 rounded mb-6 font-bold text-center shadow">
-                🚧 MODO BORRADOR (Pendiente de Aprobación)
+                🚧 PROPUESTA (Pendiente de Aprobación)
             </div>
         {% endif %}
 

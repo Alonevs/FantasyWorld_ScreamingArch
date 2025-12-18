@@ -5,9 +5,9 @@ from django.contrib.auth.decorators import login_required
 import json
 from src.FantasyWorld.AI_Generation.Infrastructure.llama_service import Llama3Service
 from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, MetadataTemplate, CaosNarrativeORM
-from src.WorldManagement.Caos.Application.common import resolve_world_id
 from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
 from src.FantasyWorld.Domain.Services.NarrativeService import NarrativeService
+from .view_utils import resolve_jid_orm
 
 @login_required
 @require_POST
@@ -32,22 +32,17 @@ def analyze_metadata_api(request):
                     break
 
 
-        # RESOLUCION DE MUNDO POR ID (Jerárquico)
-        w_orm = None
-        
-        # Intentar por ID (J-ID), PK o PublicID
-        try:
-            w_orm = CaosWorldORM.objects.get(id=world_code)
-        except CaosWorldORM.DoesNotExist:
-            try:
-                w_orm = CaosWorldORM.objects.get(public_id=world_id_raw)
-            except CaosWorldORM.DoesNotExist:
-                pass
+        # RESOLUCION DE MUNDO POR ID (Jerárquico o Público)
+        w_orm = resolve_jid_orm(world_code)
                 
+        if not w_orm:
+            # Try original raw ID in case it's a NanoID not matched by the code extractor
+            w_orm = resolve_jid_orm(world_id_raw)
+
         if not w_orm:
             return JsonResponse({
                 'success': False, 
-                'error': f'❌ Mundo no encontrado para: {world_id_raw} (código extraído: {world_code})'
+                'error': f'❌ Mundo no encontrado para: {world_id_raw}'
             })
 
         

@@ -9,6 +9,7 @@ class VersionStatus(Enum):
     PENDING_APPROVAL = "PENDING_APPROVAL"
     APPROVED = "APPROVED"
     LIVE = "LIVE"
+    OFFLINE = "OFFLINE"
     ARCHIVED = "ARCHIVED"
 
 @dataclass

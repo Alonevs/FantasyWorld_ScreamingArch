@@ -20,7 +20,7 @@ class GetNarrativeDetailsUseCase:
                 # Only show to author or admin
                 is_authorized = user and (user.is_superuser or narr.created_by == user)
                 if not is_authorized:
-                    print(f"🔒 Acceso denegado a borrador {nid}")
+                    print(f"🔒 Acceso denegado a propuesta {nid}")
                     return None
                 
                 # Fetch the pending V1 proposal

@@ -1,5 +1,15 @@
 from .metadata import METADATA_SCHEMAS
 
+def get_schema_for_type(type_name: str):
+    """Returns a schema based on a type string (e.g., 'PLANETA', 'CRIATURA')."""
+    if not type_name: return None
+    
+    # Normalize
+    type_name = type_name.upper().replace('_SCHEMA', '')
+    key = f"{type_name}_SCHEMA"
+    
+    return METADATA_SCHEMAS.get(key)
+
 def get_schema_for_hierarchy(jid: str, level: int):
     # 1. NIVEL 16 (ENTIDADES) - EL GRAN SWITCH
     if level == 16:

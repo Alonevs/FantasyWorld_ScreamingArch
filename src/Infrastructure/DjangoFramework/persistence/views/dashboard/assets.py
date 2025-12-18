@@ -46,6 +46,9 @@ def rechazar_imagen(request, id):
 def archivar_imagen(request, id):
     try:
         prop = get_object_or_404(CaosImageProposalORM, id=id)
+        from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
+        check_ownership(request.user, prop)
+        
         prop.status = 'ARCHIVED'
         prop.save()
         messages.success(request, "Imagen Archivada.")
@@ -78,6 +81,9 @@ def publicar_imagen(request, id):
 def restaurar_imagen(request, id):
     try:
         prop = get_object_or_404(CaosImageProposalORM, id=id)
+        from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
+        check_ownership(request.user, prop)
+        
         prop.status = 'PENDING'
         prop.save()
         messages.success(request, "Imagen restaurada.")
@@ -86,15 +92,11 @@ def restaurar_imagen(request, id):
 
 @login_required
 def borrar_imagen_definitivo(request, id):
-    """
-    Pseudo Soft-Delete: Mark as TRASHED.
-    User requirement: "Al borrar, nunca se eliminan del servidor. Se mueven a la carpeta 'trash/'".
-    Actually, moving files is complex. Let's just mark status='TRASHED' effectively hiding it except in Trash view.
-    To be strict with "move to trash/", we would need os.rename. 
-    For now, let's implement the Logical Trash.
-    """
     try:
         prop = get_object_or_404(CaosImageProposalORM, id=id)
+        from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
+        check_ownership(request.user, prop)
+        
         prop.status = 'TRASHED'
         prop.save()
         messages.success(request, "Imagen movida a la papelera.")
@@ -188,6 +190,9 @@ def ver_papelera(request):
 def restaurar_entidad_fisica(request, jid):
     try:
         w = get_object_or_404(CaosWorldORM, id=jid)
+        from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
+        check_ownership(request.user, w)
+        
         w.restore()
         messages.success(request, f"Mundo {w.name} restaurado.")
         log_event(request.user, "RESTORE_WORLD_PHYSICAL", jid)
@@ -195,18 +200,26 @@ def restaurar_entidad_fisica(request, jid):
     return redirect('ver_papelera')
 
 @login_required
+@admin_only # Only Admins can physically delete
 def borrar_mundo_definitivo(request, id):
     try:
         w = get_object_or_404(CaosWorldORM, id=id)
+        from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
+        check_ownership(request.user, w)
+        
         w.delete()
         messages.success(request, "Mundo eliminado.")
     except Exception as e: messages.error(request, str(e))
     return redirect('ver_papelera')
 
 @login_required
+@admin_only
 def borrar_narrativa_definitivo(request, nid):
     try:
         n = get_object_or_404(CaosNarrativeORM, nid=nid)
+        from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
+        check_ownership(request.user, n)
+        
         n.delete()
         messages.success(request, "Narrativa eliminada.")
     except Exception as e: messages.error(request, str(e))

@@ -15,7 +15,7 @@ class StableDiffusionService(ImageGenerator):
 
     def generate_concept_art(self, prompt: str, category: str = "defecto") -> str:
         # Limpiamos el prompt por si acaso
-        print(f" 🎨 [SD] Conectando a 7861...")
+        print(f" 🎨 [SD] Conectando a {self.api_url}...")
         print(f"    Prompt: {prompt[:60]}...")
 
         # Payload optimizado para revAnimated (Estilo 2.5D / Ilustración)

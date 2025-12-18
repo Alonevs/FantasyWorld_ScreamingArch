@@ -33,6 +33,7 @@ from src.WorldManagement.Caos.Application.get_world_details import GetWorldDetai
 from src.FantasyWorld.AI_Generation.Infrastructure.sd_service import StableDiffusionService
 from src.FantasyWorld.AI_Generation.Infrastructure.llama_service import Llama3Service
 from src.Infrastructure.DjangoFramework.persistence.utils import generate_breadcrumbs, get_world_images
+from .view_utils import resolve_jid_orm, check_world_access, get_admin_status
 
 
 from src.WorldManagement.Caos.Domain.hierarchy_utils import get_readable_hierarchy
@@ -48,18 +49,7 @@ def get_current_user(request):
     u, _ = User.objects.get_or_create(username='Admin')
     return u
 
-def resolve_jid(identifier):
-    """
-    RESOLUCIÓN ROBUSTA DE IDs:
-    Delegamos en la utilidad compartida de Application Layer.
-    """
-    repo = DjangoCaosRepository()
-    w = resolve_world_id(repo, identifier)
-    if w:
-        # Return ORM object for compatibility with existing views that expect it
-        try: return CaosWorldORM.objects.get(id=w.id.value)
-        except: return None
-    return None
+# Removed local resolve_jid, using resolve_jid_orm instead
 
 from django.db.models.functions import Length
 
@@ -70,17 +60,15 @@ def home(request):
             
         repo = DjangoCaosRepository()
         # For creation, author is current user
-        jid = CreateWorldUseCase(repo).execute(request.POST.get('world_name'), request.POST.get('world_desc'))
-        
-        # Assign author to the new world (if UseCase doesn't do it, we patch it here or update UseCase)
-        # Assuming UseCase returns the ID, we can fetch and set author.
         try:
+            jid = CreateWorldUseCase(repo).execute(request.POST.get('world_name'), request.POST.get('world_desc'))
             w = CaosWorldORM.objects.get(id=jid)
             w.author = request.user
             w.save()
-        except: pass
-
-        messages.success(request, "✨ Mundo propuesto. Ve al Dashboard para aprobarlo.")
+            messages.success(request, "✨ Mundo propuesto. Ve al Dashboard para aprobarlo.")
+        except Exception as e:
+            messages.error(request, f"Error al proponer mundo: {str(e)}")
+            
         return redirect('dashboard')
     
     # Show LIVE worlds (and DRAFTS for Author/Superuser)
@@ -146,33 +134,15 @@ def home(request):
     return render(request, 'index.html', {'mundos': l, 'background_images': background_images[:10]}) # Limit to 10 to save bandwidth
 
 def ver_mundo(request, public_id):
-    repo = DjangoCaosRepository()
-    
-    # 0. RESOLVE & CHECK VISIBILITY BEFORE USE CASE
-    w_orm = resolve_jid(public_id)
+    w_orm = resolve_jid_orm(public_id)
     if not w_orm:
-        return render(request, '404.html', {"jid": public_id})
+        return render(request, '404.html', {"jid": public_id}, status=404)
     
-    # Check Status
-    # Rule: LIVE is Public. OFFLINE is Private (Author/Superuser only).
-    is_live = (w_orm.status == 'LIVE')
-    is_strict_author = (request.user.is_authenticated and w_orm.author == request.user)
-    is_superuser = request.user.is_superuser
-    
-    # Check Collaborator Status (Subadmin)
-    is_collaborator = False
-    if request.user.is_authenticated and not is_strict_author:
-        try:
-             # Am I a collaborator of the author?
-             if w_orm.author and hasattr(w_orm.author, 'profile'):
-                 if request.user.profile in w_orm.author.profile.collaborators.all():
-                     is_collaborator = True
-        except: pass
-
-    can_access = is_live or is_strict_author or is_superuser or is_collaborator
-
+    can_access, is_author_or_team = check_world_access(request, w_orm)
     if not can_access:
         return render(request, 'private_access.html', status=403)
+    
+    repo = DjangoCaosRepository()
     
     # 1. Handle POST (Creation)
     if request.method == 'POST':
@@ -180,7 +150,7 @@ def ver_mundo(request, public_id):
             return redirect('login')
             
         # Resolve ID for parent (needed for creation)
-        w = resolve_jid(public_id)
+        w = resolve_jid_orm(public_id)
         if not w: return redirect('home') # Should handle better
         
         # --- SECURITY CHECK ---
@@ -239,20 +209,13 @@ def ver_mundo(request, public_id):
     context['status_str'] = w_orm.status
     context['author_live_user'] = w_orm.author
     
-    # OVERRIDE is_author for Template Buttons
-    # If I am a collaborator, I should see the buttons (is_author=True in context)
-    # OR we use a separate 'can_edit' flag.
-    # checking template: uses 'is_author' OR 'allow_proposals'
-    
-    # Check Admin Role
-    is_admin_role = False
-    try: is_admin_role = (request.user.profile.rank == 'ADMIN')
-    except: pass
+    # PERMISSIONS CHECK
+    is_admin, is_team_member = get_admin_status(request.user)
 
-    context['is_author'] = is_strict_author or is_collaborator or is_admin_role
-    context['can_edit'] = is_strict_author or is_collaborator or is_superuser or is_admin_role
-    context['allow_proposals'] = is_collaborator or is_admin_role # Explicit flag for subadmins/admins
-    context['is_admin_role'] = is_admin_role
+    context['is_author'] = is_author_or_team or is_team_member
+    context['can_edit'] = is_author_or_team or is_team_member
+    context['allow_proposals'] = is_team_member
+    context['is_admin_role'] = is_admin
     # ---------------------------------
     # ---------------------------------
     
@@ -318,7 +281,7 @@ def editar_mundo(request, jid):
 
     if request.method == 'POST':
         try:
-            w = resolve_jid(jid); real_jid = w.id if w else jid
+            w = resolve_jid_orm(jid); real_jid = w.id if w else jid
             desc = request.POST.get('description')
             action_type = request.POST.get('action_type', 'EDIT_WORLD')
             
@@ -498,7 +461,7 @@ def comparar_version(request, version_id):
 @login_required
 def init_hemisferios(request, jid):
     try: 
-        w=resolve_jid(jid)
+        w=resolve_jid_orm(jid)
         w_orm = CaosWorldORM.objects.get(id=w.id)
         check_ownership(request.user, w_orm)
         InitializeHemispheresUseCase(DjangoCaosRepository()).execute(w.id); return redirect('ver_mundo', public_id=w.public_id)
@@ -510,7 +473,7 @@ def mapa_arbol(request, public_id):
     try:
         repo = DjangoCaosRepository()
         # Security Check
-        w_orm = resolve_jid(public_id)
+        w_orm = resolve_jid_orm(public_id)
         if not w_orm: return redirect('home')
         is_live = (w_orm.status == 'LIVE')
         is_author = (request.user.is_authenticated and w_orm.author == request.user)
@@ -549,7 +512,7 @@ def toggle_lock(request, jid):
 
 # @login_required (Removed for Public Live Access)
 def ver_metadatos(request, public_id):
-    w = resolve_jid(public_id)
+    w = resolve_jid_orm(public_id)
     if not w: return redirect('home')
 
     # Security Check
@@ -641,10 +604,9 @@ def api_auto_noos(request, jid):
         else:
              context_text = "\n\n".join(context_parts)
 
-        # 2. RESOLVE SCHEMA (Source of Truth: metadata_schemas.py)
-        target_schema = None
+        # 2. RESOLVE SCHEMA (Source of Truth: metadata_router.py)
         try:
-            from src.WorldManagement.Caos.Domain.metadata_schemas import get_schema_for_hierarchy
+            from src.WorldManagement.Caos.Domain.metadata_router import get_schema_for_hierarchy
             
             raw_id = w_domain.id.value
             level = len(raw_id) // 2
