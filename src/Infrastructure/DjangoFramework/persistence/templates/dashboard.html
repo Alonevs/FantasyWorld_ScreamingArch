@@ -1,5 +1,6 @@
 {% extends "layouts/base.html" %}
 {% load static %}
+{% load rbac_tags %}
 
 {% block title %}ECLAI | Dashboard{% endblock %}
 
@@ -89,6 +90,7 @@
                         </button>
 
                         <!-- BULK APPROVE BUTTON -->
+                        {% if request.user.is_superuser or request.user.profile.rank == 'ADMIN' %}
                         <button type="submit" form="bulk-approve-form" 
                                 class="text-xs bg-green-900/30 hover:bg-green-600 text-green-400 hover:text-white px-3 py-1.5 rounded border border-green-900/50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                 :disabled="selectionCount === 0"
@@ -96,6 +98,7 @@
                                 onclick="return confirm('¿Aprobar todas las propuestas seleccionadas?')">
                             <span>✅</span> Aprobar (<span x-text="selectionCount"></span>)
                         </button>
+                        {% endif %}
                     </div>
                 </h2>
                 <p class="text-gray-500 mb-6 text-sm">Propuestas de tu equipo que requieren revisión y aprobación.</p>
@@ -200,12 +203,15 @@
                                             <!-- STANDARD LOGIC: Green=Approve, Red=Reject -->
                                             
                                             <!-- Approve (Step 1) -->
+                                            <!-- Approve (Step 1) -->
+                                            {% if request.user|can_approve:item %}
                                             <form method="post" action="{% if item.type == 'WORLD' %}{% url 'aprobar_version' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'aprobar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'aprobar_imagen' item.id %}{% endif %}">
                                                 {% csrf_token %}
                                                 <button type="submit" class="text-green-500 hover:text-white hover:bg-green-600 px-3 py-1.5 rounded text-xs font-bold transition-all border border-green-900/30 hover:border-green-500 shadow-lg shadow-green-900/10" title="Aprobar" onclick="return confirm('¿Aprobar esta propuesta?')">
                                                     Aprobar
                                                 </button>
                                             </form>
+                                            {% endif %}
                                             
                                             <!-- Review (Images in New Tab) -->
                                             <a href="{% url 'review_proposal' item.type item.id %}" {% if item.type == 'IMAGE' %}target="_blank"{% endif %} class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold px-3 py-2 rounded border border-gray-700 transition-all shadow-lg" title="Ver detalle">
@@ -213,12 +219,15 @@
                                             </a>
 
                                             <!-- Reject (New) -->
+                                            <!-- Reject (New) -->
+                                            {% if request.user|can_approve:item %}
                                             <form method="post" action="{% if item.type == 'WORLD' %}{% url 'rechazar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'rechazar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'rechazar_imagen' item.id %}{% endif %}">
                                                 {% csrf_token %}
                                                 <button type="submit" class="text-red-500 hover:text-white hover:bg-red-600 px-3 py-1.5 rounded text-xs font-bold transition-all border border-red-900/30 hover:border-red-500 shadow-lg shadow-red-900/10" onclick="return confirm('¿Rechazar definitivamente?')">
                                                     ✕
                                                 </button>
                                             </form>
+                                            {% endif %}
                                         {% endif %}
 
                                         <!-- Review Button for DELETE? Usually helpful to see what is being deleted.
@@ -266,7 +275,8 @@
                             <span>👁️</span> Ver (<span x-text="selectionCount"></span>)
                         </button>
 
-                        <!-- BULK ARCHIVE -->
+                        <!-- BULK PUBLISH & ARCHIVE -->
+                        {% if request.user.is_superuser or request.user.profile.rank == 'ADMIN' %}
                         <button type="submit" form="bulk-archive-approved-form" 
                                 formaction="{% url 'archivar_propuestas_masivo' %}"
                                 class="text-xs bg-yellow-900/30 hover:bg-yellow-600 text-yellow-500 hover:text-white px-3 py-1.5 rounded border border-yellow-900/50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -276,7 +286,6 @@
                             <span>📦</span> Archivar (<span x-text="selectionCount"></span>)
                         </button>
 
-                        <!-- BULK PUBLISH -->
                         <button type="submit" form="bulk-archive-approved-form" 
                                 formaction="{% url 'publicar_propuestas_masivo' %}"
                                 class="text-xs bg-blue-900/30 hover:bg-blue-600 text-blue-400 hover:text-white px-3 py-1.5 rounded border border-blue-900/50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -285,6 +294,7 @@
                                 onclick="return confirm('¿PUBLICAR seleccionados a LIVE? (Se archivarán las versiones actuales)')">
                             <span>🚀</span> Publicar (<span x-text="selectionCount"></span>)
                         </button>
+                        {% endif %}
                     </div>
                 </h2>
                 <div id="approved-list" class="space-y-6">
@@ -371,12 +381,14 @@
                                         </form>
 
                                          <!-- Publish (Step 2) -->
+                                        {% if user|can_publish:item %}
                                         <form method="post" action="{% if item.type == 'WORLD' %}{% url 'publicar_version' item.id %}{% elif item.type == 'IMAGE' %}{% url 'publicar_imagen' item.id %}{% else %}{% url 'publicar_narrativa' item.id %}{% endif %}">
                                             {% csrf_token %}
                                             <button type="submit" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-all hover:-translate-y-0.5" onclick="return confirm('¿PUBLICAR v{{ item.version_number }} EN LIVE? (Se archivará la versión actual)')">
                                                 <span>🚀</span> Publicar LIVE
                                             </button>
                                         </form>
+                                        {% endif %}
                                     </div>
                                 </div>
                                 {% endfor %}

@@ -44,7 +44,8 @@
 
 {% block content %}
     <!-- NAVBAR FLOTANTE -->
-    <div class="fixed top-0 left-0 w-full bg-[#0e0e16] border-b border-[#333] p-3 px-6 flex justify-between items-center z-40 shadow-lg">
+    <!-- Ajuste Top: Si hay Admin Bar (Logged in), top-11 (44px). Si no, top-0. -->
+    <div class="fixed {% if user.is_authenticated %}top-11{% else %}top-0{% endif %} left-0 w-full bg-[#0e0e16] border-b border-[#333] p-3 px-6 flex justify-between items-center z-40 shadow-lg">
         <div class="font-bold text-[#d633ff] tracking-wide">{{ narr.world.name }}</div>
         <div class="flex gap-2">
             <button onclick="history.back()" class="bg-[#333] hover:bg-[#555] text-white px-3 py-1 rounded border border-[#444] transition">⬅ Atrás</button>

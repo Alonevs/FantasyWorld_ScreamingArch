@@ -199,6 +199,10 @@ def ver_mundo(request, public_id):
             reason = request.POST.get('reason', "Creación vía Wizard")
             use_ai = request.POST.get('use_ai_gen') == 'on'
             
+            # Extract target_level (Fix UnboundLocalError)
+            target_level_str = request.POST.get('target_level')
+            target_level = int(target_level_str) if target_level_str else None
+            
             # Use EntityService for unified creation
             service = EntityService()
             new_id = service.create_entity(

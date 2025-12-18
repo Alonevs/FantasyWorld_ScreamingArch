@@ -10,16 +10,22 @@ from src.Infrastructure.DjangoFramework.persistence.views.world_views import (
     toggle_entity_status
 )
 from src.Infrastructure.DjangoFramework.persistence.views.ai_views import analyze_metadata_api, edit_narrative_api, api_generate_title
-from src.Infrastructure.DjangoFramework.persistence.views.dashboard_views import (
-    dashboard, aprobar_propuesta, rechazar_propuesta, publicar_version, archivar_propuesta,
+from src.Infrastructure.DjangoFramework.persistence.views.dashboard.workflow import (
+    dashboard, centro_control, aprobar_propuesta, rechazar_propuesta, publicar_version, archivar_propuesta,
     restaurar_version, borrar_propuesta, borrar_propuestas_masivo,
     aprobar_contribucion, rechazar_contribucion,
     aprobar_narrativa, rechazar_narrativa, publicar_narrativa, archivar_narrativa,
-    aprobar_imagen, rechazar_imagen, archivar_imagen, restaurar_imagen, borrar_imagen_definitivo, restaurar_narrativa, borrar_narrativa_version, publicar_imagen,
-    UserManagementView, toggle_admin_role, ImageProposalDetailView, ProposalDetailView,
-    aprobar_propuestas_masivo, archivar_propuestas_masivo, publicar_propuestas_masivo, batch_revisar_imagenes,
-    ver_papelera, restaurar_entidad_fisica, borrar_mundo_definitivo, borrar_narrativa_definitivo, restaurar_imagen_papelera, # NEW TRASH VIEWS
-    MyTeamView, CollaboratorWorkView  # Team Management
+    restaurar_narrativa, borrar_narrativa_version, 
+    ProposalDetailView, aprobar_propuestas_masivo, archivar_propuestas_masivo, publicar_propuestas_masivo
+)
+from src.Infrastructure.DjangoFramework.persistence.views.dashboard.assets import (
+    aprobar_imagen, rechazar_imagen, archivar_imagen, restaurar_imagen, borrar_imagen_definitivo, 
+    publicar_imagen, ImageProposalDetailView, batch_revisar_imagenes,
+    ver_papelera, restaurar_entidad_fisica, borrar_mundo_definitivo, borrar_narrativa_definitivo, 
+    restaurar_imagen_papelera
+)
+from src.Infrastructure.DjangoFramework.persistence.views.dashboard.team import (
+    UserManagementView, toggle_admin_role, MyTeamView, CollaboratorWorkView
 )
 from src.Infrastructure.DjangoFramework.persistence.views.media_views import (
     api_preview_foto, api_save_foto, api_update_image_metadata, 

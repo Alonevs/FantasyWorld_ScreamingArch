@@ -108,18 +108,15 @@ def review_proposal(request, type, id):
         action = request.POST.get('action') # 'approve' or 'reject'
         
         if action == 'approve':
-            # LOGIC DUPLICATION WARNING: Ideally call the same use case as previous views
-            # For expediency, redirecting to the existing 'aprobar_X' views would be cleaner,
-            # BUT we want to stay in this flow.
-            # Let's simple redirect to the existing logic URLs for now to avoid code duplication bugs.
-            if type == 'WORLD': return redirect('aprobar_version_mundo', version_id=id)
-            elif type == 'NARRATIVE': return redirect('aprobar_narrativa', version_id=id)
-            elif type == 'IMAGE': return redirect('aprobar_imagen', proposal_id=id)
+            # Redirect to existing logic
+            if type == 'WORLD': return redirect('aprobar_version', id=id)
+            elif type == 'NARRATIVE': return redirect('aprobar_narrativa', id=id)
+            elif type == 'IMAGE': return redirect('aprobar_imagen', id=id)
             
         elif action == 'reject':
-            if type == 'WORLD': return redirect('rechazar_version_mundo', version_id=id)
-            elif type == 'NARRATIVE': return redirect('rechazar_narrativa', version_id=id)
-            elif type == 'IMAGE': return redirect('rechazar_imagen', proposal_id=id)
+            if type == 'WORLD': return redirect('rechazar_propuesta', id=id)
+            elif type == 'NARRATIVE': return redirect('rechazar_narrativa', id=id)
+            elif type == 'IMAGE': return redirect('rechazar_imagen', id=id)
 
     ctx['proposal'] = proposal
     return render(request, 'staff/review_proposal.html', ctx)
