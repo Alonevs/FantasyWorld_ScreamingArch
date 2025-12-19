@@ -9,7 +9,7 @@
 
 {% if variant == 'horizontal' %}
 <!-- HORIZONTAL VARIANT (List/Grid Compact) -->
-<a href="{% url 'ver_mundo' entity.public_id %}" class="block bg-gray-900/50 hover:bg-gray-800 border border-gray-700 hover:border-accent rounded-lg p-3 transition flex items-center gap-3 group">
+<a href="{% url 'ver_mundo' entity.public_id %}" class="block bg-gray-900/50 hover:bg-gray-800 border {% if entity.is_jumped %}border-yellow-600/50 bg-yellow-900/5 border-dashed{% else %}border-gray-700{% endif %} hover:border-accent rounded-lg p-3 transition flex items-center gap-3 group">
     <div class="w-12 h-12 rounded bg-black border border-gray-800 overflow-hidden shrink-0 relative group-hover:border-accent transition-colors duration-300">
         {% with image=entity.img_file|default:entity.img %}
         {% if image %}
@@ -27,8 +27,13 @@
         <div class="text-xs text-gray-500 font-mono">{{ entity.short|default:entity.public_id }}</div>
         {% endif %}
         
-
+        {% if entity.missing_parent_id %}
+        <div class="text-[10px] text-red-400 font-bold bg-red-900/20 px-1.5 py-0.5 rounded border border-red-900/30 flex items-center gap-1 mt-1">
+            ⚠️ Huérfano de {{ entity.missing_parent_id }}
+        </div>
+        {% endif %}
     </div>
+
 </a>
 
 {% else %}

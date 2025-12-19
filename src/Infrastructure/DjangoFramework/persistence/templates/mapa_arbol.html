@@ -17,7 +17,7 @@
     <!-- Tree Container -->
     <div class="bg-card border border-gray-800 rounded-xl p-6 shadow-2xl overflow-x-auto">
         {% for item in tree %}
-        <a href="{% url 'ver_mundo' item.public_id %}" class="flex items-center px-3 py-2 border-b border-gray-800/50 hover:bg-white/5 transition rounded group {% if item.is_root %}text-accent font-bold{% else %}text-gray-400 hover:text-white{% endif %}">
+        <a href="{% url 'ver_mundo' item.public_id %}" class="flex items-center px-3 py-2 border-b border-gray-800/50 hover:bg-white/5 transition rounded group {% if item.is_root %}text-accent font-bold{% elif item.is_jumped %}text-yellow-400/80 italic{% else %}text-gray-400 hover:text-white{% endif %}">
             <!-- Indentation -->
             <div style="width: {{ item.indent_px }}px;" class="flex-shrink-0"></div>
             

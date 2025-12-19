@@ -46,11 +46,21 @@ def generate_breadcrumbs(jid):
                 has_data = True
         
         # LOGICA DE FILTRADO:
-        # Solo añadimos si es Root, o si tiene datos reales.
-        # Excepción: Si es el ÚLTIMO elemento (la página actual), siempre lo añadimos (filtrarlo sería confuso).
+        # 1. Ignorar "Fantasmas" explícitos (Nexo/Fantasma + ID termina en 00)
+        #    Esto aplana la ruta (ej: Caos Prime -> Mi Casa, saltando el 0100)
+        is_ghost_name = "nexo" in label.lower() or "fantasma" in label.lower() or "ghost" in label.lower()
+        is_generic_ghost = pid.endswith("00") and is_ghost_name
+        
+        # 2. Solo añadimos si es Root, o si tiene datos reales.
+        # Excepción: Si es el ÚLTIMO elemento (la página actual), siempre lo añadimos.
         is_last = (pid == jid)
         
-        if is_root or has_data or is_last:
+        # Si es un fantasma genérico INTERMEDIO, lo saltamos aunque tenga descripción.
+        should_show = (is_root or has_data or is_last)
+        if is_generic_ghost and not is_last:
+             should_show = False
+             
+        if should_show:
             full_list.append({
                 'id': link_id, 
                 'label': label

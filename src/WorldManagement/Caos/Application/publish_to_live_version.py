@@ -23,10 +23,12 @@ class PublishToLiveVersionUseCase:
         # 0.5 CHECK FOR DELETE ACTION
         if version.cambios and version.cambios.get('action') == 'DELETE':
             print(f" 🗑️ Ejecutando eliminación lógica de mundo '{version.world.name}' (v{version.version_number})")
+            # NOTE: Step 0 (above) already archived the previous LIVE version as HISTORY.
+            # This ensures we have a backup of the state prior to deletion.
             version.world.soft_delete()
-            # Also mark version as ARCHIVED or LIVE?
-            # It was approved, so it is technically "Executed". But since the world is gone (logically), maybe we keep the version as record.
-            version.status = 'HISTORY' 
+            
+            # Mark this proposal as ARCHIVED to indicate it was verified and executed.
+            version.status = 'ARCHIVED' 
             version.save()
             return
 

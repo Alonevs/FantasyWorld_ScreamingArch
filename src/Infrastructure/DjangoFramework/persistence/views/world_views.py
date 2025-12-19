@@ -79,6 +79,7 @@ def home(request):
         .exclude(id__endswith='00', name__startswith='Nexo Fantasma') \
         .exclude(id__endswith='00', name__startswith='Ghost') \
         .exclude(id__endswith='00', name='Placeholder') \
+        .exclude(id__contains='00') \
         .select_related('born_in_epoch', 'died_in_epoch') \
         .prefetch_related('versiones', 'narrativas') \
         .order_by('id')

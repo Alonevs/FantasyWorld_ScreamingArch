@@ -16,27 +16,9 @@ class CreateChildWorldUseCase:
         
         print(f"    Calculado ID: {new_child_id}")
 
-        # --- AUTO-GHOST CREATION (Gap Filling) ---
-        # Si hemos saltado niveles (ej: 01 -> 010006), asegurar que existen los intermedios (0100)
-        # para mantener la integridad de la jerarquía.
-        current_len = len(parent_id)
-        target_len = len(new_child_id)
-        
-        # Iterar por los niveles intermedios
-        for l in range(current_len + 2, target_len, 2):
-            ghost_id_str = new_child_id[:l]
-            exists = self.repository.find_by_id(WorldID(ghost_id_str))
-            
-            if not exists:
-                print(f"    👻 [Auto-Ghost] Creando Nexo Fantasma: {ghost_id_str}")
-                ghost_world = CaosWorld(
-                    id=WorldID(ghost_id_str),
-                    name=f"Nexo Fantasma {ghost_id_str}",
-                    lore_description="Nodo puente generado automáticamente por el sistema.",
-                    status='LIVE',   # Debe estar LIVE para ser visible estructuralmente
-                    is_public=True   # Visible para todos (aunque filtrado visualmente si acaba en 00)
-                )
-                self.repository.save(ghost_world)
+        # --- AUTO-GHOST CREATION REMOVED ---
+        # DISABLED BY REQUEST: We want clean jumps (using '00' padding) without physical ghost entities.
+        # The visual layer handles the "Hoisting" of children from empty levels.
 
         # --- AI TEXT GENERATION (Optional) ---
         if generate_image: # Reusing the flag as "use_ai"
