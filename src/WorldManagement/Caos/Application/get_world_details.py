@@ -280,7 +280,16 @@ class GetWorldDetailsUseCase:
         props = w.versiones.filter(status='PENDING').order_by('-created_at')
         historial = w.versiones.exclude(status='PENDING').order_by('-created_at')
 
-        # 7. Construct Permission Flags
+        # 7. Get Schema (to show empty tables in UI)
+        schema = None
+        try:
+            from src.WorldManagement.Caos.Domain.metadata_router import get_schema_for_hierarchy
+            level = len(jid) // 2
+            schema = get_schema_for_hierarchy(jid, level)
+        except Exception as e:
+            print(f"Error resolving schema in GetWorldDetails: {e}")
+
+        # 8. Construct Permission Flags
         is_author = (user and w.author == user)
         is_super = (user and user.is_superuser)
         is_subadmin = False
@@ -308,6 +317,7 @@ class GetWorldDetailsUseCase:
             'nid_lore': w.id_lore, 
             'metadata': meta_str, 
             'metadata_obj': w.metadata, 
+            'metadata_schema': schema,
             'imagenes': imgs, 
             'hijos': hijos, 
             'breadcrumbs': generate_breadcrumbs(jid), 

@@ -26,6 +26,27 @@
                 </tbody>
             </table>
         </div>
+    {% elif metadata_schema.campos_fijos %}
+        {# SHOW EMPTY SCHEMA TABLE #}
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <tbody class="divide-y divide-gray-800">
+                    {% for key, placeholder in metadata_schema.campos_fijos.items %}
+                    <tr class="group hover:bg-white/5 transition opacity-60">
+                        <td class="px-4 py-2 font-mono text-[11px] text-gray-500 font-bold tracking-wide border-r border-gray-800/50">
+                            {{ key|clean_metadata_key }}
+                        </td>
+                        <td class="px-4 py-2 text-gray-600 italic text-xs">
+                            {{ placeholder }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="p-4 bg-purple-900/10 text-center border-t border-gray-800">
+             <p class="text-[10px] text-purple-400/70 font-bold uppercase tracking-tighter">Ficha Estructural Detectada - Pendiente de Datos</p>
+        </div>
     {% else %}
         <div class="p-6 text-center">
             <p class="text-xs text-gray-600 italic">No hay datos estructurales definidos.</p>

@@ -121,6 +121,7 @@ def dashboard(request):
         x.target_name = x.proposed_name
         x.target_desc = x.proposed_description
         x.parent_context = "Universo"
+        x.feedback = getattr(x, 'admin_feedback', '') # Ensure mapped
         if x.cambios.get('action') == 'SET_COVER':
             x.target_desc = f"📸 Cambio: {x.cambios.get('cover_image')}"
         elif x.cambios.get('action') == 'TOGGLE_VISIBILITY':
@@ -140,6 +141,7 @@ def dashboard(request):
         x.target_desc = x.proposed_content
         x.target_link = x.narrative.public_id if hasattr(x.narrative, 'public_id') and x.narrative.public_id else x.narrative.nid
         x.parent_context = x.narrative.world.name
+        x.feedback = getattr(x, 'admin_feedback', '') # Ensure mapped
         
         if (x.change_log and ("Eliminación" in x.change_log or "Borrar" in x.change_log)) or \
            (hasattr(x, 'cambios') and x.cambios and x.cambios.get('action') == 'DELETE'):
@@ -149,6 +151,7 @@ def dashboard(request):
         x.type = 'IMAGE'
         x.type_label = '🖼️ IMAGEN'
         x.target_name = x.title or "(Sin Título)"
+        x.feedback = getattr(x, 'admin_feedback', '') # Ensure mapped
         desc = f"🗑️ Borrar: {x.target_filename}" if x.action == 'DELETE' else "📸 Nueva"
         if hasattr(x, 'reason') and x.reason:
             desc = f"{desc} | Motivo: {x.reason}"
@@ -203,8 +206,8 @@ def aprobar_propuesta(request, id):
 @login_required
 @admin_only
 def rechazar_propuesta(request, id):
-    reason = request.POST.get('reason', '')
-    return execute_use_case_action(request, RejectVersionUseCase, id, "Rechazada.", "REJECT_WORLD_VERSION", extra_args={'reason': reason})
+    feedback = request.POST.get('admin_feedback', '') or request.GET.get('admin_feedback', '')
+    return execute_use_case_action(request, RejectVersionUseCase, id, "Rechazada.", "REJECT_WORLD_VERSION", extra_args={'reason': feedback})
 
 @login_required
 @admin_only
@@ -214,10 +217,15 @@ def publicar_version(request, version_id):
 @login_required
 def archivar_propuesta(request, id):
     obj = get_object_or_404(CaosVersionORM, id=id)
-    # Security: Admins can archive team work, others only their own
     from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
     check_ownership(request.user, obj)
     
+    # If it's a DELETE proposal and coming from Admin ('archivar' is 'Mantener' in UI)
+    is_delete = obj.cambios.get('action') == 'DELETE' if obj.cambios else False
+    if is_delete and (request.user.is_staff or request.user.is_superuser):
+        feedback = request.POST.get('admin_feedback', '') or request.GET.get('admin_feedback', '')
+        return execute_use_case_action(request, RejectVersionUseCase, id, "Propuesta de borrado rechazada (Mantenido).", "KEEP_WORLD_REJECT_DELETE", extra_args={'reason': feedback or "El administrador ha decidido mantener este elemento."})
+
     return execute_orm_status_change(request, CaosVersionORM, id, 'ARCHIVED', "Archivado.", "ARCHIVE_VERSION")
 
 @login_required
@@ -244,8 +252,8 @@ def aprobar_narrativa(request, id):
 @login_required
 @admin_only
 def rechazar_narrativa(request, id):
-    reason = request.POST.get('reason', '')
-    return execute_use_case_action(request, RejectNarrativeVersionUseCase, id, "Narrativa rechazada.", "REJECT_NARRATIVE", extra_args={'reason': reason})
+    feedback = request.POST.get('admin_feedback', '') or request.GET.get('admin_feedback', '')
+    return execute_use_case_action(request, RejectNarrativeVersionUseCase, id, "Narrativa rechazada.", "REJECT_NARRATIVE", extra_args={'reason': feedback})
 
 @login_required
 @admin_only
@@ -257,6 +265,11 @@ def archivar_narrativa(request, id):
     obj = get_object_or_404(CaosNarrativeVersionORM, id=id)
     from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
     check_ownership(request.user, obj)
+
+    if obj.action == 'DELETE' and (request.user.is_staff or request.user.is_superuser):
+        feedback = request.POST.get('admin_feedback', '') or request.GET.get('admin_feedback', '')
+        return execute_use_case_action(request, RejectNarrativeVersionUseCase, id, "Borrado de narrativa rechazado (Mantener).", "KEEP_NARRATIVE_REJECT_DELETE", extra_args={'reason': feedback or "El administrador ha decidido mantener esta narrativa."})
+
     return execute_orm_status_change(request, CaosNarrativeVersionORM, id, 'ARCHIVED', "Archivado.", "ARCHIVE_NARRATIVE")
 
 @login_required

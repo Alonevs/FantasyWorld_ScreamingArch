@@ -86,6 +86,7 @@ class CaosVersionORM(models.Model):
     cambios = models.JSONField(default=dict, blank=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     es_version_activa = models.BooleanField(default=False)
+    admin_feedback = models.TextField(blank=True)
     class Meta: db_table = 'caos_versions'; ordering = ['-version_number']
 
 class CaosNarrativeORM(models.Model):
@@ -139,6 +140,7 @@ class CaosNarrativeVersionORM(models.Model):
     action = models.CharField(max_length=20, default="EDIT", choices=[('ADD', 'Crear'), ('EDIT', 'Editar'), ('DELETE', 'Borrar')])
     change_log = models.CharField(max_length=255, blank=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    admin_feedback = models.TextField(blank=True)
     
     class Meta: db_table = 'caos_narrative_versions'; ordering = ['-version_number']
 
@@ -177,6 +179,7 @@ class CaosImageProposalORM(models.Model):
     target_filename = models.CharField(max_length=255, null=True, blank=True) # For DELETE actions
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    admin_feedback = models.TextField(blank=True)
 
     class Meta: db_table = 'caos_image_proposals'; ordering = ['-created_at']
 

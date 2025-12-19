@@ -33,12 +33,13 @@ def aprobar_imagen(request, id):
 @admin_only
 def rechazar_imagen(request, id):
     try:
-        reason = request.POST.get('reason', '')
+        feedback = request.POST.get('admin_feedback', '') or request.GET.get('admin_feedback', '')
         prop = get_object_or_404(CaosImageProposalORM, id=id)
         prop.status = 'REJECTED'
+        prop.admin_feedback = feedback
         prop.save()
-        messages.success(request, "Imagen Rechazada.")
-        log_event(request.user, "REJECT_IMAGE", id, details=f"Razón: {reason}" if reason else "")
+        messages.success(request, f"Imagen Rechazada. Feedback: {feedback[:30]}...")
+        log_event(request.user, "REJECT_IMAGE", id, details=f"Feedback: {feedback}")
     except Exception as e: messages.error(request, str(e))
     if request.GET.get('next') == 'batch': return redirect('batch_revisar_imagenes')
     return redirect('dashboard')
@@ -50,10 +51,19 @@ def archivar_imagen(request, id):
         from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
         check_ownership(request.user, prop)
         
-        prop.status = 'ARCHIVED'
-        prop.save()
-        messages.success(request, "Imagen Archivada.")
-        log_event(request.user, "ARCHIVE_IMAGE", id)
+        # If it's a DELETE proposal and comes from Admin ('archivar' is 'Mantener' in UI)
+        if prop.action == 'DELETE' and (request.user.is_staff or request.user.is_superuser):
+            feedback = request.POST.get('admin_feedback', '') or request.GET.get('admin_feedback', '')
+            prop.status = 'REJECTED'
+            prop.admin_feedback = feedback or "El administrador ha decidido mantener este elemento."
+            prop.save()
+            messages.success(request, "Propuesta de borrado rechazada (Elemento Mantenido).")
+            log_event(request.user, "KEEP_IMAGE_REJECT_DELETE", id, details=feedback)
+        else:
+            prop.status = 'ARCHIVED'
+            prop.save()
+            messages.success(request, "Imagen Archivada.")
+            log_event(request.user, "ARCHIVE_IMAGE", id)
     except Exception as e: messages.error(request, str(e))
     if request.GET.get('next') == 'batch': return redirect('batch_revisar_imagenes')
     return redirect('dashboard')

@@ -32,8 +32,8 @@
     <div id="panel-cosmology" class="tab-panel hidden animate-wave">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 entity-grid">
             {% for entity in children %}
-                <!-- Levels 1-6 (2-12 chars): First Borns Only (Must end in '01') -->
-                {% if entity.id|length <= 12 and entity.id|slice:"-2:" == "01" %}  
+                <!-- Levels 1-6 (2-12 chars): Cosmology Index -->
+                {% if entity.id|length <= 12 %}  
                     {% include "components/_entity_card.html" with entity=entity variant="vertical" %}
                 {% endif %}
             {% endfor %}

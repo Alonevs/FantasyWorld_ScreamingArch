@@ -9,7 +9,7 @@ class RejectNarrativeVersionUseCase:
             
             version.status = 'REJECTED'
             if reason:
-                version.change_log = reason
+                version.admin_feedback = reason
             version.save()
             
             # If the rejected version was a CREATION proposal (ADD), delete the parent narrative

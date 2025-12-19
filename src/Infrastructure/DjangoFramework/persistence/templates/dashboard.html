@@ -149,10 +149,10 @@
                             </div>
 
                             <!-- BOTTOM: PROPOSALS LIST -->
-                            <div class="flex-1 divide-y divide-gray-800/50 bg-black/20">
+                            <div x-show="expanded" class="flex-1 divide-y divide-gray-800/50 bg-black/20">
                                 {% for item in group.proposals %}
-                                <!-- Item Container: 5 items always visible, others toggle -->
-                                <div {% if forloop.counter > 5 %}x-show="expanded" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2"{% endif %} class="p-4 hover:bg-white/5 transition-colors flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 group">
+                                <!-- Item Container -->
+                                <div class="p-4 hover:bg-white/5 transition-colors flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 group">
                                     <!-- CHECKBOX -->
                                     <div class="flex items-center justify-center pt-1 pl-1">
                                         <input type="checkbox" form="bulk-approve-form" 
@@ -196,9 +196,12 @@
                                             <!-- DELETE LOGIC: Green=Keep (Reject Proposal), Red=Delete (Approve Proposal) -->
                                             
                                             <!-- Green: MANTENER (Reject deletion) -->
-                                            <form method="post" action="{% if item.type == 'WORLD' %}{% url 'rechazar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'rechazar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'rechazar_imagen' item.id %}{% endif %}">
+                                            <form method="post" action="{% if item.type == 'WORLD' %}{% url 'archivar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'archivar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'archivar_imagen' item.id %}{% endif %}">
                                                 {% csrf_token %}
-                                                <button type="submit" class="text-green-500 hover:text-white hover:bg-green-600 px-3 py-1.5 rounded text-xs font-bold transition-all border border-green-900/30 hover:border-green-500 shadow-lg shadow-green-900/10 flex items-center gap-1" title="Mantener (Rechazar borrado)" data-confirm="¿Mantener este elemento y cancelar el borrado?">
+                                                <input type="hidden" name="admin_feedback" value="">
+                                                <button type="button" 
+                                                        onclick="submitWithFeedback(this.form, '🛡️ ¿Por qué mantener?', 'Indica el motivo para mantener este elemento activo:')"
+                                                        class="text-green-500 hover:text-white hover:bg-green-600 px-3 py-1.5 rounded text-xs font-bold transition-all border border-green-900/30 hover:border-green-500 shadow-lg shadow-green-900/10 flex items-center gap-1" title="Mantener (Rechazar borrado)">
                                                     <span>🛡️</span> Mantener
                                                 </button>
                                             </form>
@@ -233,10 +236,12 @@
                                             <!-- Reject (New) -->
                                             <!-- Reject (With Reason) -->
                                             {% if request.user|can_approve:item %}
-                                            <form method="post" action="{% if item.type == 'WORLD' %}{% url 'rechazar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'rechazar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'rechazar_imagen' item.id %}{% endif %}" onsubmit="let r = prompt('📝 Motivo del rechazo (Opcional):'); if (r === null) return false; this.reason.value = r; return true;">
+                                            <form method="post" action="{% if item.type == 'WORLD' %}{% url 'rechazar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'rechazar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'rechazar_imagen' item.id %}{% endif %}">
                                                 {% csrf_token %}
-                                                <input type="hidden" name="reason" value="">
-                                                <button type="submit" class="text-red-500 hover:text-white hover:bg-red-600 px-3 py-1.5 rounded text-xs font-bold transition-all border border-red-900/30 hover:border-red-500 shadow-lg shadow-red-900/10" title="Rechazar">
+                                                <input type="hidden" name="admin_feedback" value="">
+                                                <button type="button" 
+                                                        onclick="submitWithFeedback(this.form, '✕ Rechazar Propuesta', 'Motivo del rechazo (opcional):')"
+                                                        class="text-red-500 hover:text-white hover:bg-red-600 px-3 py-1.5 rounded text-xs font-bold transition-all border border-red-900/30 hover:border-red-500 shadow-lg shadow-red-900/10" title="Rechazar">
                                                     ✕
                                                 </button>
                                             </form>
@@ -346,10 +351,10 @@
                             </div>
 
                             <!-- BOTTOM: PROPOSALS LIST -->
-                            <div class="flex-1 divide-y divide-gray-800/50 bg-black/20">
+                            <div x-show="expanded" class="flex-1 divide-y divide-gray-800/50 bg-black/20">
                                 {% for item in group.proposals %}
-                                <!-- Item Container: 5 visible -->
-                                <div {% if forloop.counter > 5 %}x-show="expanded" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2"{% endif %} class="p-4 hover:bg-white/5 transition-colors flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 group">
+                                <!-- Item Container -->
+                                <div class="p-4 hover:bg-white/5 transition-colors flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 group">
                                     <!-- CHECKBOX -->
                                     <div class="flex items-center justify-center pt-1 pl-1">
                                         <input type="checkbox" form="bulk-archive-approved-form" 
@@ -389,15 +394,17 @@
                                             <span>👁️</span> <span class="hidden sm:inline">Ver</span>
                                         </a>
 
-                                         <!-- Archive (or Keep for Deletions) -->
-                                        <form method="post" action="{% if item.type == 'WORLD' %}{% url 'archivar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'archivar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'archivar_imagen' item.id %}{% endif %}">
+                                         <form method="post" action="{% if item.type == 'WORLD' %}{% url 'archivar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'archivar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'archivar_imagen' item.id %}{% endif %}">
                                             {% csrf_token %}
+                                            <input type="hidden" name="admin_feedback" value="">
                                             {% if item.action == 'DELETE' %}
-                                                <button type="submit" class="flex items-center gap-2 bg-green-900/30 hover:bg-green-600 text-green-500 hover:text-white text-xs font-bold px-3 py-2 rounded border border-green-900/50 hover:border-green-500 transition-all shadow-lg" title="Mantener (Cancelar Borrado y Archivar)" data-confirm="¿MANTENER el elemento? La propuesta de borrado será archivada y el elemento permanecerá activo.">
+                                                <button type="button" 
+                                                        onclick="submitWithFeedback(this.form, '🛡️ Mantener Elemento', 'Indica por qué has decidido NO efectuar el borrado:')"
+                                                        class="flex items-center gap-2 bg-green-900/30 hover:bg-green-600 text-green-500 hover:text-white text-xs font-bold px-3 py-2 rounded border border-green-900/50 hover:border-green-500 transition-all shadow-lg" title="Mantener (Cancelar Borrado)">
                                                     <span>🛡️</span> <span class="hidden sm:inline">Mantener</span>
                                                 </button>
                                             {% else %}
-                                                <button type="submit" class="flex items-center gap-2 bg-gray-800 hover:bg-yellow-900/30 text-yellow-500 hover:text-yellow-300 text-xs font-bold px-3 py-2 rounded border border-gray-700 hover:border-yellow-700/50 transition-all shadow-lg" title="Archivar (Quitar de la lista)" data-confirm="¿Archivar esta propuesta? (Podrás verla en el historial)">
+                                                <button type="submit" class="flex items-center gap-2 bg-gray-800 hover:bg-yellow-900/30 text-yellow-500 hover:text-yellow-300 text-xs font-bold px-3 py-2 rounded border border-gray-700 hover:border-yellow-700/50 transition-all shadow-lg" title="Archivar (Sin publicar)" data-confirm="¿Archivar esta propuesta sin publicar?">
                                                     <span>📦</span>
                                                 </button>
                                             {% endif %}
@@ -529,7 +536,13 @@
                                         </div>
                                         
                                         <!-- REASON DISPLAY -->
-                                        {% if item.change_log %}
+                                        {% if item.admin_feedback %}
+                                        <div class="bg-blue-900/10 border-l-2 border-blue-500 pl-2 py-1 mb-1 text-xs text-blue-300 italic">
+                                            💬 Admin: "{{ item.admin_feedback }}"
+                                        </div>
+                                        {% endif %}
+
+                                        {% if item.change_log and item.type != 'IMAGE' %}
                                         <div class="bg-red-900/10 border-l-2 border-red-900 pl-2 py-1 mb-1 text-xs text-red-300 italic">
                                             "{{ item.change_log }}"
                                         </div>
@@ -649,9 +662,9 @@
                             </div>
 
                             <!-- LIST -->
-                            <div class="divide-y divide-gray-800/30">
+                            <div x-show="expanded" class="divide-y divide-gray-800/30">
                                 {% for item in group.proposals %}
-                                <div class="p-3 hover:bg-white/5 transition flex flex-col sm:flex-row gap-3" {% if forloop.counter > 5 %}x-show="expanded"{% endif %}>
+                                <div class="p-3 hover:bg-white/5 transition flex flex-col sm:flex-row gap-3">
                                     
                                     <!-- CHECKBOX (Superuser Only) -->
                                     {% if request.user.is_superuser %}
@@ -778,5 +791,30 @@
 {% endblock %}
 
 {% block modals %}
+<script>
+async function submitWithFeedback(form, title, promptText) {
+    if (!window.CaosModal) {
+        // Fallback if CaosModal is not loaded (should not happen)
+        let r = prompt(promptText);
+        if (r !== null) {
+            form.admin_feedback.value = r;
+            form.submit();
+        }
+        return;
+    }
 
+    const result = await CaosModal.prompt({
+        title: title,
+        message: promptText,
+        placeholder: 'Escribe aquí tu mensaje...',
+        confirmText: 'Enviar',
+        cancelText: 'Cancelar'
+    });
+
+    if (result !== null) {
+        form.admin_feedback.value = result;
+        form.submit();
+    }
+}
+</script>
 {% endblock %}

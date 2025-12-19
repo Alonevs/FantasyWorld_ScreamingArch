@@ -14,9 +14,9 @@ class RejectVersionUseCase:
         # Cambiamos el estado a REJECTED (Papelera)
         version.status = "REJECTED"
         
-        # Append Reason to change_log if provided
+        # Guardamos el feedback del admin
         if reason:
-            version.change_log = f"{reason}"[:255] # Truncate to safety
+            version.admin_feedback = reason
             
         version.save()
         
