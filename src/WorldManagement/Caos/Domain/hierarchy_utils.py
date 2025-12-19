@@ -1,6 +1,6 @@
 # Definición de nombres por Nivel (Longitud // 2)
 HIERARCHY_LABELS = {
-    1: "CAOS PRIME",
+    1: "CAOS",
     2: "ABISMO / GESTACIÓN",
     # Rama Física (0101...)
     "PHYSICS": {
@@ -28,6 +28,60 @@ HIERARCHY_LABELS = {
         13: "ESPECIE DEMONIACA",
         16: "ENTIDAD"
     }
+}
+
+
+# Labels for categories (Plural) - Requested by User
+PLURAL_HIERARCHY_LABELS = {
+    "PHYSICS": {
+        1: "CAOS",
+        2: "ABISMOS",
+        3: "UNIVERSOS",
+        4: "GALAXIAS",
+        5: "SISTEMAS",
+        6: "PLANETAS",
+        7: "CONTINENTES",
+        8: "PAÍSES",
+        9: "CIUDADES",
+        10: "DISTRITOS",
+        11: "LUGARES",
+        12: "RAZAS",
+        13: "CLASES",
+        14: "SUBCLASES",
+        15: "TIPO PERSONAJE",
+        16: "PERSONAJES"
+    },
+    "DIMENSIONAL": {
+        3: "PLANOS MAYORES",
+        4: "DOMINIOS",
+        5: "ESTRUCTURAS",
+        6: "CAPAS / CÍRCULOS",
+        7: "SECTORES DIMENSIONALES",
+        8: "ÁREAS",
+        9: "ASENTAMIENTOS",
+        13: "ESPECIES DEMONIACAS",
+        16: "ENTIDADES"
+    }
+}
+
+def get_plural_label(level, jid="0101"):
+    branch = "DIMENSIONAL" if (jid.startswith("0102") or jid.startswith("0105")) else "PHYSICS"
+    labels = PLURAL_HIERARCHY_LABELS.get(branch, PLURAL_HIERARCHY_LABELS["PHYSICS"])
+    return labels.get(level, f"CATEGORÍA NIVEL {level}")
+
+# Labels for the "Children List" header based on PARENT Level
+# Key = Parent Level. Value = Label for the children.
+CHILDREN_LABELS = {
+    # Physics Branch default flow
+    12: "RAZAS DISPONIBLES",      # Parent L12 -> Children L13 (Raza)
+    13: "CLASES",                 # Parent L13 (Raza) -> Children L14 (Clase)
+    14: "SUBCLASES",              # Parent L14 (Clase) -> Children L15 (Subclase)
+    15: "PERSONAJES",             # Parent L15 (Subclase) -> Children L16 (Personaje)
+    # Geography
+    6:  "CONTINENTES",            # Parent L6 (Planeta) -> Children L7 (Continente)
+    7:  "PAÍSES / REGIONES",      # Parent L7 (Continente) -> Children L8 (País)
+    8:  "CIUDADES",               # Parent L8 (País) -> Children L9 (Ciudad)
+    9:  "DISTRITOS",              # Parent L9 (Ciudad) -> Children L10 (Distrito)
 }
 
 def get_readable_hierarchy(jid):
@@ -85,3 +139,11 @@ def get_available_levels(current_jid):
             })
             
     return options
+
+def get_children_label(current_jid):
+    """
+    Returns the label for the children list based on the PARENT's level.
+    e.g. If Parent is Level 12, Children are Level 13, Label = "RAZAS DISPONIBLES".
+    """
+    level = len(current_jid) // 2
+    return CHILDREN_LABELS.get(level, "ENTIDADES HIJAS")

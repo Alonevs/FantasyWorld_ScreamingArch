@@ -16,6 +16,17 @@ def resolve_jid_orm(identifier) -> CaosWorldORM:
             return CaosWorldORM.objects.get(id=w_domain.id.value)
         except CaosWorldORM.DoesNotExist:
             return None
+            
+    # Fallback: Try identifying as NanoID or ID directly
+    try:
+        # Try public_id (NanoID)
+        return CaosWorldORM.objects.get(public_id=identifier)
+    except CaosWorldORM.DoesNotExist:
+        try:
+            # Try plain ID (Integer)
+            return CaosWorldORM.objects.get(id=identifier)
+        except (CaosWorldORM.DoesNotExist, ValueError):
+            return None
     return None
 
 def check_world_access(request, world_orm: CaosWorldORM):
@@ -44,7 +55,14 @@ def check_world_access(request, world_orm: CaosWorldORM):
             if request.user.profile in world_orm.author.profile.collaborators.all():
                 is_collaborator = True
 
-    is_author_or_team = is_strict_author or is_collaborator or is_superuser
+    
+    # Check Profile Rank (Admin/SubAdmin)
+    is_profile_admin = False
+    if is_authenticated and hasattr(request.user, 'profile'):
+        if request.user.profile.rank in ['ADMIN', 'SUBADMIN']:
+            is_profile_admin = True
+
+    is_author_or_team = is_strict_author or is_collaborator or is_superuser or is_profile_admin
     can_access = is_live or is_author_or_team
     
     return can_access, is_author_or_team

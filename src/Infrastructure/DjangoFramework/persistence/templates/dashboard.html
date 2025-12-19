@@ -95,7 +95,7 @@
                                 class="text-xs bg-green-900/30 hover:bg-green-600 text-green-400 hover:text-white px-3 py-1.5 rounded border border-green-900/50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                 :disabled="selectionCount === 0"
                                 title="Aprobar seleccionados"
-                                onclick="return confirm('¿Aprobar todas las propuestas seleccionadas?')">
+                                data-confirm="¿Aprobar todas las propuestas seleccionadas?">
                             <span>✅</span> Aprobar (<span x-text="selectionCount"></span>)
                         </button>
                         {% endif %}
@@ -106,7 +106,8 @@
                                 class="text-xs bg-red-900/30 hover:bg-red-600 text-red-400 hover:text-white px-3 py-1.5 rounded border border-red-900/50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                 :disabled="selectionCount === 0"
                                 title="Rechazar seleccionados"
-                                onclick="return confirm('¿RECHAZAR todas las propuestas seleccionadas? (Se eliminarán de la lista)')">
+                                data-confirm="¿RECHAZAR todas las propuestas seleccionadas? (Se eliminarán de la lista)"
+                                data-destructive="true">
                             <span>✕</span> Rechazar (<span x-text="selectionCount"></span>)
                         </button>
                         {% endif %}
@@ -197,7 +198,7 @@
                                             <!-- Green: MANTENER (Reject deletion) -->
                                             <form method="post" action="{% if item.type == 'WORLD' %}{% url 'rechazar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'rechazar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'rechazar_imagen' item.id %}{% endif %}">
                                                 {% csrf_token %}
-                                                <button type="submit" class="text-green-500 hover:text-white hover:bg-green-600 px-3 py-1.5 rounded text-xs font-bold transition-all border border-green-900/30 hover:border-green-500 shadow-lg shadow-green-900/10 flex items-center gap-1" title="Mantener (Rechazar borrado)" onclick="return confirm('¿Mantener este elemento y cancelar el borrado?')">
+                                                <button type="submit" class="text-green-500 hover:text-white hover:bg-green-600 px-3 py-1.5 rounded text-xs font-bold transition-all border border-green-900/30 hover:border-green-500 shadow-lg shadow-green-900/10 flex items-center gap-1" title="Mantener (Rechazar borrado)" data-confirm="¿Mantener este elemento y cancelar el borrado?">
                                                     <span>🛡️</span> Mantener
                                                 </button>
                                             </form>
@@ -205,7 +206,7 @@
                                             <!-- RESTORE BUTTON (Active only) -->
                                         <form method="post" action="{% if item.type == 'WORLD' %}{% url 'aprobar_version' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'aprobar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'aprobar_imagen' item.id %}{% endif %}">
                                             {% csrf_token %}
-                                            <button type="submit" class="text-red-500 hover:text-white hover:bg-red-600 px-3 py-1.5 rounded text-xs font-bold transition-all border border-red-900/30 hover:border-red-500 shadow-lg shadow-red-900/10 flex items-center gap-1" title="Confirmar Borrado Definitivo" onclick="return confirm('⚠️ ¿CONFIRMAR BORRADO? Esta acción eliminará el elemento.')">
+                                            <button type="submit" class="text-red-500 hover:text-white hover:bg-red-600 px-3 py-1.5 rounded text-xs font-bold transition-all border border-red-900/30 hover:border-red-500 shadow-lg shadow-red-900/10 flex items-center gap-1" title="Confirmar Borrado Definitivo" data-confirm="⚠️ ¿CONFIRMAR BORRADO? Esta acción eliminará el elemento." data-destructive="true">
                                                 <span>💀</span> Borrar
                                             </button>
                                         </form>
@@ -218,7 +219,7 @@
                                             {% if request.user|can_approve:item %}
                                             <form method="post" action="{% if item.type == 'WORLD' %}{% url 'aprobar_version' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'aprobar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'aprobar_imagen' item.id %}{% endif %}">
                                                 {% csrf_token %}
-                                                <button type="submit" class="text-green-500 hover:text-white hover:bg-green-600 px-3 py-1.5 rounded text-xs font-bold transition-all border border-green-900/30 hover:border-green-500 shadow-lg shadow-green-900/10" title="Aprobar" onclick="return confirm('¿Aprobar esta propuesta?')">
+                                                <button type="submit" class="text-green-500 hover:text-white hover:bg-green-600 px-3 py-1.5 rounded text-xs font-bold transition-all border border-green-900/30 hover:border-green-500 shadow-lg shadow-green-900/10" title="Aprobar" data-confirm="¿Aprobar esta propuesta?">
                                                     Aprobar
                                                 </button>
                                             </form>
@@ -230,11 +231,12 @@
                                             </a>
 
                                             <!-- Reject (New) -->
-                                            <!-- Reject (New) -->
+                                            <!-- Reject (With Reason) -->
                                             {% if request.user|can_approve:item %}
-                                            <form method="post" action="{% if item.type == 'WORLD' %}{% url 'rechazar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'rechazar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'rechazar_imagen' item.id %}{% endif %}">
+                                            <form method="post" action="{% if item.type == 'WORLD' %}{% url 'rechazar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'rechazar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'rechazar_imagen' item.id %}{% endif %}" onsubmit="let r = prompt('📝 Motivo del rechazo (Opcional):'); if (r === null) return false; this.reason.value = r; return true;">
                                                 {% csrf_token %}
-                                                <button type="submit" class="text-red-500 hover:text-white hover:bg-red-600 px-3 py-1.5 rounded text-xs font-bold transition-all border border-red-900/30 hover:border-red-500 shadow-lg shadow-red-900/10" onclick="return confirm('¿Rechazar definitivamente?')">
+                                                <input type="hidden" name="reason" value="">
+                                                <button type="submit" class="text-red-500 hover:text-white hover:bg-red-600 px-3 py-1.5 rounded text-xs font-bold transition-all border border-red-900/30 hover:border-red-500 shadow-lg shadow-red-900/10" title="Rechazar">
                                                     ✕
                                                 </button>
                                             </form>
@@ -293,7 +295,7 @@
                                 class="text-xs bg-yellow-900/30 hover:bg-yellow-600 text-yellow-500 hover:text-white px-3 py-1.5 rounded border border-yellow-900/50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                 :disabled="selectionCount === 0"
                                 title="Archivar seleccionados"
-                                onclick="return confirm('¿Archivar propuestas seleccionadas? (Se moverán al historial sin publicar)')">
+                                data-confirm="¿Archivar propuestas seleccionadas? (Se moverán al historial sin publicar)">
                             <span>📦</span> Archivar (<span x-text="selectionCount"></span>)
                         </button>
 
@@ -302,7 +304,7 @@
                                 class="text-xs bg-blue-900/30 hover:bg-blue-600 text-blue-400 hover:text-white px-3 py-1.5 rounded border border-blue-900/50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(59,130,246,0.1)]"
                                 :disabled="selectionCount === 0"
                                 title="Publicar/Ejecutar seleccionados"
-                                onclick="return confirm('¿PROCEDER con las propuestas seleccionadas? (Publicar o Ejecutar Borrado)')">
+                                data-confirm="¿PROCEDER con las propuestas seleccionadas? (Publicar o Ejecutar Borrado)">
                             <span x-text="hasDeletions ? '💀' : '🚀'">🚀</span> 
                             <span x-text="hasDeletions ? 'Ejecutar Borrado' : 'Publicar'">Publicar</span> 
                             (<span x-text="selectionCount"></span>)
@@ -389,7 +391,7 @@
                                          <!-- Archive -->
                                         <form method="post" action="{% if item.type == 'WORLD' %}{% url 'archivar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'archivar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'archivar_imagen' item.id %}{% endif %}">
                                             {% csrf_token %}
-                                            <button type="submit" class="flex items-center gap-2 bg-gray-800 hover:bg-yellow-900/30 text-yellow-500 hover:text-yellow-300 text-xs font-bold px-3 py-2 rounded border border-gray-700 hover:border-yellow-700/50 transition-all shadow-lg" title="Archivar (Quitar de la lista)" onclick="return confirm('¿Archivar esta propuesta? (Podrás verla en el historial)')">
+                                            <button type="submit" class="flex items-center gap-2 bg-gray-800 hover:bg-yellow-900/30 text-yellow-500 hover:text-yellow-300 text-xs font-bold px-3 py-2 rounded border border-gray-700 hover:border-yellow-700/50 transition-all shadow-lg" title="Archivar (Quitar de la lista)" data-confirm="¿Archivar esta propuesta? (Podrás verla en el historial)">
                                                 <span>📦</span>
                                             </button>
                                         </form>
@@ -399,11 +401,11 @@
                                         <form method="post" action="{% if item.type == 'WORLD' %}{% url 'publicar_version' item.id %}{% elif item.type == 'IMAGE' %}{% url 'publicar_imagen' item.id %}{% else %}{% url 'publicar_narrativa' item.id %}{% endif %}">
                                             {% csrf_token %}
                                             {% if item.action == 'DELETE' %}
-                                                <button type="submit" class="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-4 py-2 rounded shadow-[0_0_15px_rgba(220,38,38,0.3)] transition-all hover:-translate-y-0.5" onclick="return confirm('⚠️ ¿EFECTUAR BORRADO DEFINITIVO EN LIVE?')">
+                                                <button type="submit" class="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-4 py-2 rounded shadow-[0_0_15px_rgba(220,38,38,0.3)] transition-all hover:-translate-y-0.5" data-confirm="⚠️ ¿EFECTUAR BORRADO DEFINITIVO EN LIVE?" data-destructive="true">
                                                     <span>💀</span> Borrar LIVE
                                                 </button>
                                             {% else %}
-                                                <button type="submit" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-all hover:-translate-y-0.5" onclick="return confirm('¿PUBLICAR v{{ item.version_number }} EN LIVE? (Se archivará la versión actual)')">
+                                                <button type="submit" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-all hover:-translate-y-0.5" data-confirm="¿PUBLICAR v{{ item.version_number }} EN LIVE? (Se archivará la versión actual)">
                                                     <span>🚀</span> Publicar LIVE
                                                 </button>
                                             {% endif %}
@@ -440,18 +442,19 @@
                                 name="action_type" value="restore" 
                                 class="text-xs bg-blue-900/30 hover:bg-blue-600 text-blue-400 hover:text-white px-3 py-1.5 rounded border border-blue-900/50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                 :disabled="selectionCount === 0"
-                                onclick="return confirm('¿Restaurar seleccionados a PENDIENTES?')">
+                                data-confirm="¿Restaurar seleccionados a PENDIENTES?">
                             <span>🔄</span> Restaurar (<span x-text="selectionCount"></span>)
                         </button>
 
-                        <!-- BULK HARD DELETE (Superuser only) -->
-                        {% if request.user.is_superuser %}
+                        <!-- BULK HARD DELETE (Superuser + Admin) -->
+                        {% if request.user.is_superuser or request.user.profile.rank == 'ADMIN' %}
                         <button type="submit" form="bulk-rejected-form" 
                                 formaction="{% url 'borrar_propuestas_masivo' %}" 
                                 name="action_type" value="hard_delete" 
                                 class="text-xs bg-red-900/30 hover:bg-red-600 text-red-500 hover:text-white px-3 py-1.5 rounded border border-red-900/50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-900/20"
                                 :disabled="selectionCount === 0"
-                                onclick="return confirm('⚠️ PELIGRO ⚠️\n\n¿BORRAR DEFINITIVAMENTE del registro?\n\nEsta acción NO se puede deshacer.')">
+                                data-confirm="⚠️ PELIGRO ⚠️ ¿BORRAR DEFINITIVAMENTE? Esta acción NO se puede deshacer."
+                                data-destructive="true">
                             <span>💀</span> Borrar (<span x-text="selectionCount"></span>)
                         </button>
                         {% endif %}
@@ -518,6 +521,13 @@
                                             <span class="text-[10px] text-red-500 font-mono border border-red-900/30 px-1 rounded bg-red-900/10">REJECTED</span>
                                         </div>
                                         
+                                        <!-- REASON DISPLAY -->
+                                        {% if item.change_log %}
+                                        <div class="bg-red-900/10 border-l-2 border-red-900 pl-2 py-1 mb-1 text-xs text-red-300 italic">
+                                            "{{ item.change_log }}"
+                                        </div>
+                                        {% endif %}
+                                        
                                         <div class="flex items-center gap-2 text-xs text-gray-600 italic">
                                             <span>v{{ item.version_number }}</span>
                                             <span>-</span>
@@ -533,19 +543,27 @@
                                             <span>👁️</span>
                                         </a>
 
-                                        <!-- Restore Button -->
-                                        <form method="post" action="{% if item.type == 'WORLD' %}{% url 'restaurar_version' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'restaurar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'restaurar_imagen' item.id %}{% endif %}">
-                                            {% csrf_token %}
-                                            <button type="submit" class="flex items-center gap-2 bg-blue-900/20 hover:bg-blue-600 text-blue-500 hover:text-white text-xs font-bold px-3 py-2 rounded border border-blue-900/50 transition-all shadow-lg" title="Restaurar a Pendientes" onclick="return confirm('¿Restaurar esta propuesta a PENDIENTES?')">
-                                                <span>🔄</span>
-                                            </button>
-                                        </form>
+                                        <!-- Retouch Button (Replaces Restore for Content) -->
+                                        {% if item.type == 'WORLD' and item.target_link %}
+                                            <a href="{% url 'editar_mundo' item.target_link %}?src_version={{ item.id }}" class="flex items-center gap-2 bg-blue-900/20 hover:bg-blue-600 text-blue-500 hover:text-white text-xs font-bold px-3 py-2 rounded border border-blue-900/50 transition-all shadow-lg" title="✏️ RETOCAR (Editar propuesta rechazada)">
+                                                <span>✏️</span>
+                                            </a>
+                                        {% elif item.type == 'NARRATIVE' and item.target_link %}
+                                             <!-- Narrative Retouch (To implement later, for now just generic link or hide) -->
+                                             <!-- Keeping restore generic for non-world types for safety until implemented -->
+                                            <form method="post" action="{% if item.type == 'NARRATIVE' %}{% url 'restaurar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'restaurar_imagen' item.id %}{% endif %}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="flex items-center gap-2 bg-blue-900/20 hover:bg-blue-600 text-blue-500 hover:text-white text-xs font-bold px-3 py-2 rounded border border-blue-900/50 transition-all shadow-lg" title="Restaurar a Pendientes">
+                                                    <span>🔄</span>
+                                                </button>
+                                            </form>
+                                        {% endif %}
 
-                                        {% if request.user.is_superuser %}
-                                        <!-- Delete Forever -->
+                                        <!-- Delete Forever (Admins + Superusers) -->
+                                        {% if request.user.is_superuser or request.user.profile.rank == 'ADMIN' %}
                                         <form method="post" action="{% if item.type == 'WORLD' %}{% url 'borrar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'borrar_narrativa_version' item.id %}{% elif item.type == 'IMAGE' %}{% url 'borrar_imagen_definitivo' item.id %}{% endif %}">
                                             {% csrf_token %}
-                                            <button type="submit" class="flex items-center gap-2 bg-red-900/20 hover:bg-red-600 text-red-500 hover:text-white text-xs font-bold px-3 py-2 rounded border border-red-900/50 transition-all shadow-lg" title="ELIMINAR DEFINITIVAMENTE" onclick="return confirm('⚠️ IRREVERSIBLE: ¿Borrar definitivamente?')">
+                                            <button type="submit" class="flex items-center gap-2 bg-red-900/20 hover:bg-red-600 text-red-500 hover:text-white text-xs font-bold px-3 py-2 rounded border border-red-900/50 transition-all shadow-lg" title="ELIMINAR DEFINITIVAMENTE" data-confirm="⚠️ IRREVERSIBLE: ¿Borrar definitivamente?" data-destructive="true">
                                                 <span>💀</span>
                                             </button>
                                         </form>
@@ -586,7 +604,8 @@
                             <button type="submit" form="bulk-archive-form" 
                                     class="text-xs bg-red-900/30 hover:bg-red-600 text-red-400 hover:text-white px-3 py-1.5 rounded border border-red-900/50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                     :disabled="selectionCount === 0"
-                                    onclick="return confirm('⚠️ ESTÁS A PUNTO DE BORRAR ELEMENTOS DEFINITIVAMENTE.\n\n¿Proceder?')">
+                                    data-confirm="⚠️ ESTÁS A PUNTO DE BORRAR ELEMENTOS DEFINITIVAMENTE. ¿Proceder?"
+                                    data-destructive="true">
                                 <span>💀</span> Borrar (<span x-text="selectionCount"></span>)
                             </button>
                         </div>
@@ -670,7 +689,7 @@
                                         <!-- RESTORE -->
                                         <form method="post" action="{% if item.type == 'WORLD' %}{% url 'restaurar_version' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'restaurar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'restaurar_imagen' item.id %}{% endif %}">
                                             {% csrf_token %}
-                                            <button type="submit" class="flex items-center gap-1.5 bg-blue-900/20 hover:bg-blue-600 text-blue-500 hover:text-white text-xs font-bold px-3 py-1.5 rounded border border-blue-900/50 transition-all shadow-lg" title="Restaurar a Pendientes" onclick="return confirm('¿Restaurar esto a Pendientes?')">
+                                            <button type="submit" class="flex items-center gap-1.5 bg-blue-900/20 hover:bg-blue-600 text-blue-500 hover:text-white text-xs font-bold px-3 py-1.5 rounded border border-blue-900/50 transition-all shadow-lg" title="Restaurar a Pendientes" data-confirm="¿Restaurar esto a Pendientes?">
                                                 <span>🔄</span> Restaurar
                                             </button>
                                         </form>

@@ -1,13 +1,15 @@
 from src.Infrastructure.DjangoFramework.persistence.models import CaosNarrativeVersionORM
 
 class RejectNarrativeVersionUseCase:
-    def execute(self, version_id: int):
+    def execute(self, version_id: int, reason: str = ""):
         try:
             version = CaosNarrativeVersionORM.objects.get(id=version_id)
             if version.status not in ['PENDING', 'APPROVED']:
                 raise Exception("No se puede rechazar esta versión.")
             
             version.status = 'REJECTED'
+            if reason:
+                version.change_log = reason
             version.save()
             
             # If the rejected version was a CREATION proposal (ADD), delete the parent narrative

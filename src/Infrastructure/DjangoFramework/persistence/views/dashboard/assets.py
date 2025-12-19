@@ -33,11 +33,12 @@ def aprobar_imagen(request, id):
 @admin_only
 def rechazar_imagen(request, id):
     try:
+        reason = request.POST.get('reason', '')
         prop = get_object_or_404(CaosImageProposalORM, id=id)
         prop.status = 'REJECTED'
         prop.save()
         messages.success(request, "Imagen Rechazada.")
-        log_event(request.user, "REJECT_IMAGE", id)
+        log_event(request.user, "REJECT_IMAGE", id, details=f"Razón: {reason}" if reason else "")
     except Exception as e: messages.error(request, str(e))
     if request.GET.get('next') == 'batch': return redirect('batch_revisar_imagenes')
     return redirect('dashboard')

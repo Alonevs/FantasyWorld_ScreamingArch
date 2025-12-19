@@ -1,7 +1,7 @@
 from src.Infrastructure.DjangoFramework.persistence.models import CaosVersionORM
 
 class RejectVersionUseCase:
-    def execute(self, version_id: int):
+    def execute(self, version_id: int, reason: str = ""):
         try:
             version = CaosVersionORM.objects.get(id=version_id)
         except CaosVersionORM.DoesNotExist:
@@ -13,6 +13,11 @@ class RejectVersionUseCase:
 
         # Cambiamos el estado a REJECTED (Papelera)
         version.status = "REJECTED"
+        
+        # Append Reason to change_log if provided
+        if reason:
+            version.change_log = f"{reason}"[:255] # Truncate to safety
+            
         version.save()
         
-        print(f" ❌ Rechazada/Descartada propuesta v{version.version_number} para '{version.world.name}'.")
+        print(f" ❌ Rechazada/Descartada propuesta v{version.version_number} para '{version.world.name}'. Motivo: {reason}")

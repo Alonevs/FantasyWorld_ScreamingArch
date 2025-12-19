@@ -86,14 +86,18 @@
                             {% endif %}
                         </div>
 
-                        {% if user.is_superuser %}
-                        <a href="{% url 'toggle_lock' public_id %}" class="text-xs px-2 py-1 rounded border border-gray-600 bg-gray-800 text-gray-400 hover:bg-gray-700">
-                            {% if is_locked %}🔓 Desbloquear{% else %}🔒 Bloquear{% endif %}
-                        </a>
+                        <!-- Lock Icon: Clickable for Author/Superuser, Static for others -->
+                        {% if user.is_superuser or user == author_live_user %}
+                            <a href="{% url 'toggle_lock' public_id %}" class="text-xs px-2 py-1 rounded border border-gray-600 bg-gray-800 text-gray-400 hover:bg-gray-700" title="{% if is_locked %}Desbloquear edición{% else %}Bloquear edición para otros usuarios{% endif %}">
+                                {% if is_locked %}🔒{% else %}🔓{% endif %}
+                            </a>
+                        {% elif is_locked %}
+                             <!-- Static Lock Status for others -->
+                            <span class="text-xs px-2 py-1 rounded border border-gray-600 bg-gray-900 text-red-500 cursor-help" title="Mundo Bloqueado por el Autor">
+                                🔒
+                            </span>
                         {% endif %}
                     {% endif %}
-
-                    {% if is_locked %}<span title="Bloqueado" class="text-red-500 text-xl">🔒</span>{% endif %}
                 </div>
 
                 {% if user.is_superuser %}
@@ -110,12 +114,23 @@
                 <a href="{% url 'dashboard' %}" class="p-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition shadow-md flex items-center gap-2" title="Panel de Control">
                     🚀 <span class="hidden sm:inline text-xs font-bold">DASHBOARD</span>
                 </a>
-                <button onclick="openEditModal()" class="p-2 bg-blue-900/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg transition border border-blue-900/50" title="Editar">
-                    ✏️
-                </button>
-                <a href="{% url 'borrar_mundo' public_id %}" onclick="return confirm('¿Borrar mundo?')" class="p-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg transition border border-red-900/50" title="Borrar">
-                    🗑️
-                </a>
+                
+                {% if is_locked and not is_admin_role and not user.is_superuser %}
+                    <!-- LOCKED: Edit Disabled -->
+                    <button disabled class="p-2 bg-gray-800 text-gray-600 cursor-not-allowed rounded-lg border border-gray-700 opacity-50" title="Bloqueado por Administración">
+                        🔒 EDITAR BLOQUEADO
+                    </button>
+                    <button disabled class="p-2 bg-gray-800 text-gray-600 cursor-not-allowed rounded-lg border border-gray-700 opacity-50" title="Bloqueado">
+                        🗑️
+                    </button>
+                {% else %}
+                    <button onclick="openEditModal()" class="p-2 bg-blue-900/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg transition border border-blue-900/50" title="Editar">
+                        ✏️
+                    </button>
+                    <a href="{% url 'borrar_mundo' public_id %}" onclick="return confirm('¿Borrar mundo?')" class="p-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg transition border border-red-900/50" title="Borrar">
+                        🗑️
+                    </a>
+                {% endif %}
             </div>
             {% endif %}
             {% endif %}
@@ -130,7 +145,7 @@
             <details class="group mb-8" open>
                 <summary class="flex justify-between items-center bg-[#1a1a2e] p-4 rounded-t-lg cursor-pointer border border-gray-800 hover:border-gray-600 transition list-none sticky top-0 z-10">
                     <h3 class="text-accent font-bold tracking-wider text-sm uppercase flex items-center gap-2">
-                        🌌 COSMOLOGÍA ({{ hijos|length }})
+                        🌌 {{ children_label|default:"ENTIDADES HIJAS" }} ({{ hijos|length }})
                     </h3>
                     <span class="text-gray-500 transform group-open:rotate-180 transition duration-300">▼</span>
                 </summary>

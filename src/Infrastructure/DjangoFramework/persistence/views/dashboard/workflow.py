@@ -200,7 +200,8 @@ def aprobar_propuesta(request, id):
 @login_required
 @admin_only
 def rechazar_propuesta(request, id):
-    return execute_use_case_action(request, RejectVersionUseCase, id, "Rechazada.", "REJECT_WORLD_VERSION")
+    reason = request.POST.get('reason', '')
+    return execute_use_case_action(request, RejectVersionUseCase, id, "Rechazada.", "REJECT_WORLD_VERSION", extra_args={'reason': reason})
 
 @login_required
 @admin_only
@@ -240,7 +241,8 @@ def aprobar_narrativa(request, id):
 @login_required
 @admin_only
 def rechazar_narrativa(request, id):
-    return execute_use_case_action(request, RejectNarrativeVersionUseCase, id, "Narrativa rechazada.", "REJECT_NARRATIVE")
+    reason = request.POST.get('reason', '')
+    return execute_use_case_action(request, RejectNarrativeVersionUseCase, id, "Narrativa rechazada.", "REJECT_NARRATIVE", extra_args={'reason': reason})
 
 @login_required
 @admin_only
@@ -287,14 +289,14 @@ def borrar_propuestas_masivo(request):
             messages.success(request, f"🔄 {count} Elementos restaurados a Pendientes.")
             
         elif action_type == 'hard_delete':
-            # Hard Delete
-            if request.user.is_superuser:
+            # Hard Delete (Superuser + Admin)
+            if request.user.is_superuser or request.user.profile.rank == 'ADMIN':
                 CaosVersionORM.objects.filter(id__in=w_ids).delete()
                 CaosNarrativeVersionORM.objects.filter(id__in=n_ids).delete()
                 CaosImageProposalORM.objects.filter(id__in=i_ids).delete()
                 messages.success(request, f"💀 {count} Elementos eliminados definitivamente.")
             else:
-                messages.error(request, "⛔ Solo Superusuarios pueden borrar definitivamente.")
+                messages.error(request, "⛔ Solo Superusuarios o Admins pueden borrar definitivamente.")
                 
         else: # Default: REJECT (Cancel)
             for id in w_ids: execute_use_case_action(request, RejectVersionUseCase, id, "", "")

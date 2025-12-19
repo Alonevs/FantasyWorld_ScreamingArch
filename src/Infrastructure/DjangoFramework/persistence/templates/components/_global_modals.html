@@ -1,0 +1,231 @@
+<!-- GLOBAL MODAL SYSTEM (CaosModal) -->
+<div id="caos-modal-backdrop" class="fixed inset-0 z-[99999] bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 transition-opacity duration-300 opacity-0">
+    <div id="caos-modal-panel" class="bg-[#0a0a16] border border-gray-700/50 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] w-full max-w-lg transform scale-95 transition-all duration-300 overflow-hidden relative">
+        
+        <!-- GLOW EFFECTS -->
+        <div id="caos-modal-glow" class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-blue-400 to-blue-600 shadow-[0_0_20px_rgba(59,130,246,0.5)]"></div>
+        
+        <!-- HEADER -->
+        <div class="px-6 py-5 border-b border-gray-800/50 bg-gray-900/30 flex items-center gap-3">
+            <span id="caos-modal-icon" class="text-2xl">✨</span>
+            <h3 id="caos-modal-title" class="text-lg font-bold text-white tracking-wide">System Message</h3>
+        </div>
+
+        <!-- BODY -->
+        <div class="p-6">
+            <p id="caos-modal-message" class="text-gray-300 text-sm leading-relaxed mb-4 font-mono">
+                Message goes here...
+            </p>
+
+            <!-- INPUT CONTAINER (Hidden by default) -->
+            <div id="caos-modal-input-container" class="hidden mt-4">
+                <input type="text" id="caos-modal-input" 
+                    class="w-full bg-[#151520] border border-gray-700 text-white px-4 py-3 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition-all font-mono"
+                    placeholder="Escribe aquí..." autocomplete="off">
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="px-6 py-5 bg-gray-900/50 flex justify-end gap-3 border-t border-gray-800/50">
+            <button id="caos-modal-cancel" class="px-4 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all font-bold text-sm">
+                Cancelar
+            </button>
+            <button id="caos-modal-confirm" class="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500 hover:shadow-[0_0_15px_rgba(37,99,235,0.4)] transition-all font-bold text-sm flex items-center gap-2">
+                <span>Confirmar</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const CaosModal = {
+        elements: {
+            backdrop: document.getElementById('caos-modal-backdrop'),
+            panel: document.getElementById('caos-modal-panel'),
+            title: document.getElementById('caos-modal-title'),
+            message: document.getElementById('caos-modal-message'),
+            inputContainer: document.getElementById('caos-modal-input-container'),
+            input: document.getElementById('caos-modal-input'),
+            btnConfirm: document.getElementById('caos-modal-confirm'),
+            btnCancel: document.getElementById('caos-modal-cancel'),
+            icon: document.getElementById('caos-modal-icon'),
+            glow: document.getElementById('caos-modal-glow')
+        },
+        resolve: null,
+        
+        _reset() {
+            this.elements.input.value = '';
+            this.elements.inputContainer.classList.add('hidden');
+            this.elements.btnCancel.classList.remove('hidden');
+            this.elements.btnConfirm.classList.remove('bg-red-600', 'bg-blue-600', 'bg-green-600');
+            this.elements.glow.className = "absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-blue-400 to-blue-600 shadow-[0_0_20px_rgba(59,130,246,0.5)]";
+            this.resolve = null;
+        },
+
+        _show(title, message, icon="✨") {
+            this.elements.backdrop.classList.remove('hidden');
+            // Trigger reflow for transition
+            this.elements.backdrop.offsetHeight;
+            
+            this.elements.backdrop.classList.remove('opacity-0');
+            this.elements.panel.classList.remove('scale-95');
+            this.elements.panel.classList.add('scale-100');
+            
+            this.elements.title.textContent = title;
+            this.elements.message.innerHTML = message.replace(/\n/g, '<br>'); // Simple formatting
+            this.elements.icon.textContent = icon;
+        },
+
+        _close() {
+            this.elements.backdrop.classList.add('opacity-0');
+            this.elements.panel.classList.remove('scale-100');
+            this.elements.panel.classList.add('scale-95');
+            
+            setTimeout(() => {
+                this.elements.backdrop.classList.add('hidden');
+            }, 300);
+        },
+
+        prompt(title, message, placeholder="") {
+            return new Promise((resolve) => {
+                this._reset();
+                this._show(title, message, "✏️");
+                
+                this.elements.inputContainer.classList.remove('hidden');
+                this.elements.input.placeholder = placeholder;
+                this.elements.input.focus();
+                
+                // Color Blue
+                this.elements.btnConfirm.classList.add('bg-blue-600');
+                this.elements.btnConfirm.innerHTML = "Aceptar";
+                
+                // Handlers
+                const confirmHandler = () => {
+                    resolve(this.elements.input.value);
+                    cleanup();
+                };
+                
+                const cancelHandler = () => {
+                    resolve(null);
+                    cleanup();
+                };
+
+                const keyHandler = (e) => {
+                    if (e.key === 'Enter') confirmHandler();
+                    if (e.key === 'Escape') cancelHandler();
+                };
+
+                const cleanup = () => {
+                    this.elements.btnConfirm.removeEventListener('click', confirmHandler);
+                    this.elements.btnCancel.removeEventListener('click', cancelHandler);
+                    this.elements.input.removeEventListener('keydown', keyHandler);
+                    this._close();
+                };
+
+                this.elements.btnConfirm.addEventListener('click', confirmHandler);
+                this.elements.btnCancel.addEventListener('click', cancelHandler);
+                this.elements.input.addEventListener('keydown', keyHandler);
+            });
+        },
+
+        confirm(title, message, destructive=false) {
+            return new Promise((resolve) => {
+                this._reset();
+                this._show(title, message, destructive ? "⚠️" : "❓");
+                
+                // Color
+                if (destructive) {
+                    this.elements.btnConfirm.classList.add('bg-red-600', 'hover:bg-red-500');
+                    this.elements.glow.className = "absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500 via-orange-500 to-red-600 shadow-[0_0_20px_rgba(239,68,68,0.5)]";
+                } else {
+                    this.elements.btnConfirm.classList.add('bg-blue-600', 'hover:bg-blue-500');
+                }
+                
+                this.elements.btnConfirm.innerHTML = destructive ? "Sí, confirmar" : "Aceptar";
+                
+                const confirmHandler = () => { resolve(true); cleanup(); };
+                const cancelHandler = () => { resolve(false); cleanup(); };
+
+                const cleanup = () => {
+                    this.elements.btnConfirm.removeEventListener('click', confirmHandler);
+                    this.elements.btnCancel.removeEventListener('click', cancelHandler);
+                    this._close();
+                };
+
+                this.elements.btnConfirm.addEventListener('click', confirmHandler);
+                this.elements.btnCancel.addEventListener('click', cancelHandler);
+            });
+        },
+        
+        alert(title, message) {
+            return new Promise((resolve) => {
+                this._reset();
+                this._show(title, message, "ℹ️");
+                this.elements.btnCancel.classList.add('hidden'); // No cancel
+                this.elements.btnConfirm.classList.add('bg-blue-600');
+                this.elements.btnConfirm.innerHTML = "Entendido";
+                
+                const confirmHandler = () => { resolve(true); cleanup(); };
+
+                const cleanup = () => {
+                    this.elements.btnConfirm.removeEventListener('click', confirmHandler);
+                    this._close();
+                };
+
+                this.elements.btnConfirm.addEventListener('click', confirmHandler);
+            });
+        }
+    };
+
+    // Global Auto-Handler for data-confirm
+    document.addEventListener('click', async (e) => {
+        const trigger = e.target.closest('[data-confirm]');
+        if (!trigger) return;
+
+        // Prevent default action immediate
+        e.preventDefault();
+        e.stopPropagation();
+
+        const message = trigger.dataset.confirm;
+        const title = trigger.dataset.title || "Confirmar Acción";
+        const isDestructive = trigger.dataset.destructive === "true" || 
+                              trigger.classList.contains('text-red-500') || 
+                              trigger.classList.contains('bg-red-600') ||
+                              message.toLowerCase().includes('borrar') ||
+                              message.toLowerCase().includes('eliminar');
+
+        const confirmed = await CaosModal.confirm(title, message, isDestructive);
+
+        if (confirmed) {
+            if (trigger.tagName === 'A') {
+                window.location.href = trigger.href;
+            } else if (trigger.tagName === 'BUTTON' && trigger.type === 'submit') {
+                // For submit buttons, we need to manually submit the form
+                // But simply calling form.submit() bypasses the button's name/value
+                // So we inject a hidden input if the button has a name
+                const form = trigger.closest('form');
+                if (form) {
+                    if (trigger.name) {
+                        const hiddenInput = document.createElement('input');
+                        hiddenInput.type = 'hidden';
+                        hiddenInput.name = trigger.name;
+                        hiddenInput.value = trigger.value;
+                        form.appendChild(hiddenInput);
+                    }
+                    form.submit();
+                }
+            } else if (trigger.tagName === 'BUTTON') {
+                // If it's a normal button with an onclick that we prevented?
+                // We've already prevented default. If it had an onclick, it might not run if we stopped propagation?
+                // Actually, if we use data-confirm, we assume we want to run the action AFTER confirmation.
+                // If there's an onclick, it's tricky. 
+                // Best to rely on form submit or link navigation for now.
+                // Or dispatch a new click event?
+                // trigger.removeAttribute('data-confirm');
+                // trigger.click(); 
+                // trigger.setAttribute('data-confirm', message);
+            }
+        }
+    });
+
+</script>

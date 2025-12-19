@@ -9,6 +9,8 @@ from ..models import (
     CaosWorldORM, CaosNarrativeORM, CaosEventLog
 )
 
+from django.http import Http404
+
 def get_diff_html(a, b):
     """
     Generates a simple HTML diff of two strings.
@@ -31,6 +33,9 @@ def get_diff_html(a, b):
             output.append(f'<span class="bg-green-900/50 text-green-200">{escape(b[b0:b1])}</span>')
             
     return "".join(output)
+
+from .dashboard.workflow import rechazar_propuesta, rechazar_narrativa
+from .dashboard.assets import rechazar_imagen
 
 @login_required
 def review_proposal(request, type, id):
@@ -57,50 +62,55 @@ def review_proposal(request, type, id):
         'live_image_url': None,
     }
 
-    # 1. FETCH PROPOSAL & LIVE DATA
-    if type == 'WORLD':
-        proposal = get_object_or_404(CaosVersionORM, id=id)
-        if proposal.world:
-            live_obj = proposal.world
-            ctx['live_title'] = live_obj.name
-            ctx['live_content'] = live_obj.description
+    try:
+        # 1. FETCH PROPOSAL & LIVE DATA
+        if type == 'WORLD':
+            proposal = get_object_or_404(CaosVersionORM, id=id)
+            if proposal.world:
+                live_obj = proposal.world
+                ctx['live_title'] = live_obj.name
+                ctx['live_content'] = live_obj.description
+                
+            ctx['proposed_title'] = proposal.proposed_name
+            ctx['proposed_content'] = proposal.proposed_description
+            ctx['change_log'] = proposal.change_log
             
-        ctx['proposed_title'] = proposal.proposed_name
-        ctx['proposed_content'] = proposal.proposed_description
-        ctx['change_log'] = proposal.change_log
-        
-        # Calculate Diffs
-        ctx['diff_title'] = get_diff_html(ctx['live_title'], ctx['proposed_title'])
-        ctx['diff_content'] = get_diff_html(ctx['live_content'], ctx['proposed_content'])
-        
-    elif type == 'NARRATIVE':
-        proposal = get_object_or_404(CaosNarrativeVersionORM, id=id)
-        if proposal.narrative:
-            live_obj = proposal.narrative
-            ctx['live_title'] = live_obj.titulo
-            ctx['live_content'] = live_obj.contenido
+            # Calculate Diffs
+            ctx['diff_title'] = get_diff_html(ctx['live_title'], ctx['proposed_title'])
+            ctx['diff_content'] = get_diff_html(ctx['live_content'], ctx['proposed_content'])
             
-        ctx['proposed_title'] = proposal.proposed_title
-        ctx['proposed_content'] = proposal.proposed_content
-        ctx['change_log'] = proposal.change_log
-        
-        # Calculate Diffs
-        ctx['diff_title'] = get_diff_html(ctx['live_title'], ctx['proposed_title'])
-        ctx['diff_content'] = get_diff_html(ctx['live_content'], ctx['proposed_content'])
+        elif type == 'NARRATIVE':
+            proposal = get_object_or_404(CaosNarrativeVersionORM, id=id)
+            if proposal.narrative:
+                live_obj = proposal.narrative
+                ctx['live_title'] = live_obj.titulo
+                ctx['live_content'] = live_obj.contenido
+                
+            ctx['proposed_title'] = proposal.proposed_title
+            ctx['proposed_content'] = proposal.proposed_content
+            ctx['change_log'] = proposal.change_log
+            
+            # Calculate Diffs
+            ctx['diff_title'] = get_diff_html(ctx['live_title'], ctx['proposed_title'])
+            ctx['diff_content'] = get_diff_html(ctx['live_content'], ctx['proposed_content'])
 
-    elif type == 'IMAGE':
-        proposal = get_object_or_404(CaosImageProposalORM, id=id)
-        # Handle Preview for DELETE actions (show target image)
-        if proposal.action == 'DELETE':
-            # Assuming standard path structure
-            ctx['image_url'] = f"/static/persistence/img/{proposal.world.id}/{proposal.target_filename}"
-            ctx['diff_content'] = f"Propuesta para ELIMINAR imagen: {proposal.target_filename}"
-        else: # Implies ADD
-            ctx['image_url'] = proposal.image.url if proposal.image else None
-            ctx['diff_content'] = f"Propuesta de Nueva Imagen: {proposal.title}" if proposal.title else "Propuesta de Nueva Imagen"
-            
-        ctx['change_log'] = f"Acción: {proposal.get_action_display()}"
-        ctx['is_image'] = True
+        elif type == 'IMAGE':
+            proposal = get_object_or_404(CaosImageProposalORM, id=id)
+            # Handle Preview for DELETE actions (show target image)
+            if proposal.action == 'DELETE':
+                # Assuming standard path structure
+                ctx['image_url'] = f"/static/persistence/img/{proposal.world.id}/{proposal.target_filename}"
+                ctx['diff_content'] = f"Propuesta para ELIMINAR imagen: {proposal.target_filename}"
+            else: # Implies ADD
+                ctx['image_url'] = proposal.image.url if proposal.image else None
+                ctx['diff_content'] = f"Propuesta de Nueva Imagen: {proposal.title}" if proposal.title else "Propuesta de Nueva Imagen"
+                
+            ctx['change_log'] = proposal.change_log if getattr(proposal, 'change_log', None) else f"Acción: {proposal.get_action_display()}"
+            ctx['is_image'] = True
+
+    except Http404:
+        messages.warning(request, "La propuesta solicitada no existe o ya ha sido procesada.")
+        return redirect('dashboard')
 
 
     # 2. DETECT DELETE INTENT
@@ -112,19 +122,21 @@ def review_proposal(request, type, id):
     ctx['is_pending'] = (getattr(proposal, 'status', 'PENDING') == 'PENDING')
 
     # 4. HANDLE POST (APPROVE/REJECT)
+    # Import logic views directly to preserve 'reason' in POST request
     if request.method == 'POST':
         action = request.POST.get('action') # 'approve' or 'reject'
         
         if action == 'approve':
-            # Redirect to existing logic
+            # Redirect is fine for approve (no extra data)
             if type == 'WORLD': return redirect('aprobar_version', id=id)
             elif type == 'NARRATIVE': return redirect('aprobar_narrativa', id=id)
             elif type == 'IMAGE': return redirect('aprobar_imagen', id=id)
             
         elif action == 'reject':
-            if type == 'WORLD': return redirect('rechazar_propuesta', id=id)
-            elif type == 'NARRATIVE': return redirect('rechazar_narrativa', id=id)
-            elif type == 'IMAGE': return redirect('rechazar_imagen', id=id)
+            # DIRECT CALL to pass POST data (reason)
+            if type == 'WORLD': return rechazar_propuesta(request, id=id)
+            elif type == 'NARRATIVE': return rechazar_narrativa(request, id=id)
+            elif type == 'IMAGE': return rechazar_imagen(request, id=id)
 
     ctx['proposal'] = proposal
     return render(request, 'staff/review_proposal.html', ctx)

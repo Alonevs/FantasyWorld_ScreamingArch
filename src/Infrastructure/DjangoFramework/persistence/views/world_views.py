@@ -84,34 +84,50 @@ def home(request):
         .order_by('id')
 
     # 2. Visibility Logic
-    if request.user.is_superuser:
-        pass # All
+    # 2. Visibility Logic
+    is_global_admin = False
+    if request.user.is_authenticated:
+        if request.user.is_superuser:
+            is_global_admin = True
+        elif hasattr(request.user, 'profile') and request.user.profile.rank in ['ADMIN', 'SUBADMIN']:
+            is_global_admin = True
+
+    if is_global_admin:
+        pass # All (except DRAFTS which are excluded in base query)
     elif request.user.is_authenticated:
         # User sees: LIVE OR (Their OWN content)
-        # We now use 'OFFLINE' for private content instead of 'DRAFT'
         ms = ms.filter(Q(status='LIVE') | Q(author=request.user))
     else:
         # Anonymous: Only LIVE
         ms = ms.filter(status='LIVE')
 
     # REPRESENTATIVE LOGIC:
-    # 1. Group by "Real Trunk" (Recursively strip '00' from parent).
-    # 2. Sort candidates by:
-    #    A. Is Real? (Prefer '0101' over '010013') -> heuristic: '00' in id?
-    #    B. Level (Shallowest first)
-    #    C. ID (Lowest first)
+    # Goal: Hide "Ghosts" (Versions) but SHOW "Siblings".
+    # A Ghost is defined as having '00' in its lineage (e.g. 01010001 is a ghost of 010101).
+    # Real Siblings (010101, 010102) should NOT be grouped together.
     
     candidates_by_group = {}
     
     for m in ms:
-        # 1. Calculate Group Key (The nearest Real Parent)
-        pid = m.id[:-2]
-        while pid and pid.endswith('00'):
-            pid = pid[:-2]
+        # Calculate "Real Trunk" ID
+        # If ID contains '00', stripping the '00' and everything after it reveals the "Real Ancestor/Self".
+        # Example: 
+        #   Real: 010103 -> Trunk: 010103
+        #   Ghost: 0101030001 -> Trunk: 010103 (Groups with Real)
+        #   Sibling: 010104 -> Trunk: 010104 (Different Group)
         
-        if pid not in candidates_by_group:
-            candidates_by_group[pid] = []
-        candidates_by_group[pid].append(m)
+        trunk_id = m.id
+        if '00' in m.id:
+            # Split by '00' and take the first part, effectively getting the ID of the real entity this ghost represents/orphaned from.
+            # But wait, '00' usually means "Child of Ghost" or "Version".
+            # The structure is pairs. '00' is the ghost marker.
+            # If 010103 00 01 -> The real entity is 010103.
+            parts = m.id.split('00')
+            trunk_id = parts[0]
+            
+        if trunk_id not in candidates_by_group:
+            candidates_by_group[trunk_id] = []
+        candidates_by_group[trunk_id].append(m)
     
     # 2. Pick Winner per Group
     final_list = []
@@ -126,6 +142,8 @@ def home(request):
 
     l = []
     background_images = []
+    from src.WorldManagement.Caos.Domain.hierarchy_utils import get_plural_label
+
     for m in final_list:
         # Pass world_instance=m to avoid re-fetching metadata from DB (N+1 fix)
         imgs = get_world_images(m.id, world_instance=m)
@@ -140,28 +158,35 @@ def home(request):
 
         # Collect up to 5 images for the slideshow
         entity_images = [i['url'] for i in imgs][:5] if imgs else []
+        
+        # VISUAL NAME OVERRIDE (As requested: "solo visual")
+        # If it's Level 1 (id="01..."), show "CAOS". Level 2 -> "ABISMOS", etc.
+        visual_name = get_plural_label(len(m.id)//2, m.id)
+        # Handle singularization or specific overrides if needed
+        if len(m.id)//2 == 1: visual_name = "CAOS"
 
         pid = m.public_id if m.public_id else m.id
         l.append({
             'id': m.id, 
             'public_id': pid, 
-            'name': m.name, 
+            'name': visual_name, 
+            'real_name': m.name, # Keep original for tooltips or alt
             'status': m.status, 
             'img_file': cover,
-            'img': cover, # Fallback/Primary key to prevent VariableDoesNotExist in template
+            'img': cover, # Fallback/Primary key
             'images': entity_images, 
             'has_img': bool(cover), 
             'visible': m.visible_publico,
             'is_locked': m.status == 'LOCKED',
             'author': m.author,
+            'level': len(m.id)//2,
         })
     
-    # Shuffle backgrounds for variety? Optional.
     import random
     random.shuffle(background_images)
     
-    # Return all images (unrestricted)
-    return render(request, 'index.html', {'mundos': l, 'background_images': background_images[:10]}) # Limit to 10 to save bandwidth
+    return render(request, 'index.html', {'mundos': l, 'background_images': background_images[:10]})
+
 
 def ver_mundo(request, public_id):
     w_orm = resolve_jid_orm(public_id)
@@ -235,7 +260,9 @@ def ver_mundo(request, public_id):
     # --------------------------------------------------
 
     # --- HIERARCHY LABEL INJECTION ---
+    from src.WorldManagement.Caos.Domain.hierarchy_utils import get_children_label # Import helper
     context['hierarchy_label'] = get_readable_hierarchy(context['jid'])
+    context['children_label'] = get_children_label(context['jid']) # NEW: Pass label for grid
     context['status_str'] = w_orm.status
     context['author_live_user'] = w_orm.author
     
@@ -293,20 +320,40 @@ def ver_mundo(request, public_id):
 
 @login_required
 def editar_mundo(request, jid):
-    repo = DjangoCaosRepository()
-    w_domain = resolve_world_id(repo, jid)
-    if not w_domain: return redirect('home')
-    real_jid = w_domain.id.value
-    w_orm = CaosWorldORM.objects.get(id=real_jid)
+    # Use robust helper that tries Domain first, then fallback to PublicID/ID
+    w_orm = resolve_jid_orm(jid)
+    if not w_orm: return redirect('home')
+    
+    real_jid = w_orm.id # We already have the ORM object
+
+    # RETOUCH/REJECTION LOGIC:
+    # If ?src_version=X passed, we are "retouching" a rejected proposal.
+    # Load its data into the context/ORM to pre-fill the form.
+    src_version_id = request.GET.get('src_version')
+    if src_version_id:
+        try:
+            v_src = CaosVersionORM.objects.get(id=src_version_id)
+            # Security: Ensure this version belongs to this world
+            if v_src.world.id == w_orm.id:
+                # Override w_orm data for the form display
+                # Note: We don't save w_orm here, just modify the instance in memory for the template
+                w_orm.name = v_src.proposed_name
+                w_orm.description = v_src.proposed_description
+                # If metadata exists in version (not standard column yet but future proofing or using change_log/reason)
+                messages.info(request, f"✏️ Retomando propuesta rechazada v{v_src.version_number}. Edita y vuelve a enviar.")
+        except Exception as e: print(f"Error loading src_version: {e}")
 
     # --- SECURITY CHECK ---
     # We remove strict check_ownership() to allow PROPOSALS from any authenticated user.
     # The actual edit action (ProposeChangeUseCase) is safe (PENDING status).
     # ----------------------
 
-    # LOCK CHECK (Block edits if locked, unless Superuser)
-    if w_orm.status == 'LOCKED' and not request.user.is_superuser:
-        messages.error(request, "⛔ Este mundo está BLOQUEADO por la Administración. No se permiten ediciones.")
+    # LOCK CHECK (Block edits if locked, unless Superuser or Author)
+    # Strict Check: "Solo si eres el autor" (or GodMode Superuser)
+    is_admin_bypass = request.user.is_superuser or (w_orm.author == request.user)
+    
+    if w_orm.status == 'LOCKED' and not is_admin_bypass:
+        messages.error(request, "⛔ Este mundo está BLOQUEADO por el Autor. No se permiten propuestas.")
         return redirect('ver_mundo', public_id=w_orm.public_id if w_orm.public_id else w_orm.id)
 
     if request.method == 'POST':
@@ -349,8 +396,31 @@ def editar_mundo(request, jid):
                 log_event(request.user, "PROPOSE_CHANGE", real_jid, f"Reason: {request.POST.get('reason')}")
             
             return redirect('ver_mundo', public_id=w.public_id if w.public_id else w.id)
-        except: return redirect('home')
-    return redirect('home')
+            return redirect('ver_mundo', public_id=w.public_id if w.public_id else w.id)
+        except Exception as e: 
+            print(f"Edit Error: {e}")
+            return redirect('home')
+
+    # --- GET: RENDER EDIT FORM ---
+    from src.WorldManagement.Caos.Application.get_world_details import GetWorldDetailsUseCase
+    try:
+        # 1. Get Base Context
+        use_case = GetWorldDetailsUseCase()
+        context = use_case.execute(real_jid, request.user)
+        
+        # 2. Set Edit Mode
+        context['edit_mode'] = True
+        
+        # 3. Apply Retouch Overrides (if any)
+        # Since use_case fetches fresh from DB, strict attributes like 'name' in context 
+        # might still be old if we don't force them from our w_orm instance.
+        context['name'] = w_orm.name
+        context['description'] = w_orm.description
+        
+        return render(request, 'ficha_mundo.html', context)
+    except Exception as e:
+        print(f"Error rendering edit view: {e}")
+        return redirect('home')
 
 def get_entity_smart(identifier):
     """Ayuda a encontrar la entidad ya sea por ID (int) o Code (str)"""
@@ -519,13 +589,18 @@ def mapa_arbol(request, public_id):
 
 @login_required
 def toggle_lock(request, jid):
-    # Solo Superuser puede bloquear
-    if not request.user.is_superuser:
-        return redirect(request.META.get('HTTP_REFERER', 'home'))
-
+    
     w_orm = get_entity_smart(jid)
     if not w_orm:
         raise Http404("Entidad no encontrada")
+
+    # PERMISSION CHECK: Author OR Superuser only
+    # (Admins cannot lock others' worlds, only Superusers)
+    can_lock = request.user.is_superuser or (w_orm.author == request.user)
+        
+    if not can_lock:
+        messages.error(request, "⛔ Solo el Autor o Superadmin pueden bloquear.")
+        return redirect(request.META.get('HTTP_REFERER', 'home'))
     
     # Lógica de Bloqueo
     if w_orm.status == 'LOCKED':

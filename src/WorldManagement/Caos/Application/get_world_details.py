@@ -92,7 +92,20 @@ class GetWorldDetailsUseCase:
         all_descendants = all_descendants.exclude(status='DRAFT')
 
         # Privacy Logic (Visibility)
-        if not (user and (user.is_superuser or user.is_staff)):
+        # Check against Django Superuser OR Profile Rank (Admin/SubAdmin)
+        is_global_admin = False
+        if user and user.is_authenticated:
+             if user.is_superuser or user.is_staff:
+                 is_global_admin = True
+             elif hasattr(user, 'profile') and user.profile.rank in ['ADMIN', 'SUBADMIN']:
+                 is_global_admin = True
+        
+        # NOTE: We keep DRAFT exclusion global for now as per "Strict Workflow". 
+        # But for visibility of LIVE/OFFLINE/LOCKED items:
+        if not is_global_admin:
+             # Regular users/Collaborators might see their own private content?
+             # For now, simplistic approach: If not admin, filter by public.
+             # (TODO: Add 'is_author' check for children if needed)
              all_descendants = all_descendants.filter(visible_publico=True)
 
         nodes_map = {d.id: d for d in all_descendants}
