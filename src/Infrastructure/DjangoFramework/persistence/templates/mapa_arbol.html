@@ -17,35 +17,134 @@
     <!-- Tree Container -->
     <div class="bg-card border border-gray-800 rounded-xl p-6 shadow-2xl overflow-x-auto">
         {% for item in tree %}
-        <a href="{% url 'ver_mundo' item.public_id %}" class="flex items-center px-3 py-2 border-b border-gray-800/50 hover:bg-white/5 transition rounded group {% if item.is_root %}text-accent font-bold{% elif item.is_jumped %}text-yellow-400/80 italic{% else %}text-gray-400 hover:text-white{% endif %}">
-            <!-- Indentation -->
-            <div style="width: {{ item.indent_px }}px;" class="flex-shrink-0"></div>
-            
-            <!-- Connector & Badge -->
-            {% if not item.is_root %}
-                <span class="text-gray-600 font-mono mr-2">└─</span>
-            {% endif %}
-            
-            <span class="font-mono text-xs bg-black/40 text-gray-500 px-1.5 py-0.5 rounded mr-3 border border-gray-800">
-                {{ item.id_display }}
-            </span>
-            
-            <!-- Name -->
-            <span class="text-lg {% if item.is_root %}underline decoration-accent/30 underline-offset-4{% endif %} mr-auto">
-                {{ item.name }}
-            </span>
+        <div class="tree-node group" 
+             data-id="{{ item.public_id }}" 
+             data-logical-parent-id="{{ item.logical_parent_id }}"
+             data-is-root="{{ item.is_root|yesno:'true,false' }}">
+            <div class="flex items-center px-3 py-2 border-b border-gray-800/50 hover:bg-white/5 transition rounded
+                {% if item.is_root %}text-accent font-bold{% elif item.is_jumped %}text-yellow-400/80 italic{% else %}text-gray-400 hover:text-white{% endif %}">
+                
+                <!-- Indentation -->
+                <div style="width: {{ item.indent_px }}px;" class="flex-shrink-0 transition-all duration-300"></div>
+                
+                <!-- Toggle Button (Placeholder, filled by JS) -->
+                <button class="toggle-btn w-6 h-6 flex items-center justify-center mr-1 text-gray-500 hover:text-white cursor-pointer focus:outline-none" onclick="toggleNode('{{ item.public_id }}', event)">
+                    <!-- Icon injected by JS -->
+                </button>
+                
+                <!-- Link Container -->
+                <a href="{% url 'ver_mundo' item.public_id %}" class="flex items-center flex-grow">
+                    <span class="font-mono text-xs bg-black/40 text-gray-500 px-1.5 py-0.5 rounded mr-3 border border-gray-800">
+                        {{ item.id_display }}
+                    </span>
+                    
+                    <span class="text-lg {% if item.is_root %}underline decoration-accent/30 underline-offset-4{% endif %} mr-auto">
+                        {{ item.name }}
+                    </span>
 
-            <!-- Status Dot -->
-            <span class="w-2.5 h-2.5 rounded-full ml-4 shadow-sm
-                {% if item.status == 'LIVE' %}bg-green-500 shadow-green-500/50{% else %}bg-red-600 shadow-red-600/50{% endif %}" 
-                title="Status: {{ item.status|default:'OFFLINE' }}">
-            </span>
-        </a>
-        {% empty %}
-            <div class="text-center py-10 text-gray-500 italic">
-                El vacío es absoluto. No hay estructura visible.
+                    <span class="w-2.5 h-2.5 rounded-full ml-4 shadow-sm
+                        {% if item.status == 'LIVE' %}bg-green-500 shadow-green-500/50{% else %}bg-red-600 shadow-red-600/50{% endif %}" 
+                        title="Status: {{ item.status|default:'OFFLINE' }}">
+                    </span>
+                </a>
             </div>
+        </div>
         {% endfor %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        initTree();
+    });
+
+    function initTree() {
+        // Build Parent Map
+        const nodes = Array.from(document.querySelectorAll('.tree-node'));
+        
+        // Mark Parents
+        // A node is a parent if another node references it as logical_parent_id
+        const logicalIds = new Set(nodes.map(n => n.dataset.logicalParentId));
+        
+        nodes.forEach(node => {
+            const id = node.dataset.id;
+            // Does anyone claim me as parent?
+            // Note: logical_parent_id matches my ID (public_id)
+            const isParent = nodes.some(n => n.dataset.logicalParentId === id);
+            
+            const btn = node.querySelector('.toggle-btn');
+            if (isParent) {
+                btn.innerHTML = `<span class="transform transition-transform duration-200">▼</span>`;
+                node.dataset.hasChildren = "true";
+                node.dataset.expanded = "true"; // Default Expanded
+            } else {
+                btn.innerHTML = `<span class="opacity-20">•</span>`;
+                btn.disabled = true;
+                btn.style.cursor = "default";
+            }
+        });
+    }
+
+    function toggleNode(id, event) {
+        event.preventDefault(); 
+        event.stopPropagation();
+        
+        const node = document.querySelector(`.tree-node[data-id="${id}"]`);
+        if (!node || node.dataset.hasChildren !== "true") return;
+
+        const isExpanded = node.dataset.expanded === "true";
+        const newState = !isExpanded;
+        
+        node.dataset.expanded = newState.toString();
+        
+        const btn = node.querySelector('.toggle-btn span');
+        btn.style.transform = newState ? 'rotate(0deg)' : 'rotate(-90deg)';
+        btn.style.color = newState ? '' : '#FBBF24'; 
+        
+        updateVisibility();
+    }
+
+    function updateVisibility() {
+        const nodes = Array.from(document.querySelectorAll('.tree-node'));
+        
+        // Recursive Visibility Check
+        // A node is visible if its LOGICAL PARENT is Expanded (and visible).
+        // Root is always visible.
+        
+        // We can't just check ancestors easily because we need chain state.
+        // But since tree is sorted top-down (mostly), we can compute visibility in order?
+        // No, sort is partial.
+        
+        // Robust approach: Check chain up to root.
+        // Map ID -> Node
+        const nodeMap = {};
+        nodes.forEach(n => nodeMap[n.dataset.id] = n);
+
+        nodes.forEach(n => {
+            if (n.dataset.isRoot === "true") {
+                n.style.display = '';
+                return;
+            }
+
+            let visible = true;
+            let currentParentId = n.dataset.logicalParentId;
+            
+            // Traverse up the LOGICAL chain
+            while (currentParentId) {
+                const parentNode = nodeMap[currentParentId];
+                if (!parentNode) break; // Orphan or Root reached (if root has no parent logic)
+                
+                // If parent is collapsed, I am hidden
+                if (parentNode.dataset.expanded === "false") {
+                    visible = false;
+                    break;
+                }
+                
+                // Move up
+                currentParentId = parentNode.dataset.logicalParentId;
+            }
+            
+            n.style.display = visible ? '' : 'none';
+        });
+    }
+</script>
     </div>
 </div>
 {% endblock %}

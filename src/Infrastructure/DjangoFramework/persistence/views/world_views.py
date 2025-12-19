@@ -79,7 +79,6 @@ def home(request):
         .exclude(id__endswith='00', name__startswith='Nexo Fantasma') \
         .exclude(id__endswith='00', name__startswith='Ghost') \
         .exclude(id__endswith='00', name='Placeholder') \
-        .exclude(id__contains='00') \
         .select_related('born_in_epoch', 'died_in_epoch') \
         .prefetch_related('versiones', 'narrativas') \
         .order_by('id')
@@ -95,9 +94,39 @@ def home(request):
         # Anonymous: Only LIVE
         ms = ms.filter(status='LIVE')
 
+    # REPRESENTATIVE LOGIC:
+    # 1. Group by "Real Trunk" (Recursively strip '00' from parent).
+    # 2. Sort candidates by:
+    #    A. Is Real? (Prefer '0101' over '010013') -> heuristic: '00' in id?
+    #    B. Level (Shallowest first)
+    #    C. ID (Lowest first)
+    
+    candidates_by_group = {}
+    
+    for m in ms:
+        # 1. Calculate Group Key (The nearest Real Parent)
+        pid = m.id[:-2]
+        while pid and pid.endswith('00'):
+            pid = pid[:-2]
+        
+        if pid not in candidates_by_group:
+            candidates_by_group[pid] = []
+        candidates_by_group[pid].append(m)
+    
+    # 2. Pick Winner per Group
+    final_list = []
+    for pid, candidates in candidates_by_group.items():
+        # Sort Key: (Has '00'?, Length, ID)
+        # We want: No '00' first (False < True), Shorter Length first, Lower ID first.
+        candidates.sort(key=lambda x: ('00' in x.id, len(x.id), x.id))
+        final_list.append(candidates[0])
+
+    # Sort final list by ID for display order
+    final_list.sort(key=lambda x: x.id)
+
     l = []
     background_images = []
-    for m in ms:
+    for m in final_list:
         # Pass world_instance=m to avoid re-fetching metadata from DB (N+1 fix)
         imgs = get_world_images(m.id, world_instance=m)
         cover = imgs[0]['url'] if imgs else None
