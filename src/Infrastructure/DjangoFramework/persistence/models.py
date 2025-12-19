@@ -171,6 +171,7 @@ class CaosImageProposalORM(models.Model):
     world = models.ForeignKey(CaosWorldORM, on_delete=models.CASCADE, related_name='image_proposals')
     image = models.ImageField(upload_to='temp_proposals/', null=True, blank=True) # Nullable for DELETE actions
     title = models.CharField(max_length=150, blank=True)
+    reason = models.TextField(blank=True)
     status = models.CharField(max_length=30, default="PENDING") # PENDING, APPROVED, REJECTED
     action = models.CharField(max_length=20, default="ADD", choices=[('ADD', 'Añadir'), ('DELETE', 'Borrar')])
     target_filename = models.CharField(max_length=255, null=True, blank=True) # For DELETE actions

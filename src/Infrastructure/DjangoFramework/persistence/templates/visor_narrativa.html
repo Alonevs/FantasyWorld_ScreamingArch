@@ -48,30 +48,41 @@
     <div class="fixed {% if user.is_authenticated %}top-11{% else %}top-0{% endif %} left-0 w-full bg-[#0e0e16] border-b border-[#333] p-3 px-6 flex justify-between items-center z-40 shadow-lg">
         <div class="font-bold text-[#d633ff] tracking-wide">{{ narr.world.name }}</div>
         <div class="flex gap-2">
+            {% if not hide_navigation %}
             <button onclick="history.back()" class="bg-[#333] hover:bg-[#555] text-white px-3 py-1 rounded border border-[#444] transition">⬅ Atrás</button>
             <a href="{% url 'ver_narrativa_mundo' narr.world.id %}" class="bg-[#333] hover:bg-[#555] text-white px-3 py-1 rounded border border-[#444] transition">📜 Índice</a>
+            {% endif %}
             
             {% if user.is_superuser or is_admin_role or is_author or allow_proposals %}
-                {% if not is_creation_mode and narr.tipo != 'LORE' %}
+                {% if not is_creation_mode and narr.tipo != 'LORE' and not hide_navigation %}
                 <a href="{% url 'pre_crear_child' narr.nid 'C' %}" class="bg-[#d633ff] hover:bg-[#b02ce0] text-white px-3 py-1 rounded font-bold transition shadow-lg shadow-purple-900/50">+ CAPÍTULO</a>
                 {% endif %}
                 
-                <button onclick="toggleEdit()" class="bg-[#333] hover:bg-[#555] text-white px-3 py-1 rounded border border-[#444] transition">✏️ EDITAR</button>
+                <button onclick="toggleEdit()" class="bg-[#333] hover:bg-[#555] text-white px-3 py-1 rounded border border-[#444] transition animate-pulse border-accent">✏️ EDITAR</button>
             {% endif %}
         </div>
     </div>
 
     <!-- DOCUMENTO PRINCIPAL -->
-    <div class="paper p-8 md:p-12 mb-20" data-world-id="{{ narr.world.id }}">
+    <div class="paper p-8 md:p-12 mb-20 relative" data-world-id="{{ narr.world.id }}">
         
+        <!-- RETOUCH WARNING -->
+        {% if is_retouch_mode %}
+            <div class="bg-purple-900/90 border border-purple-500 text-purple-100 p-4 rounded mb-8 text-center shadow-[0_0_20px_rgba(168,85,247,0.4)] backdrop-blur">
+                <h3 class="font-bold text-lg mb-1">✏️ MODO RETOQUE</h3>
+                <p class="text-sm">Estás editando una copia visual de tu propuesta rechazada. <br>Realiza las correcciones necesarias y pulsa <strong>Guardar</strong> para enviarla de nuevo.</p>
+                <div class="mt-2 text-xs text-purple-300">La navegación está desactivada para evitar pérdidas de datos.</div>
+            </div>
+        {% endif %}
+
         <!-- PROPUESTA BANNERS -->
-        {% if is_proposal %}
+        {% if is_proposal and not is_retouch_mode %}
             <div class="bg-[#d633ff] text-white p-2 rounded mb-6 font-bold text-center shadow">
                 👁️ ESTÁS VIENDO UNA PROPUESTA (v{{ narr.version_id }})
             </div>
         {% endif %}
         
-        {% if narr.is_draft %}
+        {% if narr.is_draft and not is_retouch_mode %}
             <div class="bg-orange-500 text-black p-2 rounded mb-6 font-bold text-center shadow">
                 🚧 PROPUESTA (Pendiente de Aprobación)
             </div>

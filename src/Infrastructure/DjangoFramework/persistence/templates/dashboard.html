@@ -301,12 +301,13 @@
 
                         <button type="submit" form="bulk-archive-approved-form" 
                                 formaction="{% url 'publicar_propuestas_masivo' %}"
-                                class="text-xs bg-blue-900/30 hover:bg-blue-600 text-blue-400 hover:text-white px-3 py-1.5 rounded border border-blue-900/50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(59,130,246,0.1)]"
+                                class="text-xs px-3 py-1.5 rounded border transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(59,130,246,0.1)]"
+                                :class="hasDeletions ? 'bg-red-900/30 hover:bg-red-600 text-red-500 hover:text-white border-red-900/50' : 'bg-blue-900/30 hover:bg-blue-600 text-blue-400 hover:text-white border-blue-900/50'"
                                 :disabled="selectionCount === 0"
                                 title="Publicar/Ejecutar seleccionados"
                                 data-confirm="¿PROCEDER con las propuestas seleccionadas? (Publicar o Ejecutar Borrado)">
                             <span x-text="hasDeletions ? '💀' : '🚀'">🚀</span> 
-                            <span x-text="hasDeletions ? 'Ejecutar Borrado' : 'Publicar'">Publicar</span> 
+                            <span x-text="hasDeletions ? 'Borrar' : 'Publicar'">Publicar</span> 
                             (<span x-text="selectionCount"></span>)
                         </button>
                         {% endif %}
@@ -388,12 +389,18 @@
                                             <span>👁️</span> <span class="hidden sm:inline">Ver</span>
                                         </a>
 
-                                         <!-- Archive -->
+                                         <!-- Archive (or Keep for Deletions) -->
                                         <form method="post" action="{% if item.type == 'WORLD' %}{% url 'archivar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'archivar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'archivar_imagen' item.id %}{% endif %}">
                                             {% csrf_token %}
-                                            <button type="submit" class="flex items-center gap-2 bg-gray-800 hover:bg-yellow-900/30 text-yellow-500 hover:text-yellow-300 text-xs font-bold px-3 py-2 rounded border border-gray-700 hover:border-yellow-700/50 transition-all shadow-lg" title="Archivar (Quitar de la lista)" data-confirm="¿Archivar esta propuesta? (Podrás verla en el historial)">
-                                                <span>📦</span>
-                                            </button>
+                                            {% if item.action == 'DELETE' %}
+                                                <button type="submit" class="flex items-center gap-2 bg-green-900/30 hover:bg-green-600 text-green-500 hover:text-white text-xs font-bold px-3 py-2 rounded border border-green-900/50 hover:border-green-500 transition-all shadow-lg" title="Mantener (Cancelar Borrado y Archivar)" data-confirm="¿MANTENER el elemento? La propuesta de borrado será archivada y el elemento permanecerá activo.">
+                                                    <span>🛡️</span> <span class="hidden sm:inline">Mantener</span>
+                                                </button>
+                                            {% else %}
+                                                <button type="submit" class="flex items-center gap-2 bg-gray-800 hover:bg-yellow-900/30 text-yellow-500 hover:text-yellow-300 text-xs font-bold px-3 py-2 rounded border border-gray-700 hover:border-yellow-700/50 transition-all shadow-lg" title="Archivar (Quitar de la lista)" data-confirm="¿Archivar esta propuesta? (Podrás verla en el historial)">
+                                                    <span>📦</span>
+                                                </button>
+                                            {% endif %}
                                         </form>
 
                                          <!-- Publish (Step 2) -->
@@ -544,16 +551,20 @@
                                         </a>
 
                                         <!-- Retouch Button (Replaces Restore for Content) -->
+                                        <!-- Retouch Button (Smart Routing) -->
                                         {% if item.type == 'WORLD' and item.target_link %}
                                             <a href="{% url 'editar_mundo' item.target_link %}?src_version={{ item.id }}" class="flex items-center gap-2 bg-blue-900/20 hover:bg-blue-600 text-blue-500 hover:text-white text-xs font-bold px-3 py-2 rounded border border-blue-900/50 transition-all shadow-lg" title="✏️ RETOCAR (Editar propuesta rechazada)">
                                                 <span>✏️</span>
                                             </a>
                                         {% elif item.type == 'NARRATIVE' and item.target_link %}
-                                             <!-- Narrative Retouch (To implement later, for now just generic link or hide) -->
-                                             <!-- Keeping restore generic for non-world types for safety until implemented -->
-                                            <form method="post" action="{% if item.type == 'NARRATIVE' %}{% url 'restaurar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'restaurar_imagen' item.id %}{% endif %}">
+                                            <a href="{% url 'leer_narrativa' item.target_link %}?src_version={{ item.id }}&edit=true" class="flex items-center gap-2 bg-purple-900/20 hover:bg-purple-600 text-purple-500 hover:text-white text-xs font-bold px-3 py-2 rounded border border-purple-900/50 transition-all shadow-lg" title="✏️ RETOCAR (Editar narrativa rechazada)">
+                                                <span>✏️</span>
+                                            </a>
+                                        {% else %}
+                                             <!-- Generic Restore for Images/Others -->
+                                            <form method="post" action="{% if item.type == 'IMAGE' %}{% url 'restaurar_imagen' item.id %}{% else %}{% url 'restaurar_version' item.id %}{% endif %}">
                                                 {% csrf_token %}
-                                                <button type="submit" class="flex items-center gap-2 bg-blue-900/20 hover:bg-blue-600 text-blue-500 hover:text-white text-xs font-bold px-3 py-2 rounded border border-blue-900/50 transition-all shadow-lg" title="Restaurar a Pendientes">
+                                                <button type="submit" class="flex items-center gap-2 bg-blue-900/20 hover:bg-blue-600 text-blue-500 hover:text-white text-xs font-bold px-3 py-2 rounded border border-blue-900/50 transition-all shadow-lg" title="Restaurar a Pendientes" data-confirm="¿Restaurar a Pendientes?">
                                                     <span>🔄</span>
                                                 </button>
                                             </form>

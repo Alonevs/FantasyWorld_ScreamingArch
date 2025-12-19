@@ -149,7 +149,10 @@ def dashboard(request):
         x.type = 'IMAGE'
         x.type_label = '🖼️ IMAGEN'
         x.target_name = x.title or "(Sin Título)"
-        x.target_desc = f"🗑️ Borrar: {x.target_filename}" if x.action == 'DELETE' else "📸 Nueva"
+        desc = f"🗑️ Borrar: {x.target_filename}" if x.action == 'DELETE' else "📸 Nueva"
+        if hasattr(x, 'reason') and x.reason:
+            desc = f"{desc} | Motivo: {x.reason}"
+        x.target_desc = desc
         if not hasattr(x, 'version_number'): x.version_number = 1 
         x.parent_context = x.world.name if x.world else "Global"
         x.change_log = x.target_desc

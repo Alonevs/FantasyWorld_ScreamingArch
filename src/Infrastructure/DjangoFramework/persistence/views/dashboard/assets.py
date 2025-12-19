@@ -63,18 +63,31 @@ def archivar_imagen(request, id):
 def publicar_imagen(request, id):
     try:
         prop = get_object_or_404(CaosImageProposalORM, id=id)
-        # Logic to move file
         repo = DjangoCaosRepository()
-        user_name = prop.author.username if prop.author else "Anónimo"
-        
-        # Save real file
-        repo.save_manual_file(str(prop.world.id), prop.image, username=user_name, title=prop.title)
+
+        if prop.action == 'DELETE':
+            # ACTUAL FILE DELETION
+            base_dir = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img')
+            file_path = os.path.join(base_dir, str(prop.world.id), prop.target_filename)
+            
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                messages.success(request, f"🗑️ Imagen '{prop.target_filename}' borrada definitivamente de LIVE.")
+                log_event(request.user, "DELETE_IMAGE_LIVE", prop.world.id, details=f"Archivo: {prop.target_filename}")
+            else:
+                messages.warning(request, f"⚠️ El archivo '{prop.target_filename}' no existía en el disco, pero la propuesta se ha archivado.")
+        else:
+            # NORMAL PUBLISH (ADD)
+            user_name = prop.author.username if prop.author else "Anónimo"
+            repo.save_manual_file(str(prop.world.id), prop.image, username=user_name, title=prop.title)
+            messages.success(request, "🚀 Imagen Publicada y Archivada.")
+            log_event(request.user, "PUBLISH_IMAGE", id)
         
         prop.status = 'ARCHIVED'
         prop.save()
-        messages.success(request, "Imagen Publicada y Archivada.")
-        log_event(request.user, "PUBLISH_IMAGE", id)
-    except Exception as e: messages.error(request, str(e))
+    except Exception as e:
+        messages.error(request, f"❌ Error: {e}")
+        print(f"Error publicar_imagen: {e}")
     if request.GET.get('next') == 'batch': return redirect('batch_revisar_imagenes')
     return redirect('dashboard')
 

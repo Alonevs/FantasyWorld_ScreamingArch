@@ -43,7 +43,7 @@
     <div class="bg-card border border-gray-800 rounded-2xl max-w-[1600px] mx-4 xl:mx-auto overflow-hidden shadow-2xl grid grid-cols-1 lg:grid-cols-4 mb-10">
         
         <!-- HEADER SECTION -->
-        <div class="col-span-1 lg:col-span-4 bg-gradient-to-r from-indigo-950 to-gray-900 p-6 border-b border-indigo-900 flex flex-col md:flex-row justify-between items-start gap-4">
+        <div class="col-span-1 lg:col-span-4 bg-gradient-to-r from-indigo-950 to-gray-900 p-6 border-b border-indigo-900 flex flex-col md:flex-row justify-between items-start gap-4 relative">
             <div>
                 <div class="flex items-center flex-wrap gap-2 text-xs text-gray-400 mb-4">
                     <a href="{% url 'home' %}" class="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded-full text-gray-300 transition border border-gray-700 hover:border-accent">🏠</a>
@@ -110,26 +110,34 @@
             
             {% if not is_preview %}
             {% if can_edit %}
-            <div class="flex gap-2">
-                <a href="{% url 'dashboard' %}" class="p-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition shadow-md flex items-center gap-2" title="Panel de Control">
-                    🚀 <span class="hidden sm:inline text-xs font-bold">DASHBOARD</span>
-                </a>
-                
-                {% if is_locked and not is_admin_role and not user.is_superuser %}
-                    <!-- LOCKED: Edit Disabled -->
-                    <button disabled class="p-2 bg-gray-800 text-gray-600 cursor-not-allowed rounded-lg border border-gray-700 opacity-50" title="Bloqueado por Administración">
-                        🔒 EDITAR BLOQUEADO
-                    </button>
-                    <button disabled class="p-2 bg-gray-800 text-gray-600 cursor-not-allowed rounded-lg border border-gray-700 opacity-50" title="Bloqueado">
-                        🗑️
-                    </button>
-                {% else %}
-                    <button onclick="openEditModal()" class="p-2 bg-blue-900/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg transition border border-blue-900/50" title="Editar">
-                        ✏️
-                    </button>
-                    <a href="{% url 'borrar_mundo' public_id %}" onclick="return confirm('¿Borrar mundo?')" class="p-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg transition border border-red-900/50" title="Borrar">
-                        🗑️
+            <div class="flex flex-col items-end gap-2">
+                <div class="flex gap-2">
+                    <a href="{% url 'dashboard' %}" class="p-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition shadow-md flex items-center gap-2" title="Panel de Control">
+                        🚀 <span class="hidden sm:inline text-xs font-bold">DASHBOARD</span>
                     </a>
+                    
+                    {% if is_locked and not is_admin_role and not user.is_superuser %}
+                        <!-- LOCKED: Edit Disabled -->
+                        <button disabled class="p-2 bg-gray-800 text-gray-600 cursor-not-allowed rounded-lg border border-gray-700 opacity-50" title="Bloqueado por Administración">
+                            🔒 EDITAR BLOQUEADO
+                        </button>
+                        <button disabled class="p-2 bg-gray-800 text-gray-600 cursor-not-allowed rounded-lg border border-gray-700 opacity-50" title="Bloqueado">
+                            🗑️
+                        </button>
+                    {% else %}
+                        <button onclick="openEditModal()" class="p-2 bg-blue-900/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg transition border border-blue-900/50" title="Editar">
+                            ✏️
+                        </button>
+                        <a href="{% url 'borrar_mundo' public_id %}" onclick="return confirm('¿Borrar mundo?')" class="p-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg transition border border-red-900/50" title="Borrar">
+                            🗑️
+                        </a>
+                    {% endif %}
+                </div>
+
+                {% if is_retouch_mode %}
+                    <div class="bg-purple-900/90 text-purple-100 text-xs px-3 py-1 rounded border border-purple-500 shadow-lg text-center backdrop-blur w-auto animate-pulse border-accent">
+                         <span class="font-bold">✏️ MODO RETOQUE</span>
+                    </div>
                 {% endif %}
             </div>
             {% endif %}
@@ -164,6 +172,9 @@
                 {% if not is_preview %}
                 {% if user.is_superuser or is_admin_role or is_author or allow_proposals %}
                 <div class="flex gap-2">
+                    <button onclick="toggleSelectionMode()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold rounded transition border border-gray-600 shadow" id="btn-manage-photos" title="Borrar varias fotos">
+                        ⚙️ GESTIONAR
+                    </button>
                     {% if user.is_superuser or is_author %}
                     <button onclick="openAiModal()" class="px-3 py-1 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded transition shadow-lg shadow-purple-900/20">🎨 IA GENERATOR</button>
                     {% endif %}
@@ -186,8 +197,13 @@
             <!-- GALLERY STRIP -->
             <div class="flex gap-4 overflow-x-auto pb-4 mb-8 snap-x min-h-[140px]">
                 {% for img in imagenes %}
-                <div class="snap-start shrink-0 relative group w-40 h-56">
-                    <div class="w-full h-full rounded-lg overflow-hidden border border-gray-700 cursor-pointer hover:border-accent transition shadow-lg bg-black relative" onclick="openLightbox('{% static 'persistence/img/' %}{{ img.url }}', '{{ img.filename|escapejs }}')">
+                <div class="snap-start shrink-0 relative group w-40 h-56 img-item transition-all duration-300">
+                    <!-- Checkbox Overlay -->
+                    <div class="absolute top-2 left-2 z-30 hidden selection-checkbox transform scale-125">
+                        <input type="checkbox" class="w-5 h-5 accent-red-600 cursor-pointer shadow-lg" onchange="toggleImageSelection('{{ img.filename|escapejs }}', this)">
+                    </div>
+
+                    <div class="w-full h-full rounded-lg overflow-hidden border border-gray-700 cursor-pointer hover:border-accent transition shadow-lg bg-black relative" onclick="if(!selectionMode) openLightbox('{% static 'persistence/img/' %}{{ img.url }}', '{{ img.filename|escapejs }}')">
                         <img src="{% static 'persistence/img/' %}{{ img.url }}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500 opacity-90 group-hover:opacity-100">
                         
                         <!-- Metadata Overlay -->
@@ -197,7 +213,7 @@
                         </div>
                     </div>
                     {% if user_role >= 20 or is_author or allow_proposals %}
-                    <a href="{% url 'borrar_foto' jid img.filename %}" class="absolute top-1 right-1 bg-red-600/80 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition hover:bg-red-500 shadow-lg backdrop-blur" onclick="event.stopPropagation(); return confirm('¿Solicitar borrado de esta imagen?')">✕</a>
+                    <button onclick="event.stopPropagation(); solicitarBorradoIndividual('{{ jid }}', '{{ img.filename|escapejs }}')" class="absolute top-1 right-1 bg-red-600/80 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition hover:bg-red-500 shadow-lg backdrop-blur z-20 batch-hide">✕</button>
                     {% endif %}
                 </div>
                 {% empty %}
@@ -252,4 +268,99 @@
 {% block modals %}
     {% include "partials/_world_modals.html" %}
     {% include "partials/_world_scripts.html" %}
+    
+    {% if edit_mode %}
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Auto Open Edit Modal
+            setTimeout(() => { if(typeof openEditModal === 'function') openEditModal(); }, 300);
+            
+            // If Retouch Mode, lock navigation
+            {% if is_retouch_mode %}
+                // Disable links in children grid and Images
+                const grid = document.querySelector('.animate-wave');
+                const gallery = document.querySelector('.snap-x');
+                
+                if(grid) { grid.style.pointerEvents = 'none'; grid.style.opacity = '0.5'; }
+                if(gallery) { gallery.style.pointerEvents = 'none'; gallery.style.opacity = '0.5'; }
+                
+                // Disable Generator Button
+                const genBtn = document.querySelector("button[onclick='openCreateModal()']");
+                if(genBtn) {
+                    genBtn.disabled = true;
+                    genBtn.onclick = null;
+                    genBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                }
+            {% endif %}
+        });
+    </script>
+    {% endif %}
+
+    <!-- BATCH DELETE UI -->
+    <div id="batchDeleteModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div class="bg-gray-900 border border-gray-700 rounded-xl p-6 w-full max-w-md shadow-2xl relative">
+            <h3 class="text-xl font-bold text-white mb-2">🗑️ Borrar Fotos</h3>
+            <p class="text-xs text-gray-400 mb-4">Vas a borrar <span id="batch-delete-count" class="text-white font-bold">0</span> imágenes. Se creará una propuesta.</p>
+            <textarea id="batch-delete-reason" class="w-full bg-black/50 border border-gray-700 rounded p-2 text-gray-200 text-sm focus:border-red-500 outline-none mb-4 h-24" placeholder="Motivo (Obligatorio)..."></textarea>
+            <div class="flex justify-end gap-2">
+                <button onclick="document.getElementById('batchDeleteModal').classList.toggle('hidden', true); document.getElementById('batchDeleteModal').classList.toggle('flex', false);" class="text-gray-300 text-sm hover:text-white px-3">Cancelar</button>
+                <button onclick="submitBatchDelete()" class="px-4 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-500">Confirmar</button>
+            </div>
+        </div>
+    </div>
+    <div id="batch-toolbar" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900/90 border border-red-500/30 rounded-full px-6 py-2 shadow-xl flex items-center gap-4 backdrop-blur animate-fade-in-up">
+        <span class="text-white text-xs font-bold"><span id="selected-count" class="text-red-400">0</span> seleccionadas</span>
+        <button onclick="openBatchDeleteModal()" id="btn-batch-delete" disabled class="text-xs bg-red-600/20 text-red-500 border border-red-900 hover:bg-red-600 hover:text-white px-3 py-1 rounded transition font-bold disabled:opacity-50">🗑️ BORRAR</button>
+        <button onclick="toggleSelectionMode()" class="text-gray-500 hover:text-white ml-2">✕</button>
+    </div>
+    <script>
+        let selectionMode = false; let selectedImages = new Set();
+        function toggleSelectionMode() {
+            selectionMode = !selectionMode;
+            const btn = document.getElementById('btn-manage-photos');
+            if(btn) btn.classList.toggle('bg-gray-600', selectionMode);
+            
+            document.querySelectorAll('.selection-checkbox').forEach(el => el.classList.toggle('hidden', !selectionMode));
+            document.querySelectorAll('.batch-hide').forEach(el => el.classList.toggle('hidden', selectionMode));
+            document.getElementById('batch-toolbar').classList.toggle('hidden', !selectionMode);
+            if(!selectionMode) { selectedImages.clear(); updateSelectionUI(); document.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = false); }
+        }
+        function toggleImageSelection(fn, cb) {
+            if(cb.checked) {
+                if(selectedImages.size >= 5) { cb.checked = false; alert("Máximo 5 imágenes."); return; }
+                selectedImages.add(fn);
+            } else selectedImages.delete(fn);
+            updateSelectionUI();
+        }
+        function updateSelectionUI() {
+            document.getElementById('selected-count').innerText = selectedImages.size;
+            document.getElementById('batch-delete-count').innerText = selectedImages.size;
+            document.getElementById('btn-batch-delete').disabled = selectedImages.size === 0;
+            // Opacity update
+            const btn = document.getElementById('btn-batch-delete');
+            btn.classList.toggle('opacity-50', selectedImages.size === 0);
+        }
+        async function submitBatchDelete() {
+            const reason = document.getElementById('batch-delete-reason').value;
+            if(!reason.trim()) { 
+                await CaosModal.alert("Campo Obligatorio", "Debes especificar un motivo para el borrado.");
+                return; 
+            }
+            fetch("{% url 'borrar_fotos_batch' jid %}", { method: "POST", headers: { "Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token }}" }, body: JSON.stringify({ filenames: Array.from(selectedImages), reason: reason }) })
+            .then(r => r.json()).then(async d => { 
+                if(d.status === 'ok') location.reload(); 
+                else await CaosModal.alert("Error en el Sistema", d.message); 
+            });
+        }
+        async function solicitarBorradoIndividual(jid, filename) {
+            const reason = await CaosModal.prompt("📝 Motivo del borrado", "Explica brevemente por qué quieres eliminar esta imagen:", "Ej: Imagen duplicada, borrosa...");
+            if (reason === null) return;
+            if (!reason.trim()) { 
+                await CaosModal.alert("Motivo Obligatorio", "El motivo del borrado es necesario para procesar la solicitud.");
+                return; 
+            }
+            const url = `{% url 'borrar_foto' 'JID_PLACEHOLDER' 'FILE_PLACEHOLDER' %}`.replace('JID_PLACEHOLDER', jid).replace('FILE_PLACEHOLDER', filename) + "?reason=" + encodeURIComponent(reason);
+            window.location.href = url;
+        }
+    </script>
 {% endblock %}

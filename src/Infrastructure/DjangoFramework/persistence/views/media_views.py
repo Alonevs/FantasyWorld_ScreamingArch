@@ -201,6 +201,7 @@ def borrar_foto(request, jid, filename):
         CaosImageProposalORM.objects.create(
             world=w,
             title=f"Borrar: {filename}",
+            reason=request.GET.get('reason', ''),
             target_filename=filename,
             action='DELETE',
             status='PENDING',
@@ -215,3 +216,53 @@ def borrar_foto(request, jid, filename):
 
 def generar_foto_extra(request, jid):
     return redirect('ver_mundo', public_id=jid)
+
+def borrar_fotos_batch(request, jid):
+    from django.http import JsonResponse
+    import json
+    
+    if request.method != 'POST': 
+        return JsonResponse({'status':'error', 'message':'Método no permitido'})
+    
+    try:
+        data = json.loads(request.body)
+        filenames = data.get('filenames', [])
+        reason = data.get('reason', '')
+        
+        if not filenames:
+             return JsonResponse({'status':'error', 'message':'No has seleccionado ninguna foto.'})
+             
+        if len(filenames) > 5:
+            return JsonResponse({'status':'error', 'message':'Máximo 5 fotos por lote.'})
+            
+        if not reason.strip():
+             return JsonResponse({'status':'error', 'message':'El motivo es obligatorio.'})
+
+        w = resolve_jid_orm(jid)
+        if not w:
+             return JsonResponse({'status':'error', 'message':'Mundo no encontrado'})
+
+        # Security Check
+        from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
+        try: check_ownership(request.user, w)
+        except: return JsonResponse({'status':'error', 'message':'Permiso denegado'})
+
+        count = 0
+        for fn in filenames:
+             CaosImageProposalORM.objects.create(
+                 world=w,
+                 title=f"Borrar: {fn}", 
+                 reason=reason,
+                 target_filename=fn,
+                 action='DELETE',
+                 status='PENDING',
+                 author=request.user if request.user.is_authenticated else None
+             )
+             count += 1
+        
+        messages.info(request, f"🗑️ Solicitado el borrado de {count} imágenes. Pendiente de aprobación.")
+        return JsonResponse({'status':'ok'})
+            
+    except Exception as e:
+        print(f"Error batch delete: {e}")
+        return JsonResponse({'status':'error', 'message':str(e)})

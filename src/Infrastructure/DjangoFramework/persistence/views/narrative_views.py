@@ -86,9 +86,36 @@ def leer_narrativa(request, nid):
            context['allow_proposals'] = is_team_member
            context['is_admin_role'] = is_admin
         
+
         if not context:
             messages.error(request, f"No se encontró la narrativa: {nid}")
             return redirect('home')
+
+        # RETOUCH LOGIC: Pre-fill with rejected draft if requested
+        src_version_id = request.GET.get('src_version')
+        if src_version_id and context.get('narr'):
+            try:
+                v_src = CaosNarrativeVersionORM.objects.get(id=src_version_id)
+                # Check match (Robust NID comparison)
+                target_nid = getattr(context['narr'], 'nid', None) or getattr(context['narr'], 'id', None)
+                if target_nid and v_src.narrative.nid == target_nid:
+                     # SECURITY & UX: If I own this draft OR AM ADMIN, I must be allowed to edit it
+                     # Use IDs for safer comparison
+                     is_owner = (v_src.author and request.user.id == v_src.author.id)
+                     is_admin = context.get('is_admin_role', False)
+                     
+                     if is_owner or request.user.is_superuser or is_admin:
+                         context['is_author'] = True 
+                         context['allow_proposals'] = True
+                         context['open_editor_auto'] = True
+                         context['is_retouch_mode'] = True # New flag for UI
+                         context['hide_navigation'] = True # Disable nav as requested
+
+                     context['narr'].titulo = v_src.proposed_title
+                     context['narr'].contenido = v_src.proposed_content
+                     messages.info(request, f"✏️ Retomando borrador rechazado v{v_src.version_number}. Edita y vuelve a enviar.")
+            except Exception as e:
+                print(f"Error loading src_version (Narrative): {e}")
 
         return render(request, 'visor_narrativa.html', context)
     except Exception as e:

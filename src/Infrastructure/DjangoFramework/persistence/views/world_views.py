@@ -326,31 +326,20 @@ def editar_mundo(request, jid):
     
     real_jid = w_orm.id # We already have the ORM object
 
-    # RETOUCH/REJECTION LOGIC:
-    # If ?src_version=X passed, we are "retouching" a rejected proposal.
-    # Load its data into the context/ORM to pre-fill the form.
-    src_version_id = request.GET.get('src_version')
-    if src_version_id:
-        try:
-            v_src = CaosVersionORM.objects.get(id=src_version_id)
-            # Security: Ensure this version belongs to this world
-            if v_src.world.id == w_orm.id:
-                # Override w_orm data for the form display
-                # Note: We don't save w_orm here, just modify the instance in memory for the template
-                w_orm.name = v_src.proposed_name
-                w_orm.description = v_src.proposed_description
-                # If metadata exists in version (not standard column yet but future proofing or using change_log/reason)
-                messages.info(request, f"✏️ Retomando propuesta rechazada v{v_src.version_number}. Edita y vuelve a enviar.")
-        except Exception as e: print(f"Error loading src_version: {e}")
+    # Old retouch logic removed (moved to bottom for context robustness)
 
     # --- SECURITY CHECK ---
     # We remove strict check_ownership() to allow PROPOSALS from any authenticated user.
     # The actual edit action (ProposeChangeUseCase) is safe (PENDING status).
     # ----------------------
 
-    # LOCK CHECK (Block edits if locked, unless Superuser or Author)
+    # LOCK CHECK (Block edits if locked, unless Superuser or Author or Admin)
     # Strict Check: "Solo si eres el autor" (or GodMode Superuser)
-    is_admin_bypass = request.user.is_superuser or (w_orm.author == request.user)
+    is_profile_admin = False
+    try: is_profile_admin = (request.user.profile.rank in ['ADMIN', 'SUBADMIN'])
+    except: pass
+
+    is_admin_bypass = request.user.is_superuser or (w_orm.author == request.user) or is_profile_admin
     
     if w_orm.status == 'LOCKED' and not is_admin_bypass:
         messages.error(request, "⛔ Este mundo está BLOQUEADO por el Autor. No se permiten propuestas.")
@@ -405,18 +394,30 @@ def editar_mundo(request, jid):
     from src.WorldManagement.Caos.Application.get_world_details import GetWorldDetailsUseCase
     try:
         # 1. Get Base Context
-        use_case = GetWorldDetailsUseCase()
+        repo = DjangoCaosRepository()
+        use_case = GetWorldDetailsUseCase(repo)
         context = use_case.execute(real_jid, request.user)
         
         # 2. Set Edit Mode
         context['edit_mode'] = True
         
-        # 3. Apply Retouch Overrides (if any)
-        # Since use_case fetches fresh from DB, strict attributes like 'name' in context 
-        # might still be old if we don't force them from our w_orm instance.
-        context['name'] = w_orm.name
-        context['description'] = w_orm.description
-        
+        # 3. Apply Retouch Overrides (moved logic here for robustness)
+        src_version_id = request.GET.get('src_version')
+        if src_version_id:
+            try:
+                v_src = CaosVersionORM.objects.get(id=src_version_id)
+                # Verify ownership/relation
+                can_retouch = (v_src.author == request.user) or is_admin_bypass
+                
+                if v_src.world.id == real_jid and can_retouch:
+                    context['name'] = v_src.proposed_name
+                    context['description'] = v_src.proposed_description
+                    context['is_retouch_mode'] = True
+                    context['can_edit'] = True # Force Edit button visibility
+                    messages.info(request, f"✏️ Retomando propuesta rechazada v{v_src.version_number}. Datos cargados.")
+            except Exception as e:
+                print(f"Error loading src_version in GET: {e}")
+
         return render(request, 'ficha_mundo.html', context)
     except Exception as e:
         print(f"Error rendering edit view: {e}")

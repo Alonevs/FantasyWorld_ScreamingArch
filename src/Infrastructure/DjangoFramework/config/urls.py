@@ -29,7 +29,7 @@ from src.Infrastructure.DjangoFramework.persistence.views.dashboard.team import 
 )
 from src.Infrastructure.DjangoFramework.persistence.views.media_views import (
     api_preview_foto, api_save_foto, api_update_image_metadata, 
-    subir_imagen_manual, set_cover_image, borrar_foto, generar_foto_extra
+    subir_imagen_manual, set_cover_image, borrar_foto, generar_foto_extra, borrar_fotos_batch
 )
 from src.Infrastructure.DjangoFramework.persistence.views import review_views # NEW
 from src.Infrastructure.DjangoFramework.persistence.views.narrative_views import (
@@ -71,6 +71,7 @@ urlpatterns = [
     path('foto_extra/<str:jid>/', generar_foto_extra, name='generar_foto_extra'),
     path('cover/<str:jid>/<str:filename>/', set_cover_image, name='set_cover_image'),
     path('borrar_foto/<str:jid>/<str:filename>/', borrar_foto, name='borrar_foto'),
+    path('borrar_fotos_batch/<str:jid>/', borrar_fotos_batch, name='borrar_fotos_batch'),
     path('init_hemisferios/<str:jid>/', init_hemisferios, name='init_hemisferios'),
     path('subir_foto/<str:jid>/', subir_imagen_manual, name='subir_imagen_manual'),
 
