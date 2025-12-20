@@ -14,12 +14,6 @@ class GetHomeIndexUseCase:
         Returns:
             list: The final filtered and sorted list of entities to display.
         """
-        
-        # 1. Pick Winner per Group (Versions/Ghosts)
-        # Goal: Hide "Ghosts" (Versions) but SHOW "Siblings".
-        # CRITICAL FIX: Do NOT collapse High-Level (Geography) entities that use '00' for Jumping.
-        # If Level >= 7, we assume '00' is structural padding, not a Ghost Version of a Level 2 ancestor.
-        
         winners_by_trunk = {}
         for m in all_entities:
             trunk_id = m.id
@@ -40,7 +34,17 @@ class GetHomeIndexUseCase:
         pre_list = []
         for pid, candidates in winners_by_trunk.items():
             candidates.sort(key=lambda x: ('00' in x.id, len(x.id), x.id))
-            pre_list.append(candidates[0])
+            winner = candidates[0]
+            
+            # STRICT GHOST CHECK:
+            # If the winner is a Ghost (contains '00' and not Geography)
+            # AND it is NOT the Trunk ID itself (meaning the Trunk/Root is missing from candidates)
+            # Then hide it. (Do not show a Ghost Fragment if the Real Body '01' is hidden)
+            is_ghost_structure = ('00' in winner.id and (len(winner.id)//2) < 7)
+            if is_ghost_structure and winner.id != pid:
+                continue
+                
+            pre_list.append(winner)
 
         # 2. Aggressive Index Logic: One Representative Per Branch (01 preference)
         # This fulfills the "usa los primeros de cada tabla 01 (o fallback 02, 03)" for navigation index.

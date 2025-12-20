@@ -20,7 +20,6 @@ from src.WorldManagement.Caos.Application.generate_lore import GenerateWorldLore
 from src.WorldManagement.Caos.Application.generate_map import GenerateWorldMapUseCase
 from src.WorldManagement.Caos.Application.generate_creature_usecase import GenerateCreatureUseCase
 from src.WorldManagement.Caos.Application.initialize_hemispheres import InitializeHemispheresUseCase
-from src.WorldManagement.Caos.Application.initialize_hemispheres import InitializeHemispheresUseCase
 from src.WorldManagement.Caos.Application.restore_version import RestoreVersionUseCase
 from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -86,20 +85,44 @@ def home(request):
     # 2. Visibility Logic
     # 2. Visibility Logic
     is_global_admin = False
+    
+    # Identify my bosses (people who I collaborate with)
+    my_bosses_users = [] 
+    
     if request.user.is_authenticated:
         if request.user.is_superuser:
             is_global_admin = True
-        elif hasattr(request.user, 'profile') and request.user.profile.rank in ['ADMIN', 'SUBADMIN']:
-            is_global_admin = True
+        elif hasattr(request.user, 'profile'):
+             # No "Admin Global" check anymore. Everyone is siloed.
+             
+             # Fetch bosses (Users who have me in their collaborators list)
+             # Relation: UserProfile.collaborators -> M2M to UserProfile (related_name='bosses')
+             # So 'my_profile.bosses.all()' returns the profiles of my bosses.
+             try:
+                 boss_profiles = request.user.profile.bosses.all()
+                 my_bosses_users = [bp.user for bp in boss_profiles]
+             except: pass
 
     if is_global_admin:
         pass # All (except DRAFTS which are excluded in base query)
     elif request.user.is_authenticated:
-        # User sees: LIVE OR (Their OWN content)
-        ms = ms.filter(Q(status='LIVE') | Q(author=request.user))
+        # User sees: LIVE OR (Their OWN content) OR (Their BOSS's content)
+        # Note: If visible_publico=False but I am the collab, I should see it.
+        # But for 'LIVE' part, we must respect visible_publico=True for strangers.
+        
+        # Complex Filter:
+        # (Status=LIVE AND Visible=True)  <-- Public Stuff
+        # OR (Author = Me)                <-- My Stuff
+        # OR (Author IN MyBosses)         <-- Boss Stuff
+        
+        ms = ms.filter(
+            Q(status='LIVE', visible_publico=True) | 
+            Q(author=request.user) |
+            Q(author__in=my_bosses_users)
+        )
     else:
-        # Anonymous: Only LIVE
-        ms = ms.filter(status='LIVE')
+        # Anonymous: Only LIVE AND visibly Public
+        ms = ms.filter(status='LIVE', visible_publico=True)
 
     # REPRESENTATIVE LOGIC:
     # Goal: Hide "Ghosts" (Versions) but SHOW "Siblings".
@@ -244,9 +267,9 @@ def ver_mundo(request, public_id):
     # PERMISSIONS CHECK
     is_admin, is_team_member = get_admin_status(request.user)
 
-    context['is_author'] = is_author_or_team or is_team_member
-    context['can_edit'] = is_author_or_team or is_team_member
-    context['allow_proposals'] = is_team_member
+    context['is_author'] = is_author_or_team
+    context['can_edit'] = is_author_or_team
+    context['allow_proposals'] = is_author_or_team # Or specific logic if you want public proposals
     context['is_admin_role'] = is_admin
     # ---------------------------------
     # ---------------------------------
@@ -303,18 +326,17 @@ def editar_mundo(request, jid):
 
     # Old retouch logic removed (moved to bottom for context robustness)
 
-    # --- SECURITY CHECK ---
-    # We remove strict check_ownership() to allow PROPOSALS from any authenticated user.
-    # The actual edit action (ProposeChangeUseCase) is safe (PENDING status).
-    # ----------------------
+    # LOCK CHECK
+    # Admin Bypass should only apply if they have legitimate edit access (is_author_or_team).
+    # Since we are in 'editar_mundo', we must check if they actually have rights.
+    # Note: 'editar_mundo' doesn't call check_world_access yet. We should.
+    
+    can_access, is_author_or_team = check_world_access(request, w_orm)
+    if not is_author_or_team:
+         messages.error(request, "⛔ No tienes permisos para editar este mundo.")
+         return redirect('ver_mundo', public_id=w_orm.public_id if w_orm.public_id else w_orm.id)
 
-    # LOCK CHECK (Block edits if locked, unless Superuser or Author or Admin)
-    # Strict Check: "Solo si eres el autor" (or GodMode Superuser)
-    is_profile_admin = False
-    try: is_profile_admin = (request.user.profile.rank in ['ADMIN', 'SUBADMIN'])
-    except: pass
-
-    is_admin_bypass = request.user.is_superuser or (w_orm.author == request.user) or is_profile_admin
+    is_admin_bypass = is_author_or_team # Contains Superuser, Admin, Boss-Collab logic
     
     if w_orm.status == 'LOCKED' and not is_admin_bypass:
         messages.error(request, "⛔ Este mundo está BLOQUEADO por el Autor. No se permiten propuestas.")
@@ -551,10 +573,9 @@ def mapa_arbol(request, public_id):
         # Security Check
         w_orm = resolve_jid_orm(public_id)
         if not w_orm: return redirect('home')
-        is_live = (w_orm.status == 'LIVE')
-        is_author = (request.user.is_authenticated and w_orm.author == request.user)
-        is_superuser = request.user.is_superuser
-        if not (is_live or is_author or is_superuser): 
+        
+        can_access, _ = check_world_access(request, w_orm)
+        if not can_access: 
              return render(request, 'private_access.html', status=403)
 
         result = GetWorldTreeUseCase(repo).execute(public_id)
@@ -597,10 +618,8 @@ def ver_metadatos(request, public_id):
     if not w: return redirect('home')
 
     # Security Check
-    is_live = (w.status == 'LIVE')
-    is_author = (request.user.is_authenticated and w.author == request.user)
-    is_superuser = request.user.is_superuser
-    if not (is_live or is_author or is_superuser): 
+    can_access, _ = check_world_access(request, w)
+    if not can_access: 
         return render(request, 'private_access.html', status=403)
     
     context = {
