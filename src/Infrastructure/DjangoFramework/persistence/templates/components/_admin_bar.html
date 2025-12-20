@@ -1,59 +1,164 @@
-{% if show_bar %}
-<div class="w-full h-11 {{ bar_style }} flex items-center justify-between px-6 z-[90] fixed top-0 left-0 backdrop-blur-md shadow-sm border-b border-white/5">
+<div class="w-full h-14 bg-dark/80 backdrop-blur-md flex items-center justify-between px-6 z-[90] fixed top-0 left-0 border-b border-white/5 shadow-sm">
     
-    <!-- Left: Rank & User -->
+    <!-- Left: Brand / Rank -->
     <div class="flex items-center gap-4">
-        <!-- Badge -->
-        <div class="{{ role_badge_class }} px-3 py-1 rounded text-xs font-bold tracking-widest uppercase flex items-center gap-2 transition-all hover:scale-105 select-none">
-            <span>{{ role_icon }}</span>
-            <span>{{ role_label }}</span>
-        </div>
-        
-        <!-- User Info -->
-        <span class="text-gray-400 text-sm font-medium">
-            {{ user.username }}
-        </span>
-
-        {% if user.profile.rank == 'SUBADMIN' %}
-            <!-- Subadmin Indicator (Clean) -->
+        {% if user.is_authenticated %}
+            <!-- Badge -->
+            {% if user.is_superuser or user.profile.rank == 'ADMIN' %}
+                <div class="bg-gradient-to-r from-amber-500/20 to-yellow-600/20 border border-amber-500/30 text-amber-400 px-3 py-1 rounded text-xs font-bold tracking-widest uppercase flex items-center gap-2 transition-all hover:scale-105 select-none shadow-[0_0_10px_-3px_rgba(245,158,11,0.3)]">
+                    <span>👑</span>
+                    <span>Admin</span>
+                </div>
+            {% elif user.profile.rank == 'SUBADMIN' %}
+                <div class="bg-gradient-to-r from-cyan-500/20 to-blue-600/20 border border-cyan-500/30 text-cyan-400 px-3 py-1 rounded text-xs font-bold tracking-widest uppercase flex items-center gap-2 transition-all hover:scale-105 select-none shadow-[0_0_10px_-3px_rgba(6,182,212,0.3)]">
+                    <span>🛡️</span>
+                    <span>SubAdmin</span>
+                </div>
+            {% else %}
+                <!-- USER / EXPLORADOR -->
+                <div class="bg-gradient-to-r from-gray-700/50 to-gray-600/50 border border-gray-600/30 text-gray-300 px-3 py-1 rounded text-xs font-bold tracking-widest uppercase flex items-center gap-2 transition-all hover:scale-105 select-none">
+                    <span>🧭</span>
+                    <span>Explorador</span>
+                </div>
+            {% endif %}
+            
+            <!-- User Info -->
+            <div class="flex items-center gap-3 border-l border-gray-700 pl-4 ml-2">
+                {% if user.is_superuser or user.profile.rank == 'ADMIN' %}
+                    <!-- ADMIN STYLE: Gold/Royal -->
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-500 font-bold text-sm tracking-wider drop-shadow-sm">
+                        {{ user.username|upper }}
+                    </span>
+                {% elif user.profile.rank == 'SUBADMIN' %}
+                     <!-- SUBADMIN STYLE: Tech/Blue -->
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-500 font-bold text-sm tracking-wide">
+                        {{ user.username|upper }}
+                    </span>
+                {% else %}
+                    <!-- USER STYLE: Standard -->
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-gray-200 to-gray-400 font-bold text-sm tracking-wide">
+                        {{ user.username|upper }}
+                    </span>
+                {% endif %}
+                
+                {% if user.profile.bosses.exists and user.profile.rank != 'USER' %}
+                    <span class="text-gray-700 text-xs">|</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Minion de:</span>
+                        {% for boss in user.profile.bosses.all %}
+                            <a href="{% url 'collaborator_work' boss.user.id %}" class="px-2 py-0.5 bg-gradient-to-r from-amber-500/10 to-yellow-600/10 text-yellow-500/80 rounded text-[9px] font-bold uppercase tracking-wider border border-yellow-500/20 hover:bg-yellow-500/20 transition-colors cursor-pointer flex items-center gap-1 group/boss" title="Ver Perfil de Jefe">
+                                <span>👑</span> 
+                                <span class="group-hover/boss:underline decoration-yellow-500/50 underline-offset-2">{{ boss.user.username }}</span>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        {% else %}
+            <!-- Brand for Anonymous -->
+            <a href="{% url 'home' %}" class="font-bold text-accent tracking-widest text-lg hover:text-white transition">
+                ECLAI
+            </a>
         {% endif %}
     </div>
 
     <!-- Right: Actions -->
     <div class="flex items-center gap-6 text-sm font-medium">
-        <!-- HOME LINK -->
+        <!-- Back Button -->
+        <button onclick="history.back()" class="text-gray-400 hover:text-white transition-colors flex items-center gap-2 group" title="Volver">
+            <span class="group-hover:-translate-x-1 transition-transform">⬅️</span>
+            <span class="hidden md:inline">Atrás</span>
+        </button>
+
+        <!-- Common Links -->
         <a href="{% url 'home' %}" class="text-gray-400 hover:text-white transition-colors flex items-center gap-2">
             <span>🏠</span>
             <span class="hidden md:inline">Inicio</span>
         </a>
 
-        {% if user.is_superuser %}
-            <a href="{% url 'my_team' %}" class="text-gray-400 hover:text-yellow-400 transition-colors flex items-center gap-2">
-                <span>👥</span> 
-                <span class="hidden md:inline">Jerarquía</span>
-            </a>
 
-            <a href="{% url 'dashboard' %}" class="text-gray-400 hover:text-purple-400 transition-colors flex items-center gap-2">
-                <span>🛠️</span> 
-                <span class="hidden md:inline">Panel Global</span>
-            </a>
-        
-        {% elif user.profile.rank == 'ADMIN' %}
-             <a href="{% url 'my_team' %}" class="text-gray-400 hover:text-emerald-400 transition-colors flex items-center gap-2">
-                <span>👥</span> 
-                <span class="hidden md:inline">Mi Equipo</span>
-            </a>
+
+        {% if user.is_authenticated %}
+            <!-- DASHBOARD / INBOX (Staff Only) -->
+            {% if user.is_superuser or user.profile.rank == 'ADMIN' or user.profile.rank == 'SUBADMIN' %}
+                <div class="relative group" x-data="{ open: false }">
+                    <a href="{% url 'dashboard' %}" 
+                       @mouseenter="open = true"
+                       class="text-gray-400 hover:text-purple-400 transition-colors flex items-center gap-2 py-2" title="Buzón de Propuestas">
+                        <span>📬</span><span class="hidden md:inline">Buzón</span>
+                        {% if user.is_superuser or user.profile.rank == 'ADMIN' %}
+                        <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        {% endif %}
+                    </a>
+                    
+                    {% if global_buzones %}
+                        {% if user.is_superuser or user.profile.rank == 'ADMIN' %}
+                        <div x-show="open" 
+                             @mouseleave="open = false"
+                             x-transition:enter="transition ease-out duration-200"
+                             x-transition:enter-start="opacity-0 translate-y-2"
+                             x-transition:enter-end="opacity-100 translate-y-0"
+                             class="absolute top-full left-0 w-56 bg-[#0f111a] border border-white/10 rounded-lg shadow-2xl z-50 overflow-hidden py-2"
+                             style="display: none;">
+                            
+                            <div class="px-3 py-1.5 text-[10px] text-gray-500 font-bold uppercase tracking-wider border-b border-white/5 mb-1">
+                                Buzones por Autor
+                            </div>
+                            
+                            <a href="{% url 'dashboard' %}" class="flex items-center justify-between px-4 py-2 text-xs text-gray-300 hover:bg-purple-900/30 hover:text-white transition-colors">
+                                <span class="font-bold">📋 Ver Global</span>
+                            </a>
+
+                            <div class="max-h-64 overflow-y-auto custom-scrollbar">
+                                {% for b_user in global_buzones %}
+                                <a href="{% url 'dashboard' %}?author={{ b_user.id }}" class="flex items-center justify-between px-4 py-2 text-xs text-gray-400 hover:bg-white/5 hover:text-purple-400 transition-colors">
+                                    <span class="truncate">{{ b_user.username }}</span>
+                                    {% if b_user.pending_count %}
+                                        <span class="bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded-full text-[10px] font-bold">
+                                            {{ b_user.pending_count }}
+                                        </span>
+                                    {% endif %}
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            {% if user.is_superuser %}
+                <a href="{% url 'my_team' %}" class="text-gray-400 hover:text-yellow-400 transition-colors flex items-center gap-2">
+                    <span></span><span class="hidden md:inline">Jerarquía</span>
+                </a>
+            {% elif user.profile.rank == 'ADMIN' %}
+                 <a href="{% url 'my_team' %}" class="text-gray-400 hover:text-emerald-400 transition-colors flex items-center gap-2">
+                    <span>👥</span><span class="hidden md:inline">Mi Equipo</span>
+                </a>
+            {% elif user.profile.rank == 'SUBADMIN' %}
+                <a href="{% url 'my_team' %}" class="text-gray-400 hover:text-blue-400 transition-colors flex items-center gap-2">
+                    <span>🛡️</span><span class="hidden md:inline">Sala de Trabajo</span>
+                </a>
+            {% endif %}
+
+            <!-- COMMON LINKS (For all logged in) -->
             <a href="{% url 'my_work' %}" class="text-gray-400 hover:text-emerald-400 transition-colors flex items-center gap-2">
-                <span>🏰</span> 
-                <span class="hidden md:inline">Mis Mundos</span>
+                <span>🏰</span><span class="hidden md:inline">Mis Mundos</span>
             </a>
 
-        {% elif user.profile.rank == 'SUBADMIN' %}
-            <a href="{% url 'my_work' %}" class="text-gray-400 hover:text-blue-400 transition-colors flex items-center gap-2">
-                <span>🛡️</span> 
-                <span class="hidden md:inline">Sala de Trabajo</span>
+            <!-- Logout -->
+            <form action="{% url 'logout' %}" method="post" class="inline flex border-l border-gray-700 pl-4">
+                {% csrf_token %}
+                <button type="submit" class="text-red-400 hover:text-red-300 transition text-sm flex items-center gap-2 hover:bg-white/5 px-2 py-1 rounded" title="Cerrar Sesión">
+                    <span>⏻</span>
+                </button>
+            </form>
+        {% else %}
+            <!-- Login Button -->
+            <a href="{% url 'login' %}" class="bg-accent hover:bg-accent-hover text-white text-xs font-bold px-5 py-2 rounded-full transition shadow-lg flex items-center gap-2 group">
+                <span>🔑</span>
+                <span class="group-hover:tracking-wider transition-all duration-300">LOGIN</span>
             </a>
         {% endif %}
     </div>
 </div>
-{% endif %}

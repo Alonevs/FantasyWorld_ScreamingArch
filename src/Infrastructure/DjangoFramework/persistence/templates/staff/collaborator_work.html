@@ -6,15 +6,19 @@
     
     <!-- HEADER -->
     <div class="flex items-center gap-4 mb-8">
+        {% if target_user != user %}
         <a href="{% url 'my_team' %}" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors text-xl">
             ⬅
         </a>
+        {% endif %}
         <div>
             <h2 class="text-3xl font-extrabold text-white">
                 {% if target_user == user %}
                     Mi Espacio de <span class="text-emerald-400">Trabajo</span>
+                {% elif target_user.profile in user.profile.bosses.all %}
+                    Viendo perfil de <span class="text-amber-400">Jefe</span>: {{ target_user.username }}
                 {% else %}
-                    Supervisando a <span class="text-blue-400">{{ target_user.context_username|default:target_user.username }}</span>
+                    Supervisando a <span class="text-blue-400">{{ target_user.username }}</span>
                 {% endif %}
             </h2>
             <div class="flex items-center gap-3 mt-1">
@@ -24,7 +28,13 @@
                     </span>
                 </p>
                 <!-- MANAGE LINK -->
-                {% if target_user != user %}
+                {% if target_user == user %}
+                <a href="{% url 'dashboard' %}" class="text-xs bg-purple-900/30 hover:bg-purple-600 border border-purple-900/50 text-purple-300 hover:text-white px-3 py-1 rounded-full transition flex items-center gap-1 group">
+                    <span>🎛️ Panel de Control</span>
+                    <span class="opacity-50 group-hover:opacity-100">→</span>
+                </a>
+                {% endif %}
+                {% if target_user != user and not target_user.profile in user.profile.bosses.all %}
                 <a href="{% url 'dashboard' %}?author={{ target_user.id }}" class="text-xs bg-blue-900/30 hover:bg-blue-600 border border-blue-900/50 text-blue-300 hover:text-white px-3 py-1 rounded-full transition flex items-center gap-1 group">
                     <span>🎛️ Gestionar Propuestas</span>
                     <span class="opacity-50 group-hover:opacity-100">→</span>

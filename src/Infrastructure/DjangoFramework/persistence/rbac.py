@@ -52,7 +52,7 @@ def requires_role(role_name):
                 messages.error(request, f"⛔ Acceso Denegado. Requiere rango {role_name}.")
                 # If user is Explorer, maybe redirect home?
                 if request.user.is_authenticated:
-                    return redirect('dashboard')
+                    return redirect('home')
                 return redirect('login')
                 
             return view_func(request, *args, **kwargs)

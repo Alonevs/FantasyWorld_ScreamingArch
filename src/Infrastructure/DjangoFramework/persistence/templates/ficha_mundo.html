@@ -9,35 +9,7 @@
 {% endblock %}
 
 {% block content %}
-    <!-- HEADER NAV -->
-    <div class="flex justify-between items-center mb-6 bg-gray-900/80 p-4 rounded-xl border border-gray-800 backdrop-blur-md mx-4 mt-4 max-w-[1600px] xl:mx-auto">
-        <div class="text-xl font-bold tracking-widest text-white flex items-center gap-3">
-            ECLAI 
-            <span class="text-xs text-gray-300 bg-gray-900/50 px-3 py-1.5 rounded-full border border-gray-700 flex items-center gap-3 shadow-inner">
-                {% if user.is_authenticated %}
-                     <span class="{{ role_badge_class }} px-1.5 py-0.5 rounded font-bold tracking-wider shadow-sm flex items-center gap-1 text-[10px]">
-                        <span>{{ role_icon }}</span>
-                        <span>{{ role_label }}</span>
-                    </span>
-                    
-                    <span class="font-bold tracking-wide">{{ user.username|upper }}</span>
-                    
-                    <form action="{% url 'logout' %}" method="post" class="inline flex items-center border-l border-gray-600 pl-2">
-                        {% csrf_token %}
-                        <button type="submit" class="text-red-400 hover:text-red-300 transition hover:scale-110" title="Cerrar Sesión">⏻</button>
-                    </form>
-                {% else %}
-                    <a href="{% url 'login' %}" class="hover:text-white transition flex items-center gap-2">
-                        <span class="text-gray-500">👻</span> ANÓNIMO <span class="text-[10px] bg-accent/20 text-accent px-1 rounded border border-accent/30">LOGIN</span>
-                    </a>
-                {% endif %}
-            </span>
-        </div>
-        <div class="flex gap-2">
-            <button onclick="history.back()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm border border-gray-700 transition">⬅️ Atrás</button>
-            <a href="{% url 'home' %}" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm border border-gray-700 transition">🏠 Inicio</a>
-        </div>
-    </div>
+    <div class="mt-4"></div>
 
     <!-- MAIN GRID -->
     <div class="bg-card border border-gray-800 rounded-2xl max-w-[1600px] mx-4 xl:mx-auto overflow-hidden shadow-2xl grid grid-cols-1 lg:grid-cols-4 mb-10">

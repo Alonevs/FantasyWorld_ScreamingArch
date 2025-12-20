@@ -13,13 +13,11 @@
 
 {% block content %}
     <div class="container mx-auto px-4 md:px-8 max-w-[1400px]">
-        <!-- TOP BAR -->
-        <div class="flex justify-between items-center mb-6 bg-gray-900/80 p-4 rounded-xl border border-gray-800 backdrop-blur-md">
-            <div class="text-xl font-bold tracking-widest text-white">BIBLIOTECA</div>
-            <div class="flex gap-2">
-                <a href="{% url 'ver_mundo' world.id %}" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm border border-gray-700 transition">⬅ Volver al Mundo</a>
-                <a href="{% url 'home' %}" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm border border-gray-700 transition">🏠 Inicio</a>
-            </div>
+        <!-- TITLE SECTION -->
+        <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <h1 class="text-4xl font-extrabold tracking-tight text-white flex items-center gap-3">
+                <span class="text-accent underline decoration-accent/30 underline-offset-8 decoration-2">BIBLIOTECA</span>
+            </h1>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">

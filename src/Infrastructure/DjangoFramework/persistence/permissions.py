@@ -17,7 +17,7 @@ def check_ownership(user, obj):
     # Check Rank 100 via logic
     try:
         # Global Access for High Ranks
-        if user.profile.rank in ['SUPERADMIN', 'ADMIN', 'SUBADMIN']: return True
+        if user.profile.rank == 'SUPERADMIN': return True
     except: pass
         
     # 2. AUTHORSHIP
@@ -43,7 +43,6 @@ def check_ownership(user, obj):
                 # "Admin (Pepe)... Own Worlds + Team".
                 # If Pepe is Boss, and Owner is Minion.
                 # Minion is in Pepe.collaborators.
-                # So if owner.profile in user.profile.collaborators.all() -> YES.
                 if hasattr(user, 'profile') and user.profile.rank == 'ADMIN':
                     if owner.profile in user.profile.collaborators.all():
                         return True

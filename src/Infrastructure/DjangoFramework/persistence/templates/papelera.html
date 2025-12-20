@@ -3,15 +3,12 @@
 {% block title %}Papelera de Reciclaje | ECLAI{% endblock %}
 
 {% block content %}
-    <!-- HEADER -->
-    <div class="flex justify-between items-center mb-6 bg-gray-900/80 p-4 rounded-xl border border-gray-800 backdrop-blur-md max-w-7xl mx-auto">
-        <div class="text-xl font-bold tracking-widest text-white flex items-center gap-2">
-            <span>🗑️ PAPELERA</span>
-            <span class="text-xs text-red-400 bg-red-900/20 px-2 py-1 rounded border border-red-800">Reciclaje</span>
-        </div>
-        <div class="flex gap-2">
-            <a href="{% url 'dashboard' %}" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm border border-gray-700 transition">⬅ Volver al Dashboard</a>
-        </div>
+    <!-- PAGE TITLE -->
+    <div class="max-w-7xl mx-auto px-4 mb-8">
+        <h1 class="text-4xl font-extrabold text-white tracking-tight flex items-center gap-4">
+            <span>🗑️ <span class="text-red-500">PAPELERA</span></span>
+            <span class="text-xs font-mono uppercase tracking-widest bg-red-900/50 text-red-100 px-3 py-1 rounded-full border border-red-500/30">Reciclaje</span>
+        </h1>
     </div>
 
     <div class="max-w-7xl mx-auto pb-24">

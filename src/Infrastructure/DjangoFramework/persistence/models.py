@@ -198,7 +198,7 @@ class UserProfile(models.Model):
     RANK_CHOICES = [
         ('ADMIN', 'Admin'),
         ('SUBADMIN', 'Subadmin'),
-        ('USER', 'User')
+        ('USER', 'Explorador')
     ]
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     rank = models.CharField(max_length=20, choices=RANK_CHOICES, default='USER')

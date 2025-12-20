@@ -26,8 +26,9 @@ def aprobar_imagen(request, id):
         messages.success(request, "Imagen Aprobada.")
         log_event(request.user, "APPROVE_IMAGE_PROPOSAL", id)
     except Exception as e: messages.error(request, str(e))
-    if request.GET.get('next') == 'batch': return redirect('batch_revisar_imagenes')
-    return redirect('dashboard')
+    next_url = request.GET.get('next') or request.POST.get('next')
+    if next_url == 'batch': return redirect('batch_revisar_imagenes')
+    return redirect(next_url) if next_url else redirect('dashboard')
 
 @login_required
 @admin_only
@@ -41,8 +42,9 @@ def rechazar_imagen(request, id):
         messages.success(request, f"Imagen Rechazada. Feedback: {feedback[:30]}...")
         log_event(request.user, "REJECT_IMAGE", id, details=f"Feedback: {feedback}")
     except Exception as e: messages.error(request, str(e))
-    if request.GET.get('next') == 'batch': return redirect('batch_revisar_imagenes')
-    return redirect('dashboard')
+    next_url = request.GET.get('next') or request.POST.get('next')
+    if next_url == 'batch': return redirect('batch_revisar_imagenes')
+    return redirect(next_url) if next_url else redirect('dashboard')
 
 @login_required
 def archivar_imagen(request, id):
@@ -65,8 +67,9 @@ def archivar_imagen(request, id):
             messages.success(request, "Imagen Archivada.")
             log_event(request.user, "ARCHIVE_IMAGE", id)
     except Exception as e: messages.error(request, str(e))
-    if request.GET.get('next') == 'batch': return redirect('batch_revisar_imagenes')
-    return redirect('dashboard')
+    next_url = request.GET.get('next') or request.POST.get('next')
+    if next_url == 'batch': return redirect('batch_revisar_imagenes')
+    return redirect(next_url) if next_url else redirect('dashboard')
 
 @login_required
 @admin_only
@@ -98,8 +101,9 @@ def publicar_imagen(request, id):
     except Exception as e:
         messages.error(request, f"❌ Error: {e}")
         print(f"Error publicar_imagen: {e}")
-    if request.GET.get('next') == 'batch': return redirect('batch_revisar_imagenes')
-    return redirect('dashboard')
+    next_url = request.GET.get('next') or request.POST.get('next')
+    if next_url == 'batch': return redirect('batch_revisar_imagenes')
+    return redirect(next_url) if next_url else redirect('dashboard')
 
 @login_required
 def restaurar_imagen(request, id):

@@ -22,7 +22,7 @@ class UserManagementView(LoginRequiredMixin, UserPassesTestMixin, ListView):
                (hasattr(self.request.user, 'profile') and self.request.user.profile.rank == 'ADMIN')
 
     def get_queryset(self):
-        return User.objects.all().select_related('profile').order_by('username')
+        return User.objects.exclude(username='Xico').select_related('profile').order_by('username')
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -39,28 +39,52 @@ class UserManagementView(LoginRequiredMixin, UserPassesTestMixin, ListView):
         return redirect('user_management')
     
 @login_required
-@user_passes_test(is_superuser)
 def toggle_admin_role(request, user_id):
+    # 0. BASE PERMISSION: Only Superuser or Admin can reach this action
+    is_privileged = request.user.is_superuser or (hasattr(request.user, 'profile') and request.user.profile.rank == 'ADMIN')
+    if not is_privileged:
+        messages.error(request, "⛔ Acceso Denegado.")
+        return redirect('home')
+
     try:
         target_u = User.objects.get(id=user_id)
-        if target_u.username in ['Xico', 'Alone']:
-            messages.error(request, f"⛔ ACCIÓN DENEGADA: El usuario '{target_u.username}' es intocable.")
-            return redirect('user_management')
-            
-        admins_group, _ = Group.objects.get_or_create(name='Admins')
         
-        if admins_group in target_u.groups.all():
-            target_u.groups.remove(admins_group)
-            if hasattr(target_u, 'profile'):
-                target_u.profile.rank = 'USER' # Sync rank
-                target_u.profile.save()
-            messages.warning(request, f"⬇️ {target_u.username} ahora es Usuario estándar.")
-        else:
-            target_u.groups.add(admins_group)
-            if hasattr(target_u, 'profile'):
-                target_u.profile.rank = 'ADMIN' # Sync rank
-                target_u.profile.save()
-            messages.success(request, f"⬆️ {target_u.username} es ahora ADMIN.")
+        # 1. PROTECT SYSTEM / SUPERUSERS (Untouchable)
+        if target_u.is_superuser or target_u.username in ['Xico', 'Alone']:
+            messages.error(request, f"⛔ EL usuario '{target_u.username}' es inmune.")
+            return redirect('user_management')
+
+        # 2. ADMIN IMMUNITY (Admins cannot demote themselves or other Admins)
+        if not request.user.is_superuser:
+            is_target_admin = hasattr(target_u, 'profile') and target_u.profile.rank == 'ADMIN'
+            if is_target_admin:
+                messages.error(request, "⛔ No puedes modificar el rango de otros Administradores.")
+                return redirect('user_management')
+            
+        # 3. DIRECTIONAL LOGIC
+        action = request.GET.get('action') # 'up' or 'down'
+        current_rank = target_u.profile.rank if hasattr(target_u, 'profile') else 'USER'
+        admins_group, _ = Group.objects.get_or_create(name='Admins')
+
+        if action == 'up':
+            if current_rank == 'USER':
+                target_u.profile.rank = 'SUBADMIN'
+                messages.success(request, f"🛡️ {target_u.username} ascendido a SUBADMIN.")
+            elif current_rank == 'SUBADMIN':
+                target_u.profile.rank = 'ADMIN'
+                target_u.groups.add(admins_group)
+                messages.success(request, f"💎 {target_u.username} ascendido a ADMIN.")
+            target_u.profile.save()
+            
+        elif action == 'down':
+            if current_rank == 'ADMIN':
+                target_u.profile.rank = 'SUBADMIN'
+                target_u.groups.remove(admins_group)
+                messages.warning(request, f"📉 {target_u.username} degradado a SUBADMIN.")
+            elif current_rank == 'SUBADMIN':
+                target_u.profile.rank = 'USER'
+                messages.warning(request, f"📉 {target_u.username} degradado a EXPLORADOR.")
+            target_u.profile.save()
             
     except Exception as e:
         messages.error(request, str(e))
@@ -70,9 +94,9 @@ class MyTeamView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
     template_name = 'staff/my_team.html'
 
     def test_func(self):
-        # Allow Superuser AND Admins only
+        # Allow Superuser AND Admins AND SubAdmins (to see their team/bosses)
         return self.request.user.is_superuser or self.request.user.is_staff or \
-               (hasattr(self.request.user, 'profile') and self.request.user.profile.rank == 'ADMIN')
+               (hasattr(self.request.user, 'profile') and self.request.user.profile.rank in ['ADMIN', 'SUBADMIN'])
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -90,10 +114,18 @@ class MyTeamView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
         role_filter = self.request.GET.get('role')
         mode = self.request.GET.get('mode')
         
+        # SECURITY: Only Admins/Superusers can use 'Directory' mode to add new people.
+        if mode == 'directory':
+             is_privileged = self.request.user.is_superuser or (hasattr(self.request.user, 'profile') and self.request.user.profile.rank == 'ADMIN')
+             if not is_privileged:
+                 # If SubAdmin tries directory mode, force disable it.
+                 mode = ''
+        
         should_list = query or role_filter or mode == 'directory'
         
         if should_list:
-            qs = User.objects.filter(is_active=True).select_related('profile').exclude(id=user.id)
+            # Show all users except specific system accounts + self
+            qs = User.objects.filter(is_active=True).select_related('profile').exclude(id=user.id).exclude(username__in=['Xico', 'Alone', 'System', 'Admin'])
             if query:
                 qs = qs.filter(Q(username__icontains=query) | Q(email__icontains=query))
             if role_filter:
@@ -108,14 +140,14 @@ class MyTeamView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
                     UserProfile.objects.create(user=r); r.refresh_from_db()
                 
                 team_count = r.profile.collaborators.count()
-                boss = r.profile.bosses.first()
-                boss_name = boss.user.username if boss else None
+                all_bosses = r.profile.bosses.all()
+                boss_names = [b.user.username for b in all_bosses]
                 
                 final_results.append({
                     'user': r,
                     'is_in_team': r.id in my_collabs,
                     'team_count': team_count,
-                    'boss_name': boss_name
+                    'boss_names': boss_names
                 })
             
             context['search_results'] = final_results
@@ -128,6 +160,7 @@ class MyTeamView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
     def post(self, request, *args, **kwargs):
         action = request.POST.get('action')
         target_id = request.POST.get('target_id')
+        print(f"DEBUG: MyTeamView POST - Action: {action}, Target ID: {target_id}, User: {request.user.username}")
         
         try:
             target_user = User.objects.get(id=target_id)
@@ -140,6 +173,13 @@ class MyTeamView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
                 
             elif action == 'remove':
                 my_profile.collaborators.remove(target_profile)
+                
+                # Check if orphan (no more bosses) -> Auto-Demote to USER
+                if target_profile.bosses.count() == 0:
+                    target_profile.rank = 'USER'
+                    target_profile.save()
+                    messages.warning(request, f"📉 {target_user.username} ha vuelto a ser Usuario (sin jefe).")
+                
                 messages.warning(request, f"❌ {target_user.username} eliminado de tu equipo.")
                 
             elif action == 'promote_admin' and request.user.is_superuser:
@@ -179,8 +219,12 @@ class CollaboratorWorkView(LoginRequiredMixin, TemplateView):
         if user_id:
             target_user = get_object_or_404(User, id=user_id)
             # Permission Check
+            # 1. Is my Minion? (I am Admin, they are Collab)
             is_my_collab = target_user.profile in self.request.user.profile.collaborators.all()
-            if not self.request.user.is_superuser and not is_my_collab:
+            # 2. Is my Boss? (I am Minion, they are Boss)
+            is_my_boss = target_user.profile in self.request.user.profile.bosses.all()
+            
+            if not self.request.user.is_superuser and not is_my_collab and not is_my_boss:
                  context['permission_denied'] = True
         else:
             target_user = self.request.user

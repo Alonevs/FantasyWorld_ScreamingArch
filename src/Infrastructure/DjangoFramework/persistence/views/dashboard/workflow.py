@@ -36,9 +36,11 @@ def dashboard(request):
     # =========================================================================
     # JURISDICTION & ACCESS CONTROL
     # =========================================================================
-    user = request.user
-    allowed_authors = User.objects.all() # Trusted Mode
-
+    # =========================================================================
+    # BASE QUERYSETS & VISIBILITY SCOPE
+    # =========================================================================
+    allowed_authors = []
+    
     # =========================================================================
     # GET PARAMETERS (FILTERS)
     # =========================================================================
@@ -46,32 +48,33 @@ def dashboard(request):
     filter_type = request.GET.get('type')
     search_query = request.GET.get('q')
 
-    # =========================================================================
-    # BASE QUERYSETS
-    # =========================================================================
-    if request.user.is_superuser:
+    is_global_admin = request.user.is_superuser or (hasattr(request.user, 'profile') and request.user.profile.rank == 'SUPERADMIN')
+
+    if is_global_admin:
         w_qs = CaosVersionORM.objects.all().select_related('world', 'author')
         n_qs = CaosNarrativeVersionORM.objects.all().select_related('narrative__world', 'author')
         i_qs = CaosImageProposalORM.objects.all().select_related('world', 'author')
+        allowed_authors = User.objects.filter(is_active=True).order_by('username')
     else:
         # Hierarchy Filter:
-        # 1. Myself
-        # 2. My Subordinates (If I am Admin) -> To review their work
-        # 3. My Bosses (If I am Subadmin) -> For collaborative work
+        # 1. Myself (Always)
+        # 2. My Subordinates (If I am Admin) -> To review their work.
+        # SubAdmins do NOT see Boss's proposals (Hierarchy flows UP).
         visible_ids = [request.user.id]
         if hasattr(request.user, 'profile'):
-            # Subordinates
+            # Only add Collaborators (Minions)
+            # If I am SubAdmin, my 'collaborators' list is empty, so I only see myself.
             collab_ids = list(request.user.profile.collaborators.values_list('user__id', flat=True))
-            # Bosses
-            boss_ids = list(request.user.profile.bosses.values_list('user__id', flat=True))
             visible_ids.extend(collab_ids)
-            visible_ids.extend(boss_ids)
             
         q_filter = Q(author_id__in=visible_ids)
         
         w_qs = CaosVersionORM.objects.filter(q_filter).select_related('world', 'author')
         i_qs = CaosImageProposalORM.objects.filter(q_filter).select_related('world', 'author')
         n_qs = CaosNarrativeVersionORM.objects.filter(q_filter).select_related('narrative__world', 'author')
+        
+        # Restrict Filter Dropdown to only visible people
+        allowed_authors = User.objects.filter(id__in=visible_ids).order_by('username')
 
     # =========================================================================
     # DYNAMIC FILTERS
@@ -177,6 +180,14 @@ def dashboard(request):
     grouped_rejected = group_items_by_author(rejected)
     grouped_archived = group_items_by_author(archived)
     
+    # --- ENHANCE AVAILABLE AUTHORS WITH COUNTS ---
+    # We do this for the dropdown to show who has pending stuff.
+    for author in allowed_authors:
+        w_p = CaosVersionORM.objects.filter(author_id=author.id, status='PENDING').count()
+        n_p = CaosNarrativeVersionORM.objects.filter(author_id=author.id, status='PENDING').count()
+        i_p = CaosImageProposalORM.objects.filter(author_id=author.id, status='PENDING').count()
+        author.pending_count = w_p + n_p + i_p
+
     kpis = calculate_kpis(pending, logs_base)
 
     context = {
@@ -319,8 +330,9 @@ def borrar_propuestas_masivo(request):
             for id in n_ids: execute_use_case_action(request, RejectNarrativeVersionUseCase, id, "", "")
             CaosImageProposalORM.objects.filter(id__in=i_ids).update(status='REJECTED')
             messages.success(request, f"✕ {count} Elementos rechazados.")
-
-    return redirect('dashboard')
+ 
+    next_url = request.GET.get('next') or request.POST.get('next')
+    return redirect(next_url) if next_url else redirect('dashboard')
 
 @login_required
 def aprobar_propuestas_masivo(request):
@@ -332,7 +344,8 @@ def aprobar_propuestas_masivo(request):
         for id in n_ids: execute_use_case_action(request, ApproveNarrativeVersionUseCase, id, "", "")
         
         messages.success(request, f"✅ {len(w_ids)+len(n_ids)} Propuestas aprobadas.")
-    return redirect('dashboard')
+    next_url = request.GET.get('next') or request.POST.get('next')
+    return redirect(next_url) if next_url else redirect('dashboard')
 
 @login_required
 def archivar_propuestas_masivo(request): 
@@ -353,10 +366,11 @@ def archivar_propuestas_masivo(request):
             count += 1
             
         if count > 0:
-            messages.success(request, f"📦 {count} Propuestas archivadas correctamente.")
+            messages.success(request, f"Box {count} Propuestas archivadas correctamente.")
             log_event(request.user, "BULK_ARCHIVE", f"Archivadas {count} propuestas mixtas.")
             
-    return redirect('dashboard')
+    next_url = request.GET.get('next') or request.POST.get('next')
+    return redirect(next_url) if next_url else redirect('dashboard')
 
 @login_required
 def publicar_propuestas_masivo(request): 
@@ -388,7 +402,8 @@ def publicar_propuestas_masivo(request):
             messages.success(request, f"🚀 {count} Propuestas ejecutadas correctamente (Publicadas/Borradas).")
             log_event(request.user, "BULK_PUBLISH", f"Publicadas {count} propuestas mixtas.")
             
-    return redirect('dashboard')
+    next_url = request.GET.get('next') or request.POST.get('next')
+    return redirect(next_url) if next_url else redirect('dashboard')
 
 # --- TEXT PROPOSAL CONTRIBUTIONS ---
 

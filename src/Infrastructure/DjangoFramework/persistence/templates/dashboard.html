@@ -10,56 +10,7 @@
         <form id="bulk-delete-form" method="POST" action="{% url 'borrar_propuestas_masivo' %}">
             {% csrf_token %}
             
-            <!-- FILTER BAR (UNIFIED CONTROL CENTER) -->
-            <div class="mb-8 bg-gray-900/50 p-4 rounded-xl border border-white/5 backdrop-blur-sm flex flex-col md:flex-row gap-4 items-center justify-between">
-                <div class="flex items-center gap-2 w-full md:w-auto">
-                    <span class="text-2xl">🎛️</span>
-                    <h2 class="text-lg font-bold text-white">Centro de Control</h2>
-                </div>
 
-                <div class="flex flex-col md:flex-row gap-3 w-full md:w-auto">
-                    <!-- 1. SEARCH -->
-                    <div class="relative group">
-                        <span class="absolute left-3 top-2.5 text-gray-500 group-focus-within:text-blue-400">🔍</span>
-                        <input type="text" name="q" value="{{ search_query|default:'' }}" 
-                               form="filter-form"
-                               placeholder="Buscar por nombre..." 
-                               class="bg-black/40 border border-white/10 rounded-lg py-2 pl-9 pr-4 text-sm text-white w-full md:w-64 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all">
-                    </div>
-
-                    <!-- 2. FILTER BY USER (Jurisdiction) -->
-                    <select name="author" form="filter-form" class="bg-black/40 border border-white/10 rounded-lg py-2 px-3 text-sm text-gray-300 focus:border-blue-500 outline-none cursor-pointer hover:bg-white/5 transition-colors [&>option]:bg-gray-900 [&>option]:text-gray-300">
-                        <option value="">👤 Todos los Autores</option>
-                        {% for user in available_authors %}
-                            <option value="{{ user.id }}" {% if current_author == user.id %}selected{% endif %}>
-                                {{ user.username }} {% if user == request.user %}(Tú){% endif %}
-                            </option>
-                        {% endfor %}
-                    </select>
-
-                    <!-- 3. FILTER BY TYPE -->
-                    <select name="type" form="filter-form" class="bg-black/40 border border-white/10 rounded-lg py-2 px-3 text-sm text-gray-300 focus:border-blue-500 outline-none cursor-pointer hover:bg-white/5 transition-colors [&>option]:bg-gray-900 [&>option]:text-gray-300">
-                        <option value="">📂 Todo el Contenido</option>
-                        <option value="WORLD" {% if current_type == 'WORLD' %}selected{% endif %}>🌍 Mundos</option>
-                        <option value="NARRATIVE" {% if current_type == 'NARRATIVE' %}selected{% endif %}>📖 Narrativas</option>
-                        <option value="IMAGE" {% if current_type == 'IMAGE' %}selected{% endif %}>🖼️ Imágenes</option>
-                    </select>
-
-                    <!-- SUBMIT -->
-                    <button type="submit" form="filter-form" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition shadow-lg">
-                        Filtrar
-                    </button>
-                    
-                    {% if search_query or current_author or current_type %}
-                    <a href="{% url 'dashboard' %}" class="bg-red-900/40 hover:bg-red-900/60 text-red-300 py-2 px-3 rounded-lg text-sm transition border border-red-800/50 flex items-center justify-center">
-                        ✕
-                    </a>
-                    {% endif %}
-                </div>
-            </div>
-            
-            <!-- Hidden Form for GET Filters -->
-            <form id="filter-form" method="GET" action="{% url 'dashboard' %}"></form>
 
 
 
@@ -75,7 +26,15 @@
 
                 <h2 class="text-2xl font-bold text-white mb-6 flex justify-between items-center">
                     <div class="flex items-center gap-3">
-                        <span>📬 Propuestas Pendientes</span>
+                        {% if current_author %}
+                            {% for u in available_authors %}
+                                {% if u.id == current_author %}
+                                    <span>📬 Buzón de <span class="text-blue-400">{{ u.username }}</span></span>
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <span>📬 Propuestas Pendientes (Global)</span>
+                        {% endif %}
                         <span class="text-xs bg-blue-900/50 text-blue-300 px-3 py-1 rounded-full border border-blue-800">{{ total_pending_count }}</span>
                     </div>
 
@@ -124,20 +83,17 @@
                             <!-- TOP: AUTHOR HEADER (HORIZONTAL) -->
                             <div @click="expanded = !expanded" class="w-full bg-gray-900/80 p-3 flex items-center justify-between border-b border-gray-800 cursor-pointer hover:bg-gray-800/80 transition-colors select-none">
                                 <div class="flex items-center gap-3">
-                                    <div class="relative">
-                                        <div class="w-10 h-10 rounded-full bg-indigo-900 flex items-center justify-center text-sm text-white font-bold shadow-lg ring-2 ring-indigo-500/30">
-                                            {% if group.author %}{{ group.author.username|slice:":1"|upper }}{% else %}?{% endif %}
-                                        </div>
-                                        <span class="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[10px] text-white font-mono border border-gray-900">
-                                            {{ group.count }}
-                                        </span>
-                                    </div>
                                     <div class="flex flex-col leading-tight">
-                                        <span class="text-blue-400 font-bold text-sm" title="{% if group.author %}{{ group.author.username }}{% else %}Sistema{% endif %}">
-                                            {% if group.author %}{{ group.author.username }}{% else %}Sistema{% endif %}
-                                        </span>
-                                        <span class="text-xs text-gray-500 font-mono">
-                                            {{ group.proposals|length }} propuestas pendientes
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-blue-400 font-bold text-sm" title="{% if group.author %}{{ group.author.username }}{% else %}Sistema{% endif %}">
+                                                {% if group.author %}{{ group.author.username }}{% else %}Sistema{% endif %}
+                                            </span>
+                                            <span class="bg-blue-600/20 text-blue-400 text-[10px] px-1.5 py-0.5 rounded border border-blue-500/30 font-mono">
+                                                {{ group.count }}
+                                            </span>
+                                        </div>
+                                        <span class="text-[10px] text-gray-500 font-mono mt-0.5">
+                                            propuestas pendientes
                                         </span>
                                     </div>
                                 </div>
@@ -196,7 +152,7 @@
                                             <!-- DELETE LOGIC: Green=Keep (Reject Proposal), Red=Delete (Approve Proposal) -->
                                             
                                             <!-- Green: MANTENER (Reject deletion) -->
-                                            <form method="post" action="{% if item.type == 'WORLD' %}{% url 'archivar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'archivar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'archivar_imagen' item.id %}{% endif %}">
+                                            <form method="post" action="{% if item.type == 'WORLD' %}{% url 'archivar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'archivar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'archivar_imagen' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
                                                 {% csrf_token %}
                                                 <input type="hidden" name="admin_feedback" value="">
                                                 <button type="button" 
@@ -207,7 +163,7 @@
                                             </form>
                                             
                                             <!-- RESTORE BUTTON (Active only) -->
-                                        <form method="post" action="{% if item.type == 'WORLD' %}{% url 'aprobar_version' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'aprobar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'aprobar_imagen' item.id %}{% endif %}">
+                                        <form method="post" action="{% if item.type == 'WORLD' %}{% url 'aprobar_version' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'aprobar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'aprobar_imagen' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
                                             {% csrf_token %}
                                             <button type="submit" class="text-red-500 hover:text-white hover:bg-red-600 px-3 py-1.5 rounded text-xs font-bold transition-all border border-red-900/30 hover:border-red-500 shadow-lg shadow-red-900/10 flex items-center gap-1" title="Confirmar Borrado Definitivo" data-confirm="⚠️ ¿CONFIRMAR BORRADO? Esta acción eliminará el elemento." data-destructive="true">
                                                 <span>💀</span> Borrar
@@ -218,9 +174,8 @@
                                             <!-- STANDARD LOGIC: Green=Approve, Red=Reject -->
                                             
                                             <!-- Approve (Step 1) -->
-                                            <!-- Approve (Step 1) -->
                                             {% if request.user|can_approve:item %}
-                                            <form method="post" action="{% if item.type == 'WORLD' %}{% url 'aprobar_version' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'aprobar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'aprobar_imagen' item.id %}{% endif %}">
+                                            <form method="post" action="{% if item.type == 'WORLD' %}{% url 'aprobar_version' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'aprobar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'aprobar_imagen' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
                                                 {% csrf_token %}
                                                 <button type="submit" class="text-green-500 hover:text-white hover:bg-green-600 px-3 py-1.5 rounded text-xs font-bold transition-all border border-green-900/30 hover:border-green-500 shadow-lg shadow-green-900/10" title="Aprobar" data-confirm="¿Aprobar esta propuesta?">
                                                     Aprobar
@@ -233,10 +188,9 @@
                                                 <span>👁️</span> <span class="hidden sm:inline">Ver</span>
                                             </a>
 
-                                            <!-- Reject (New) -->
                                             <!-- Reject (With Reason) -->
                                             {% if request.user|can_approve:item %}
-                                            <form method="post" action="{% if item.type == 'WORLD' %}{% url 'rechazar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'rechazar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'rechazar_imagen' item.id %}{% endif %}">
+                                            <form method="post" action="{% if item.type == 'WORLD' %}{% url 'rechazar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'rechazar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'rechazar_imagen' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
                                                 {% csrf_token %}
                                                 <input type="hidden" name="admin_feedback" value="">
                                                 <button type="button" 
@@ -326,20 +280,17 @@
                             <!-- TOP: AUTHOR HEADER (HORIZONTAL) -->
                             <div @click="expanded = !expanded" class="w-full bg-gray-900/80 p-3 flex items-center justify-between border-b border-gray-800 cursor-pointer hover:bg-gray-800/80 transition-colors select-none">
                                 <div class="flex items-center gap-3">
-                                    <div class="relative">
-                                        <div class="w-10 h-10 rounded-full bg-indigo-900 flex items-center justify-center text-sm text-white font-bold shadow-lg ring-2 ring-indigo-500/30">
-                                            {% if group.author %}{{ group.author.username|slice:":1"|upper }}{% else %}?{% endif %}
-                                        </div>
-                                        <span class="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[10px] text-white font-mono border border-gray-900">
-                                            {{ group.count }}
-                                        </span>
-                                    </div>
                                     <div class="flex flex-col leading-tight">
-                                        <span class="text-blue-400 font-bold text-sm" title="{% if group.author %}{{ group.author.username }}{% else %}Sistema{% endif %}">
-                                            {% if group.author %}{{ group.author.username }}{% else %}Sistema{% endif %}
-                                        </span>
-                                        <span class="text-xs text-gray-500 font-mono">
-                                            {{ group.proposals|length }} aprobadas, listas para live
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-blue-400 font-bold text-sm" title="{% if group.author %}{{ group.author.username }}{% else %}Sistema{% endif %}">
+                                                {% if group.author %}{{ group.author.username }}{% else %}Sistema{% endif %}
+                                            </span>
+                                            <span class="bg-green-600/20 text-green-400 text-[10px] px-1.5 py-0.5 rounded border border-green-500/30 font-mono">
+                                                {{ group.count }}
+                                            </span>
+                                        </div>
+                                        <span class="text-[10px] text-gray-500 font-mono mt-0.5">
+                                            aprobadas, listas para live
                                         </span>
                                     </div>
                                 </div>
@@ -483,20 +434,17 @@
                             <!-- TOP: AUTHOR HEADER (HORIZONTAL) -->
                             <div @click="expanded = !expanded" class="w-full bg-gray-900/80 p-3 flex items-center justify-between border-b border-gray-800 cursor-pointer hover:bg-gray-800/80 transition-colors select-none">
                                 <div class="flex items-center gap-3">
-                                    <div class="relative">
-                                        <div class="w-10 h-10 rounded-full bg-red-900/20 flex items-center justify-center text-sm text-red-400 font-bold shadow-lg ring-1 ring-red-500/30">
-                                            {% if group.author %}{{ group.author.username|slice:":1"|upper }}{% else %}?{% endif %}
-                                        </div>
-                                        <span class="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[10px] text-white font-mono border border-gray-900">
-                                            {{ group.count }}
-                                        </span>
-                                    </div>
                                     <div class="flex flex-col leading-tight">
-                                        <span class="text-red-400 font-bold text-sm" title="{% if group.author %}{{ group.author.username }}{% else %}Sistema{% endif %}">
-                                            {% if group.author %}{{ group.author.username }}{% else %}Sistema{% endif %}
-                                        </span>
-                                        <span class="text-xs text-gray-500 font-mono">
-                                            {{ group.proposals|length }} rechazadas
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-red-400 font-bold text-sm" title="{% if group.author %}{{ group.author.username }}{% else %}Sistema{% endif %}">
+                                                {% if group.author %}{{ group.author.username }}{% else %}Sistema{% endif %}
+                                            </span>
+                                            <span class="bg-red-600/20 text-red-400 text-[10px] px-1.5 py-0.5 rounded border border-red-500/30 font-mono">
+                                                {{ group.count }}
+                                            </span>
+                                        </div>
+                                        <span class="text-[10px] text-gray-500 font-mono mt-0.5">
+                                            rechazadas
                                         </span>
                                     </div>
                                 </div>
@@ -644,17 +592,17 @@
                             <!-- HEADER -->
                             <div @click="expanded = !expanded" class="w-full bg-gray-900/60 p-3 flex items-center justify-between border-b border-gray-800 cursor-pointer hover:bg-gray-800/80 transition-colors select-none">
                                 <div class="flex items-center gap-3">
-                                    <div class="relative">
-                                        <div class="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-xs text-gray-500 font-bold">
-                                            {% if group.author %}{{ group.author.username|slice:":1"|upper }}{% else %}?{% endif %}
-                                        </div>
-                                    </div>
                                     <div class="flex flex-col leading-tight">
-                                        <span class="text-gray-400 font-bold text-sm">
-                                            {% if group.author %}{{ group.author.username }}{% else %}Sistema{% endif %}
-                                        </span>
-                                        <span class="text-[10px] text-gray-600 font-mono">
-                                            {{ group.count }} archivados
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-gray-400 font-bold text-sm">
+                                                {% if group.author %}{{ group.author.username }}{% else %}Sistema{% endif %}
+                                            </span>
+                                            <span class="bg-gray-800 text-gray-500 text-[10px] px-1.5 py-0.5 rounded border border-gray-700 font-mono">
+                                                {{ group.count }}
+                                            </span>
+                                        </div>
+                                        <span class="text-[10px] text-gray-600 font-mono mt-0.5">
+                                            archivados
                                         </span>
                                     </div>
                                 </div>
