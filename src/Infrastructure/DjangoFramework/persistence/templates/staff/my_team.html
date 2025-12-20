@@ -7,7 +7,7 @@
     <!-- HEADER -->
     <div class="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
         <div>
-            <h2 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
+            <h2 class="text-3xl font-extrabold text-transparent bg-clip-text bg-linear-to-r from-blue-400 to-purple-500">
                 {% if user.is_superuser %}Gestión de Jerarquía{% else %}Mi Equipo y Jerarquía{% endif %}
             </h2>
             <p class="text-gray-400 text-sm mt-1 mb-4">
@@ -80,8 +80,8 @@
                     <div class="bg-[#111] rounded-xl border border-white/10 overflow-hidden hover:border-blue-500/50 transition-all group flex flex-col relative">
                         <!-- Top Banner (Rank Color) -->
                         <div class="h-1 w-full 
-                            {% if item.user.profile.rank == 'ADMIN' %}bg-gradient-to-r from-amber-500 to-yellow-600
-                            {% elif item.user.profile.rank == 'SUBADMIN' %}bg-gradient-to-r from-emerald-500 to-teal-600
+                            {% if item.user.profile.rank == 'ADMIN' %}bg-linear-to-r from-amber-500 to-yellow-600
+                            {% elif item.user.profile.rank == 'SUBADMIN' %}bg-linear-to-r from-emerald-500 to-teal-600
                             {% else %}bg-gray-700{% endif %}">
                         </div>
 
@@ -167,11 +167,11 @@
             <!-- 0. SELF CARD (Always Visible) -->
             <div class="group bg-[#161616] rounded-lg p-3 border border-blue-500/40 shadow-[0_0_20px_-5px_rgba(59,130,246,0.2)] flex items-center justify-between gap-3 relative">
                 <!-- Highlight Indicator -->
-                <div class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-400 to-purple-500 rounded-l-lg"></div>
+                <div class="absolute left-0 top-0 bottom-0 w-1 bg-linear-to-b from-blue-400 to-purple-500 rounded-l-lg"></div>
 
                 <div class="flex items-center gap-3">
                     <!-- Avatar -->
-                    <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold text-white shadow-sm bg-gradient-to-br from-blue-600 to-purple-600 ring-2 ring-white/10">
+                    <div class="w-10 h-10 rounded-full shrink-0 flex items-center justify-center text-sm font-bold text-white shadow-sm bg-linear-to-br from-blue-600 to-purple-600 ring-2 ring-white/10">
                         {{ user.username|slice:":1"|upper }}
                     </div>
                     
@@ -283,7 +283,7 @@
                                                 <button class="text-xs text-gray-500 hover:text-white focus:outline-none bg-transparent w-6 h-6 flex items-center justify-center rounded hover:bg-white/10">⚙</button>
                                                 
                                                 <!-- Simplified Menu for Overflow -->
-                                                <div class="hidden group-hover/menu-ov:block absolute right-0 top-full mt-1 w-32 bg-[#222] border border-white/20 rounded shadow-xl z-[60] overflow-hidden">
+                                                <div class="hidden group-hover/menu-ov:block absolute right-0 top-full mt-1 w-32 bg-[#222] border border-white/20 rounded shadow-xl z-60 overflow-hidden">
                                                     <div class="absolute -top-4 right-0 w-6 h-4 bg-transparent"></div>
                                                     
                                                      <!-- EXPEL (Most important) -->

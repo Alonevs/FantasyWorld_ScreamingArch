@@ -1,22 +1,22 @@
-<div class="w-full h-14 bg-dark/80 backdrop-blur-md flex items-center justify-between px-6 z-[90] fixed top-0 left-0 border-b border-white/5 shadow-sm">
+<div class="w-full h-14 bg-dark/80 backdrop-blur-md flex items-center justify-between px-6 z-90 fixed top-0 left-0 border-b border-white/5 shadow-sm">
     
     <!-- Left: Brand / Rank -->
-    <div class="flex items-center gap-4">
+    <div class="flex items-center gap-6 h-full">
         {% if user.is_authenticated %}
             <!-- Badge -->
             {% if user.is_superuser or user.profile.rank == 'ADMIN' %}
-                <div class="bg-gradient-to-r from-amber-500/20 to-yellow-600/20 border border-amber-500/30 text-amber-400 px-3 py-1 rounded text-xs font-bold tracking-widest uppercase flex items-center gap-2 transition-all hover:scale-105 select-none shadow-[0_0_10px_-3px_rgba(245,158,11,0.3)]">
+                <div class="bg-linear-to-r from-amber-500/20 to-yellow-600/20 border border-amber-500/30 text-amber-400 px-3 py-1 rounded text-xs font-bold tracking-widest uppercase flex items-center gap-2 transition-all hover:scale-105 select-none shadow-[0_0_10px_-3px_rgba(245,158,11,0.3)]">
                     <span>👑</span>
                     <span>Admin</span>
                 </div>
             {% elif user.profile.rank == 'SUBADMIN' %}
-                <div class="bg-gradient-to-r from-cyan-500/20 to-blue-600/20 border border-cyan-500/30 text-cyan-400 px-3 py-1 rounded text-xs font-bold tracking-widest uppercase flex items-center gap-2 transition-all hover:scale-105 select-none shadow-[0_0_10px_-3px_rgba(6,182,212,0.3)]">
+                <div class="bg-linear-to-r from-cyan-500/20 to-blue-600/20 border border-cyan-500/30 text-cyan-400 px-3 py-1 rounded text-xs font-bold tracking-widest uppercase flex items-center gap-2 transition-all hover:scale-105 select-none shadow-[0_0_10px_-3px_rgba(6,182,212,0.3)]">
                     <span>🛡️</span>
                     <span>SubAdmin</span>
                 </div>
             {% else %}
                 <!-- USER / EXPLORADOR -->
-                <div class="bg-gradient-to-r from-gray-700/50 to-gray-600/50 border border-gray-600/30 text-gray-300 px-3 py-1 rounded text-xs font-bold tracking-widest uppercase flex items-center gap-2 transition-all hover:scale-105 select-none">
+                <div class="bg-linear-to-r from-gray-700/50 to-gray-600/50 border border-gray-600/30 text-gray-300 px-3 py-1 rounded text-xs font-bold tracking-widest uppercase flex items-center gap-2 transition-all hover:scale-105 select-none">
                     <span>🧭</span>
                     <span>Explorador</span>
                 </div>
@@ -26,17 +26,17 @@
             <div class="flex items-center gap-3 border-l border-gray-700 pl-4 ml-2">
                 {% if user.is_superuser or user.profile.rank == 'ADMIN' %}
                     <!-- ADMIN STYLE: Gold/Royal -->
-                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-500 font-bold text-sm tracking-wider drop-shadow-sm">
+                    <span class="text-transparent bg-clip-text bg-linear-to-r from-amber-200 via-yellow-400 to-amber-500 font-bold text-sm tracking-wider drop-shadow-sm">
                         {{ user.username|upper }}
                     </span>
                 {% elif user.profile.rank == 'SUBADMIN' %}
                      <!-- SUBADMIN STYLE: Tech/Blue -->
-                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-500 font-bold text-sm tracking-wide">
+                    <span class="text-transparent bg-clip-text bg-linear-to-r from-cyan-300 to-blue-500 font-bold text-sm tracking-wide">
                         {{ user.username|upper }}
                     </span>
                 {% else %}
                     <!-- USER STYLE: Standard -->
-                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-gray-200 to-gray-400 font-bold text-sm tracking-wide">
+                    <span class="text-transparent bg-clip-text bg-linear-to-r from-gray-200 to-gray-400 font-bold text-sm tracking-wide">
                         {{ user.username|upper }}
                     </span>
                 {% endif %}
@@ -46,7 +46,7 @@
                     <div class="flex items-center gap-2">
                         <span class="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Minion de:</span>
                         {% for boss in user.profile.bosses.all %}
-                            <a href="{% url 'collaborator_work' boss.user.id %}" class="px-2 py-0.5 bg-gradient-to-r from-amber-500/10 to-yellow-600/10 text-yellow-500/80 rounded text-[9px] font-bold uppercase tracking-wider border border-yellow-500/20 hover:bg-yellow-500/20 transition-colors cursor-pointer flex items-center gap-1 group/boss" title="Ver Perfil de Jefe">
+                            <a href="{% url 'collaborator_work' boss.user.id %}" class="px-2 py-0.5 bg-linear-to-r from-amber-500/10 to-yellow-600/10 text-yellow-500/80 rounded text-[9px] font-bold uppercase tracking-wider border border-yellow-500/20 hover:bg-yellow-500/20 transition-colors cursor-pointer flex items-center gap-1 group/boss" title="Ver Perfil de Jefe">
                                 <span>👑</span> 
                                 <span class="group-hover/boss:underline decoration-yellow-500/50 underline-offset-2">{{ boss.user.username }}</span>
                             </a>

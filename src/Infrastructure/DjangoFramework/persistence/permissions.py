@@ -14,11 +14,8 @@ def check_ownership(user, obj):
     # 1. GLOBAL ACCESS
     if user.is_superuser: return True
     
-    # Check Rank 100 via logic
-    try:
-        # Global Access for High Ranks
-        if user.profile.rank == 'SUPERADMIN': return True
-    except: pass
+    # Rank 'SUPERADMIN' logic removed as it's superseded by is_superuser.
+    pass
         
     # 2. AUTHORSHIP
     owner = None

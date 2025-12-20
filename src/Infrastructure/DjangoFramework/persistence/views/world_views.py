@@ -382,7 +382,6 @@ def editar_mundo(request, jid):
                 log_event(request.user, "PROPOSE_CHANGE", real_jid, f"Reason: {request.POST.get('reason')}")
             
             return redirect('ver_mundo', public_id=w.public_id if w.public_id else w.id)
-            return redirect('ver_mundo', public_id=w.public_id if w.public_id else w.id)
         except Exception as e: 
             print(f"Edit Error: {e}")
             return redirect('home')

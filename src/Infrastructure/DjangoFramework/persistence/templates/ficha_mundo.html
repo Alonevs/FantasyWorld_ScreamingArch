@@ -15,7 +15,7 @@
     <div class="bg-card border border-gray-800 rounded-2xl max-w-[1600px] mx-4 xl:mx-auto overflow-hidden shadow-2xl grid grid-cols-1 lg:grid-cols-4 mb-10">
         
         <!-- HEADER SECTION -->
-        <div class="col-span-1 lg:col-span-4 bg-gradient-to-r from-indigo-950 to-gray-900 p-6 border-b border-indigo-900 flex flex-col md:flex-row justify-between items-start gap-4 relative">
+        <div class="col-span-1 lg:col-span-4 bg-linear-to-r from-indigo-950 to-gray-900 p-6 border-b border-indigo-900 flex flex-col md:flex-row justify-between items-start gap-4 relative">
             <div>
                 <div class="flex items-center flex-wrap gap-2 text-xs text-gray-400 mb-4">
                     <a href="{% url 'home' %}" class="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded-full text-gray-300 transition border border-gray-700 hover:border-accent">🏠</a>
@@ -99,15 +99,12 @@
                     {% else %}
                         <button onclick="openEditModal()" class="p-2 bg-blue-900/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg transition border border-blue-900/50" title="Editar">
                             ✏️
-                        </button>
-                        <a href="{% url 'borrar_mundo' public_id %}" onclick="return confirm('¿Borrar mundo?')" class="p-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg transition border border-red-900/50" title="Borrar">
-                            🗑️
                         </a>
                     {% endif %}
                 </div>
 
                 {% if is_retouch_mode %}
-                    <div class="bg-purple-900/90 text-purple-100 text-xs px-3 py-1 rounded border border-purple-500 shadow-lg text-center backdrop-blur w-auto animate-pulse border-accent">
+                    <div class="bg-purple-900/90 text-purple-100 flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-bold shadow-lg transition-all duration-300 active:scale-95 text-center backdrop-blur w-auto animate-pulse border-accent">
                          <span class="font-bold">✏️ MODO RETOQUE</span>
                     </div>
                 {% endif %}
@@ -179,7 +176,7 @@
                         <img src="{% static 'persistence/img/' %}{{ img.url }}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500 opacity-90 group-hover:opacity-100">
                         
                         <!-- Metadata Overlay -->
-                        <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/80 to-transparent p-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                        <div class="absolute inset-x-0 bottom-0 bg-linear-to-t from-black via-black/80 to-transparent p-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
                             <div class="font-bold text-white truncate">{{ img.author|default:"?" }}</div>
                             <div class="text-gray-400 text-[10px]">{{ img.date|default:"-" }}</div>
                         </div>
@@ -224,7 +221,7 @@
                 
                 <div class="mt-8 pt-4 border-t border-gray-800">
                     {% if user_role >= 20 or user.is_superuser %}
-                    <button onclick="openCreateModal()" class="w-full py-3 bg-gradient-to-r from-accent to-purple-600 hover:from-accent-hover hover:to-purple-500 text-white font-bold rounded-lg shadow-lg shadow-purple-900/30 transition transform hover:scale-[1.02] flex items-center justify-center gap-2">
+                    <button onclick="openCreateModal()" class="w-full py-3 bg-linear-to-r from-accent to-purple-600 hover:from-accent-hover hover:to-purple-500 text-white font-bold rounded-lg shadow-lg shadow-purple-900/30 transition transform hover:scale-[1.02] flex items-center justify-center gap-2">
                         ✨ GENERAR ENTORNO
                     </button>
                     {% endif %}
