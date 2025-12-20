@@ -16,4 +16,5 @@
 - [ ] **Exportación**: Generar PDF o EPUB de una rama narrativa completa.
 
 ### Fase 3: Móvil
-- [ ] Optimizar experiencia de escritura en móviles.
+- [x] **Header Responsivo**: Implementado panel lateral y navegación optimizada.
+- [ ] **Escritura Móvil**: Optimizar la experiencia de edición de narrativa en pantallas táctiles.

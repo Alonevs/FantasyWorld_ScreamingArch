@@ -7,12 +7,13 @@
 **Estado:** Desarrollo Activo v5.2 / UI Premium / PostgreSQL
 
 ## 🚀 Fase Actual (v5.2)
--   **UI Overhaul**: Integración total de **Alpine.js** y **Tailwind CSS** para animaciones fluidas.
--   **Zen Slideshows**: Tarjetas de entidad con efecto "Ola Sincronizada" y modo Zen (25s).
--   **Roles & Visibilidad**:
-    -   Etiqueta **👑 SUPERADMIN** / **EXPLORER**.
-    -   Filtrado estricto de contenido Privado para usuarios no autorizados.
-    -   Botón de Logout integrado.
+-   **UI Premium & Responsive**: Header con efecto Glassmorphism, animaciones avanzadas y **Panel Lateral optimizado para móviles**.
+-   **Jerarquía de Roles (Eclai-Core)**:
+    -   **👑 Superadmin**: Control global total.
+    -   **🤝 Admin (Socio)**: Gestión de equipo y aprobación de sus propios "Minions".
+    -   **🛡️ SubAdmin**: Colaborador con permisos de edición avanzados.
+    -   **🧭 Explorador**: Usuario base con permisos de lectura y propuestas.
+-   **Seguridad y Silos**: Los Admins solo gestionan a sus colaboradores asignados, garantizando un entorno de trabajo organizado.
 -   **ECLAI Core**: Generación de imágenes y textos con IA.
 -   **Flujo de Aprobación**: Todo cambio requiere validación en Dashboard.
 

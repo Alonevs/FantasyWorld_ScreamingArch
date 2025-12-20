@@ -55,7 +55,27 @@ Para modelar la contención (Universo > Galaxia > Planeta), usamos **Identificad
 
 ---
 
-## 4. Instalación y Setup
+## 4. Sistema de Permisos y Rangos
+
+La aplicación implementa una jerarquía de acceso granular gestionada a través del perfil de usuario (`UserProfile.RANK_CHOICES`) y grupos de Django.
+
+### Jerarquía de Rangos
+- **USER (Explorador)**: Permisos básicos. Crea propuestas que requieren aprobación.
+- **SUBADMIN**: Colaborador con capacidad de edición, pero supeditado a un Admin.
+- **ADMIN (Socio)**: Líder de equipo.
+    - Gestiona propuestas de sus colaboradores asignados.
+    - Sus cambios son `LIVE` automáticamente si es el autor.
+    - Miembro automático del grupo de Django `Admins`.
+- **SUPERUSER**: Acceso global absoluto.
+
+### Lógica de Silos (Permissions)
+- Los permisos se validan en `permissions.py` y `view_utils.py`.
+- Un **Admin** solo puede ver y aprobar propuestas de usuarios que lo tengan como jefe (`collaborators`).
+- El acceso a mundos privados está restringido al autor, su equipo y los Superadmins.
+
+---
+
+## 5. Instalación y Setup
 
 ### Requisitos
 *   Python 3.10+
