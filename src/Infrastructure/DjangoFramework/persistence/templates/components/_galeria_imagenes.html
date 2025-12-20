@@ -22,7 +22,11 @@
             <img src="{% static 'persistence/img/'|add:img.url %}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500 opacity-90 group-hover:opacity-100">
         </div>
         {% if not is_preview %}
-        <a href="{% url 'borrar_foto' jid img.filename %}" class="absolute top-1 right-1 bg-red-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition hover:bg-red-500 shadow-lg" onclick="event.stopPropagation(); return confirm('¿Borrar?')">✕</a>
+        <a href="{% url 'borrar_foto' jid img.filename %}" 
+           class="absolute top-1 right-1 bg-red-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition hover:bg-red-500 shadow-lg" 
+           data-confirm="¿Borrar esta imagen?" 
+           data-destructive="true"
+           onclick="event.stopPropagation();">✕</a>
         {% endif %}
     </div>
     {% empty %}

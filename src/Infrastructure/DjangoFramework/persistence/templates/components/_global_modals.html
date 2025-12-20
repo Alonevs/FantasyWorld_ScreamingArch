@@ -86,7 +86,7 @@
             }, 300);
         },
 
-        prompt(title, message, placeholder="") {
+        prompt(title, message, placeholder="", confirmText="Aceptar") {
             return new Promise((resolve) => {
                 this._reset();
                 this._show(title, message, "✏️");
@@ -97,7 +97,7 @@
                 
                 // Color Blue
                 this.elements.btnConfirm.classList.add('bg-blue-600');
-                this.elements.btnConfirm.innerHTML = "Aceptar";
+                this.elements.btnConfirm.innerHTML = confirmText;
                 
                 // Handlers
                 const confirmHandler = () => {
@@ -176,6 +176,9 @@
             });
         }
     };
+    
+    // Explicitly expose to window
+    window.CaosModal = CaosModal;
 
     // Global Auto-Handler for data-confirm
     document.addEventListener('click', async (e) => {

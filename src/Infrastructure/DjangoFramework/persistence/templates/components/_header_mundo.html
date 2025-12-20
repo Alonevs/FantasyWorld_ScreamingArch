@@ -30,7 +30,11 @@
     {% if not is_preview %}
     <div>
         <button onclick="openEditModal()" class="p-2 bg-blue-900/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg transition border border-blue-900/50 mr-2" title="Editar">✏️</button>
-        <a href="{% url 'borrar_mundo' jid %}" onclick="return confirm('¿Borrar mundo?')" class="p-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg transition border border-red-900/50" title="Borrar">🗑️</a>
+        <a href="{% url 'borrar_mundo' jid %}" 
+           data-confirm="¿Estás seguro de solicitar el borrado de este mundo?" 
+           data-title="Solicitar Borrado" 
+           data-destructive="true"
+           class="p-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg transition border border-red-900/50" title="Borrar">🗑️</a>
     </div>
     {% endif %}
 </div>

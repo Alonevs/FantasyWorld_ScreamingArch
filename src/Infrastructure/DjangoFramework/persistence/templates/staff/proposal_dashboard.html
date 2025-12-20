@@ -75,7 +75,9 @@
                              <!-- DELETE -->
                              <span class="text-xs text-red-400 flex items-center gap-2 mr-2">⚠️ Solicitud de borrado</span>
                              <a href="{% url 'revisar_imagen' p.id %}" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs font-bold text-white transition">👁️ VER</a>
-                             <a href="{% url 'aprobar_imagen' p.id %}" class="px-3 py-1 bg-red-600 hover:bg-red-500 rounded text-xs font-bold text-white transition" onclick="return confirm('¿Confirmar borrado?')">🗑️ BORRAR</a>
+                            <a href="{% url 'aprobar_imagen' p.id %}" class="px-3 py-1 bg-red-600 hover:bg-red-500 rounded text-xs font-bold text-white transition" 
+                               data-confirm="¿Confirmar borrado de la imagen propuesta?" 
+                               data-destructive="true">🗑️ BORRAR</a>
                              <a href="{% url 'rechazar_imagen' p.id %}" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs font-bold text-white transition">❌ MANTENER</a>
                          {% endif %}
                          

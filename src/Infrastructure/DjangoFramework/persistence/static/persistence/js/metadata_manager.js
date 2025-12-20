@@ -162,14 +162,14 @@ async function runAutoNoos(jid) {
             });
             
             renderMetadataRows();
-            alert(`✅ Auto-Noos Completado.\nSe actualizaron/añadieron variables.`);
+            await CaosModal.alert("Auto-Noos Completado", "Se actualizaron/añadieron variables.");
         } else {
-            alert(`⚠️ Error IA: ${data.message}`);
+            await CaosModal.alert("Error IA", data.message);
         }
 
     } catch (e) {
         console.error(e);
-        alert("❌ Error de comunicación con el servidor.");
+        await CaosModal.alert("Error de Conexión", "Error de comunicación con el servidor.");
     } finally {
         // Reset UI
         txt.innerText = originalText;

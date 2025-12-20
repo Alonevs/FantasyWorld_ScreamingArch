@@ -125,31 +125,31 @@
         <!-- CONTEXTUAL BUTTONS -->
         {% if variant == 'pending' %}
             {% if item.type == 'WORLD' %}
-                <a href="{% url 'aprobar_propuesta' item.id %}" class="px-4 py-2 bg-green-900/20 hover:bg-green-600 text-green-400 hover:text-white rounded-lg border border-green-900/50 transition font-bold shadow-lg shadow-green-900/20">✅ Aprobar</a>
-                <a href="{% url 'rechazar_propuesta' item.id %}" class="px-4 py-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg border border-red-900/50 transition font-bold" onclick="return confirm('¿Rechazar esta propuesta?')">✕ Rechazar</a>
+                <a href="{% url 'aprobar_propuesta' item.id %}" class="px-4 py-2 bg-green-900/20 hover:bg-green-600 text-green-400 hover:text-white rounded-lg border border-green-900/50 transition font-bold shadow-lg shadow-green-900/20" data-confirm="¿Aprobar esta propuesta?">✅ Aprobar</a>
+                <a href="{% url 'rechazar_propuesta' item.id %}" class="px-4 py-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg border border-red-900/50 transition font-bold" data-confirm="¿Rechazar esta propuesta?" data-destructive="true">✕ Rechazar</a>
             {% else %}
-                <a href="{% url 'aprobar_narrativa' item.id %}" class="px-4 py-2 bg-green-900/20 hover:bg-green-600 text-green-400 hover:text-white rounded-lg border border-green-900/50 transition font-bold shadow-lg shadow-green-900/20">✅ Aprobar</a>
-                <a href="{% url 'rechazar_narrativa' item.id %}" class="px-4 py-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg border border-red-900/50 transition font-bold" onclick="return confirm('¿Rechazar esta narrativa?')">✕ Rechazar</a>
+                <a href="{% url 'aprobar_narrativa' item.id %}" class="px-4 py-2 bg-green-900/20 hover:bg-green-600 text-green-400 hover:text-white rounded-lg border border-green-900/50 transition font-bold shadow-lg shadow-green-900/20" data-confirm="¿Aprobar esta narrativa?">✅ Aprobar</a>
+                <a href="{% url 'rechazar_narrativa' item.id %}" class="px-4 py-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg border border-red-900/50 transition font-bold" data-confirm="¿Rechazar esta narrativa?" data-destructive="true">✕ Rechazar</a>
             {% endif %}
         
         {% elif variant == 'approved' %}
              {% if item.type == 'WORLD' %}
-                <a href="{% url 'publicar_version' item.id %}" class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg shadow-lg shadow-green-900/50 transition font-bold flex items-center gap-2" onclick="return confirm('¿PUBLICAR esta versión a LIVE? Esto sobreescribirá los datos actuales.')">
+                <a href="{% url 'publicar_version' item.id %}" class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg shadow-lg shadow-green-900/50 transition font-bold flex items-center gap-2" data-confirm="¿PUBLICAR esta versión a LIVE? Esto sobreescribirá los datos actuales.">
                     🚀 PUBLICAR
                 </a>
             {% else %}
-                <a href="{% url 'publicar_narrativa' item.id %}" class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg shadow-lg shadow-green-900/50 transition font-bold flex items-center gap-2" onclick="return confirm('¿PUBLICAR esta narrativa a LIVE?')">
+                <a href="{% url 'publicar_narrativa' item.id %}" class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg shadow-lg shadow-green-900/50 transition font-bold flex items-center gap-2" data-confirm="¿PUBLICAR esta narrativa a LIVE?">
                     🚀 PUBLICAR
                 </a>
             {% endif %}
 
         {% elif variant == 'archived' %}
             {% if item.type == 'WORLD' %}
-                <a href="{% url 'restaurar_version' item.id %}" class="px-3 py-1 bg-yellow-900/20 hover:bg-yellow-600 text-yellow-500 hover:text-white rounded border border-yellow-900/50 text-xs font-bold transition" onclick="return confirm('¿RESTAURAR esta versión? Se creará una nueva propuesta basada en ella.')">
+                <a href="{% url 'restaurar_version' item.id %}" class="px-3 py-1 bg-yellow-900/20 hover:bg-yellow-600 text-yellow-500 hover:text-white rounded border border-yellow-900/50 text-xs font-bold transition" data-confirm="¿RESTAURAR esta versión? Se creará una nueva propuesta basada en ella.">
                     🔄 Restaurar
                 </a>
             {% else %}
-                 <a href="{% url 'restaurar_narrativa' item.id %}" class="px-3 py-1 bg-yellow-900/20 hover:bg-yellow-600 text-yellow-500 hover:text-white rounded border border-yellow-900/50 text-xs font-bold transition" onclick="return confirm('¿RESTAURAR esta versión? Se creará una nueva propuesta basada en ella.')">
+                 <a href="{% url 'restaurar_narrativa' item.id %}" class="px-3 py-1 bg-yellow-900/20 hover:bg-yellow-600 text-yellow-500 hover:text-white rounded border border-yellow-900/50 text-xs font-bold transition" data-confirm="¿RESTAURAR esta versión? Se creará una nueva propuesta basada en ella.">
                     🔄 Restaurar
                 </a>
             {% endif %}
@@ -157,9 +157,9 @@
 
         <!-- DELETE ALWAYS AVAILABLE -->
         {% if item.type == 'WORLD' %}
-            <a href="{% url 'borrar_propuesta' item.id %}" class="px-4 py-2 bg-gray-800 hover:bg-red-600 text-gray-400 hover:text-white rounded-lg border border-gray-700 transition font-bold" onclick="return confirm('¿BORRAR DEFINITIVAMENTE? No se podrá recuperar.')">🗑️</a>
+            <a href="{% url 'borrar_propuesta' item.id %}" class="px-4 py-2 bg-gray-800 hover:bg-red-600 text-gray-400 hover:text-white rounded-lg border border-gray-700 transition font-bold" data-confirm="⚠️ ¿BORRAR DEFINITIVAMENTE? No se podrá recuperar." data-destructive="true">🗑️</a>
         {% else %}
-             <a href="{% url 'borrar_narrativa_version' item.id %}" class="px-4 py-2 bg-gray-800 hover:bg-red-600 text-gray-400 hover:text-white rounded-lg border border-gray-700 transition font-bold" onclick="return confirm('¿BORRAR DEFINITIVAMENTE?')">🗑️</a>
+             <a href="{% url 'borrar_narrativa_version' item.id %}" class="px-4 py-2 bg-gray-800 hover:bg-red-600 text-gray-400 hover:text-white rounded-lg border border-gray-700 transition font-bold" data-confirm="⚠️ ¿BORRAR DEFINITIVAMENTE? No se podrá recuperar." data-destructive="true">🗑️</a>
         {% endif %}
     </div>
 

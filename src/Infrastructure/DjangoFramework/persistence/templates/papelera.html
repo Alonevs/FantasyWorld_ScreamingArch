@@ -38,7 +38,11 @@
                                             </div>
                                         </div>
                                         <div class="flex gap-2">
-                                            <a href="{% url 'borrar_mundo_definitivo' item.id %}" onclick="return confirm('⚠️ ¿Estás seguro? Esto borrará el mundo y todo su contenido PARA SIEMPRE. No se puede deshacer.')" class="px-3 py-1.5 bg-red-600/10 hover:bg-red-600 text-red-400 hover:text-white text-xs font-bold rounded border border-red-600/30 transition">
+                                            <a href="{% url 'borrar_mundo_definitivo' item.id %}" 
+                                               data-confirm="⚠️ ¿Estás seguro? Esto borrará el mundo y todo su contenido PARA SIEMPRE. No se puede deshacer." 
+                                               data-title="Borrado Definitivo"
+                                               data-destructive="true"
+                                               class="px-3 py-1.5 bg-red-600/10 hover:bg-red-600 text-red-400 hover:text-white text-xs font-bold rounded border border-red-600/30 transition">
                                                 ELIMINAR
                                             </a>
                                             <a href="{% url 'restaurar_entidad_fisica' item.id %}" class="px-4 py-1.5 bg-green-600/20 hover:bg-green-600 text-green-400 hover:text-white text-xs font-bold rounded border border-green-600/30 transition">
@@ -65,7 +69,11 @@
                                             </div>
                                         </div>
                                         <div class="flex gap-2">
-                                            <a href="{% url 'borrar_narrativa_definitivo' item.nid %}" onclick="return confirm('⚠️ ¿Estás seguro? Esto borrará la narrativa PARA SIEMPRE.')" class="px-3 py-1.5 bg-red-600/10 hover:bg-red-600 text-red-400 hover:text-white text-xs font-bold rounded border border-red-600/30 transition">
+                                            <a href="{% url 'borrar_narrativa_definitivo' item.nid %}" 
+                                               data-confirm="⚠️ ¿Estás seguro? Esto borrará la narrativa PARA SIEMPRE." 
+                                               data-title="Borrado Definitivo"
+                                               data-destructive="true"
+                                               class="px-3 py-1.5 bg-red-600/10 hover:bg-red-600 text-red-400 hover:text-white text-xs font-bold rounded border border-red-600/30 transition">
                                                 ELIMINAR
                                             </a>
                                             <a href="{% url 'restaurar_narrativa' item.nid %}" class="px-4 py-1.5 bg-green-600/20 hover:bg-green-600 text-green-400 hover:text-white text-xs font-bold rounded border border-green-600/30 transition">
@@ -94,7 +102,10 @@
                                             </div>
                                         </div>
                                         <div class="flex gap-2 justify-end">
-                                            <a href="{% url 'borrar_imagen_definitivo' item.id %}" onclick="return confirm('⚠️ ¿Borrar imagen permanentemente?')" class="px-3 py-1 bg-red-600/10 hover:bg-red-600 text-red-400 hover:text-white text-xs font-bold rounded border border-red-600/30 transition">
+                                            <a href="{% url 'borrar_imagen_definitivo' item.id %}" 
+                                               data-confirm="⚠️ ¿Borrar imagen permanentemente?" 
+                                               data-destructive="true"
+                                               class="px-3 py-1 bg-red-600/10 hover:bg-red-600 text-red-400 hover:text-white text-xs font-bold rounded border border-red-600/30 transition">
                                                 ELIMINAR
                                             </a>
                                             <a href="{% url 'restaurar_imagen_papelera' item.id %}" class="px-3 py-1 bg-green-600/20 hover:bg-green-600 text-green-400 hover:text-white text-xs font-bold rounded border border-green-600/30 transition">

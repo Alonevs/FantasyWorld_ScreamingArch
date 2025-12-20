@@ -69,7 +69,13 @@
 
             <div class="flex justify-end gap-[10px] mt-[10px]">
                 {% if not is_creation_mode %}
-                    <a href="{% url 'borrar_narrativa' narr.nid %}" onclick="return confirm('¿BORRAR PARA SIEMPRE?')" class="text-[#e74c3c] mr-auto self-center cursor-pointer hover:text-red-400 font-bold">🗑️ Eliminar</a>
+                    <a href="{% url 'borrar_narrativa' narr.nid %}" 
+                       data-confirm="¿Estás seguro de solicitar el borrado de esta narrativa? Se enviará al Dashboard." 
+                       data-title="Solicitar Borrado" 
+                       data-destructive="true"
+                       class="text-[#e74c3c] mr-auto self-center cursor-pointer hover:text-red-400 font-bold flex items-center gap-2">
+                       🗑️ Eliminar
+                    </a>
                 {% endif %}
                 
                 <button type="button" id="cancel-btn" class="bg-[#555] text-white border-none p-[10px_20px] rounded-[4px] cursor-pointer hover:bg-[#444]">Cancelar</button>

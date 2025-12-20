@@ -86,12 +86,13 @@ function updateWordCount(textarea) {
 // AI Edit Logic
 async function requestAIEdit(mode) {
      const textarea = document.querySelector('textarea[name="content"]') || document.querySelector('textarea[name="contenido"]');
-     if(!textarea || !textarea.value.trim()) return alert("El texto está vacío.");
+     if(!textarea || !textarea.value.trim()) return await CaosModal.alert("Campo Vacío", "El texto está vacío.");
      
      const status = document.getElementById('ai-status');
      const originalText = textarea.value;
      
-     if(!confirm("⚠️ Esto reemplazará el contenido actual con la versión de la IA.\n¿Continuar?")) return;
+     const confirmed = await CaosModal.confirm("⚠️ Confirmar Reemplazo", "Esto reemplazará el contenido actual con la versión de la IA.\n¿Deseas continuar?", true);
+     if(!confirmed) return;
 
      status.innerText = "🤖 La IA está escribiendo...";
      textarea.disabled = true;
@@ -123,11 +124,11 @@ async function requestAIEdit(mode) {
             status.innerText = "✨ ¡Hecho!";
             setTimeout(() => status.innerText = "", 3000);
         } else {
-            alert("Error IA: " + data.error);
+            await CaosModal.alert("Error IA", data.error);
             status.innerText = "❌ Error";
         }
      } catch (e) {
-        alert("Error de conexión: " + e);
+        await CaosModal.alert("Error de Conexión", "" + e);
         status.innerText = "❌ Error Red";
      } finally {
         textarea.disabled = false;
@@ -142,11 +143,11 @@ async function generateTitle() {
     const titleInput = document.querySelector('input[name="titulo"]') || document.querySelector('input[name="title"]');
     
     if(!titleInput) {
-        return alert("❌ Error interno: No encuentro el campo de título.");
+        return await CaosModal.alert("Error Interno", "No encuentro el campo de título.");
     }
     
     if(!textarea || !textarea.value.trim() || textarea.value.length < 50) {
-        return alert("⚠️ Escribe al menos 50 caracteres en el contenido para generar un título.");
+        return await CaosModal.alert("Contenido Insuficiente", "Escribe al menos 50 caracteres en el contenido para generar un título.");
     }
 
     const originalTitle = titleInput.value;
@@ -178,12 +179,12 @@ async function generateTitle() {
                 titleInput.style.boxShadow = "none";
             }, 1000);
         } else {
-            alert("Error IA: " + data.error);
+            await CaosModal.alert("Error IA", data.error);
             titleInput.value = originalTitle; // Revert
         }
 
     } catch (e) {
-        alert("Error de conexión: " + e);
+        await CaosModal.alert("Error de Conexión", "" + e);
         titleInput.value = originalTitle;
     } finally {
         titleInput.disabled = false;

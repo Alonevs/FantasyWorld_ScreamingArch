@@ -44,8 +44,8 @@
 
 {% block content %}
     <!-- NAVBAR FLOTANTE -->
-    <!-- Ajuste Top: Si hay Admin Bar (Logged in), top-11 (44px). Si no, top-0. -->
-    <div class="fixed {% if user.is_authenticated %}top-11{% else %}top-0{% endif %} left-0 w-full bg-[#0e0e16] border-b border-[#333] p-3 px-6 flex justify-between items-center z-40 shadow-lg">
+    <!-- Ajuste Top: Si hay Admin Bar (Logged in), top-16 (64px). Si no, top-0. -->
+    <div class="fixed {% if user.is_authenticated %}top-16{% else %}top-0{% endif %} left-0 w-full bg-[#0e0e16]/80 backdrop-blur-md border-b border-[#333] p-3 px-6 flex justify-between items-center z-[60] shadow-2xl transition-all duration-300">
         <div class="font-bold text-[#d633ff] tracking-wide">{{ narr.world.name }}</div>
         <div class="flex gap-2">
             {% if not hide_navigation %}

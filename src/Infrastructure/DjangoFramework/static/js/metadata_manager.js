@@ -109,7 +109,7 @@ async function requestAIAnalysis() {
 
     } catch (e) {
         console.error(e);
-        alert("Error conectando con el Núcleo NOOS.");
+        await CaosModal.alert("Error de Conexión", "Error conectando con el Núcleo NOOS.");
     } finally {
         loader.classList.add('hidden');
     }

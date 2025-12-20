@@ -131,7 +131,7 @@
             }
             
             btn.innerText = "Finalizado";
-            alert(`✅ ${successCount}/${total} imágenes enviadas a revisión.`);
+            await CaosModal.alert("Carga Completa", `✅ ${successCount}/${total} imágenes enviadas a revisión.`);
             location.reload();
         }
         
@@ -205,24 +205,31 @@
             lb.classList.remove('flex');
         }
         
-        function editImageTitle() {
+        async function editImageTitle() {
             const el = document.getElementById('lb-title');
             const fn = el.dataset.filename;
-            const nt = prompt("Nuevo título:", el.innerText);
+            // Native prompt -> CaosModal.prompt
+            const nt = await CaosModal.prompt("Editar Título", "Introduce el nuevo título:", el.innerText);
+            
             if(nt) {
-                fetch("{% url 'api_update_image_metadata' jid %}", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token }}" },
-                    body: JSON.stringify({ filename: fn, title: nt })
-                })
-                .then(r => r.json())
-                .then(d => {
+                try {
+                    const r = await fetch("{% url 'api_update_image_metadata' jid %}", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token }}" },
+                        body: JSON.stringify({ filename: fn, title: nt })
+                    });
+                    const d = await r.json();
+                    
                     if(d.status === 'ok') {
                         el.innerText = nt;
                         if(!galleryLog[fn]) galleryLog[fn] = {};
                         galleryLog[fn].title = nt;
-                    } else alert(d.message);
-                });
+                    } else {
+                        await CaosModal.alert("Error", d.message);
+                    }
+                } catch(e) {
+                    await CaosModal.alert("Error de Conexión", ""+e);
+                }
             }
         }
         
