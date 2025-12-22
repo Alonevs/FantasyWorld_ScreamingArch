@@ -6,7 +6,7 @@
 <div class="min-h-screen bg-[#050510] pb-10"> <!-- Standard padding -->
     
     <!-- HEADER (Sticky) -->
-    <div class="sticky top-16 z-[60] bg-gray-900/95 backdrop-blur border-b border-gray-800 p-6 shadow-xl transition-all">
+    <div class="sticky top-16 z-60 bg-gray-900/95 backdrop-blur border-b border-gray-800 p-6 shadow-xl transition-all">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
             <div>
                 <a href="{% url 'dashboard' %}" class="text-gray-500 hover:text-white mb-2 inline-flex items-center gap-1 text-sm bg-gray-800 px-3 py-1 rounded-full transition-colors">
@@ -99,7 +99,7 @@
         {% if change_log %}
         <div class="max-w-7xl mx-auto mt-6 px-6 lg:px-0">
             <div class="relative group">
-                <div class="absolute -inset-0.5 bg-gradient-to-r {% if proposal.status == 'REJECTED' %}from-red-600 to-orange-600{% else %}from-blue-600 to-cyan-600{% endif %} rounded-lg blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
+                <div class="absolute -inset-0.5 bg-linear-to-r {% if proposal.status == 'REJECTED' %}from-red-600 to-orange-600{% else %}from-blue-600 to-cyan-600{% endif %} rounded-lg blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
                 <div class="relative flex items-start gap-4 bg-[#0a0a16] border border-gray-800 p-4 rounded-lg overflow-hidden">
                     <div class="shrink-0 p-2 rounded-md {% if proposal.status == 'REJECTED' %}bg-red-900/20 text-red-500{% else %}bg-blue-900/20 text-blue-400{% endif %}">
                         {% if proposal.status == 'REJECTED' %}

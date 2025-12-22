@@ -7,7 +7,7 @@
 <div class="min-h-screen flex items-center justify-center relative overflow-hidden">
     <!-- Background Effect -->
     <div class="absolute inset-0 bg-[url('https://media.giphy.com/media/xyz/giphy.gif')] bg-cover opacity-10 blur-sm grayscale"></div>
-    <div class="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-900/90 to-black"></div>
+    <div class="absolute inset-0 bg-linear-to-t from-gray-950 via-gray-900/90 to-black"></div>
 
     <div class="relative z-10 max-w-2xl mx-4 text-center">
         <!-- Icon / Glitch Effect -->
@@ -19,7 +19,7 @@
         </div>
 
         <!-- Main Title -->
-        <h1 class="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-600 mb-2 drop-shadow-[0_0_10px_rgba(220,38,38,0.5)]">
+        <h1 class="text-5xl font-black text-transparent bg-clip-text bg-linear-to-r from-red-500 to-orange-600 mb-2 drop-shadow-[0_0_10px_rgba(220,38,38,0.5)]">
             ACCESO DENEGADO
         </h1>
         <p class="text-xl text-red-200/50 font-mono tracking-[0.3em] uppercase mb-8">Protocolo de Seguridad Alfa</p>
@@ -46,11 +46,11 @@
                 </a>
                 
                 {% if not user.is_authenticated %}
-                <a href="{% url 'login' %}?next={{ request.path }}" class="px-8 py-3 bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white rounded-lg font-bold shadow-[0_0_20px_rgba(220,38,38,0.4)] transition hover:shadow-[0_0_30px_rgba(220,38,38,0.6)] flex items-center justify-center gap-2 animate-pulse">
+                <a href="{% url 'login' %}?next={{ request.path }}" class="px-8 py-3 bg-linear-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white rounded-lg font-bold shadow-[0_0_20px_rgba(220,38,38,0.4)] transition hover:shadow-[0_0_30px_rgba(220,38,38,0.6)] flex items-center justify-center gap-2 animate-pulse">
                     🔑 Identificarse
                 </a>
                 {% else %}
-                <a href="mailto:admin@eclai.universe?subject=Solicitud%20Acceso%20Offline" class="px-8 py-3 bg-gradient-to-r from-accent to-purple-600 hover:from-accent-hover hover:to-purple-500 text-white rounded-lg font-bold shadow-lg transition flex items-center justify-center gap-2">
+                <a href="mailto:admin@eclai.universe?subject=Solicitud%20Acceso%20Offline" class="px-8 py-3 bg-linear-to-r from-accent to-purple-600 hover:from-accent-hover hover:to-purple-500 text-white rounded-lg font-bold shadow-lg transition flex items-center justify-center gap-2">
                     📨 Solicitar Acceso
                 </a>
                 {% endif %}

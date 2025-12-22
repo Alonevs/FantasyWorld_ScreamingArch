@@ -22,11 +22,11 @@
     <template x-for="(img, index) in images" :key="index">
         <img 
             :src="img" 
-            class="absolute inset-0 w-full h-full object-cover transition-opacity duration-[3000ms] ease-in-out"
+            class="absolute inset-0 w-full h-full object-cover transition-opacity duration-3000 ease-in-out"
             :class="active === index ? 'opacity-40 z-0' : 'opacity-0 -z-10'"
         >
     </template>
     
     <!-- Fallback Gradient if no images -->
-    <div x-show="images.length === 0" class="absolute inset-0 bg-gradient-to-br from-[#0a0a12] via-[#1a1a2e] to-[#000000] -z-20"></div>
+    <div x-show="images.length === 0" class="absolute inset-0 bg-linear-to-br from-[#0a0a12] via-[#1a1a2e] to-[#000000] -z-20"></div>
 </div>

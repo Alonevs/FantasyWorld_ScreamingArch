@@ -1,7 +1,7 @@
-    <div id="editor" class="edit-overlay hidden fixed inset-0 bg-black/90 z-50 p-10 box-border">
+    <div id="editor" class="edit-overlay hidden fixed inset-0 bg-black/90 z-50 p-10 box-border items-center justify-center" style="z-index: 99999;">
         <form method="POST" 
               action="{% if is_creation_mode %}{% if is_child_mode %}{% url 'crear_sub_narrativa' target_parent target_type %}{% else %}{% url 'crear_narrativa' target_jid target_type %}{% endif %}{% else %}{% url 'editar_narrativa' narr.nid %}{% endif %}" 
-              class="max-w-[900px] mx-auto bg-[#1f1f2e] p-[30px] rounded-[10px] border border-[#d633ff] h-[90%] flex flex-col">
+              class="w-full h-full mx-auto bg-[#1f1f2e] p-[30px] rounded-[10px] border border-[#d633ff] flex flex-col">
             {% csrf_token %}
             <h2 class="mt-0 font-['Segoe_UI'] text-white text-2xl mb-4 font-bold">
                 {% if is_creation_mode %}✨ Creando Nuevo Documento{% else %}Modo Edición{% endif %}
@@ -11,7 +11,7 @@
             <div class="flex gap-[10px] items-center mb-2">
                 <input type="text" {% if is_creation_mode %}name="title"{% else %}name="titulo"{% endif %} value="{{ narr.titulo }}" class="flex-1 bg-[#0a0a12] border border-[#444] text-white p-[10px] rounded focus:border-accent outline-none">
                 <button type="button" onclick="generateTitle()" title="🪄 Generar Título Mágico con IA" 
-                        class="bg-gradient-to-br from-[#8e44ad] to-[#d633ff] border-none p-[8px_12px] rounded-[4px] cursor-pointer text-[1.2em] shadow-[0_0_10px_rgba(142,68,173,0.5)] transition duration-200 hover:scale-110">
+                        class="bg-linear-to-br from-[#8e44ad] to-[#d633ff] border-none p-[8px_12px] rounded-[4px] cursor-pointer text-[1.2em] shadow-[0_0_10px_rgba(142,68,173,0.5)] transition duration-200 hover:scale-110">
                     🪄
                 </button>
             </div>
@@ -57,7 +57,7 @@
                  <span id="word-count" class="text-[0.8em] text-[#666] ml-auto">0 palabras</span>
             </div>
 
-            <textarea {% if is_creation_mode %}name="content"{% else %}name="contenido"{% endif %} oninput="updateWordCount(this)" class="flex-grow resize-none bg-[#0a0a12] border border-[#444] text-white p-[10px] font-inherit mb-[10px] leading-relaxed">{{ narr.contenido }}</textarea>
+            <textarea {% if is_creation_mode %}name="content"{% else %}name="contenido"{% endif %} oninput="updateWordCount(this)" class="grow resize-none bg-[#0a0a12] border border-[#444] text-white p-[10px] font-inherit mb-[10px] leading-relaxed">{{ narr.contenido }}</textarea>
             
             {% if not is_creation_mode %}
             <div class="bg-[#2a2a35] p-[15px] rounded-[5px] mb-[15px] border border-[#444]">

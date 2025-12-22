@@ -1,9 +1,9 @@
 <!-- GLOBAL MODAL SYSTEM (CaosModal) -->
-<div id="caos-modal-backdrop" class="fixed inset-0 z-[99999] bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 transition-opacity duration-300 opacity-0">
+<div id="caos-modal-backdrop" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 transition-opacity duration-300 opacity-0" style="z-index: 99999;">
     <div id="caos-modal-panel" class="bg-[#0a0a16] border border-gray-700/50 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] w-full max-w-lg transform scale-95 transition-all duration-300 overflow-hidden relative">
         
         <!-- GLOW EFFECTS -->
-        <div id="caos-modal-glow" class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-blue-400 to-blue-600 shadow-[0_0_20px_rgba(59,130,246,0.5)]"></div>
+        <div id="caos-modal-glow" class="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-blue-500 via-blue-400 to-blue-600 shadow-[0_0_20px_rgba(59,130,246,0.5)]"></div>
         
         <!-- HEADER -->
         <div class="px-6 py-5 border-b border-gray-800/50 bg-gray-900/30 flex items-center gap-3">
@@ -58,12 +58,13 @@
             this.elements.inputContainer.classList.add('hidden');
             this.elements.btnCancel.classList.remove('hidden');
             this.elements.btnConfirm.classList.remove('bg-red-600', 'bg-blue-600', 'bg-green-600');
-            this.elements.glow.className = "absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-blue-400 to-blue-600 shadow-[0_0_20px_rgba(59,130,246,0.5)]";
+            this.elements.glow.className = "absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-blue-500 via-blue-400 to-blue-600 shadow-[0_0_20px_rgba(59,130,246,0.5)]";
             this.resolve = null;
         },
 
         _show(title, message, icon="✨") {
             this.elements.backdrop.classList.remove('hidden');
+            this.elements.backdrop.classList.add('flex'); // Add flex for centering
             // Trigger reflow for transition
             this.elements.backdrop.offsetHeight;
             
@@ -83,6 +84,7 @@
             
             setTimeout(() => {
                 this.elements.backdrop.classList.add('hidden');
+                this.elements.backdrop.classList.remove('flex');
             }, 300);
         },
 
@@ -136,7 +138,7 @@
                 // Color
                 if (destructive) {
                     this.elements.btnConfirm.classList.add('bg-red-600', 'hover:bg-red-500');
-                    this.elements.glow.className = "absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500 via-orange-500 to-red-600 shadow-[0_0_20px_rgba(239,68,68,0.5)]";
+                    this.elements.glow.className = "absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-red-500 via-orange-500 to-red-600 shadow-[0_0_20px_rgba(239,68,68,0.5)]";
                 } else {
                     this.elements.btnConfirm.classList.add('bg-blue-600', 'hover:bg-blue-500');
                 }

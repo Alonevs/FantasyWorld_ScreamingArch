@@ -15,7 +15,7 @@
     <div class="bg-card border border-gray-800 rounded-2xl max-w-[1600px] mx-4 xl:mx-auto overflow-hidden shadow-2xl grid grid-cols-1 lg:grid-cols-4 mb-10">
         
         <!-- HEADER SECTION -->
-        <div class="col-span-1 lg:col-span-4 bg-gradient-to-r from-indigo-950 to-gray-900 p-6 border-b border-indigo-900 flex flex-col md:flex-row justify-between items-start gap-4 relative">
+        <div class="col-span-1 lg:col-span-4 bg-linear-to-r from-indigo-950 to-gray-900 p-6 border-b border-indigo-900 flex flex-col md:flex-row justify-between items-start gap-4 relative">
             <div>
                 <div class="flex items-center flex-wrap gap-2 text-xs text-gray-400 mb-4">
                     <a href="{% url 'home' %}" class="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded-full text-gray-300 transition border border-gray-700 hover:border-accent">🏠</a>
@@ -184,10 +184,10 @@
                          data-url="{% static "persistence/img/" %}{{ img.url }}" 
                          data-filename="{{ img.filename|escapejs }}"
                          onclick="if(!selectionMode) openLightbox(this.dataset.url, this.dataset.filename)">
-                        <img src="{% static 'persistence/img/' %}{{ img.url }}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500 opacity-90 group-hover:opacity-100">
+                        <img src="{% static 'persistence/img/' %}{{ img.url }}" alt="{{ img.filename }}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500 opacity-90 group-hover:opacity-100">
                         
                         <!-- Metadata Overlay -->
-                        <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/80 to-transparent p-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                        <div class="absolute inset-x-0 bottom-0 bg-linear-to-t from-black via-black/80 to-transparent p-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
                             <div class="font-bold text-white truncate">{{ img.author|default:"?" }}</div>
                             <div class="text-gray-400 text-[10px]">{{ img.date|default:"-" }}</div>
                         </div>
@@ -234,7 +234,7 @@
                 
                 <div class="mt-8 pt-4 border-t border-gray-800">
                     {% if user_role >= 20 or user.is_superuser %}
-                    <button onclick="openCreateModal()" class="w-full py-3 bg-gradient-to-r from-accent to-purple-600 hover:from-accent-hover hover:to-purple-500 text-white font-bold rounded-lg shadow-lg shadow-purple-900/30 transition transform hover:scale-[1.02] flex items-center justify-center gap-2">
+                    <button onclick="openCreateModal()" class="w-full py-3 bg-linear-to-r from-accent to-purple-600 hover:from-accent-hover hover:to-purple-500 text-white font-bold rounded-lg shadow-lg shadow-purple-900/30 transition transform hover:scale-[1.02] flex items-center justify-center gap-2">
                         ✨ GENERAR ENTORNO
                     </button>
                     {% endif %}
@@ -280,22 +280,36 @@
     {% endif %}
 
     <!-- BATCH DELETE UI -->
-    <div id="batchDeleteModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+    <div id="batchDeleteModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/80 backdrop-blur-sm">
         <div class="bg-gray-900 border border-gray-700 rounded-xl p-6 w-full max-w-md shadow-2xl relative">
             <h3 class="text-xl font-bold text-white mb-2">🗑️ Borrar Fotos</h3>
             <p class="text-xs text-gray-400 mb-4">Vas a borrar <span id="batch-delete-count" class="text-white font-bold">0</span> imágenes. Se creará una propuesta.</p>
             <textarea id="batch-delete-reason" class="w-full bg-black/50 border border-gray-700 rounded p-2 text-gray-200 text-sm focus:border-red-500 outline-none mb-4 h-24" placeholder="Motivo (Obligatorio)..."></textarea>
             <div class="flex justify-end gap-2">
-                <button onclick="document.getElementById('batchDeleteModal').classList.toggle('hidden', true); document.getElementById('batchDeleteModal').classList.toggle('flex', false);" class="text-gray-300 text-sm hover:text-white px-3">Cancelar</button>
+                <button onclick="closeBatchDeleteModal()" class="text-gray-300 text-sm hover:text-white px-3">Cancelar</button>
                 <button onclick="submitBatchDelete()" class="px-4 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-500">Confirmar</button>
             </div>
         </div>
     </div>
-    <div id="batch-toolbar" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900/90 border border-red-500/30 rounded-full px-6 py-2 shadow-xl flex items-center gap-4 backdrop-blur animate-fade-in-up">
+    
+    <div id="batch-toolbar" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900/90 border border-red-500/30 rounded-full px-6 py-2 shadow-xl items-center gap-4 backdrop-blur animate-fade-in-up">
         <span class="text-white text-xs font-bold"><span id="selected-count" class="text-red-400">0</span> seleccionadas</span>
         <button onclick="openBatchDeleteModal()" id="btn-batch-delete" disabled class="text-xs bg-red-600/20 text-red-500 border border-red-900 hover:bg-red-600 hover:text-white px-3 py-1 rounded transition font-bold disabled:opacity-50">🗑️ BORRAR</button>
         <button onclick="toggleSelectionMode()" class="text-gray-500 hover:text-white ml-2">✕</button>
     </div>
+
+    <script>
+        function openBatchDeleteModal() {
+            const el = document.getElementById('batchDeleteModal');
+            el.classList.remove('hidden');
+            el.classList.add('flex');
+        }
+        function closeBatchDeleteModal() {
+            const el = document.getElementById('batchDeleteModal');
+            el.classList.add('hidden');
+            el.classList.remove('flex');
+        }
+    </script>
     <script>
         let selectionMode = false; let selectedImages = new Set();
         function toggleSelectionMode() {
@@ -305,7 +319,11 @@
             
             document.querySelectorAll('.selection-checkbox').forEach(el => el.classList.toggle('hidden', !selectionMode));
             document.querySelectorAll('.batch-hide').forEach(el => el.classList.toggle('hidden', selectionMode));
-            document.getElementById('batch-toolbar').classList.toggle('hidden', !selectionMode);
+            
+            const toolbar = document.getElementById('batch-toolbar');
+            toolbar.classList.toggle('hidden', !selectionMode);
+            toolbar.classList.toggle('flex', selectionMode);
+            
             if(!selectionMode) { selectedImages.clear(); updateSelectionUI(); document.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = false); }
         }
         async function toggleImageSelection(fn, cb) {
@@ -333,20 +351,44 @@
                 await CaosModal.alert("Campo Obligatorio", "Debes especificar un motivo para el borrado.");
                 return; 
             }
-            fetch("{% url 'borrar_fotos_batch' jid %}", { method: "POST", headers: { "Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token }}" }, body: JSON.stringify({ filenames: Array.from(selectedImages), reason: reason }) })
-            .then(r => r.json()).then(async d => { 
+            
+            fetch("{% url 'borrar_fotos_batch' jid %}", { 
+                method: "POST", 
+                headers: { 
+                    "Content-Type": "application/json", 
+                    "X-CSRFToken": "{{ csrf_token }}" 
+                }, 
+                body: JSON.stringify({ 
+                    filenames: Array.from(selectedImages), 
+                    reason: reason 
+                }) 
+            })
+            .then(r => r.json())
+            .then(async d => { 
                 if(d.status === 'ok') location.reload(); 
                 else await CaosModal.alert("Error en el Sistema", d.message); 
             });
         }
+
         async function solicitarBorradoIndividual(jid, filename) {
             const reason = await CaosModal.prompt("📝 Motivo del borrado", "Explica brevemente por qué quieres eliminar esta imagen:", "Ej: Imagen duplicada, borrosa...");
             if (reason === null) return;
+            
             if (!reason.trim()) { 
                 await CaosModal.alert("Motivo Obligatorio", "El motivo del borrado es necesario para procesar la solicitud.");
                 return; 
             }
-            const url = `{% url "borrar_foto" "JID_PLACEHOLDER" "FILE_PLACEHOLDER" %}`.replace('JID_PLACEHOLDER', jid).replace('FILE_PLACEHOLDER', filename) + "?reason=" + encodeURIComponent(reason);
+            
+            // Construct URL dynamically to avoid linter issues with placeholder strings in django tags if strict
+            const baseUrl = "{% url 'borrar_foto' '00000000' 'generic_file' %}"; 
+            // Replace placeholders or use a cleaner approach if the view accepts generic args. 
+            // Since we can't easily change the Django url pattern here without knowing urls.py, we'll assume the string replacement method specific to this project's pattern:
+            // But actually, the safest way is constructing it if we have the view pattern. 
+            // Let's stick to the previous method but cleaner:
+            const url = `{% url "borrar_foto" "JID_PLACEHOLDER" "FILE_PLACEHOLDER" %}`
+                .replace('JID_PLACEHOLDER', jid)
+                .replace('FILE_PLACEHOLDER', filename) + "?reason=" + encodeURIComponent(reason);
+                
             window.location.href = url;
         }
     </script>

@@ -45,7 +45,7 @@
 {% block content %}
     <!-- NAVBAR FLOTANTE -->
     <!-- Ajuste Top: Si hay Admin Bar (Logged in), top-16 (64px). Si no, top-0. -->
-    <div class="fixed {% if user.is_authenticated %}top-16{% else %}top-0{% endif %} left-0 w-full bg-[#0e0e16]/80 backdrop-blur-md border-b border-[#333] p-3 px-6 flex justify-between items-center z-[60] shadow-2xl transition-all duration-300">
+    <div class="fixed {% if user.is_authenticated %}top-16{% else %}top-0{% endif %} left-0 w-full bg-[#0e0e16]/80 backdrop-blur-md border-b border-[#333] p-3 px-6 flex justify-between items-center z-50 shadow-2xl transition-all duration-300" style="z-index: 60;">
         <div class="font-bold text-[#d633ff] tracking-wide">{{ narr.world.name }}</div>
         <div class="flex gap-2">
             {% if not hide_navigation %}
@@ -95,9 +95,9 @@
         </div>
         
         <!-- TITLE & CONTENT -->
-        <h1 class="text-3xl font-bold break-words">{{ narr.titulo }}</h1>
+        <h1 class="text-3xl font-bold" style="overflow-wrap: break-word;">{{ narr.titulo }}</h1>
         
-        <div class="paper-content break-words">{{ narr.contenido|default:"(Escribe aquí tu historia...)" }}</div>
+        <div class="paper-content" style="overflow-wrap: break-word;">{{ narr.contenido|default:"(Escribe aquí tu historia...)" }}</div>
     </div>
 
     <!-- SECCIÓN DE HIJOS -->
@@ -130,7 +130,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // Initialize Editor
-            const isCreation = {{ is_creation_mode|yesno:"true,false" }};
+            const isCreation = "{{ is_creation_mode|yesno:'true,false' }}" === "true";
             const urlParams = new URLSearchParams(window.location.search);
             if(typeof initEditor === 'function') {
                 initEditor(isCreation, urlParams.get('edit'));
@@ -154,9 +154,11 @@
         function toggleEdit() {
             const el = document.getElementById('editor');
             if(el.classList.contains('hidden')) {
+                document.body.style.overflow = 'hidden';
                 el.classList.remove('hidden');
                 el.classList.add('flex');
             } else {
+                document.body.style.overflow = '';
                 el.classList.add('hidden');
                 el.classList.remove('flex');
             }

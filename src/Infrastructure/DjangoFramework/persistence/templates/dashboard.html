@@ -38,12 +38,11 @@
                         <span class="text-xs bg-blue-900/50 text-blue-300 px-3 py-1 rounded-full border border-blue-800">{{ total_pending_count }}</span>
                     </div>
 
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2" x-show="selectionCount > 0" x-transition.opacity.duration.300ms style="display: none;">
                         <!-- BULK VIEW (Images only) -->
                         <button type="submit" form="bulk-approve-form" 
                                 formaction="{% url 'batch_revisar_imagenes' %}"
-                                class="text-xs bg-indigo-900/30 hover:bg-indigo-600 text-indigo-400 hover:text-white px-3 py-1.5 rounded border border-indigo-900/50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                                :disabled="selectionCount === 0"
+                                class="text-xs bg-indigo-900/30 hover:bg-indigo-600 text-indigo-400 hover:text-white px-3 py-1.5 rounded border border-indigo-900/50 transition flex items-center gap-2"
                                 title="Ver imágenes seleccionadas">
                             <span>👁️</span> Ver (<span x-text="selectionCount"></span>)
                         </button>
@@ -51,19 +50,18 @@
                         <!-- BULK APPROVE BUTTON -->
                         {% if request.user.is_superuser or request.user.profile.rank == 'ADMIN' %}
                         <button type="submit" form="bulk-approve-form" 
-                                class="text-xs bg-green-900/30 hover:bg-green-600 text-green-400 hover:text-white px-3 py-1.5 rounded border border-green-900/50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                                :disabled="selectionCount === 0"
+                                class="text-xs bg-green-900/30 hover:bg-green-600 text-green-400 hover:text-white px-3 py-1.5 rounded border border-green-900/50 transition flex items-center gap-2"
                                 title="Aprobar seleccionados"
                                 data-confirm="¿Aprobar todas las propuestas seleccionadas?">
                             <span>✅</span> Aprobar (<span x-text="selectionCount"></span>)
                         </button>
                         {% endif %}
-                        <!-- BULK AGREGADO: RECHAZAR/BORRAR PROPUESTA -->
+                        
+                        <!-- BULK REJECT -->
                         {% if request.user.is_superuser or request.user.profile.rank == 'ADMIN' %}
                         <button type="submit" form="bulk-approve-form" 
                                 formaction="{% url 'borrar_propuestas_masivo' %}"
-                                class="text-xs bg-red-900/30 hover:bg-red-600 text-red-400 hover:text-white px-3 py-1.5 rounded border border-red-900/50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                                :disabled="selectionCount === 0"
+                                class="text-xs bg-red-900/30 hover:bg-red-600 text-red-400 hover:text-white px-3 py-1.5 rounded border border-red-900/50 transition flex items-center gap-2"
                                 title="Rechazar seleccionados"
                                 data-confirm="¿RECHAZAR todas las propuestas seleccionadas? (Se eliminarán de la lista)"
                                 data-destructive="true">

@@ -13,13 +13,13 @@
     <div class="w-12 h-12 rounded bg-black border border-gray-800 overflow-hidden shrink-0 relative group-hover:border-accent transition-colors duration-300">
         {% with image=entity.img_file|default:entity.img %}
         {% if image %}
-        <img src="{% static 'persistence/img/'|add:image %}" class="w-full h-full object-cover transition-transform duration-[10000ms] ease-linear group-hover:scale-125" onerror="this.parentElement.innerHTML='<div class=\'w-full h-full flex items-center justify-center text-xl text-gray-700\'>🪐</div>'">
+        <img src="{% static 'persistence/img/'|add:image %}" class="w-full h-full object-cover transition-transform duration-10000 ease-linear group-hover:scale-125" onerror="this.parentElement.innerHTML='<div class=\'w-full h-full flex items-center justify-center text-xl text-gray-700\'>🪐</div>'">
         {% else %}
         <div class="w-full h-full flex items-center justify-center text-xl text-gray-700 group-hover:text-accent transition">🪐</div>
         {% endif %}
         {% endwith %}
         <!-- Reflection/Shine overlay -->
-        <div class="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+        <div class="absolute inset-0 bg-linear-to-tr from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
     </div>
     <div>
         <div class="font-bold text-gray-200 group-hover:text-white transition-colors flex items-center">{{ entity.name }}</div>
@@ -58,20 +58,20 @@
                     
                     {% for img_url in entity.images %}
                     <img src="{% static 'persistence/img/'|add:img_url %}" 
-                         class="absolute inset-0 w-full h-full object-cover transition-opacity duration-[2000ms] ease-in-out"
+                         class="absolute inset-0 w-full h-full object-cover transition-opacity duration-2000 ease-in-out"
                          :class="current == {{ forloop.counter0 }} ? 'opacity-100 scale-110' : 'opacity-0 scale-100'"
                          loading="lazy"
-                         style="transition: opacity 2000ms ease-in-out, transform 20000ms linear;"> 
+                         style="transition: opacity 2000ms ease-in-out, transform 20000ms linear;">  
                     {% endfor %}
                     
                     <!-- Gradient Overlay -->
-                    <div class="absolute inset-0 bg-gradient-to-t from-[#161625] via-transparent to-transparent opacity-60"></div>
+                    <div class="absolute inset-0 bg-linear-to-t from-[#161625] via-transparent to-transparent opacity-60"></div>
                 </div>
             {% else %}
                 <!-- Static Image (Single or Fallback) -->
                 {% if entity.has_img or entity.img %}
                     {% with image=entity.img_file|default:entity.img %}
-                    <img src="{% static 'persistence/img/'|add:image %}" class="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-transform duration-[10000ms] ease-linear group-hover:scale-125">
+                    <img src="{% static 'persistence/img/'|add:image %}" class="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-transform duration-10000 ease-linear group-hover:scale-125">
                     {% endwith %}
                 {% else %}
                     <!-- No Image Fallback -->
