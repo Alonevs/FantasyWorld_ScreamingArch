@@ -3,131 +3,245 @@
 {% block title %}Papelera de Reciclaje | ECLAI{% endblock %}
 
 {% block content %}
-    <!-- PAGE TITLE -->
-    <div class="max-w-7xl mx-auto px-4 mb-8">
+<div x-data="{ selectionCount: 0, showModal: false, activeImg: '', activeId: 0 }" @change="selectionCount = document.querySelectorAll('.trash-check:checked').length" class="min-h-screen">
+
+    <!-- HEADER -->
+    <div class="max-w-7xl mx-auto px-4 mb-4 mt-8 flex flex-col md:flex-row justify-between items-center gap-4">
         <h1 class="text-4xl font-extrabold text-white tracking-tight flex items-center gap-4">
             <span>🗑️ <span class="text-red-500">PAPELERA</span></span>
             <span class="text-xs font-mono uppercase tracking-widest bg-red-900/50 text-red-100 px-3 py-1 rounded-full border border-red-500/30">Reciclaje</span>
         </h1>
+        
+        <div class="flex flex-col md:flex-row gap-4 items-center">
+            
+            <!-- FILTER FORM -->
+            <form method="get" class="flex gap-2">
+                <select name="user" class="bg-black/40 border border-gray-700 rounded-lg py-2 px-3 text-sm text-gray-300 outline-none focus:border-red-500">
+                    <option value="">👤 Todos los Usuarios</option>
+                    {% for u in users %}
+                    <option value="{{ u.id }}" {% if current_user == u.id %}selected{% endif %}>{{ u.username }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded-lg text-sm font-bold border border-gray-700 transition">
+                    Filtrar
+                </button>
+            </form>
+
+            <div class="h-6 w-px bg-gray-800 hidden md:block"></div>
+
+            <!-- BULK ACTIONS -->
+            <button type="submit" id="btn-manage-trash" form="bulk-trash-form" name="action" value="review"
+                    class="px-6 py-2 bg-linear-to-r from-gray-800 to-gray-700 hover:from-blue-900 hover:to-purple-900 text-white rounded-lg border border-gray-600 hover:border-blue-400 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg font-bold tracking-wide"
+                    :disabled="selectionCount === 0">
+                <span>🗂️</span> Gestionar Selección (<span x-text="selectionCount"></span>)
+            </button>
+        </div>
     </div>
 
-    <div class="max-w-7xl mx-auto pb-24">
+    <div class="max-w-7xl mx-auto pb-24 px-4">
         
-        {% if grouped_trash %}
-            <div class="flex flex-col gap-8">
-                {% for author, types in grouped_trash.items %}
-                    <div class="bg-card/50 border border-gray-800 rounded-xl overflow-hidden p-6">
-                        <!-- Author Header -->
-                        <div class="flex items-center gap-3 mb-4 border-b border-gray-800 pb-2">
-                            <span class="text-2xl">👤</span>
-                            <h2 class="text-xl font-bold text-white">{{ author }}</h2>
-                        </div>
-
-                        <!-- WORLDS -->
-                        {% if types.Mundos %}
-                            <h3 class="text-sm uppercase tracking-widest text-gray-500 font-bold mb-3 pl-2 border-l-2 border-blue-500">🌍 Mundos</h3>
-                            <div class="grid gap-3 mb-6">
-                                {% for item in types.Mundos %}
-                                    <div class="bg-gray-900/40 border border-red-900/30 p-4 rounded-lg flex justify-between items-center group hover:border-red-500/50 transition">
-                                        <div>
-                                            <h4 class="font-bold text-white">{{ item.name }}</h4>
-                                            <div class="text-xs text-red-400 flex gap-2">
-                                                <span>{{ item.deleted_at|date:"d/m/Y H:i" }}</span>
-                                                <span class="text-gray-600">|</span>
-                                                <span>ID: {{ item.public_id }}</span>
-                                            </div>
-                                        </div>
-                                        <div class="flex gap-2">
-                                            <a href="{% url 'borrar_mundo_definitivo' item.id %}" 
-                                               data-confirm="⚠️ ¿Estás seguro? Esto borrará el mundo y todo su contenido PARA SIEMPRE. No se puede deshacer." 
-                                               data-title="Borrado Definitivo"
-                                               data-destructive="true"
-                                               class="px-3 py-1.5 bg-red-600/10 hover:bg-red-600 text-red-400 hover:text-white text-xs font-bold rounded border border-red-600/30 transition">
-                                                ELIMINAR
-                                            </a>
-                                            <a href="{% url 'restaurar_entidad_fisica' item.id %}" class="px-4 py-1.5 bg-green-600/20 hover:bg-green-600 text-green-400 hover:text-white text-xs font-bold rounded border border-green-600/30 transition">
-                                                RESTAURAR
-                                            </a>
-                                        </div>
-                                    </div>
-                                {% endfor %}
+        <form id="bulk-trash-form" method="post" action="{% url 'manage_trash_bulk' %}">
+            {% csrf_token %}
+            
+            {% if grouped_trash %}
+                <div class="flex flex-col gap-8">
+                    {% for author, types in grouped_trash.items %}
+                        <div class="bg-card/50 border border-gray-800 rounded-xl overflow-hidden p-6 relative">
+                            <!-- Author Header -->
+                            <div class="flex items-center gap-3 mb-4 border-b border-gray-800 pb-2">
+                                <span class="text-2xl">👤</span>
+                                <h2 class="text-xl font-bold text-white">{{ author }}</h2>
                             </div>
-                        {% endif %}
 
-                        <!-- NARRATIVES -->
-                        {% if types.Narrativas %}
-                            <h3 class="text-sm uppercase tracking-widest text-gray-500 font-bold mb-3 pl-2 border-l-2 border-purple-500">📜 Narrativas</h3>
-                            <div class="grid gap-3">
-                                {% for item in types.Narrativas %}
-                                    <div class="bg-gray-900/40 border border-red-900/30 p-4 rounded-lg flex justify-between items-center group hover:border-red-500/50 transition">
-                                        <div>
-                                            <h4 class="font-bold text-white">{{ item.titulo }}</h4>
-                                            <div class="text-xs text-red-400 flex gap-2">
-                                                <span>{{ item.deleted_at|date:"d/m/Y H:i" }}</span>
-                                                <span class="text-gray-600">|</span>
-                                                <span>Tipo: {{ item.tipo }}</span>
-                                            </div>
-                                        </div>
-                                        <div class="flex gap-2">
-                                            <a href="{% url 'borrar_narrativa_definitivo' item.nid %}" 
-                                               data-confirm="⚠️ ¿Estás seguro? Esto borrará la narrativa PARA SIEMPRE." 
-                                               data-title="Borrado Definitivo"
-                                               data-destructive="true"
-                                               class="px-3 py-1.5 bg-red-600/10 hover:bg-red-600 text-red-400 hover:text-white text-xs font-bold rounded border border-red-600/30 transition">
-                                                ELIMINAR
-                                            </a>
-                                            <a href="{% url 'restaurar_narrativa' item.nid %}" class="px-4 py-1.5 bg-green-600/20 hover:bg-green-600 text-green-400 hover:text-white text-xs font-bold rounded border border-green-600/30 transition">
-                                                RESTAURAR
-                                            </a>
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                        <!-- IMAGES -->
-                        {% if types.Imagenes %}
-                            <h3 class="text-sm uppercase tracking-widest text-gray-500 font-bold mb-3 pl-2 border-l-2 border-yellow-500">🖼️ Imágenes</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {% for item in types.Imagenes %}
-                                    <div class="bg-gray-900/40 border border-red-900/30 p-3 rounded-lg group hover:border-red-500/50 transition">
-                                        <div class="relative aspect-video mb-3 bg-black/50 rounded overflow-hidden border border-gray-800">
-                                            <img src="{{ item.trash_path }}" alt="Trash Preview" class="w-full h-full object-contain opacity-75 group-hover:opacity-100 transition">
-                                        </div>
-                                        <div class="flex justify-between items-start mb-3">
-                                            <div>
-                                                <h4 class="font-bold text-white text-sm truncate w-40" title="{{ item.target_filename }}">{{ item.target_filename }}</h4>
-                                                <div class="text-xs text-red-400">
-                                                    {{ item.created_at|date:"d/m/Y H:i" }}
+                            <!-- WORLDS -->
+                            {% if types.Mundos %}
+                                <h3 class="text-sm uppercase tracking-widest text-gray-500 font-bold mb-3 pl-2 border-l-2 border-blue-500">🌍 Mundos</h3>
+                                <div class="grid gap-3 mb-6">
+                                    {% for item in types.Mundos %}
+                                        <div class="bg-gray-900/40 border border-red-900/30 p-4 rounded-lg flex items-center gap-4 group hover:border-red-500/50 transition">
+                                            {% if request.user == item.author or request.user.profile.rank == 'ADMIN' or request.user.is_superuser %}
+                                            <input type="checkbox" name="world_ids" value="{{ item.id }}" class="trash-check w-5 h-5 rounded border-gray-600 bg-gray-700 text-red-500 focus:ring-red-500/50 cursor-pointer">
+                                            {% endif %}
+                                            
+                                            <div class="flex-1">
+                                                <h4 class="font-bold text-white">{{ item.name }}</h4>
+                                                <div class="text-xs text-red-400 flex gap-2">
+                                                    <span>{{ item.deleted_at|date:"d/m/Y H:i" }}</span>
+                                                    <span class="text-gray-600">|</span>
+                                                    <span>👤 {{ item.author.username|default:"Alone" }}</span>
+                                                    <span class="text-gray-600">|</span>
+                                                    <span class="text-red-400">🗑️ {{ item.deleted_by_name|default:"?" }}</span>
+                                                    <span class="text-gray-600">|</span>
+                                                    <span class="text-blue-300">{{ item.nice_level }}</span>
+                                                    {% if item.short_desc %}
+                                                    <span class="text-gray-600">|</span>
+                                                    <span class="italic text-gray-500">{{ item.short_desc }}</span>
+                                                    {% endif %}
                                                 </div>
                                             </div>
+                                            
+                                            <a href="{% url 'ver_mundo' item.public_id %}" target="_blank" class="text-xs font-bold text-gray-500 hover:text-white mr-2" title="Ver Ficha">👁️ Ver</a>
+                                            {% if request.user == item.author or request.user.profile.rank == 'ADMIN' or request.user.is_superuser %}
+                                            <a href="{% url 'restaurar_entidad_fisica' item.id %}" class="text-xs font-bold text-green-500 hover:underline">Restaurar</a>
+                                            {% endif %}
                                         </div>
-                                        <div class="flex gap-2 justify-end">
-                                            <a href="{% url 'borrar_imagen_definitivo' item.id %}" 
-                                               data-confirm="⚠️ ¿Borrar imagen permanentemente?" 
-                                               data-destructive="true"
-                                               class="px-3 py-1 bg-red-600/10 hover:bg-red-600 text-red-400 hover:text-white text-xs font-bold rounded border border-red-600/30 transition">
-                                                ELIMINAR
-                                            </a>
-                                            <a href="{% url 'restaurar_imagen_papelera' item.id %}" class="px-3 py-1 bg-green-600/20 hover:bg-green-600 text-green-400 hover:text-white text-xs font-bold rounded border border-green-600/30 transition">
-                                                RESTAURAR
-                                            </a>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+
+                            <!-- NARRATIVES -->
+                            {% if types.Narrativas %}
+                                <h3 class="text-sm uppercase tracking-widest text-gray-500 font-bold mb-3 pl-2 border-l-2 border-purple-500">📜 Narrativas</h3>
+                                <div class="grid gap-3 mb-6">
+                                    {% for item in types.Narrativas %}
+                                        <div class="bg-gray-900/40 border border-red-900/30 p-4 rounded-lg flex items-center gap-4 group hover:border-red-500/50 transition">
+                                            {% if request.user == item.created_by or request.user.profile.rank == 'ADMIN' or request.user.is_superuser %}
+                                            <input type="checkbox" name="narrative_ids" value="{{ item.nid }}" class="trash-check w-5 h-5 rounded border-gray-600 bg-gray-700 text-red-500 focus:ring-red-500/50 cursor-pointer">
+                                            {% endif %}
+                                            
+                                            <div class="flex-1">
+                                                <h4 class="font-bold text-white">{{ item.titulo }}</h4>
+                                                <div class="text-xs text-red-400 flex gap-2">
+                                                    <span>{{ item.deleted_at|date:"d/m/Y H:i" }}</span>
+                                                    <span class="text-gray-600">|</span>
+                                                    <span>👤 {{ item.created_by.username|default:"Alone" }}</span>
+                                                    <span class="text-gray-600">|</span>
+                                                    <span class="text-red-400">🗑️ {{ item.deleted_by_name|default:"?" }}</span>
+                                                    <span class="text-gray-600">|</span>
+                                                    <span class="text-blue-300">{{ item.nice_location }}</span>
+                                                    {% if item.short_desc %}
+                                                    <span class="text-gray-600">|</span>
+                                                    <span class="italic text-gray-500">{{ item.short_desc }}</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            
+                                            <a href="{% url 'leer_narrativa' item.nid %}" target="_blank" class="text-xs font-bold text-gray-500 hover:text-white mr-2" title="Leer Completo">👁️ Ver</a>
+                                            {% if request.user == item.created_by or request.user.profile.rank == 'ADMIN' or request.user.is_superuser %}
+                                            <a href="{% url 'restaurar_narrativa' item.nid %}" class="text-xs font-bold text-green-500 hover:underline">Restaurar</a>
+                                            {% endif %}
                                         </div>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            
+                            <!-- IMAGES -->
+                            {% if types.Imagenes %}
+                                <h3 class="text-sm uppercase tracking-widest text-gray-500 font-bold mb-3 pl-2 border-l-2 border-yellow-500">🖼️ Imágenes</h3>
+                                <div class="grid gap-3 mb-6">
+                                    {% for item in types.Imagenes %}
+                                        <div class="bg-gray-900/40 border border-red-900/20 p-3 rounded-lg flex items-center gap-4 group hover:border-red-500/50 transition">
+                                            <!-- Checkbox -->
+                                            {% if request.user == item.author or request.user.profile.rank == 'ADMIN' or request.user.is_superuser %}
+                                            <input type="checkbox" name="image_ids" value="{{ item.id }}" class="trash-check w-5 h-5 rounded border-gray-600 bg-gray-700 text-red-500 focus:ring-red-500/50 cursor-pointer">
+                                            {% endif %}
+                                            
+                                            <!-- Icon -->
+                                            <div class="text-2xl opacity-70">🖼️</div>
+                                            
+                                            <!-- Info -->
+                                            <div class="flex-1 min-w-0">
+                                                <h4 class="font-bold text-gray-300 text-sm truncate" title="{{ item.target_filename }}">{{ item.target_filename }}</h4>
+                                                <div class="text-xs text-red-400 flex gap-2">
+                                                    <span>{{ item.created_at|date:"d/m/Y H:i" }}</span>
+                                                    <span class="text-gray-600">|</span>
+                                                    <span>👤 {{ item.author.username|default:"Alone" }}</span>
+                                                    <span class="text-gray-600">|</span>
+                                                    <span class="text-red-400">🗑️ {{ item.deleted_by_name|default:"?" }}</span>
+                                                    {% if item.nice_location %}
+                                                    <span class="text-gray-600">|</span>
+                                                    <span class="text-blue-300">{{ item.nice_location }}</span>
+                                                    {% endif %}
+                                                    {% if item.short_desc %}
+                                                    <span class="text-gray-600">|</span>
+                                                    <span class="italic text-gray-500">{{ item.short_desc }}</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Actions -->
+                                            <div class="flex items-center gap-2">
+                                                <button type="button" 
+                                                        @click.prevent="if(selectionCount > 0) { document.getElementById('btn-manage-trash').click(); } else { activeImg='{{ item.trash_path }}'; activeId={{ item.id }}; showModal=true; }" 
+                                                        class="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white text-[10px] font-bold rounded border border-gray-600 transition" 
+                                                        title="Previsualizar">
+                                                    👁️ Ver
+                                                </button>
+
+                                                {% if request.user == item.author or request.user.profile.rank == 'ADMIN' or request.user.is_superuser %}
+                                                    <a href="{% url 'restaurar_imagen_papelera' item.id %}" class="px-3 py-1 bg-green-900/20 hover:bg-green-600 text-green-500 hover:text-white text-[10px] font-bold rounded border border-green-900/30 transition">
+                                                        Restaurar
+                                                    </a>
+                                                    
+                                                    <a href="{% url 'borrar_imagen_definitivo' item.id %}" 
+                                                       data-confirm="⚠️ ¿Borrar imagen permanentemente?" 
+                                                       data-destructive="true"
+                                                       class="px-3 py-1 bg-red-900/20 hover:bg-red-600 text-red-500 hover:text-white text-[10px] font-bold rounded border border-red-900/30 transition">
+                                                        Eliminar
+                                                    </a>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-20 bg-card border border-dashed border-gray-800 rounded-xl">
+                    <div class="text-6xl mb-4 text-gray-700">🗑️</div>
+                    <h3 class="text-xl font-bold text-white mb-2">Papelera Vacía</h3>
+                    <p class="text-gray-500">No hay elementos eliminados recientemente.</p>
+                    <div class="mt-6">
+                        <a href="{% url 'dashboard' %}" class="text-blue-400 hover:underline">Ir al Dashboard</a>
                     </div>
-                {% endfor %}
+                </div>
+            {% endif %}
+        </form>
+        
+        <!-- INFO BOX at bottom -->
+        <div class="mt-12 p-4 bg-gray-900/50 rounded-xl border border-gray-800 text-center text-sm text-gray-500">
+             <p>💡 Tip: Para eliminar imágenes, puedes seleccionar hasta 5 a la vez para su revisión final de seguridad.</p>
+        </div>
+    </div>
+
+    <!-- IMAGE PREVIEW MODAL -->
+    <div x-show="showModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm" style="display: none;"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0">
+        
+        <div class="relative bg-[#0f111a] p-4 rounded-xl border border-gray-700 max-w-4xl w-full mx-4 shadow-2xl flex flex-col gap-4" @click.away="showModal = false">
+            <button @click="showModal = false" class="absolute top-2 right-2 text-gray-500 hover:text-white z-10 text-xl">✕</button>
+            
+            <div class="relative w-full h-[60vh] bg-black rounded-lg overflow-hidden flex items-center justify-center border border-gray-800">
+                <img :src="activeImg" class="max-w-full max-h-full object-contain">
             </div>
-        {% else %}
-            <div class="text-center py-20 bg-card border border-dashed border-gray-800 rounded-xl">
-                <div class="text-6xl mb-4 text-gray-700">🗑️</div>
-                <h3 class="text-xl font-bold text-white mb-2">Papelera Vacía</h3>
-                <p class="text-gray-500">No hay elementos eliminados recientemente.</p>
-                <div class="mt-6">
-                    <a href="{% url 'dashboard' %}" class="text-accent hover:underline">Ir al Dashboard</a>
+            
+            <div class="flex justify-between items-center bg-black/40 p-3 rounded-lg border border-gray-800">
+                <div class="text-gray-400 text-sm font-mono">ID: <span x-text="activeId"></span></div>
+                
+                <div class="flex gap-4">
+                    <!-- Dynamic Links using JS replacement is tricky with Django tags. 
+                         Solution: Use a base JS variable or just string concat since we know the URL pattern. -->
+                    
+                    <a :href="'/papelera/restaurar_imagen/' + activeId + '/'" 
+                       class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded flex items-center gap-2 transition">
+                        ♻️ Restaurar
+                    </a>
+                    
+                    <a :href="'/imagen/propuesta/' + activeId + '/borrar/'" 
+                       class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded flex items-center gap-2 transition">
+                        💀 Eliminar
+                    </a>
                 </div>
             </div>
-        {% endif %}
+        </div>
     </div>
+
+</div>
 {% endblock %}

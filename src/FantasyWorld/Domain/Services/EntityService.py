@@ -1,7 +1,4 @@
-from datetime import datetime
-from src.WorldManagement.Caos.Application.create_child import CreateChildWorldUseCase
-from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
-from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM
+from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosEventLog
 
 class EntityService:
     """
@@ -33,6 +30,9 @@ class EntityService:
         try:
             w = CaosWorldORM.objects.get(id=jid)
             w.soft_delete()
+            if user:
+                 try: CaosEventLog.objects.create(user=user, action="SOFT_DELETE", target_id=jid, details=f"Borrado directo de '{w.name}'")
+                 except: pass
             return True
         except Exception as e:
             print(f"Error Soft Delete: {e}")

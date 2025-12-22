@@ -8,10 +8,13 @@ from django.urls import reverse
 from .utils import log_event, is_superuser, is_admin_or_staff
 from src.Infrastructure.DjangoFramework.persistence.rbac import admin_only, restrict_explorer
 import os
+import urllib.parse
 
 from src.Infrastructure.DjangoFramework.persistence.models import (
-    CaosImageProposalORM, CaosWorldORM, CaosNarrativeORM
+    CaosImageProposalORM, CaosWorldORM, CaosNarrativeORM,
+    CaosEventLog
 )
+from django.contrib.auth.models import User
 from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
 
 # --- IMAGE ACTIONS ---
@@ -196,21 +199,100 @@ class ImageProposalDetailView(LoginRequiredMixin, View):
 
 @login_required
 def ver_papelera(request):
-    deleted_worlds = CaosWorldORM.objects.filter(is_active=False)
+    # 0. Common Data
+    users = User.objects.all().order_by('username')
+    f_user = request.GET.get('user')
     
-    # Images in TRASHED status
-    deleted_images = CaosImageProposalORM.objects.filter(status='TRASHED')
+    # 1. Fetch Items
+    deleted_worlds = CaosWorldORM.objects.filter(is_active=False).select_related('author')
+    deleted_narratives = CaosNarrativeORM.objects.filter(is_active=False).select_related('created_by')
     
-    # Narratives in DELETED/HISTORY? 
-    # For now, let's assume Soft Delete on Narratives sets is_active=False like Worlds?
-    # Or rely on Version status? User said "se conserva en el historial".
-    # If using CaosNarrativeORM logic:
-    deleted_narratives = CaosNarrativeORM.objects.filter(is_active=False)
+    # Images: TRASHED (from explicit delete) OR ARCHIVED (history versions)
+    deleted_images = CaosImageProposalORM.objects.filter(status__in=['TRASHED', 'ARCHIVED']).select_related('author')
     
+    # FILTER BY USER
+    if f_user:
+        try:
+            uid = int(f_user)
+            deleted_worlds = deleted_worlds.filter(author_id=uid)
+            deleted_narratives = deleted_narratives.filter(created_by_id=uid)
+            deleted_images = deleted_images.filter(author_id=uid)
+        except (ValueError, TypeError): pass
+    
+    # --- AUDIT LOG HYDRATION ---
+    # Fetch logs for these items to find WHO deleted them
+    all_target_ids = [str(w.id) for w in deleted_worlds] + [str(n.nid) for n in deleted_narratives] + [str(i.id) for i in deleted_images]
+    # Fetch latest SOFT_DELETE msg for each
+    audit_logs = CaosEventLog.objects.filter(
+        target_id__in=all_target_ids, 
+        action='SOFT_DELETE'
+    ).select_related('user').order_by('target_id', '-timestamp')
+    
+    # Map target_id -> user_name
+    deleter_map = {}
+    for log in audit_logs:
+        if log.target_id not in deleter_map: # Take first (latest)
+            deleter_map[log.target_id] = log.user.username if log.user else "Sistema"
+
+    # 2. Group by Author
+    grouped_trash = {}
+    
+    # Import hierarchy utils
+    from src.WorldManagement.Caos.Domain.hierarchy_utils import get_readable_hierarchy
+
+    def add_to_group(item, type_key):
+        user_obj = getattr(item, 'author', getattr(item, 'created_by', None))
+        # Change "Sistema" -> "Alone" as requested
+        # Also check if user_obj is None, use "Alone"
+        author_name = user_obj.username if user_obj else "Alone"
+        
+        if author_name not in grouped_trash:
+            grouped_trash[author_name] = {'Mundos': [], 'Narrativas': [], 'Imagenes': []}
+        grouped_trash[author_name][type_key].append(item)
+        
+    for w in deleted_worlds: 
+        w.deleted_at = getattr(w, 'updated_at', getattr(w, 'created_at', None)) # Approximate
+        w.deleted_by_name = deleter_map.get(w.id, "Desconocido")
+        # Add Level and Description
+        lvl = len(w.id) // 2
+        label = get_readable_hierarchy(w.id)
+        w.nice_level = f"Nivel {lvl}: {label}"
+        w.short_desc = (w.description[:60] + "...") if w.description else ""
+        add_to_group(w, 'Mundos')
+        
+    for n in deleted_narratives: 
+        n.deleted_at = getattr(n, 'updated_at', getattr(n, 'created_at', None))
+        n.deleted_by_name = deleter_map.get(n.nid, "Desconocido")
+        # Add Context and Description
+        n.nice_location = f"Mundo: {n.world.name}" if n.world else ""
+        n.short_desc = (n.contenido[:60] + "...") if n.contenido else ""
+        add_to_group(n, 'Narrativas')
+        
+    for i in deleted_images:
+        # Improve presentation for template
+        try:
+             encoded_filename = urllib.parse.quote(i.target_filename)
+        except: encoded_filename = ""
+        
+        i.trash_path = f"{settings.STATIC_URL}persistence/img/{i.world.id}/{encoded_filename}" if i.world else ""
+        i.deleted_by_name = deleter_map.get(str(i.id), "Desconocido")
+        i.nice_location = f"Mundo: {i.world.name}" if i.world else ""
+        
+        # LOGIC: Prioritize REASON. 
+        # If title is "Borrar: filename", we assume it's redundant if reason is improperly missing or if we just want to avoid the label.
+        clean_title = i.title.replace(f"Borrar: {i.target_filename}", "").strip() if i.title else ""
+        if i.title and i.title.startswith("Borrar:"): clean_title = i.title.replace("Borrar:", "").strip()
+        
+        # If the resulting title is same as filename, ignore it
+        if clean_title == i.target_filename: clean_title = ""
+        
+        i.short_desc = i.reason if i.reason else clean_title
+        add_to_group(i, 'Imagenes')
+
     context = {
-        'deleted_worlds': deleted_worlds,
-        'deleted_narratives': deleted_narratives, 
-        'deleted_images': deleted_images
+        'grouped_trash': grouped_trash,
+        'users': users,
+        'current_user': int(f_user) if f_user else None
     }
     return render(request, 'papelera.html', context)
 
@@ -251,4 +333,113 @@ def borrar_narrativa_definitivo(request, nid):
         n.delete()
         messages.success(request, "Narrativa eliminada.")
     except Exception as e: messages.error(request, str(e))
+    return redirect('ver_papelera')
+
+@login_required
+@admin_only
+def manage_trash_bulk(request):
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        w_ids = request.POST.getlist('world_ids')
+        n_ids = request.POST.getlist('narrative_ids')
+        i_ids = request.POST.getlist('image_ids')
+        
+        # If coming from Review Page, IDs might be in CSV hidden fields
+        if not w_ids and request.POST.get('world_ids_csv'): 
+            w_ids = [x for x in request.POST.get('world_ids_csv').split(',') if x]
+        if not n_ids and request.POST.get('narrative_ids_csv'): 
+            n_ids = [x for x in request.POST.get('narrative_ids_csv').split(',') if x]
+        if not i_ids and request.POST.get('image_ids_csv'): 
+            i_ids = [x for x in request.POST.get('image_ids_csv').split(',') if x]
+
+        count_w = len(w_ids)
+        count_n = len(n_ids)
+        count_i = len(i_ids)
+        total = count_w + count_n + count_i
+        
+        if total == 0 and action == 'review':
+             messages.warning(request, "⚠️ No seleccionaste nada para gestionar.")
+             return redirect('ver_papelera')
+
+        # --- STEP 1: REVIEW SELECTION ---
+        if action == 'review':
+            # LIMIT CHECK FOR IMAGES? 
+            # User said "hasta 5 de una vez" previously.
+            # But now says "previsualizacion de todas".
+            # I will show all but warn if too many? Or strict limit?
+            # "hasta 5" might still apply for DELETION safety.
+            # I will pass objects to template.
+            
+            sel_worlds = CaosWorldORM.objects.filter(id__in=w_ids)
+            sel_narratives = CaosNarrativeORM.objects.filter(nid__in=n_ids)
+            sel_images = CaosImageProposalORM.objects.filter(id__in=i_ids)
+            
+            # Reconstruct trash paths for images if needed (though template logic handles it usually)
+            for img in sel_images:
+                img.trash_path = f"{settings.STATIC_URL}persistence/img/{img.world.id}/{img.target_filename}" if img.world else ""
+
+            context = {
+                'total_count': total,
+                'sel_worlds': sel_worlds,
+                'sel_narratives': sel_narratives,
+                'sel_images': sel_images,
+                'world_ids_csv': ",".join(w_ids),
+                'narrative_ids_csv': ",".join(n_ids),
+                'image_ids_csv': ",".join(i_ids)
+            }
+            return render(request, 'dashboard/trash_bulk_review.html', context)
+
+        # --- STEP 3: GRANULAR PROCESSING ---
+        elif action == 'process_granular':
+            stats = {'restored': 0, 'deleted': 0, 'kept': 0}
+            
+            # Iterate all POST keys
+            for key, val in request.POST.items():
+                if not key.startswith('action_'): continue
+                
+                parts = key.split('_')
+                if len(parts) < 3: continue
+                
+                type_code = parts[1] # world, narrative, image
+                obj_id = parts[2]
+                
+                try:
+                    if type_code == 'world':
+                        if val == 'restore':
+                            CaosWorldORM.objects.get(id=obj_id).restore(); stats['restored'] += 1
+                        elif val == 'delete':
+                            CaosWorldORM.objects.filter(id=obj_id).delete(); stats['deleted'] += 1
+                        else: stats['kept'] += 1
+                            
+                    elif type_code == 'narrative':
+                        if val == 'restore':
+                            CaosNarrativeORM.objects.get(nid=obj_id).restore(); stats['restored'] += 1
+                        elif val == 'delete':
+                            CaosNarrativeORM.objects.filter(nid=obj_id).delete(); stats['deleted'] += 1
+                        else: stats['kept'] += 1
+
+                    elif type_code == 'image':
+                        if val == 'restore':
+                            CaosImageProposalORM.objects.filter(id=obj_id).update(status='PENDING'); stats['restored'] += 1
+                        elif val == 'delete':
+                            # Cleanup file
+                            img = CaosImageProposalORM.objects.filter(id=obj_id).first()
+                            if img:
+                                try:
+                                    file_path = f"persistence/static/persistence/img/{img.world.id}/{img.target_filename}"
+                                    full_path = os.path.join(settings.BASE_DIR, file_path)
+                                    if os.path.exists(full_path): os.remove(full_path)
+                                except: pass
+                                img.delete(); stats['deleted'] += 1
+                        elif val == 'archive':
+                            # Explicitly set to ARCHIVED (History)
+                             CaosImageProposalORM.objects.filter(id=obj_id).update(status='ARCHIVED'); stats['kept'] += 1
+                        else: stats['kept'] += 1
+                        
+                except Exception as e:
+                    print(f"Error processing {key}: {e}")
+
+            messages.success(request, f"✅ Procesado: ♻️ {stats['restored']} Restaurados | 🔥 {stats['deleted']} Eliminados | 📂 {stats['kept']} Mantenidos")
+            return redirect('ver_papelera')
+
     return redirect('ver_papelera')

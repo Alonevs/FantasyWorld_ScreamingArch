@@ -690,52 +690,43 @@
                 </div>
             </details>
 
-            <!-- EVENT LOG (AUDIT) -->
-            <h2 class="text-2xl font-bold text-blue-400 mt-12 mb-4">📋 Registro de Actividad (Audit Log)</h2>
+            <!-- SYSTEM TOOLS NAVIGATION -->
+            <h2 class="text-2xl font-bold text-gray-400 mt-12 mb-6 border-b border-gray-800 pb-2">🛠️ Herramientas del Sistema</h2>
             
-            <div class="space-y-4">
-                <details class="group bg-card border border-blue-900/30 rounded-xl overflow-hidden shadow-lg">
-                    <summary class="flex justify-between items-center p-4 cursor-pointer bg-blue-900/20 hover:bg-blue-900/30 transition list-none">
-                        <span class="font-bold text-blue-200 flex items-center gap-2">🌍 Cambios en MUNDOS <span class="text-xs bg-blue-900 text-blue-300 px-2 rounded-full">{{ logs_world|length }}</span></span>
-                        <span class="text-blue-400 transform group-open:rotate-180 transition">▼</span>
-                    </summary>
-                    <div class="overflow-x-auto">
-                        {% include "components/_log_table.html" with logs=logs_world color="blue" %}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- HISTORY CARD -->
+                <a href="{% url 'version_history' %}" class="bg-[#0f111a] p-6 rounded-xl border border-gray-800 hover:border-purple-500/50 hover:bg-purple-900/10 transition group">
+                    <div class="flex items-center gap-4 mb-3">
+                        <div class="w-12 h-12 rounded-lg bg-purple-900/20 text-purple-400 flex items-center justify-center text-2xl group-hover:scale-110 transition">📜</div>
+                        <div>
+                            <h3 class="font-bold text-white group-hover:text-purple-400 transition">Historial de Versiones</h3>
+                            <p class="text-xs text-gray-500">Archivo de propuestas y cambios</p>
+                        </div>
                     </div>
-                </details>
+                </a>
 
-                <details class="group bg-card border border-purple-900/30 rounded-xl overflow-hidden shadow-lg">
-                    <summary class="flex justify-between items-center p-4 cursor-pointer bg-purple-900/20 hover:bg-purple-900/30 transition list-none">
-                        <span class="font-bold text-purple-200 flex items-center gap-2">📖 Cambios en NARRATIVAS <span class="text-xs bg-purple-900 text-purple-300 px-2 rounded-full">{{ logs_narrative|length }}</span></span>
-                        <span class="text-purple-400 transform group-open:rotate-180 transition">▼</span>
-                    </summary>
-                    <div class="overflow-x-auto">
-                        {% include "components/_log_table.html" with logs=logs_narrative color="purple" %}
+                <!-- AUDIT LOG CARD -->
+                <a href="{% url 'audit_log' %}" class="bg-[#0f111a] p-6 rounded-xl border border-gray-800 hover:border-blue-500/50 hover:bg-blue-900/10 transition group">
+                    <div class="flex items-center gap-4 mb-3">
+                        <div class="w-12 h-12 rounded-lg bg-blue-900/20 text-blue-400 flex items-center justify-center text-2xl group-hover:scale-110 transition">📋</div>
+                        <div>
+                            <h3 class="font-bold text-white group-hover:text-blue-400 transition">Registro de Auditoría</h3>
+                            <p class="text-xs text-gray-500">Log de eventos y actividad</p>
+                        </div>
                     </div>
-                </details>
+                </a>
 
-                <details class="group bg-card border border-pink-900/30 rounded-xl overflow-hidden shadow-lg">
-                    <summary class="flex justify-between items-center p-4 cursor-pointer bg-pink-900/20 hover:bg-pink-900/30 transition list-none">
-                        <span class="font-bold text-pink-200 flex items-center gap-2">🖼️ Cambios en IMÁGENES <span class="text-xs bg-pink-900 text-pink-300 px-2 rounded-full">{{ logs_image|length }}</span></span>
-                        <span class="text-pink-400 transform group-open:rotate-180 transition">▼</span>
-                    </summary>
-                    <div class="overflow-x-auto">
-                        {% include "components/_log_table.html" with logs=logs_image color="pink" %}
+                <!-- TRASH CAN CARD -->
+                <a href="{% url 'ver_papelera' %}" class="bg-[#0f111a] p-6 rounded-xl border border-gray-800 hover:border-red-500/50 hover:bg-red-900/10 transition group">
+                    <div class="flex items-center gap-4 mb-3">
+                        <div class="w-12 h-12 rounded-lg bg-red-900/20 text-red-400 flex items-center justify-center text-2xl group-hover:scale-110 transition">🗑️</div>
+                        <div>
+                            <h3 class="font-bold text-white group-hover:text-red-400 transition">Papelera de Reciclaje</h3>
+                            <p class="text-xs text-gray-500">Elementos eliminados de Live</p>
+                        </div>
                     </div>
-                </details>
-
-                <details class="group bg-card border border-gray-800 rounded-xl overflow-hidden shadow-lg">
-                    <summary class="flex justify-between items-center p-4 cursor-pointer bg-gray-900/50 hover:bg-gray-800 transition list-none">
-                        <span class="font-bold text-gray-400 flex items-center gap-2">⚙️ Otros Eventos <span class="text-xs bg-gray-800 text-gray-300 px-2 rounded-full">{{ logs_other|length }}</span></span>
-                        <span class="text-gray-500 transform group-open:rotate-180 transition">▼</span>
-                    </summary>
-                    <div class="overflow-x-auto">
-                        {% include "components/_log_table.html" with logs=logs_other color="gray" %}
-                    </div>
-                </details>
+                </a>
             </div>
-
-        </form>
     </div>
 {% endblock %}
 

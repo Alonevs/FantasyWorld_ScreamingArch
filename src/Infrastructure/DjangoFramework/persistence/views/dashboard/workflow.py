@@ -381,7 +381,7 @@ def publicar_propuestas_masivo(request):
         
         count = 0
         for vid in w_ids:
-            execute_use_case_action(request, PublishToLiveVersionUseCase, vid, "", "")
+            execute_use_case_action(request, PublishToLiveVersionUseCase, vid, "", "", extra_args={'user': request.user})
             count += 1
         for nid in n_ids:
             execute_use_case_action(request, PublishNarrativeToLiveUseCase, nid, "", "")

@@ -1,7 +1,7 @@
-from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosVersionORM
+from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosVersionORM, CaosEventLog
 
 class PublishToLiveVersionUseCase:
-    def execute(self, version_id: int):
+    def execute(self, version_id: int, user=None):
         try:
             version = CaosVersionORM.objects.get(id=version_id)
         except CaosVersionORM.DoesNotExist:
@@ -14,9 +14,9 @@ class PublishToLiveVersionUseCase:
         try:
             old_live = CaosVersionORM.objects.filter(world=version.world, status='LIVE').exclude(id=version.id)
             for old in old_live:
-                old.status = 'HISTORY'
+                old.status = 'ARCHIVED'
                 old.save()
-                print(f" 📦 Versión v{old.version_number} archivada como HISTORY.")
+                print(f" 📦 Versión v{old.version_number} archivada como ARCHIVED.")
         except Exception as e:
             print(f"Error archivando versión anterior: {e}")
 
@@ -27,6 +27,11 @@ class PublishToLiveVersionUseCase:
             # This ensures we have a backup of the state prior to deletion.
             version.world.soft_delete()
             
+            # LOG EVENT
+            if user:
+                 try: CaosEventLog.objects.create(user=user, action="SOFT_DELETE", target_id=version.world.id, details=f"Aprobada v{version.version_number} (Borrado)")
+                 except: pass
+
             # Mark this proposal as ARCHIVED to indicate it was verified and executed.
             version.status = 'ARCHIVED' 
             version.save()

@@ -1,0 +1,57 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Confirmar Borrado de Imágenes | ECLAI{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-4xl">
+    
+    <div class="bg-red-900/10 border border-red-900/50 rounded-xl p-8 text-center mb-8">
+        <div class="text-6xl mb-4">⚠️</div>
+        <h1 class="text-3xl font-extrabold text-red-500 mb-2">¿Estás seguro?</h1>
+        <p class="text-gray-300 text-lg">Estás a punto de eliminar definitivamente las siguientes imágenes.</p>
+        <p class="text-red-400 font-bold mt-2">Esta acción borrará los archivos del disco y NO se puede deshacer.</p>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+        {% for img in images %}
+        <div class="bg-black/40 p-2 rounded border border-gray-800 relative group">
+            <div class="aspect-square bg-gray-900 rounded overflow-hidden mb-2">
+                {% if img.trash_path %}
+                <!-- It seems we didn't calculate trash_path in the bulk view logic, we used 'world.id' -->
+                <!-- We can reconstruct it or pass it. We'll reconstruct it here. -->
+                <img src="/static/persistence/img/{{ img.world.id }}/{{ img.target_filename }}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition">
+                {% else %}
+                <div class="w-full h-full flex items-center justify-center text-gray-700 text-xs">Sin Vista Previa</div>
+                {% endif %}
+            </div>
+            <p class="text-[10px] text-gray-500 truncate text-center">{{ img.target_filename }}</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <form method="post" action="{% url 'manage_trash_bulk' %}" class="flex justify-center gap-4">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="delete">
+        <input type="hidden" name="confirmed_delete" value="true">
+        
+        <!-- Pass back the IDs -->
+        <input type="hidden" name="world_ids" value="{{ world_ids_csv }}">
+        <!-- Since we used getlist in view, but here we can't pass lists easily in hidden input unless we split logic.
+             Fix: The view expects getlist('world_ids'). If we put a string, getlist might strictly split it? No.
+             Better approach: Loop and put hidden inputs for each ID. 
+        -->
+        {% for id in world_ids_csv.split(',') %}{% if id %}<input type="hidden" name="world_ids" value="{{ id }}">{% endif %}{% endfor %}
+        {% for id in narrative_ids_csv.split(',') %}{% if id %}<input type="hidden" name="narrative_ids" value="{{ id }}">{% endif %}{% endfor %}
+        {% for id in image_ids_csv.split(',') %}{% if id %}<input type="hidden" name="image_ids" value="{{ id }}">{% endif %}{% endfor %}
+
+        <a href="{% url 'ver_papelera' %}" class="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition">
+            Cancelar
+        </a>
+
+        <button type="submit" class="px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg shadow-[0_0_20px_rgba(220,38,38,0.4)] animate-pulse hover:animate-none transition">
+            🔥 Confirmar Borrado Definitivo
+        </button>
+    </form>
+
+</div>
+{% endblock %}

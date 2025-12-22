@@ -22,10 +22,13 @@ from src.Infrastructure.DjangoFramework.persistence.views.dashboard.assets impor
     aprobar_imagen, rechazar_imagen, archivar_imagen, restaurar_imagen, borrar_imagen_definitivo, 
     publicar_imagen, ImageProposalDetailView, batch_revisar_imagenes,
     ver_papelera, restaurar_entidad_fisica, borrar_mundo_definitivo, borrar_narrativa_definitivo, 
-    restaurar_imagen_papelera
+    restaurar_imagen_papelera, manage_trash_bulk
 )
 from src.Infrastructure.DjangoFramework.persistence.views.dashboard.team import (
     UserManagementView, toggle_admin_role, MyTeamView, CollaboratorWorkView
+)
+from src.Infrastructure.DjangoFramework.persistence.views.dashboard.history import (
+    audit_log_view, version_history_view, version_history_cleanup_view
 )
 from src.Infrastructure.DjangoFramework.persistence.views.media_views import (
     api_preview_foto, api_save_foto, api_update_image_metadata, 
@@ -79,11 +82,15 @@ urlpatterns = [
     # DASHBOARD Y CONTROL DE VERSIONES
     # ==========================================
     path('control/', dashboard, name='dashboard'), 
+    path('control/auditoria/', audit_log_view, name='audit_log'),
+    path('control/historial/', version_history_view, name='version_history'),
+    path('control/historial/limpiar/', version_history_cleanup_view, name='version_history_cleanup'),
     path('papelera/', ver_papelera, name='ver_papelera'),
     path('papelera/restaurar/<str:jid>/', restaurar_entidad_fisica, name='restaurar_entidad_fisica'), 
     path('papelera/borrar_mundo/<str:id>/', borrar_mundo_definitivo, name='borrar_mundo_definitivo'), # HARD DELETE
     path('papelera/borrar_narrativa/<str:nid>/', borrar_narrativa_definitivo, name='borrar_narrativa_definitivo'), # HARD DELETE
     path('papelera/restaurar_imagen/<int:id>/', restaurar_imagen_papelera, name='restaurar_imagen_papelera'), # NEW
+    path('papelera/acciones_lote/', manage_trash_bulk, name='manage_trash_bulk'),
     
     # Acciones de Propuestas (Aprobar/Rechazar)
     path('propuesta/<int:id>/aprobar/', aprobar_propuesta, name='aprobar_propuesta'),
