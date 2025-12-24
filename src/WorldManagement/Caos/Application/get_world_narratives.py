@@ -3,11 +3,17 @@ from src.WorldManagement.Caos.Application.common import resolve_world_id
 from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM
 
 class GetWorldNarrativesUseCase:
+    """
+    Caso de Uso responsable de listar y organizar jerárquicamente todos los 
+    documentos de lore (Narrativas) asociados a una entidad.
+    Construye una estructura de "bosque" (árboles anidados) y clasifica los 
+    documentos raíz por su tipo (Lore, Historia, Leyenda, etc.).
+    """
     def __init__(self, repository: CaosRepository):
         self.repository = repository
 
     def execute(self, identifier: str, user=None):
-        # 1. Resolve World
+        # 1. Resolución de la Entidad (Mundo/Nivel)
         w_domain = resolve_world_id(self.repository, identifier)
         if not w_domain:
             return None
@@ -17,57 +23,56 @@ class GetWorldNarrativesUseCase:
         except CaosWorldORM.DoesNotExist:
             return None
 
-        # 2. Get All Narratives
-        # Fetch everything. We DO NOT exclude CAPITULO here because they might be top level? 
-        # Actually usually chapters are children, but if they are orphaned they should appear somewhere.
+        # 2. Recuperación de Documentos
+        # Obtenemos todas las narrativas vinculadas a este mundo.
         docs = w.narrativas.all()
         
-        # Filter out drafts (version 0). They only appear in Dashboard or via direct link.
+        # Regla de Negocio: Los borradores (Versión 0) se excluyen de la lista pública.
+        # Solo se muestran documentos que tengan al menos una versión aprobada y publicada.
         docs = docs.filter(current_version_number__gt=0)
 
-        # Convert to list for processing
+        # Convertimos a lista y ordenamos por NID (Identificador Jerárquico)
+        # El orden natural del NID asegura que los padres aparezcan antes que sus hijos.
         all_docs = list(docs)
-        
-        # Sort by NID
         all_docs.sort(key=lambda x: x.nid)
         
-        # Build Forest (Unified Tree)
-        # We process linearly. Since sorted by NID, potential parents always appear before children.
+        # 3. Construcción del Bosque Jerárquico (Árboles anidados)
+        # Procesamos linealmente usando una pila (stack) para gestionar la profundidad.
         roots = []
-        stack = [] # list of narratives acting as current open pointers
+        stack = [] # Pila de narrativas que actúan como contenedores actuales
         
-        # Initialize children for everyone
+        # Inicializamos la lista de hijos para cada nodo
         for d in all_docs:
             d.children = []
 
         for node in all_docs:
-            # Pop from stack if node is not a child of stack top
+            # Si el nodo actual no es hijo del nodo en la cima de la pila, sacamos elementos.
             while stack:
                 potential_parent = stack[-1]
-                # Check strict containment: node.nid starts with potential_parent.nid AND is longer
+                # Comprobación de contención jerárquica estricta
                 if node.nid.startswith(potential_parent.nid) and node.nid != potential_parent.nid:
-                    # It IS a child.
+                    # El nodo actual ES un hijo (Capítulo/Sección) del potencial padre
                     potential_parent.children.append(node)
-                    stack.append(node) # This node acts as parent for potential deeper nodes
+                    stack.append(node) # El hijo ahora puede ser padre de niveles más profundos
                     break
                 else:
-                    # Not a child of this parent
+                    # No es hijo, el contenedor actual está "cerrado" para este nodo
                     stack.pop()
             
             if not stack:
-                # It's a root
+                # Si la pila está vacía, el nodo es una raíz (Documento Principal)
                 roots.append(node)
                 stack.append(node)
         
-        # Categorize ROOTS by type
-        # Children are already nested inside these roots, so we only care about roots for the main lists.
+        # 4. Clasificación por Tipo (Categorización en la Interfaz)
+        # Los hijos ya están anidados dentro de sus padres, así que solo clasificamos las raíces.
         lores = []
         historias = []
         eventos = []
         leyendas = []
         reglas = []
         bestiario = []
-        otros = [] # Fallback
+        otros = [] # Categoría de seguridad para tipos desconocidos
 
         for r in roots:
             if r.tipo == 'LORE': lores.append(r)
@@ -76,15 +81,11 @@ class GetWorldNarrativesUseCase:
             elif r.tipo == 'LEYENDA': leyendas.append(r)
             elif r.tipo == 'REGLA': reglas.append(r)
             elif r.tipo == 'BESTIARIO': bestiario.append(r)
-            else: otros.append(r) # CAPITULO roots? Should technically be HISTORIA usually.
+            else: otros.append(r)
 
-        # Note: If a root is a CAPITULO, we might want to show it in historias or others. 
-        # But usually CAPITULO is child. If it's root, it's orphan or wrong type.
-        # Let's add orphans to historias for visibility if needed, or misc.
-        # For now, append unknown/other types to 'historias' as generic? Or better 'otros'?
-        # Let's map CAPITULO roots to historias to be safe.
+        # Normalización: Si un capítulo aparece como raíz (huérfano), lo tratamos como historia por defecto.
         for r in otros:
-             if r.tipo == 'CAPITULO': historias.append(r)
+             if getattr(r, 'tipo', '') == 'CAPITULO': historias.append(r)
         
         return {
             'world': w,

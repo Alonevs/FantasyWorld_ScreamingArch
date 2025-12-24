@@ -3,14 +3,23 @@ from django.contrib.auth.models import User
 from datetime import datetime
 import nanoid
 
-# 1. FUNCIÓN GENERADORA
+# --- FUNCIONES DE UTILIDAD ---
+
 def generate_nanoid():
+    """
+    Genera un identificador público único de 10 caracteres (NanoID).
+    Utiliza un alfabeto personalizado seguro para URLs y referencias externas.
+    """
     return nanoid.generate('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz-', 10)
 
-# Parche para migraciones antiguas
+# Parche para migraciones antiguas que usaban 'get_nanoid'
 get_nanoid = generate_nanoid
 
 class CaosEpochORM(models.Model):
+    """
+    Representa una 'Época' o periodo temporal en la cronología del mundo.
+    Se utiliza para anclaje temporal de entidades y eventos.
+    """
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
@@ -20,6 +29,10 @@ class CaosEpochORM(models.Model):
     class Meta: db_table = 'caos_epochs'; ordering = ['start_year']
 
 class CaosWorldORM(models.Model):
+    """
+    Modelo central que representa cualquier 'Entidad' del proyecto (Mundo, Región, Ciudad, Personaje).
+    Almacena tanto la jerarquía (J-ID) como la identidad pública (NanoID).
+    """
     id = models.CharField(primary_key=True, max_length=100)
     
     # NANOID (PUBLIC ID)
@@ -76,6 +89,10 @@ class CaosWorldORM(models.Model):
     class Meta: db_table = 'caos_worlds'
 
 class CaosVersionORM(models.Model):
+    """
+    Almacena las diferentes propuestas y versiones de una entidad. 
+    Es la base del sistema de Control de Versiones 'ECLAI'.
+    """
     world = models.ForeignKey(CaosWorldORM, on_delete=models.CASCADE, related_name='versiones')
     proposed_name = models.CharField(max_length=150)
     proposed_description = models.TextField(null=True, blank=True)
@@ -90,6 +107,10 @@ class CaosVersionORM(models.Model):
     class Meta: db_table = 'caos_versions'; ordering = ['-version_number']
 
 class CaosNarrativeORM(models.Model):
+    """
+    Almacena relatos, historias y lore asociado a una entidad. 
+    Sigue una dependencia existencial: si la entidad muere, su narrativa también.
+    """
     nid = models.CharField(primary_key=True, max_length=50)
     
     # NANOID (PUBLIC ID)

@@ -129,6 +129,9 @@ def dashboard(request):
             x.target_desc = f"📸 Cambio: {x.cambios.get('cover_image')}"
         elif x.cambios.get('action') == 'TOGGLE_VISIBILITY':
             x.target_desc = f"👁️ Visibilidad"
+        elif x.cambios.get('action') == 'METADATA_UPDATE':
+            count = len(x.cambios.get('metadata', {}).get('properties', []))
+            x.target_desc = f"🧬 Metadatos ({count} variables)"
         
         # Detect Deletion
         if (x.change_log and ("Eliminación" in x.change_log or "Borrar" in x.change_log)) or \
@@ -211,12 +214,24 @@ from .utils import execute_use_case_action, execute_orm_status_change, execute_o
 @login_required
 @admin_only
 def aprobar_propuesta(request, id):
+    # Verificación de Autoridad BOSS (Regla de Usuario)
+    obj = get_object_or_404(CaosVersionORM, id=id)
+    if not (request.user.is_superuser or obj.world.author == request.user):
+        messages.error(request, "⛔ Solo el Autor (Administrador) de este mundo puede aprobar esta propuesta.")
+        return redirect('dashboard')
+    
     # Allow GET for redirects from Review System
     return execute_use_case_action(request, ApproveVersionUseCase, id, "Propuesta aprobada.", "APPROVE_WORLD_VERSION")
 
 @login_required
 @admin_only
 def rechazar_propuesta(request, id):
+    # Verificación de Autoridad BOSS (Regla de Usuario)
+    obj = get_object_or_404(CaosVersionORM, id=id)
+    if not (request.user.is_superuser or obj.world.author == request.user):
+        messages.error(request, "⛔ Solo el Autor (Administrador) de este mundo puede rechazar esta propuesta.")
+        return redirect('dashboard')
+
     feedback = request.POST.get('admin_feedback', '') or request.GET.get('admin_feedback', '')
     return execute_use_case_action(request, RejectVersionUseCase, id, "Rechazada.", "REJECT_WORLD_VERSION", extra_args={'reason': feedback})
 

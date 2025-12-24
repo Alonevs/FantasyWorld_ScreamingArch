@@ -3,104 +3,101 @@ from django.conf import settings
 from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM
 
 def generate_breadcrumbs(jid):
-    """Genera breadcrumbs robustos manejando longitudes variables y nombres reales."""
+    """
+    Genera una lista de 'migas de pan' (breadcrumbs) robusta y procesada.
+    Se encarga de:
+    1. Manejar longitudes variables (Niveles básicos vs Niveles finales de 4 chars).
+    2. Resolver nombres reales desde la base de datos en una única consulta.
+    3. Filtrar 'Nexos Fantasma' (Gaps) intermedios para un historial limpio.
+    4. Aplicar truncamiento inteligente (Shortening) para no saturar el UI.
+    """
     breadcrumbs = []
     current_len = 0
     target_len = len(jid)
     
     ids_to_fetch = []
     
-    # 1. Calcular todos los IDs de la ruta
+    # 1. Fragmentación del J-ID en niveles lógicos
     while current_len < target_len:
-        # Niveles 1-15 son de 2 chars, Nivel 16 (Entidad) es de 4 chars
-        # Si ya estamos en longitud 30 (Nivel 15), el siguiente salto es de 4
+        # Los primeros niveles son de 2 caracteres. El Nivel 16 es de 4.
         step = 4 if current_len >= 30 else 2
-        
-        # Protección contra IDs mal formados
         if current_len + step > target_len: break
         
         current_len += step
         chunk_id = jid[:current_len]
         ids_to_fetch.append(chunk_id)
 
-    # 2. Obtener nombres, descripciones y PUBLIC_ID de la DB en una sola consulta
-    worlds_data = {w.id: {'name': w.name, 'desc': w.description, 'public_id': w.public_id} for w in CaosWorldORM.objects.filter(id__in=ids_to_fetch)}
+    # 2. Recuperación masiva de datos de ancestros
+    worlds_data = {
+        w.id: {'name': w.name, 'desc': w.description, 'public_id': w.public_id} 
+        for w in CaosWorldORM.objects.filter(id__in=ids_to_fetch)
+    }
     
-    # 3. Construir lista ordenada
+    # 3. Construcción y filtrado de la ruta visual
     full_list = []
     for i, pid in enumerate(ids_to_fetch):
         w_data = worlds_data.get(pid)
-        
-        # Validar si es "real" (tiene datos)
         is_root = (len(pid) <= 2)
         has_data = False
         label = f"Nivel {i+1}"
-        link_id = pid # Fallback
+        link_id = pid # ID por defecto
         
         if w_data:
             label = w_data['name']
             desc = w_data['desc']
-            link_id = w_data['public_id'] # Prefer NanoID
-            # Check content validity
+            link_id = w_data['public_id'] or pid # Preferimos el NanoID para la URL
             if desc and desc.strip() and desc.lower() != 'none':
                 has_data = True
         
-        # LOGICA DE FILTRADO:
-        # 1. Ignorar "Fantasmas" explícitos (Nexo/Fantasma + ID termina en 00)
-        #    Esto aplana la ruta (ej: Caos Prime -> Mi Casa, saltando el 0100)
+        # LÓGICA DE FILTRADO DE GAPS:
+        # Ocultamos entidades puramente estructurales (Nombre 'Nexo' y ID termina en '00')
+        # para que la navegación parezca directa entre niveles con contenido.
         is_ghost_name = "nexo" in label.lower() or "fantasma" in label.lower() or "ghost" in label.lower()
         is_generic_ghost = pid.endswith("00") and is_ghost_name
-        
-        # 2. Solo añadimos si es Root, o si tiene datos reales.
-        # Excepción: Si es el ÚLTIMO elemento (la página actual), siempre lo añadimos.
         is_last = (pid == jid)
         
-        # Si es un fantasma genérico INTERMEDIO, lo saltamos aunque tenga descripción.
+        # Mostramos si es raíz, si es el destino final, o si tiene contenido literario real.
         should_show = (is_root or has_data or is_last)
         if is_generic_ghost and not is_last:
              should_show = False
              
         if should_show:
-            full_list.append({
-                'id': link_id, 
-                'label': label
-            })
+            full_list.append({'id': link_id, 'label': label})
         
-    # --- SMART TRUNCATION ---
-    # Si hay más de 5 elementos, mostramos: Root + ... + Últimos 3 (para asegurar contexto)
+    # --- TRUNCAMIENTO INTELIGENTE ---
+    # Si la ruta es demasiado larga, colapsamos el medio: [Raíz, ..., Últimos 3]
     if len(full_list) > 5:
-        short_list = [full_list[0], {'id': None, 'label': '...'}] + full_list[-3:]
-        return short_list
+        return [full_list[0], {'id': None, 'label': '...'}] + full_list[-3:]
         
     return full_list
 
 def get_world_images(jid, world_instance=None):
+    """
+    Localiza y cataloga las imágenes asociadas a una entidad en el sistema de archivos.
+    Cruza los archivos físicos con el 'gallery_log' almacenado en los metadatos de la DB
+    para recuperar autores, fechas y títulos.
+    """
     from pathlib import Path
+    import datetime
     
-    # Use pathlib for robust path handling
+    # Definición de ruta base para el almacenamiento estático
     base_dir = Path(settings.BASE_DIR) / 'persistence' / 'static' / 'persistence' / 'img'
-    
-    # Safety Check: If base_dir doesn't exist, return empty
-    if not base_dir.exists():
-        return []
+    if not base_dir.exists(): return []
 
     target = base_dir / jid
     
-    # Discovery Logic (handling legacy folder names like "ID_Name")
+    # Fallback para estructuras de carpetas legacy (ID_Nombre)
     if not target.exists():
         try:
             for d in base_dir.iterdir():
                 if d.is_dir() and d.name.startswith(f"{jid}_"): 
                     target = d
                     break
-        except Exception:
-            # If iterdir fails (permission, etc), fallback safely
-            return []
+        except: return []
     
-    # Fetch metadata from DB (Use instance if available to avoid N+1)
+    # Recuperación de metadatos de galería (Evita N+1 usando la instancia si existe)
     gallery_log = {}
     cover_image = None
-    
     if world_instance:
         gallery_log = world_instance.metadata.get('gallery_log', {}) if world_instance.metadata else {}
         cover_image = world_instance.metadata.get('cover_image', None) if world_instance.metadata else None
@@ -109,39 +106,30 @@ def get_world_images(jid, world_instance=None):
             w = CaosWorldORM.objects.get(id=jid)
             gallery_log = w.metadata.get('gallery_log', {}) if w.metadata else {}
             cover_image = w.metadata.get('cover_image', None) if w.metadata else None
-        except:
-            gallery_log = {}
-            cover_image = None
+        except: pass
 
     imgs = []
     if target.exists() and target.is_dir():
         dname = target.name
         try:
-            for f in sorted(os.listdir(str(target))): # str(target) for legacy os.listdir compatibility if needed, or target.iterdir()
-                 # Using os.listdir for simple name string
+            for f in sorted(os.listdir(str(target))):
                 if f.lower().endswith(('.png', '.webp', '.jpg', '.jpeg')): 
                     meta = gallery_log.get(f, {})
                     
-                    # DATE LOGIC: Meta > File Creation Time > Today
+                    # Lógica de Fecha: Metadata > Fecha modificación archivo > Hoy
                     date_str = meta.get('date', '')
                     if not date_str:
                         try:
-                            import datetime
-                            file_path = os.path.join(str(target), f)
-                            timestamp = os.path.getmtime(file_path)
-                            dt = datetime.datetime.fromtimestamp(timestamp)
-                            date_str = dt.strftime('%d/%m/%Y')
-                        except:
-                            date_str = "??/??/????"
+                            timestamp = os.path.getmtime(os.path.join(str(target), f))
+                            date_str = datetime.datetime.fromtimestamp(timestamp).strftime('%d/%m/%Y')
+                        except: date_str = "??/??/????"
 
-                    # AUTHOR LOGIC: Meta > World Author > "Alone"
+                    # Lógica de Autoría: Metadata > Autor del Mundo > "Alone"
                     author_str = meta.get('uploader')
                     if not author_str or author_str == "Sistema":
-                         # Fallback to world author if possible, otherwise 'Alone'
                          if world_instance and world_instance.author:
                              author_str = world_instance.author.username
-                         else:
-                             author_str = "Alone"
+                         else: author_str = "Alone"
 
                     imgs.append({
                         'url': f'{dname}/{f}', 
@@ -149,9 +137,9 @@ def get_world_images(jid, world_instance=None):
                         'author': author_str,
                         'date': date_str,
                         'title': meta.get('title', ''),
-                        'is_cover': (f == cover_image)
+                        'is_cover': (f == cover_image) # Identifica si es la portada actual
                     })
         except Exception as e:
-            print(f"Error reading images for {jid}: {e}")
+            print(f"Error procesando galería de {jid}: {e}")
             
     return imgs

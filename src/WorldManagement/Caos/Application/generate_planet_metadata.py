@@ -5,57 +5,69 @@ import json
 import re
 
 class GeneratePlanetMetadataUseCase:
+    """
+    Caso de Uso especializado en la generación de metadatos planetarios (Astrofísica y Clima).
+    Analiza la descripción narrativa para extraer variables técnicas como gravedad, 
+    duración del día, composición atmosférica y satélites.
+    """
     def __init__(self, repository: CaosRepository, ai_service: LoreGenerator):
         self.repo = repository
         self.ai = ai_service
 
     def execute(self, world_id: str):
-        # 1. Cargar Mundo
+        """
+        Analiza una entidad de tipo Planeta y actualiza su ficha técnica técnica (Metadata).
+        """
+        # 1. Cargar la entidad desde el repositorio
         world = self.repo.find_by_id(WorldID(world_id))
-        if not world: raise Exception("Mundo no encontrado")
+        if not world: 
+            raise Exception("No se ha encontrado la entidad para el análisis planetario.")
 
-        # 2. Preparar el Prompt de Análisis
+        # 2. Configuración del análisis por IA
         print(f" 🔭 Escaneando datos planetarios de: {world.name}...")
         
-        # PROMPT CORREGIDO: MÁS ESTRICTO
+        # Instrucciones estrictas para asegurar una respuesta JSON válida
         system_prompt = """
-        Role: Database System.
-        Task: Convert the input text into a JSON object.
-        Input Lore: "{lore}"
+        Rol: Sistema de Base de Datos Astrofísicas.
+        Tarea: Convertir el texto de Lore en un objeto JSON técnico.
+        Lore de Entrada: "{lore}"
         
-        RULES:
-        1. Output ONLY valid JSON.
-        2. DO NOT write Python code (no 'import json', no variables).
-        3. DO NOT write explanations.
-        4. Starts with {{ and ends with }}.
+        REGLAS ESTRICTAS:
+        1. Devuelve ÚNICAMENTE un JSON válido.
+        2. NO escribas explicaciones ni código.
+        3. Usa claves en minúsculas.
         
-        JSON Structure:
+        Estructura REQUERIDA:
         {{
             "tipo_entidad": "PLANETA",
             "fisica": {{
-                "gravedad": "1.0G",
-                "ciclo_dia": "24h",
-                "lunas": ["Luna 1"]
+                "gravedad": "valor",
+                "ciclo_dia": "valor",
+                "lunas": ["Luna A", "Luna B"]
             }},
             "clima": {{
-                "tipo": "Tundra",
-                "atmosfera": "Toxic",
-                "temperatura_media": "-10C"
+                "tipo": "valor",
+                "atmosfera": "valor",
+                "temperatura_media": "valor"
             }},
-            "rasgos": "Resumen geológico breve"
+            "rasgos": "Resumen breve"
         }}
-        """.format(lore=world.lore_description or "Planeta generico")
+        """.format(lore=world.lore_description or "Entidad planetaria sin descripción.")
         
-        # 3. Invocar a Llama 3
-        # Usamos un mensaje de usuario simple para detonar la respuesta JSON
-        meta_json = self.ai.generate_structure(system_prompt, "JSON OUTPUT:")
+        # 3. Invocación al servicio de estructura (IA)
+        meta_json = self.ai.generate_structure(system_prompt, "FORMATO JSON:")
 
-        # 4. Guardar
+        # 4. Actualización y Persistencia
         if meta_json:
-            if not world.metadata: world.metadata = {}
+            # Inicializamos metadatos si no existen
+            if not world.metadata: 
+                world.metadata = {}
+            
+            # Combinamos los nuevos datos técnicos con los existentes
             world.metadata.update(meta_json)
             self.repo.save(world)
-            print(f" ✅ Metadatos actualizados: {json.dumps(meta_json, indent=2)}")
+            
+            print(f" ✅ Metadatos planetarios sincronizados: {json.dumps(meta_json, indent=2)}")
             return meta_json
         
         return None

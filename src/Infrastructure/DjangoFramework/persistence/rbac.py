@@ -4,17 +4,24 @@ from django.contrib.auth.models import User
 from django.shortcuts import redirect
 from django.contrib import messages
 
-# ROLE CONSTANTS AND WEIGHTS
+# --- JERARQUÍA DE ROLES Y PESOS ---
+"""
+Define el sistema de permisos basado en rangos. 
+Cuanto mayor es el valor numérico, mayor es la autoridad.
+"""
 ROLE_HIERARCHY = {
-    'SUPERADMIN': 100,  # "Alone" - Global Access
-    'ADMIN': 50,        # "Pepe" - Own Worlds + Team
-    'SUBADMIN': 20,     # Collaborator - Drafts Only
-    'USER': 0,          # Explorer - Read Only
-    'EXPLORER': 0       # Alias
+    'SUPERADMIN': 100,  # "Alone" - Acceso total y supervisión técnica global.
+    'ADMIN': 50,        # "Boss" - Dueño de sus mundos y gestor de su equipo.
+    'SUBADMIN': 20,     # "Colaborador" - Ayuda en mundos ajenos (solo visualiza borradores).
+    'USER': 0,          # "Explorador" - Solo puede leer contenido público 'Live'.
+    'EXPLORER': 0       # Alias heredado.
 }
 
-def get_user_rank_value(user):
-    """Returns integer value of user rank."""
+def get_user_rank_value(user) -> int:
+    """
+    Obtiene el peso numérico del rango del usuario actual.
+    Si es Superuser de Django, se le asigna automáticamente el rango máximo.
+    """
     if not user.is_authenticated:
         return -1
         
@@ -23,34 +30,37 @@ def get_user_rank_value(user):
         
     if hasattr(user, 'profile'):
         rank_str = user.profile.rank.upper()
-        # Fallback for old data or mismatches
+        # Retorna el peso del rango o 0 (Explorer) si no se reconoce.
         return ROLE_HIERARCHY.get(rank_str, 0)
         
-    return 0 # Default User
+    return 0 # Por defecto: Explorador
 
-def check_role_access(user, min_role_name):
+def check_role_access(user, min_role_name: str) -> bool:
     """
-    Checks if user meets the minimum role requirement.
+    Valida si el usuario cumple con el rango mínimo exigido.
+    
+    Args:
+        user: El objeto User de Django.
+        min_role_name: El nombre del rango requerido (ej: 'ADMIN').
     """
     user_val = get_user_rank_value(user)
     required_val = ROLE_HIERARCHY.get(min_role_name, 0)
     return user_val >= required_val
 
-# DECORATORS
+# --- DECORADORES DE VISTA (RBAC) ---
 
-def requires_role(role_name):
+def requires_role(role_name: str):
     """
-    View decorator that denies access if user doesn't meet role.
-    Redirects to dashboard with error or raises 403.
+    Decorador maestro para denegar el acceso a vistas si no se cumple el rango.
+    Redirige al dashboard/home con un mensaje de error estilizado.
     """
     def decorator(view_func):
         @wraps(view_func)
         def _wrapped_view(request, *args, **kwargs):
             if not check_role_access(request.user, role_name):
-                # If it's an AJAX request or critical, maybe 403?
-                # For UX, flash message and redirect to safe place
-                messages.error(request, f"⛔ Acceso Denegado. Requiere rango {role_name}.")
-                # If user is Explorer, maybe redirect home?
+                # Generar mensaje de sistema mediante CaosModal (vía messages)
+                messages.error(request, f"⛔ Acceso Denegado. Se requiere rango {role_name} para realizar esta acción.")
+                
                 if request.user.is_authenticated:
                     return redirect('home')
                 return redirect('login')
@@ -60,9 +70,9 @@ def requires_role(role_name):
     return decorator
 
 def restrict_explorer(view_func):
-    """Shortcut for requiring at least SUBADMIN (Contributor) access."""
+    """Acceso restringido: Solo para Colaboradores (SUBADMIN) o superiores."""
     return requires_role('SUBADMIN')(view_func)
 
 def admin_only(view_func):
-    """Shortcut for ADMIN only."""
+    """Acceso exclusivo para Administradores (ADMIN) y Superadmins."""
     return requires_role('ADMIN')(view_func)

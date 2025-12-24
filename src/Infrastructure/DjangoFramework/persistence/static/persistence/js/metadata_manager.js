@@ -1,21 +1,21 @@
 /**
- * METADATA MANAGER V2 (Clean Rewrite)
- * Handles the dynamic list of metadata properties for the editing modal.
+ * GESTOR DE METADATOS V2 (Reescritura Limpia)
+ * Maneja la lista dinámica de propiedades de metadatos para el modal de edición.
  */
 
-let META_PROPS = []; // Source of Truth
-let CURRENT_JID = ""; // Global JID
-
-// 1. Initialization
+let META_PROPS = []; // Fuente de Verdad
+let CURRENT_JID = ""; // JID Global
+ 
+// 1. Inicialización
 function initMetadataManager(initialData, jid) {
-    // Ensure we have an array
+    // Asegurar que sea una lista
     META_PROPS = Array.isArray(initialData) ? initialData : [];
     CURRENT_JID = jid;
-    console.log("✅ Metadata Manager Initialized for", jid, "with", META_PROPS.length, "items.");
+    console.log("✅ Gestor de Metadatos Inicializado para", jid, "con", META_PROPS.length, "elementos.");
     renderMetadataRows();
 }
 
-// 2. Open/Close Modal Helper
+// 2. Ayudantes de Apertura/Cierre de Modal
 function openMetadataModal() {
     const modal = document.getElementById('metadataModal');
     if(modal) {
@@ -32,7 +32,7 @@ function closeMetadataModal() {
     }
 }
 
-// 3. Render Logic (State -> DOM)
+// 3. Lógica de Renderizado (Estado -> DOM)
 function renderMetadataRows() {
     const container = document.getElementById('metadata-rows-container');
     const emptyMsg = document.getElementById('empty-msg');
@@ -50,7 +50,7 @@ function renderMetadataRows() {
         if(emptyMsg) emptyMsg.classList.add('hidden');
     }
 
-    // Generate Rows
+    // Generar Filas
     META_PROPS.forEach((prop, index) => {
         const row = document.createElement('div');
         row.className = "flex gap-2 items-center bg-black/20 p-2 rounded border border-gray-800 hover:border-purple-500/30 transition group";
@@ -89,7 +89,7 @@ function renderMetadataRows() {
     });
 }
 
-// 4. State Management (DOM -> State)
+// 4. Gestión de Estado (DOM -> Estado)
 function syncProp(index, field, value) {
     if (META_PROPS[index]) {
         META_PROPS[index][field] = value;
@@ -99,7 +99,7 @@ function syncProp(index, field, value) {
 function addMetadataRow() {
     META_PROPS.push({ key: "", value: "" });
     renderMetadataRows();
-    // Focus last element
+    // Enfocar el último elemento
     setTimeout(() => {
         const inputs = document.querySelectorAll('input[name="prop_keys[]"]');
         if(inputs.length) inputs[inputs.length - 1].focus();
@@ -111,7 +111,7 @@ function deleteMetadataRow(index) {
     renderMetadataRows();
 }
 
-// 5. Utility
+// 5. Utilidades
 function escapeHtml(text) {
     if (!text) return "";
     return text
@@ -122,21 +122,28 @@ function escapeHtml(text) {
         .replace(/'/g, "&#039;");
 }
 
-// 6. AUTO-NOOS LOGIC
+// 6. LÓGICA AUTO-NOOS
 async function runAutoNoos(jid) {
     const targetJid = jid || CURRENT_JID;
     const btn = document.querySelector('button[onclick^="runAutoNoos"]');
     const txt = document.getElementById('noos-text');
     const icon = document.getElementById('noos-icon');
     
-    // Loading State
+    // Estado de Carga
     const originalText = txt ? txt.innerText : "AUTO-NOOS";
     if(txt) txt.innerText = "ESCANEYENDO...";
     if(icon) icon.innerHTML = "⏳";
     if(btn) btn.disabled = true;
+ 
+    // Mostrar Overlay
+    const overlay = document.getElementById('aiLoading');
+    if(overlay) {
+        overlay.classList.remove('hidden');
+        overlay.classList.add('flex');
+    }
 
     try {
-        console.log("🧠 Run AutoNode for:", targetJid);
+        console.log("🧠 Ejecutando AutoNode para:", targetJid);
         const res = await fetch(`/api/auto_noos/${targetJid}/`);
         
         if (!res.ok) throw new Error(`Server Error ${res.status}`);
@@ -148,9 +155,9 @@ async function runAutoNoos(jid) {
             let added = 0;
             
             newDefaults.forEach(item => {
-                // Only add if key doesn't exist (to preserve current edits)
-                // OR simply overwrite? Let's OVERWRITE empty values, maintain filled?
-                // Logic: If key exists, update value. If not, add.
+                // Solo añadir si la clave no existe (para preservar ediciones actuales)
+                // ¿O simplemente sobreescribir? Vamos a SOBREESCRIBIR valores vacíos, mantener rellenos.
+                // Lógica: Si la clave existe, actualizar valor. Si no, añadir.
                 
                 const existing = META_PROPS.find(p => p.key === item.key);
                 if (existing) {
@@ -171,9 +178,16 @@ async function runAutoNoos(jid) {
         console.error(e);
         await CaosModal.alert("Error de Conexión", "Error de comunicación con el servidor.");
     } finally {
-        // Reset UI
-        txt.innerText = originalText;
-        icon.innerHTML = "🧠";
-        btn.disabled = false;
+        // Resetear UI
+        if(txt) txt.innerText = originalText;
+        if(icon) icon.innerHTML = "🧠";
+        if(btn) btn.disabled = false;
+ 
+        // Ocultar Overlay
+        const overlay = document.getElementById('aiLoading');
+        if(overlay) {
+            overlay.classList.add('hidden');
+            overlay.classList.remove('flex');
+        }
     }
 }

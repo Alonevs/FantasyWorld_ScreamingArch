@@ -1,8 +1,11 @@
-# Definición de nombres por Nivel (Longitud // 2)
+# Definición de nombres por Nivel (Nivel = Longitud J-ID // 2)
+# Esta jerarquía define el "Nombre del Tipo" de cada entidad basado en su posición.
+
 HIERARCHY_LABELS = {
     1: "CAOS",
     2: "ABISMO / GESTACIÓN",
-    # Rama Física (0101...)
+    
+    # Rama Física (Estructura tradicional: Mundo, Continente, Ciudad...)
     "PHYSICS": {
         3: "UNIVERSO",
         4: "GALAXIA",
@@ -13,10 +16,11 @@ HIERARCHY_LABELS = {
         9: "CIUDAD",
         10: "DISTRITO",
         11: "LUGAR",
-        13: "RAZA/ESPECIE", # Default biología
+        13: "RAZA/ESPECIE",
         16: "PERSONAJE"
     },
-    # Rama Dimensional (0105...)
+    
+    # Rama Dimensional (Planos, Círculos, Entidades Demoníacas...)
     "DIMENSIONAL": {
         3: "PLANO MAYOR",
         4: "DOMINIO",
@@ -31,7 +35,7 @@ HIERARCHY_LABELS = {
 }
 
 
-# Labels for categories (Plural) - Requested by User
+# Etiquetas en plural para las categorías (Vistas de Índice)
 PLURAL_HIERARCHY_LABELS = {
     "PHYSICS": {
         1: "CAOS",
@@ -65,47 +69,46 @@ PLURAL_HIERARCHY_LABELS = {
 }
 
 def get_plural_label(level, jid="0101"):
+    """
+    Retorna la etiqueta en plural correspondiente al nivel y la rama del J-ID proporcionado.
+    """
     branch = "DIMENSIONAL" if (jid.startswith("0102") or jid.startswith("0105")) else "PHYSICS"
     labels = PLURAL_HIERARCHY_LABELS.get(branch, PLURAL_HIERARCHY_LABELS["PHYSICS"])
     return labels.get(level, f"CATEGORÍA NIVEL {level}")
 
-# Labels for the "Children List" header based on PARENT Level
-# Key = Parent Level. Value = Label for the children.
+
+# Etiquetas para los encabezados de las listas de hijos según el nivel del PADRE.
+# Ejemplo: si el Padre es Nivel 8 (País), sus hijos son 'CIUDADES'.
 CHILDREN_LABELS = {
-    # Physics Branch default flow
-    12: "RAZAS DISPONIBLES",      # Parent L12 -> Children L13 (Raza)
-    13: "CLASES",                 # Parent L13 (Raza) -> Children L14 (Clase)
-    14: "SUBCLASES",              # Parent L14 (Clase) -> Children L15 (Subclase)
-    15: "PERSONAJES",             # Parent L15 (Subclase) -> Children L16 (Personaje)
-    # Geography
-    6:  "CONTINENTES",            # Parent L6 (Planeta) -> Children L7 (Continente)
-    7:  "PAÍSES / REGIONES",      # Parent L7 (Continente) -> Children L8 (País)
-    8:  "CIUDADES",               # Parent L8 (País) -> Children L9 (Ciudad)
-    9:  "DISTRITOS",              # Parent L9 (Ciudad) -> Children L10 (Distrito)
+    12: "RAZAS DISPONIBLES",
+    13: "CLASES",
+    14: "SUBCLASES",
+    15: "PERSONAJES",
+    6:  "CONTINENTES",
+    7:  "PAÍSES / REGIONES",
+    8:  "CIUDADES",
+    9:  "DISTRITOS",
 }
 
 def get_readable_hierarchy(jid):
+    """
+    Resuelve el nombre legible del nivel jerárquico para un J-ID específico.
+    Gestiona la detección de ramas (Física/Dimensional) y casos especiales para niveles profundos.
+    """
     level = len(jid) // 2
     
-    # Detección de Rama
+    # Determinar la rama según el prefijo del J-ID
     branch = "DIMENSIONAL" if (jid.startswith("0102") or jid.startswith("0105")) else "PHYSICS"
     
-    # Detección Especial Nivel 13/16 (Objetos vs Biología)
+    # Lógica especial para diferenciar Objetos de Biología en niveles profundos (L13+)
     if level >= 13:
         try:
-            # Check indices carefully. 
-            # 24:26 means chars at index 24 and 25.
-            # JID: "01" (2 chars) -> level 1
-            # "0101" (4 chars) -> level 2 ? No, level = len//2
-            # User says: Level 13 (indices 24-26 aprox)
-            # len = 13*2 = 26.
-            # Indices 0..25. 24 and 25 are the 13th pair.
+            # Si el par de dígitos en la posición 13 (24:26) es >= 90, se trata de un Objeto
             cat_id = int(jid[24:26]) 
             if cat_id >= 90: return "OBJETO / ARTEFACTO"
         except: pass
 
-    # Retorno básico
-    # First check if level is in top-level unique keys (1, 2)
+    # Resolución del nombre según nivel y rama
     if level in HIERARCHY_LABELS and isinstance(HIERARCHY_LABELS[level], str):
         return HIERARCHY_LABELS[level]
         
@@ -114,8 +117,8 @@ def get_readable_hierarchy(jid):
 
 def get_available_levels(current_jid):
     """
-    Retorna una lista de niveles disponibles para crear hijos desde el nivel actual.
-    Ej: Si estoy en Nivel 3 (Universo), puedo crear Nivel 4, pero también saltar a 5, 6, etc.
+    Retorna los niveles disponibles para la creación de hijos desde la posición actual.
+    Soporta la lógica de "Saltos de Jerarquía" permitiendo crear hijos en cualquier nivel inferior.
     """
     current_level = len(current_jid) // 2
     branch_key = "DIMENSIONAL" if (current_jid.startswith("0102") or current_jid.startswith("0105")) else "PHYSICS"
@@ -123,27 +126,24 @@ def get_available_levels(current_jid):
     
     options = []
     
-    # Rango de búsqueda: Niveles siguientes hasta un tope razonable (ej: Nivel 16)
-    # Start at current_level + 1
-    # Start at current_level + 1
+    # Recorremos desde el nivel inmediatamente inferior hasta el máximo permitido (16)
     for lvl in range(current_level + 1, 17):
-        # Fallback to top-level labels (for Level 2, etc.)
+        # Intentamos obtener la etiqueta para el nivel actual en el bucle
         label = labels_map.get(lvl, HIERARCHY_LABELS.get(lvl))
-        if isinstance(label, dict): label = None # Safety if key exists but is a dict (like PHYSICS)
+        if isinstance(label, dict): label = None # Seguridad si la clave existe pero es una rama (dict)
         
         if label:
             options.append({
                 'level': lvl,
                 'label': label,
-                'is_next': (lvl == current_level + 1)
+                'is_next': (lvl == current_level + 1) # Indica si es el hijo natural (sin salto)
             })
             
     return options
 
 def get_children_label(current_jid):
     """
-    Returns the label for the children list based on the PARENT's level.
-    e.g. If Parent is Level 12, Children are Level 13, Label = "RAZAS DISPONIBLES".
+    Retorna la etiqueta para la sección de hijos basada en el nivel del PADRE actual.
     """
     level = len(current_jid) // 2
     return CHILDREN_LABELS.get(level, "ENTIDADES HIJAS")

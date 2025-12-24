@@ -3,34 +3,34 @@ from src.WorldManagement.Caos.Application.common import resolve_world_id
 from src.WorldManagement.Caos.Domain.entities import VersionStatus
 
 class ToggleWorldLockUseCase:
+    """
+    Caso de Uso responsable de conmutar el estado de bloqueo de una entidad.
+    Una entidad bloqueada (LOCKED) no permite cambios ni nuevas propuestas de
+    modificación hasta que sea desbloqueada por un administrador.
+    """
     def __init__(self, repository: CaosRepository):
         self.repository = repository
 
     def execute(self, identifier: str) -> str:
         """
-        Toggles the lock status of a world.
-        Returns the public_id (or id) to redirect to.
+        Cambia el estado de bloqueo (True/False).
+        Retorna el identificador de la entidad para gestionar la redirección.
         """
+        # Resolvemos la entidad (soporta NanoID y J-ID)
         world = resolve_world_id(self.repository, identifier)
         if not world:
-            raise ValueError(f"World not found: {identifier}")
+            raise ValueError(f"No se ha encontrado la entidad: {identifier}")
 
-        # Toggle lock
+        # Invertir el estado de bloqueo
+        # Nota: El bloqueo es una medida de seguridad administrativa para "congelar" el estado.
         if world.is_locked:
             world.is_locked = False
-            # If unlocking, we might want to reset status to DRAFT if it was LOCKED?
-            # The original logic was: if w.status == 'LOCKED' -> w.status = 'DRAFT'
-            # Let's preserve that logic but using the new boolean field + status enum
-            if world.status == VersionStatus.LIVE: # Or whatever status maps to LOCKED
-                # Wait, the original code used 'LOCKED' as a status string.
-                # Our Entity uses VersionStatus Enum.
-                # Let's assume 'LOCKED' is not in the Enum yet, or we map it.
-                pass
-            # For now, just toggle the boolean.
+            print(f" 🔓 Entidad '{world.name}' DESBLOQUEADA.")
         else:
             world.is_locked = True
+            print(f" 🔒 Entidad '{world.name}' BLOQUEADA formalmente.")
             
-        # Save changes
+        # Persistir el cambio mediante el repositorio de dominio
         self.repository.save(world)
         
         return world.id.value

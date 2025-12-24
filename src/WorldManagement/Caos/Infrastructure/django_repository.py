@@ -18,15 +18,25 @@ from src.Shared.Domain import id_utils
 from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM
 
 class DjangoCaosRepository(CaosRepository):
+    """
+    Implementación concreta del repositorio utilizando el ORM de Django.
+    Esta clase actúa como el Adaptador de Infraestructura que comunica el Dominio 
+    con la base de datos SQL y el sistema de archivos (para imágenes).
+    """
     
     def save(self, world: CaosWorld):
+        """
+        Sincroniza el estado de una entidad del dominio con la base de datos.
+        Gestiona la lógica de mapeo de estados, incluyendo el soporte para bloqueos.
+        """
         status_str = world.status.value if hasattr(world.status, 'value') else world.status
         
-        # Handle Locking Logic mapping to Status
+        # Lógica de Bloqueo: Si la entidad está marcada como bloqueada, 
+        # su estado en DB se fuerza a 'LOCKED'.
         if world.is_locked:
             status_str = 'LOCKED'
         elif status_str == 'LOCKED':
-            # If unlocked but status says LOCKED, revert to DRAFT
+            # Si se desbloquea pero el estado persistido era LOCKED, vuelve a DRAFT por seguridad.
             status_str = 'DRAFT'
 
         CaosWorldORM.objects.update_or_create(
@@ -37,13 +47,13 @@ class DjangoCaosRepository(CaosRepository):
                 'status': status_str,
                 'metadata': world.metadata,
                 'visible_publico': world.is_public
-                # Removed 'is_locked' as it is a property, not a field
+                # Nota: 'is_locked' es una propiedad calculada en el ORM basada en el estado.
             }
         )
-        print(f" 💾 [DB] Guardado: {world.name}")
+        print(f" 💾 [Persistencia] Entidad '{world.name}' guardada en base de datos.")
 
     def _to_domain(self, orm_obj: CaosWorldORM) -> CaosWorld:
-        """Helper to map ORM objects to Domain entities consistently."""
+        """Maquetador de objetos ORM a Entidades de Dominio puras."""
         return CaosWorld(
             id=WorldID(str(orm_obj.id)),
             name=orm_obj.name,
@@ -55,6 +65,7 @@ class DjangoCaosRepository(CaosRepository):
         )
 
     def find_by_id(self, world_id) -> Optional[CaosWorld]:
+        """Recupera una entidad activa por su J-ID."""
         val = world_id.value if hasattr(world_id, 'value') else world_id
         try:
             orm_obj = CaosWorldORM.objects.get(id=val, is_active=True)
@@ -63,6 +74,7 @@ class DjangoCaosRepository(CaosRepository):
             return None
 
     def get_by_public_id(self, public_id: str) -> Optional[CaosWorld]:
+        """Recupera una entidad activa por su NanoID público."""
         try:
             orm_obj = CaosWorldORM.objects.get(public_id=public_id, is_active=True)
             return self._to_domain(orm_obj)
@@ -70,17 +82,15 @@ class DjangoCaosRepository(CaosRepository):
             return None
 
     def find_descendants(self, root_id: WorldID) -> List[CaosWorld]:
+        """Recupera todos los descendientes lógicos de una rama jerárquica."""
         root_val = root_id.value if hasattr(root_id, 'value') else root_id
-        # Filter by startswith and order by ID to maintain hierarchy
         orm_objs = CaosWorldORM.objects.filter(id__startswith=root_val, is_active=True).order_by('id')
         return [self._to_domain(obj) for obj in orm_objs]
 
     def get_ancestors_by_id(self, entity_id: str) -> List[CaosWorld]:
-        # Generate potential ancestor IDs based on length
-        # Assuming standard depth: 2 chars per level
+        """Recupera la línea ascendente (Padres, Abuelos) de una entidad."""
         ids_to_fetch = []
-        # Start at 2, go up to len-2 (strict ancestors)
-        # Use step 2 generic rule
+        # Generar IDs de ancestros cortando el J-ID actual en segmentos de 2
         for l in range(2, len(entity_id), 2):
             ids_to_fetch.append(entity_id[:l])
             
@@ -91,6 +101,7 @@ class DjangoCaosRepository(CaosRepository):
         return [self._to_domain(obj) for obj in orm_objs]
 
     def save_creature(self, creature: Creature):
+        """Persiste una entidad de tipo Criatura generada por IA."""
         CaosWorldORM.objects.update_or_create(
             id=creature.id.value,
             defaults={
@@ -99,23 +110,26 @@ class DjangoCaosRepository(CaosRepository):
                 'metadata': creature.to_metadata_dict(),
                 'status': 'DRAFT',
                 'current_version_number': 1,
-                'current_author_name': 'AI_Genesis'
+                'current_author_name': 'IA_Genesis'
             }
         )
-        print(f" 🧬 [DB] Criatura guardada: {creature.name}")
+        print(f" 🧬 [Persistencia] Criatura '{creature.name}' guardada.")
+
+    # --- Gestión de Archivos e Imágenes ---
 
     def _inject_metadata(self, image, artist="ECLAI User"):
+        """Inyecta metadatos EXIF de autoría y software en la imagen generada."""
         try:
             exif = image.getexif()
-            # 0x013b: Artist, 0x0131: Software, 0x0132: DateTime
-            exif[0x013b] = artist
-            exif[0x0131] = "ECLAI World Builder v4.9"
-            exif[0x0132] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            exif[0x013b] = artist # Artista
+            exif[0x0131] = "ECLAI World Builder v4.9" # Software
+            exif[0x0132] = datetime.now().strftime("%Y-%m-%d %H:%M:%S") # Timestamp
             return exif
         except:
             return image.getexif()
 
     def _audit_log(self, jid, filename, uploader, origin, title=None):
+        """Registra el historial de subida de una imagen en los metadatos de la entidad."""
         try:
             world = CaosWorldORM.objects.get(id=jid)
             if not world.metadata: world.metadata = {}
@@ -129,30 +143,15 @@ class DjangoCaosRepository(CaosRepository):
             }
             world.save()
         except Exception as e:
-            print(f"⚠️ Error auditoría: {e}")
-
-    def update_image_metadata(self, jid, filename, new_title):
-        try:
-            world = CaosWorldORM.objects.get(id=jid)
-            if not world.metadata: return False
-            if 'gallery_log' not in world.metadata: return False
-            
-            # Buscamos la entrada de la imagen
-            if filename in world.metadata['gallery_log']:
-                world.metadata['gallery_log'][filename]['title'] = new_title
-                world.save()
-                print(f" ✏️ [Metadata] Título actualizado para {filename}: {new_title}")
-                return True
-            return False
-        except Exception as e:
-            print(f"⚠️ Error actualizando metadata: {e}")
-            return False
+            print(f"⚠️ Error en auditoría de galería: {e}")
 
     def save_image(self, jid, base64_data, title=None, username="AI System"):
+        """Guarda una imagen generada por IA en el sistema de archivos y registra el log."""
         if not base64_data: return None
         base_dir = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img')
         target_dir = os.path.join(base_dir, jid)
         os.makedirs(target_dir, exist_ok=True)
+        
         timestamp = int(time.time())
         filename = f"{jid}_ia_{timestamp}.webp"
         file_path = os.path.join(target_dir, filename)
@@ -161,24 +160,25 @@ class DjangoCaosRepository(CaosRepository):
             if "," in base64_data: base64_data = base64_data.split(",")[1]
             image = Image.open(io.BytesIO(base64.b64decode(base64_data)))
             exif = self._inject_metadata(image, artist=username)
+            # Guardamos en formato WEBP optimizado
             image.save(file_path, "WEBP", quality=85, exif=exif)
             self._audit_log(jid, filename, username, "GENERATED", title=title)
             return filename
         except Exception as e:
-            print(f"⚠️ Error IA save: {e}")
+            print(f"⚠️ Error al guardar imagen de IA: {e}")
             return None
 
     def save_manual_file(self, jid, uploaded_file, username="Unknown", title=None):
+        """Gestiona la subida manual de archivos de imagen por parte de un usuario."""
         base_dir = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img')
         target_dir = os.path.join(base_dir, jid)
         os.makedirs(target_dir, exist_ok=True)
 
-        # Determinar nombre
+        # Sanitización de nombre de archivo
         raw_name = title if title else f"{jid}_m_{int(time.time())}"
         safe_name = "".join([c for c in raw_name if c.isalnum() or c in (' ', '-', '_')]).strip().replace(' ', '_')
         if not safe_name: safe_name = "imagen"
 
-        # Anti-Colisión
         filename = f"{safe_name}.webp"
         counter = 1
         while os.path.exists(os.path.join(target_dir, filename)):
@@ -193,69 +193,55 @@ class DjangoCaosRepository(CaosRepository):
             exif = self._inject_metadata(image, artist=username)
             image.save(file_path, "WEBP", quality=90, exif=exif)
             self._audit_log(jid, filename, username, "MANUAL_UPLOAD", title=title)
-            print(f" 📎 [Upload] Guardado: {filename}")
+            print(f" 📎 [Upload] Archivo '{filename}' subido y procesado.")
             return True
         except Exception as e:
-            print(f"⚠️ Error manual save: {e}")
+            print(f"⚠️ Error al guardar archivo manual: {e}")
             return False
 
-    def get_next_child_id(self, parent_id_str: str, target_level: int = None) -> str:
-        len_parent = len(parent_id_str)
-        nivel_padre = id_utils.get_level_u(parent_id_str)
-        
-        # Calculate Target Level logic
-        if target_level:
-            nivel_hijo = target_level
-        else:
-            nivel_hijo = nivel_padre + 1
+    # --- Lógica Avanzada de Identificadores (J-ID) ---
 
-        # Determine if "Entity" (Level 16 or Level 13+ logic dep on branch)
-        # Using simple rule for now: if target is 16, use 4 digits.
-        # But wait, hierarchy_utils had some branch logic.
-        # For simplicty, stick to existing `es_entidad` check if possible or expand.
-        # Check if gap exists
+    def get_next_child_id(self, parent_id_str: str, target_level: int = None) -> str:
+        """
+        Calcula el siguiente J-ID disponible, soportando lógica de saltos (Gaps).
+        Busca 'huecos' en la jerarquía para asignar el menor número disponible.
+        """
+        nivel_padre = id_utils.get_level_u(parent_id_str)
+        nivel_hijo = target_level if target_level else nivel_padre + 1
+        
+        # Determinamos cuántos niveles de salto (Gaps) hay
         gaps = nivel_hijo - nivel_padre - 1
         
-        # Determine segment length for the final entity
+        # Las entidades finales (Nivel 16) usan 4 dígitos, el resto 2.
         es_entidad = (nivel_hijo == 16)
         segment_len = 4 if es_entidad else 2
         
-        # Padding
-        # Each gap level is usually 2 chars "00".
-        # If jumping from 3 to 8. Gaps: 4, 5, 6, 7. 4 gaps.
-        # Padding = "00" * 4.
-        # BUT: Level 16 jump logic might be tricky if gaps are mixed.
-        # Assuming standard 2-char gaps for transparency.
+        # Los saltos se representan con '00' en el ID
         padding = "00" * gaps if gaps > 0 else ""
-        
         prefix = parent_id_str + padding
         
-        # Use prefix to find max existing
-        # Filter: starts with prefix AND length equals expected total length
-        # Expected total len = len(prefix) + segment_len
         target_len = len(prefix) + segment_len
         
-        # GAP FILLING LOGIC: Find the first available number
+        # Recuperamos hermanos existentes en el mismo nivel exacto
         siblings = CaosWorldORM.objects.filter(id__startswith=prefix).annotate(id_len=Length('id')).filter(id_len=target_len).values_list('id', flat=True)
         
         existing_nums = set()
         for s_id in siblings:
             try:
-                # Extract last N chars
                 seg = s_id[-segment_len:]
                 existing_nums.add(int(seg))
             except: pass
             
+        # Algoritmo de Gap Filling: Buscar el primer número natural saltado.
         siguiente_seq = 1
         while siguiente_seq in existing_nums:
             siguiente_seq += 1
 
-        if es_entidad: nuevo_segmento = f"{siguiente_seq:04d}"
-        else: nuevo_segmento = f"{siguiente_seq:02d}"
-
+        nuevo_segmento = f"{siguiente_seq:0{segment_len}d}"
         return prefix + nuevo_segmento
 
     def get_next_narrative_id(self, prefix: str) -> str:
+        """Genera el siguiente NID jerárquico para una narrativa/capítulo."""
         from src.Infrastructure.DjangoFramework.persistence.models import CaosNarrativeORM
         existing_nids = CaosNarrativeORM.objects.filter(nid__startswith=prefix).values_list('nid', flat=True)
         used_nums = set()

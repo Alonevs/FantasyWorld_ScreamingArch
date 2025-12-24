@@ -4,7 +4,9 @@ from src.FantasyWorld.AI_Generation.Domain.interfaces import LoreGenerator, Imag
 
 class GenerateCreatureUseCase:
     """
-    Orquesta la creación de una criatura usando IA Textual (Biología) y Visual (Foto).
+    Orquesta la creación de una nueva especie de fauna (Criaturas) utilizando IA.
+    Este proceso combina la generación de biología evolutiva (Llama) con la 
+    renderización visual (Stable Diffusion) para crear seres coherentes con su entorno.
     """
     def __init__(self, repository: CaosRepository, lore_service: LoreGenerator, image_service: ImageGenerator):
         self.repo = repository
@@ -12,51 +14,58 @@ class GenerateCreatureUseCase:
         self.sd = image_service
 
     def execute(self, parent_id: str) -> str:
-        # 1. Obtener contexto del padre (Planeta/Región)
-        # Nota: find_by_id acepta string o WorldID gracias al repo inteligente
+        """
+        Diseña una criatura adaptada al medio ambiente de su contenedor padre.
+        
+        Args:
+            parent_id: El ID de la entidad donde habita la criatura (ej: un continente o planeta).
+        """
+        # 1. Análisis del Ecosistema (Contexto del Padre)
         parent = self.repo.find_by_id(parent_id)
         if not parent:
-            raise Exception(f"Padre {parent_id} no encontrado")
+            raise Exception(f"No se ha encontrado el entorno padre: {parent_id}")
 
-        print(f" 🧬 Diseñando forma de vida para: {parent.name}...")
+        print(f" 🧬 Diseñando forma de vida adaptada a: {parent.name}...")
 
-        # 2. Generar Biología (Llama 3)
+        # 2. Generación de Biología Evolutiva (IA Textual)
         system_prompt = """
-        Role: Expert Xenobiologist.
-        Task: Design a unique fauna species for the provided environment.
-        Output: STRICT JSON.
-        Keys required: name, taxonomy, description, danger_level (int 1-10), behavior, visual_dna (list), sd_prompt.
+        Rol: Xenobiólogo Experto.
+        Tarea: Diseñar una especie de fauna única adaptada al entorno proporcionado.
+        Salida: JSON ESTRICTO.
+        Claves: name, taxonomy, description, danger_level (1-10), behavior, visual_dna (lista), sd_prompt.
         """
         
-        context_prompt = f"World: {parent.name}. Context: {parent.lore_description}"
+        context_prompt = f"Entorno: {parent.name}. Lore del clima/entorno: {parent.lore_description}"
         
+        # Invocación generadora de estructura
         bio_data = self.llama.generate_structure(system_prompt, context_prompt)
 
-        # Fallback de seguridad
+        # Mecanismo de seguridad (Fallback) por si falla la IA
         if not bio_data:
             bio_data = {
                 "name": "Especie Desconocida",
-                "taxonomy": "Anomalía",
-                "description": "Datos biológicos corruptos o ilegibles.",
-                "danger_level": 1,
-                "behavior": "Errático",
-                "visual_dna": ["glitch", "shadow"],
-                "sd_prompt": "glitch artifact, error texture"
+                "taxonomy": "Anomalía Biológica",
+                "description": "Datos de ADN corruptos.",
+                "danger_level": 0,
+                "behavior": "Pasivo",
+                "visual_dna": ["indeterminado"],
+                "sd_prompt": "foggy creature silhouette"
             }
 
-        # 3. Calcular ID (ECLAI Nivel 16)
-        # El repositorio ya sabe que las criaturas van al nivel 16
+        # 3. Asignación Jerárquica
+        # Las criaturas suelen pertenecer a niveles profundos de la jerarquía (Nivel 16).
         new_id = self.repo.get_next_child_id(parent_id)
 
-        # 4. Crear Entidad Dominio
+        # 4. Construcción de la Entidad de Dominio
+        # Utilizamos el factory method de la entidad Creature para mapear el JSON.
         creature = Creature.from_ai_data(bio_data, parent_id)
         creature.eclai_id = new_id
 
-        # 5. Generar Imagen (Stable Diffusion)
-        print(f" 🎨 Renderizando espécimen: {creature.name}")
+        # 5. Renderización Visual (IA de Imagen)
+        print(f" 🎨 Generando visual del espécimen: {creature.name}")
         image_base64 = self.sd.generate_concept_art(creature.sd_prompt)
 
-        # 6. Persistencia
+        # 6. Almacenamiento y Persistencia
         self.repo.save_creature(creature)
         
         if image_base64:

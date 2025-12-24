@@ -6,9 +6,16 @@ from django.core.exceptions import PermissionDenied
 @receiver(pre_delete, sender=User)
 def prevent_critical_user_deletion(sender, instance, **kwargs):
     """
-    Prevents deletion of critical system users.
-    'Xico' = AI/System user.
-    'Alone' = Superadmin.
+    Señal de seguridad para proteger cuentas críticas del sistema.
+    Evita la eliminación accidental o malintencionada de usuarios pilares.
+    
+    Protegidos:
+    - 'Xico': Identidad de la IA / System User.
+    - 'Alone': Identidad del Superadministrador Global.
     """
-    if instance.username in ['Xico', 'Alone']:
-        raise PermissionDenied(f"CRITICAL ERROR: The user '{instance.username}' is PROTECTED and cannot be deleted.")
+    nombres_protegidos = ['Xico', 'Alone']
+    
+    if instance.username in nombres_protegidos:
+        raise PermissionDenied(
+            f"⛔ ERROR CRÍTICO: El usuario '{instance.username}' está PROTEGIDO por el núcleo del sistema y su eliminación está prohibida."
+        )

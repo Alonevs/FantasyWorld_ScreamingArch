@@ -2,28 +2,30 @@ from src.WorldManagement.Caos.Domain.repositories import CaosRepository
 from src.WorldManagement.Caos.Application.common import resolve_world_id
 
 class ToggleWorldVisibilityUseCase:
+    """
+    Caso de Uso responsable de conmutar la visibilidad pública de una entidad.
+    Una entidad con visibilidad desactivada (Oculta) solo será accesible para
+    administradores y supervisores.
+    """
     def __init__(self, repository: CaosRepository):
         self.repository = repository
 
     def execute(self, identifier: str) -> str:
         """
-        Toggles the public visibility of a world.
-        Returns the public_id (or id) to redirect to.
+        Cambia el estado de visibilidad (Público/Privado).
+        Retorna el identificador para gestionar la redirección en la capa de infraestructura.
         """
+        # Resolvemos la entidad (soporta NanoID y J-ID)
         world = resolve_world_id(self.repository, identifier)
         if not world:
-            raise ValueError(f"World not found: {identifier}")
+            raise ValueError(f"No se ha encontrado la entidad: {identifier}")
 
-        # Toggle visibility
+        # Invertir el estado de visibilidad
         world.is_public = not world.is_public
         
-        # Save changes
+        # Guardar el nuevo estado persistiendo el objeto de dominio
         self.repository.save(world)
         
-        # Return the best ID for redirection
-        # Note: We need to access public_id from the entity, but our entity doesn't store it explicitly 
-        # (it's in the ORM). Ideally, the Entity should have it.
-        # For now, we return the identifier passed or the ID.
-        # To be safe, let's fetch the updated object or just return the ID.
-        # The view will handle the redirect.
+        print(f" 👁️ Visibilidad de '{world.name}' cambiada a: {'PÚBLICO' if world.is_public else 'PRIVADO'}.")
+        
         return world.id.value

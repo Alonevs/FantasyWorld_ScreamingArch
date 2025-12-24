@@ -6,8 +6,8 @@ from src.WorldManagement.Caos.Application.common import resolve_world_id
 
 def resolve_jid_orm(identifier) -> CaosWorldORM:
     """
-    Resolves a J-ID or PublicID (NanoID) to a CaosWorldORM instance.
-    Returns None if not found.
+    Resuelve un J-ID o PublicID (NanoID) a una instancia de CaosWorldORM.
+    Devuelve None si no se encuentra.
     """
     repo = DjangoCaosRepository()
     w_domain = resolve_world_id(repo, identifier)
@@ -17,13 +17,13 @@ def resolve_jid_orm(identifier) -> CaosWorldORM:
         except CaosWorldORM.DoesNotExist:
             return None
             
-    # Fallback: Try identifying as NanoID or ID directly
+    # Fallback: Intentar identificar como NanoID o ID directo
     try:
-        # Try public_id (NanoID)
+        # Intentar por public_id (NanoID)
         return CaosWorldORM.objects.get(public_id=identifier)
     except CaosWorldORM.DoesNotExist:
         try:
-            # Try plain ID (Integer)
+            # Intentar ID plano (Entero/Legacy)
             return CaosWorldORM.objects.get(id=identifier)
         except (CaosWorldORM.DoesNotExist, ValueError):
             return None
@@ -31,14 +31,14 @@ def resolve_jid_orm(identifier) -> CaosWorldORM:
 
 def check_world_access(request, world_orm: CaosWorldORM):
     """
-    Checks if the current user has access to view a world.
-    Rules: 
-    1. Status 'LIVE' is public.
-    2. Other statuses require:
-       - Being the author
-       - Being a collaborator of the author
-       - Being a superuser
-    Returns (can_access: bool, is_author_or_team: bool)
+    Verifica si el usuario actual tiene acceso para ver un mundo.
+    Reglas: 
+    1. El estado 'LIVE' es público.
+    2. Otros estados requieren:
+       - Ser el autor
+       - Ser colaborador del autor
+       - Ser superusuario
+    Devuelve (can_access: bool, is_author_or_team: bool)
     """
     if not world_orm:
         return False, False
@@ -49,12 +49,12 @@ def check_world_access(request, world_orm: CaosWorldORM):
     
     is_strict_author = (is_authenticated and world_orm.author == request.user)
     
-    # Delegated Access (Sub-Admin / Collaborator)
-    # If I am a collaborator of the Author, I have full access (View/Edit)
+    # Acceso Delegado (Sub-Admin / Colaborador)
+    # Si soy colaborador del Autor, tengo acceso total (Ver/Editar)
     is_collaborator = False
     if is_authenticated and not is_strict_author and world_orm.author:
-        # Check explicit collaboration via Profile
-        # Correct Relation: Author.profile.collaborators contains Me.profile
+        # Comprobar colaboración explícita vía Perfil
+        # Relación Correcta: El Author.profile.collaborators me contiene (Me.profile)
         try:
             if hasattr(world_orm.author, 'profile') and hasattr(request.user, 'profile'):
                 if request.user.profile in world_orm.author.profile.collaborators.all():
@@ -62,16 +62,16 @@ def check_world_access(request, world_orm: CaosWorldORM):
         except: pass
 
     
-    # GLOBAL Admin Access (Superuser ONLY)
-    # Rank 'ADMIN' is now Siloed (like a User with extra dashboard features), 
-    # so they cannot edit/view other Admins' private content.
+    # Acceso de Admin GLOBAL (Solo Superusuario)
+    # El rango 'ADMIN' ahora está en Silo (como un Usuario con funciones extra de dashboard), 
+    # por lo que no pueden editar/ver el contenido privado de otros Admins.
     is_global_admin = False
     if is_authenticated and request.user.is_superuser:
         is_global_admin = True
 
     is_author_or_team = is_strict_author or is_collaborator or is_global_admin
     
-    # Strict Public Access: Must be LIVE AND explicitly marked as visible_publico
+    # Acceso Público Estricto: Debe ser LIVE Y marcado explícitamente como visible_publico
     is_publicly_visible = (is_live and world_orm.visible_publico)
     
     can_access = is_publicly_visible or is_author_or_team
@@ -79,7 +79,7 @@ def check_world_access(request, world_orm: CaosWorldORM):
     return can_access, is_author_or_team
 
 def get_admin_status(user):
-    """Checks if the user has an ADMIN or SUBADMIN rank."""
+    """Verifica si el usuario tiene rango ADMIN o SUBADMIN."""
     if not user.is_authenticated:
         return False, False
     

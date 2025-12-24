@@ -2,22 +2,23 @@ from django.core.exceptions import PermissionDenied
 
 def check_ownership(user, obj):
     """
-    Verifies if user has jurisdiction over the object.
-    Rules:
-    1. Superuser / Rank 100 -> YES.
-    2. Author/Creator -> YES.
-    3. Collaborator (User is in Author's team) -> YES.
+    Verifica si un usuario tiene jurisdicción legal sobre un objeto de contenido.
+    Aplica las reglas de soberanía y colaboración definidas en readme_rules.md.
+    
+    Reglas de Acceso:
+    1. Superusuario (Alone) -> Acceso Global.
+    2. Autor/Creador -> Soberanía Total sobre su obra.
+    3. Equipo de Colaboración (Boss/Minion) -> El Jefe puede editar lo del Subadmin
+       y el Subadmin puede editar lo del Jefe si están vinculados en el perfil.
     """
     if not user.is_authenticated:
-        raise PermissionDenied("Debe iniciar sesión.")
+        raise PermissionDenied("Se requiere autenticación para realizar esta operación.")
         
-    # 1. GLOBAL ACCESS
-    if user.is_superuser: return True
-    
-    # Rank 'SUPERADMIN' logic removed as it's superseded by is_superuser.
-    pass
-        
-    # 2. AUTHORSHIP
+    # 1. ACCESO GLOBAL (Superadmin)
+    if user.is_superuser: 
+        return True
+         
+    # 2. IDENTIFICACIÓN DEL PROPIETARIO
     owner = None
     if hasattr(obj, 'author'):
         owner = obj.author
@@ -25,27 +26,23 @@ def check_ownership(user, obj):
         owner = obj.created_by
         
     if owner:
-        if owner == user: return True
+        # Acceso directo por autoría
+        if owner == user: 
+            return True
         
-        # 3. COLLABORATION (JURISDICTION)
-        # "Is 'user' a collaborator of 'owner'?"
-        # Owner's profile has a list of collaborators.
+        # 3. LÓGICA DE JURISDICCIÓN (Colaboración Boss/Minion)
         try:
-            if hasattr(owner, 'profile'):
-                # Check if user is in the owner's collaborators list
+            if hasattr(owner, 'profile') and hasattr(user, 'profile'):
+                # Caso A: El usuario actual es un colaborador autorizado del propietario (Minion trabajando para Boss).
                 if user.profile in owner.profile.collaborators.all():
                     return True
                 
-                # REVERSE: If I am an Admin, and the owner is in my 'collaborators', I can edit their stuff?
-                # "Admin (Pepe)... Own Worlds + Team".
-                # If Pepe is Boss, and Owner is Minion.
-                # Minion is in Pepe.collaborators.
-                if hasattr(user, 'profile') and user.profile.rank == 'ADMIN':
+                # Caso B: El usuario es el Jefe (ADMIN) y el propietario es uno de sus colaboradores (Boss editando a Minion).
+                if user.profile.rank == 'ADMIN':
                     if owner.profile in user.profile.collaborators.all():
                         return True
-        except Exception as e:
-            # print(f"Jurisdiction Check Error: {e}") 
+        except Exception:
             pass
             
-    # Default Deny
+    # Denegación por defecto si no se cumple ninguna jerarquía de poder.
     raise PermissionDenied("⛔ ACCESO DENEGADO: No tienes jurisdicción sobre este contenido.")

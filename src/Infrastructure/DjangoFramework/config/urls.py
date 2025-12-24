@@ -28,7 +28,7 @@ from src.Infrastructure.DjangoFramework.persistence.views.dashboard.team import 
     UserManagementView, toggle_admin_role, MyTeamView, CollaboratorWorkView
 )
 from src.Infrastructure.DjangoFramework.persistence.views.dashboard.history import (
-    audit_log_view, version_history_view, version_history_cleanup_view
+    audit_log_view, version_history_view, version_history_cleanup_view, delete_history_bulk_view
 )
 from src.Infrastructure.DjangoFramework.persistence.views.media_views import (
     api_preview_foto, api_save_foto, api_update_image_metadata, 
@@ -85,6 +85,7 @@ urlpatterns = [
     path('control/auditoria/', audit_log_view, name='audit_log'),
     path('control/historial/', version_history_view, name='version_history'),
     path('control/historial/limpiar/', version_history_cleanup_view, name='version_history_cleanup'),
+    path('control/historial/eliminar_lote/', delete_history_bulk_view, name='delete_history_bulk'),
     path('papelera/', ver_papelera, name='ver_papelera'),
     path('papelera/restaurar/<str:jid>/', restaurar_entidad_fisica, name='restaurar_entidad_fisica'), 
     path('papelera/borrar_mundo/<str:id>/', borrar_mundo_definitivo, name='borrar_mundo_definitivo'), # HARD DELETE

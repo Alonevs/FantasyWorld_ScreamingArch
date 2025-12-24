@@ -1,23 +1,32 @@
 from src.Infrastructure.DjangoFramework.persistence.models import CaosVersionORM
 
 class RejectVersionUseCase:
+    """
+    Caso de Uso responsable de rechazar o descartar una propuesta de cambio.
+    El rechazo mueve la versión al estado 'REJECTED', sirviendo como una 
+    eliminación lógica que permite conservar el historial de cambios descartados.
+    """
     def execute(self, version_id: int, reason: str = ""):
         try:
+            # Recuperar la propuesta desde el ORM
             version = CaosVersionORM.objects.get(id=version_id)
         except CaosVersionORM.DoesNotExist:
-            raise Exception("Versión no encontrada")
+            raise Exception("La propuesta que intenta rechazar no existe.")
 
-        # CAMBIO: Ahora permitimos rechazar PENDING y APPROVED
+        # Regla de Negocio: Se pueden rechazar tanto las propuestas nuevas (PENDING) 
+        # como las que ya habían sido aprobadas pero no publicadas aún (APPROVED).
         if version.status not in ["PENDING", "APPROVED"]:
-            raise Exception(f"No se puede rechazar una versión en estado {version.status}")
+            raise Exception(f"Operación denegada. No se puede rechazar una versión con estado final: {version.status}")
 
-        # Cambiamos el estado a REJECTED (Papelera)
+        # Pasamos la versión a REJECTED (estado de descarte)
         version.status = "REJECTED"
         
-        # Guardamos el feedback del admin
+        # Almacenar el motivo del rechazo para dar feedback al proponente
         if reason:
             version.admin_feedback = reason
             
         version.save()
         
-        print(f" ❌ Rechazada/Descartada propuesta v{version.version_number} para '{version.world.name}'. Motivo: {reason}")
+        print(f" ❌ Descartada propuesta v{version.version_number} para '{version.world.name}'.")
+        if reason:
+            print(f"    └── Feedback del Admin: {reason}")

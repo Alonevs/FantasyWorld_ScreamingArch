@@ -2,31 +2,36 @@ from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, 
 from django.contrib.auth.models import User
 
 class ProposeChangeUseCase:
+    """
+    Caso de Uso responsable de generar una propuesta de cambio (Snapshot).
+    En lugar de editar la entidad en vivo, este proceso crea un registro de versión
+    con el estado deseado. El cambio queda en espera (PENDING) hasta ser 
+    revisado por un administrador.
+    """
     def execute(self, world_id: str, new_name: str, new_desc: str, reason: str, user: User, metadata_proposal: dict = None) -> int:
-        # 1. Recuperar la "Verdad Absoluta" (Datos actuales en Live)
+        # 1. Recuperar la entidad desde la base de datos (Datos actuales 'Live')
         try:
             live_world = CaosWorldORM.objects.get(id=world_id)
         except CaosWorldORM.DoesNotExist:
-            raise Exception("Mundo no encontrado")
+            raise Exception("No se puede proponer cambios: La entidad no existe.")
 
-        # 2. Calcular siguiente número de versión
+        # 2. Determinar el siguiente número de versión secuencial
         last_ver = live_world.versiones.first()
         next_num = (last_ver.version_number + 1) if last_ver else 1
 
-        # 3. ESTRATEGIA DE COPIA SEGURA (SNAPSHOT)
+        # 3. Preparar la Copia de Datos (Snapshot)
+        # Si no se proporciona un nuevo valor, se mantiene el actual para que la versión sea completa.
         final_name = new_name if new_name is not None else live_world.name
         final_desc = new_desc if new_desc is not None else live_world.description
         
-        # Metadata logic: If proposed, use it. Else, keep existing (not exactly clean, but safe)
-        # However, for metadata we usually want to store the DIFF or the FULL NEW STATE in 'cambios' 
-        # for approval. Here we store the proposal in 'cambios' JSON.
-        
+        # Lógica de Metadatos: Almacenamos la estructura propuesta en el campo JSON 'cambios'
         changes_json = {}
         if metadata_proposal:
             changes_json['metadata'] = metadata_proposal
             changes_json['action'] = 'METADATA_UPDATE'
 
-        # 4. Crear la Versión (Es una copia completa del estado deseado)
+        # 4. Crear la Propuesta (Registro de Versión)
+        # Este registro actúa como un "clon" del estado futuro deseado.
         version = CaosVersionORM.objects.create(
             world=live_world,
             proposed_name=final_name,
@@ -38,5 +43,5 @@ class ProposeChangeUseCase:
             author=user
         )
         
-        print(f" 📝 Propuesta v{next_num} generada (Copia segura de '{live_world.name}').")
+        print(f" 📝 Propuesta v{next_num} generada para '{live_world.name}'. Pendiente de revisión.")
         return next_num
