@@ -70,8 +70,8 @@ class CreateNarrativeUseCase:
             narr = CaosNarrativeORM.objects.create(
                 nid=new_nid, 
                 world=padre.world, 
-                title=final_title, 
-                content=final_content, 
+                titulo=final_title, 
+                contenido=final_content, 
                 tipo=full_type,
                 current_version_number=initial_version
             )
@@ -103,8 +103,8 @@ class CreateNarrativeUseCase:
             narr = CaosNarrativeORM.objects.create(
                 nid=new_nid, 
                 world=world, 
-                title=final_title, 
-                content=final_content, 
+                titulo=final_title, 
+                contenido=final_content, 
                 tipo=full_type,
                 current_version_number=initial_version
             )

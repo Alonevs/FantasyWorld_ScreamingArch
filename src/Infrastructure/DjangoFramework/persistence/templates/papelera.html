@@ -80,7 +80,7 @@
                                                 </div>
                                             </div>
                                             
-                                            <a href="{% url 'ver_mundo' item.public_id %}" target="_blank" class="text-xs font-bold text-gray-500 hover:text-white mr-2" title="Ver Ficha">👁️ Ver</a>
+                                            <a href="{% url 'ver_mundo' item.public_id %}" class="text-xs font-bold text-gray-500 hover:text-white mr-2" title="Ver Ficha">👁️ Ver</a>
                                             {% if request.user == item.author or request.user.profile.rank == 'ADMIN' or request.user.is_superuser %}
                                             <a href="{% url 'restaurar_entidad_fisica' item.id %}" class="text-xs font-bold text-green-500 hover:underline">Restaurar</a>
                                             {% endif %}
@@ -116,7 +116,7 @@
                                                 </div>
                                             </div>
                                             
-                                            <a href="{% url 'leer_narrativa' item.nid %}" target="_blank" class="text-xs font-bold text-gray-500 hover:text-white mr-2" title="Leer Completo">👁️ Ver</a>
+                                            <a href="{% url 'leer_narrativa' item.nid %}" class="text-xs font-bold text-gray-500 hover:text-white mr-2" title="Leer Completo">👁️ Ver</a>
                                             {% if request.user == item.created_by or request.user.profile.rank == 'ADMIN' or request.user.is_superuser %}
                                             <a href="{% url 'restaurar_narrativa' item.nid %}" class="text-xs font-bold text-green-500 hover:underline">Restaurar</a>
                                             {% endif %}
@@ -207,7 +207,7 @@
     </div>
 
     <!-- IMAGE PREVIEW MODAL -->
-    <div x-show="showModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm" style="display: none;"
+    <div x-show="showModal" class="fixed inset-0 z-100 flex items-center justify-center bg-black/90 backdrop-blur-sm" style="display: none;"
          x-transition:enter="transition ease-out duration-300"
          x-transition:enter-start="opacity-0"
          x-transition:enter-end="opacity-100"

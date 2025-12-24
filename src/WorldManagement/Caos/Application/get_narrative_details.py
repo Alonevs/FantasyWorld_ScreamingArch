@@ -34,8 +34,8 @@ class GetNarrativeDetailsUseCase:
                 try:
                     v1 = CaosNarrativeVersionORM.objects.get(narrative=narr, version_number=1)
                     # "Inyectamos" el título y contenido propuesto en el objeto para que el template lo pinte
-                    narr.title = v1.proposed_title
-                    narr.content = v1.proposed_content
+                    narr.titulo = v1.proposed_title
+                    narr.contenido = v1.proposed_content
                     narr.is_draft = True # Indicador visual para la interfaz
                 except CaosNarrativeVersionORM.DoesNotExist:
                     # Caso de seguridad por si la propuesta se perdió: marcamos como borrador vacío

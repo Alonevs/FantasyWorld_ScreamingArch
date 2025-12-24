@@ -92,7 +92,10 @@ class PublishToLiveVersionUseCase:
              print(f" 💾 Metadatos aplicados: {len(new_meta.get('properties', []))} propiedades.")
 
         # Aseguramos que el estado del mundo sea 'LIVE' tras la publicación
-        world.status = "LIVE" 
+        # REQUERIMIENTO: Si ya estaba en OFFLINE o LOCKED, mantener esa visibilidad.
+        if world.status not in ['OFFLINE', 'LOCKED']:
+            world.status = "LIVE" 
+            
         world.save()
 
         # Marcamos la versión actual como la ACTIVA

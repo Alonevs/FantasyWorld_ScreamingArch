@@ -14,8 +14,8 @@ class ProposeNarrativeChangeUseCase:
             raise ValueError("La narrativa que intenta modificar no existe.")
         
         # Mantener valores actuales si el proponente deja campos vacíos (Snapshot completo)
-        final_title = new_title if (new_title and new_title.strip()) else narrative.title
-        final_content = new_content if (new_content and new_content.strip()) else narrative.content
+        final_title = new_title if (new_title and new_title.strip()) else narrative.titulo
+        final_content = new_content if (new_content and new_content.strip()) else narrative.contenido
         
         # Cálculo del número de versión: Siguiente al máximo histórico registrado
         last_version = narrative.versiones.order_by('-version_number').first()
@@ -32,4 +32,4 @@ class ProposeNarrativeChangeUseCase:
             author=user
         )
         
-        print(f" 📝 Propuesta de lore v{next_version} generada para '{narrative.title}'.")
+        print(f" 📝 Propuesta de lore v{next_version} generada para '{narrative.titulo}'.")

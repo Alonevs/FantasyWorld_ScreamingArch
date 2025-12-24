@@ -27,8 +27,8 @@ class PublishNarrativeToLiveUseCase:
         # 2. APLICACIÓN AL 'LIVE' (Registro Maestro)
         # Copiamos los textos de la propuesta al objeto principal que ve el usuario.
         narrative = version.narrative
-        narrative.title = version.proposed_title
-        narrative.content = version.proposed_content
+        narrative.titulo = version.proposed_title
+        narrative.contenido = version.proposed_content
         narrative.current_version_number = version.version_number
         
         narrative.save()
@@ -46,4 +46,4 @@ class PublishNarrativeToLiveUseCase:
         )
         obsoletas.update(status='ARCHIVED')
         
-        print(f" 🚀 Lore Publicado exitosamente: v{version.version_number} de '{narrative.title}'.")
+        print(f" 🚀 Lore Publicado exitosamente: v{version.version_number} de '{narrative.titulo}'.")

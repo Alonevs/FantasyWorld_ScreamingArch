@@ -182,7 +182,7 @@
                                             {% endif %}
                                             
                                             <!-- Review (Images in New Tab) -->
-                                            <a href="{% url 'review_proposal' item.type item.id %}" {% if item.type == 'IMAGE' %}target="_blank"{% endif %} class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold px-3 py-2 rounded border border-gray-700 transition-all shadow-lg" title="Ver detalle">
+                                            <a href="{% url 'review_proposal' item.type item.id %}" class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold px-3 py-2 rounded border border-gray-700 transition-all shadow-lg" title="Ver detalle">
                                                 <span>👁️</span> <span class="hidden sm:inline">Ver</span>
                                             </a>
 
@@ -204,7 +204,7 @@
                                              If in DELETE mode, I replaced the block, so button missing.
                                              I should add "Ver" button to DELETE block too. -->
                                         {% if item.action == 'DELETE' %}
-                                            <a href="{% url 'review_proposal' item.type item.id %}" {% if item.type == 'IMAGE' %}target="_blank"{% endif %} class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold px-3 py-2 rounded border border-gray-700 transition-all shadow-lg" title="Ver detalle">
+                                            <a href="{% url 'review_proposal' item.type item.id %}" class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold px-3 py-2 rounded border border-gray-700 transition-all shadow-lg" title="Ver detalle">
                                                 <span>👁️</span>
                                             </a>
                                         {% endif %}
@@ -652,7 +652,7 @@
                                     <!-- ACTIONS -->
                                     <div class="flex items-center gap-2 shrink-0">
                                          <!-- Preview -->
-                                         <a href="{% url 'review_proposal' item.type item.id %}" {% if item.type == 'IMAGE' %}target="_blank"{% endif %} class="text-gray-600 hover:text-gray-300 transition" title="Ver Snapshot">
+                                         <a href="{% url 'review_proposal' item.type item.id %}" class="text-gray-600 hover:text-gray-300 transition" title="Ver Snapshot">
                                             👁️
                                         </a>
                                         

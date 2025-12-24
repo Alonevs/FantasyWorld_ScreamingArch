@@ -151,7 +151,7 @@
                         <div class="w-16 h-16 rounded bg-gray-800 flex items-center justify-center text-xs text-gray-600">No Cover</div>
                     {% endif %}
                     <div>
-                        <a href="{% url 'ver_mundo' proposal.world.public_id|default:proposal.world.id %}" target="_blank" class="text-accent hover:text-white font-bold hover:underline">
+                        <a href="{% url 'ver_mundo' proposal.world.public_id|default:proposal.world.id %}" class="text-accent hover:text-white font-bold hover:underline">
                             {{ proposal.world.name }} ↗
                         </a>
                         <div class="text-xs text-gray-500 mt-1">ID: {{ proposal.world.id }}</div>
