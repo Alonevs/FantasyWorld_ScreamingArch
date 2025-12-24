@@ -74,6 +74,8 @@ def review_proposal(request, type, id):
             ctx['proposed_title'] = proposal.proposed_name
             ctx['proposed_content'] = proposal.proposed_description
             ctx['change_log'] = proposal.change_log
+            if live_obj:
+                ctx['live_version_number'] = live_obj.current_version_number
             
             # Calculate Diffs
             ctx['diff_title'] = get_diff_html(ctx['live_title'], ctx['proposed_title'])
@@ -89,6 +91,8 @@ def review_proposal(request, type, id):
             ctx['proposed_title'] = proposal.proposed_title
             ctx['proposed_content'] = proposal.proposed_content
             ctx['change_log'] = proposal.change_log
+            if live_obj:
+                ctx['live_version_number'] = live_obj.current_version_number
             
             # Calculate Diffs
             ctx['diff_title'] = get_diff_html(ctx['live_title'], ctx['proposed_title'])

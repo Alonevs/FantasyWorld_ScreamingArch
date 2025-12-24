@@ -91,7 +91,7 @@ def version_history_view(request):
     # Sticking to ['ARCHIVED', 'HISTORY'] for now as per previous pattern, but ensuring we capture what's needed.
     # Actually, for images, 'ARCHIVED' usually means old versions or deleted ones.
     
-    target_statuses = ['ARCHIVED', 'HISTORY']
+    target_statuses = ['ARCHIVED', 'HISTORY', 'REJECTED', 'APPROVED', 'LIVE', 'PENDING']
     
     w_qs = CaosVersionORM.objects.filter(status__in=target_statuses).select_related('author', 'world')
     n_qs = CaosNarrativeVersionORM.objects.filter(status__in=target_statuses).select_related('author', 'narrative__world')
@@ -160,35 +160,53 @@ def version_history_view(request):
             # If action is UPDATE or something images don't have, hide images
             i_qs = i_qs.none()
 
-    # 3. GROUPING LOGIC
+    # 4. INITIALIZE EMPTY GROUPS (Ensures they appear even if empty)
     # structure: { 'unique_key': { 'entity_name': Str, 'type': Str, 'latest_date': Date, 'versions': [List] } }
     grouped_data = {}
+    
+    # Priority Map & Placeholders
+    type_priority = {
+        'WORLD': 0,
+        'NARRATIVE': 1,
+        'IMAGE': 2,
+        'METADATA': 3
+    }
+    
+    # Pre-populate with dummy entries if desired? 
+    # Actually, the template uses {% regroup page_obj by type as type_list %}.
+    # For regroup to work, the items MUST be in the list.
+    # So we should add at least one "Empty" marker for each type if not present.
+    
+    required_types = ['WORLD', 'NARRATIVE', 'METADATA', 'IMAGE']
+    if f_type:
+        required_types = [f_type]
 
     # Process Worlds
     for v in w_qs:
-        key = f"WORLD_{v.world.id}"
+        # Determine if this is primarily a metadata update
+        raw_action = v.cambios.get('action', 'UPDATE') if v.cambios else 'UPDATE'
+        keys = v.cambios.keys() if v.cambios else []
+        is_metadata = 'metadata' in keys and raw_action == 'UPDATE'
+        
+        actual_type = 'METADATA' if is_metadata else 'WORLD'
+        key = f"{actual_type}_{v.world.id}"
+        
         if key not in grouped_data:
             grouped_data[key] = {
                 'id': v.world.id,
                 'public_id': v.world.public_id, # For links
                 'name': v.world.name,
-                'type': 'WORLD',
-                'type_label': '🌍 Mundo',
+                'type': actual_type,
+                'type_label': '🌍 Mundo' if actual_type == 'WORLD' else '🧬 Metadatos',
                 'versions': [],
                 'latest_date': v.created_at
             }
         
         # Enrich Version
         v.target_name = v.proposed_name
-        v.target_name = v.proposed_name
-        
-        # Determine Action Type for UI
-        raw_action = v.cambios.get('action', 'UPDATE') if v.cambios else 'UPDATE'
         
         # Refine Action label if it's an UPDATE
         if raw_action == 'UPDATE':
-            # Check what changed
-            keys = v.cambios.keys() if v.cambios else []
             if 'noos' in keys:
                  v.refined_action = 'UPDATE_NOOS'
                  v.action_label = '🧠 Ajuste Noos'
@@ -206,6 +224,16 @@ def version_history_view(request):
                 'RESTORE': '♻️ Restauración'
             }
             v.action_label = label_map.get(raw_action, raw_action)
+        
+        # Override action label based on status for better context
+        if v.status == 'LIVE':
+            v.action_label = f"✅ Actual: {v.action_label}"
+        elif v.status == 'PENDING':
+             v.action_label = f"⏳ Propuesta: {v.action_label}"
+        elif v.status == 'REJECTED':
+             v.action_label = f"❌ Rechazada: {v.action_label}"
+        elif v.status == 'APPROVED':
+             v.action_label = f"☑️ Aprobada: {v.action_label}"
 
         v.action_type = v.refined_action # standardized for loop
         grouped_data[key]['versions'].append(v)
@@ -214,7 +242,7 @@ def version_history_view(request):
             grouped_data[key]['latest_date'] = v.created_at
             grouped_data[key]['latest_action_label'] = v.action_label
 
-    # Process Narratives
+    # Process Narrativas
     for v in n_qs:
         key = f"NARRATIVE_{v.narrative.nid}"
         if key not in grouped_data:
@@ -232,7 +260,6 @@ def version_history_view(request):
         v.target_name = v.proposed_title
         v.action_type = v.action if hasattr(v, 'action') else 'UPDATE'
         
-        # Narrative mappings
         n_label_map = {
             'ADD': '✨ Creación',
             'EDIT': '✏️ Edición',
@@ -240,6 +267,15 @@ def version_history_view(request):
             'RESTORE': '♻️ Restauración'
         }
         v.action_label = n_label_map.get(v.action_type, '✏️ Edición')
+        
+        if v.status == 'LIVE':
+            v.action_label = f"✅ Actual: {v.action_label}"
+        elif v.status == 'PENDING':
+             v.action_label = f"⏳ Propuesta: {v.action_label}"
+        elif v.status == 'REJECTED':
+             v.action_label = f"❌ Rechazada: {v.action_label}"
+        elif v.status == 'APPROVED':
+             v.action_label = f"☑️ Aprobada: {v.action_label}"
         grouped_data[key]['versions'].append(v)
         if v.created_at > grouped_data[key]['latest_date']:
             grouped_data[key]['latest_date'] = v.created_at
@@ -247,18 +283,11 @@ def version_history_view(request):
 
     # Process Images
     for v in i_qs:
-        key = f"IMAGE_{v.id}" # Images are usually single events, but if we group by World or Image ID...
-        # Image proposals don't have a "Version" chain like objects. Each proposal IS the record.
-        # But to fit the UI, we treat it as a group of 1 version (or try to group by World?)
-        # User wants "Fotos" similar to others. Grouping by World for images might be confusing if distinct images.
-        # Let's group by the Image Proposal ID itself (single item group)
-        
-        # Enriched ID logic for unique key if needed
-        
+        key = f"IMAGE_{v.id}"
         if key not in grouped_data:
              grouped_data[key] = {
                 'id': v.id,
-                'public_id': v.world.public_id if v.world else '???', # Link to world
+                'public_id': v.world.public_id if v.world else '???',
                 'name': f"Foto: {v.title or v.target_filename or 'Sin Título'}",
                 'type': 'IMAGE',
                 'type_label': '🖼️ Imagen',
@@ -270,7 +299,7 @@ def version_history_view(request):
             }
             
         v.target_name = v.title or v.target_filename
-        v.version_number = 1 # Dummy
+        v.version_number = 1
         
         act = v.action
         if act == 'ADD':
@@ -285,57 +314,44 @@ def version_history_view(request):
             
         grouped_data[key]['versions'].append(v)
 
-    # 4. CONVERT TO LIST & SORT GROUPS
-    # Sorting Requirement: 
-    # 1. Type Priority (World > Narrative > Image)
-    # 2. Author Name
-    # 3. Date (Newest first)
-    
-    # Priority Map
-    type_priority = {
-        'WORLD': 0,
-        'NARRATIVE': 1,
-        'IMAGE': 2
-    }
-    
+    # 4.1 ADD EMPTY MARKERS FOR MISSING TYPES
+    # This ensures regroup in template works even for empty categories
+    found_types = set(g['type'] for g in grouped_data.values())
+    for rt in required_types:
+        if rt not in found_types:
+            grouped_data[f"EMPTY_{rt}"] = {
+                'id': 0, 'public_id': '', 'name': '',
+                'type': rt, 'type_label': '',
+                'versions': [], 'latest_date': None,
+                'latest_author_name': 'Sistema',
+                'is_empty_marker': True
+            }
+
+    # 5. CONVERT TO LIST & SORT GROUPS
     formatted_groups = list(grouped_data.values())
     
-    # Enrichment for sorting (ensure author name exists on group level)
     for g in formatted_groups:
         g['sort_type_idx'] = type_priority.get(g['type'], 99)
-        # Author: Use the author of the latest version if not present
-        if 'latest_author_name' not in g:
-             # Find latest version
-             if g['versions']:
-                 # Versions are not sorted yet in this loop, but we track latest_date. 
-                 # Let's find the version matching latest_date or just take the first one after sorting.
-                 pass
-             g['latest_author_name'] = 'Unknown'
-
-    # 5. SORT VERSIONS INSIDE GROUPS (Newest first)
-    for group in formatted_groups:
-        group['versions'].sort(key=lambda x: x.created_at, reverse=True)
-        # Capture author from latest version for group sorting
-        if group['versions']:
-            latest = group['versions'][0]
+        if g.get('is_empty_marker'):
+            continue
+            
+        # Ensure versions are sorted
+        g['versions'].sort(key=lambda x: x.created_at, reverse=True)
+        if g['versions']:
+            latest = g['versions'][0]
             if latest.author:
-                group['latest_author_name'] = latest.author.username
+                g['latest_author_name'] = latest.author.username
             else:
-                group['latest_author_name'] = 'Sistema'
+                g['latest_author_name'] = 'Sistema'
+        else:
+            g['latest_author_name'] = 'Sistema'
 
-    # 6. SORT GROUPS
-    # Sort key: (Type Index ASC, Author Name ASC, Date DESC)
-    # Note: Python sorts are stable. We can chain sorts or use a tuple key.
-    # Tuple: (sort_typ_idx, latest_author_name, -timestamp)
-    # Since specific requirement: "agrupen primero por si es mundo o narrativa y luego ya por usuario"
-    # It implies: Type -> User. What about Date? Usually date is important.
-    # If Type -> User, then all user's worlds are together?
-    # Let's try: Type ASC, User ASC, Date DESC
-    
+    # Sort groups: Type -> Empty Marker Status (Data first) -> Author -> Date
     formatted_groups.sort(key=lambda x: (
         x['sort_type_idx'], 
-        x['latest_author_name'].lower(), 
-        x['latest_date'].timestamp() * -1 # Negative for reverse sort on date
+        1 if x.get('is_empty_marker') else 0, # Content groups first, then markers if any
+        x.get('latest_author_name', 'Z').lower(), 
+        x['latest_date'].timestamp() * -1 if x['latest_date'] else 0
     ))
     
     history_groups = formatted_groups
@@ -428,6 +444,9 @@ def delete_history_bulk_view(request):
         for item in selection:
             if item.startswith('WORLD_'):
                 try: w_ids.append(int(item.replace('WORLD_', '')))
+                except: pass
+            elif item.startswith('METADATA_'):
+                try: w_ids.append(int(item.replace('METADATA_', '')))
                 except: pass
             elif item.startswith('NARRATIVE_'):
                 try: n_ids.append(int(item.replace('NARRATIVE_', '')))

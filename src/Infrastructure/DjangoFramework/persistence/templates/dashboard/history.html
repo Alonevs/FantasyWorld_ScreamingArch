@@ -54,6 +54,7 @@
                         <option value="">Todo el Contenido</option>
                         <option value="WORLD" {% if current_type == 'WORLD' %}selected{% endif %}>🌍 Mundos</option>
                         <option value="NARRATIVE" {% if current_type == 'NARRATIVE' %}selected{% endif %}>📖 Narrativas</option>
+                        <option value="METADATA" {% if current_type == 'METADATA' %}selected{% endif %}>🧬 Metadatos</option>
                         <option value="IMAGE" {% if current_type == 'IMAGE' %}selected{% endif %}>📸 Imágenes</option>
                     </select>
                     <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-600 group-hover:text-purple-400 transition">▼</div>
@@ -113,13 +114,14 @@
                          <div class="absolute inset-0 opacity-20 bg-current 
                             {% if type_group.grouper == 'WORLD' %}text-blue-500
                             {% elif type_group.grouper == 'NARRATIVE' %}text-purple-500
+                            {% elif type_group.grouper == 'METADATA' %}text-emerald-500
                             {% else %}text-teal-500{% endif %}"></div>
-                        {% if type_group.grouper == 'WORLD' %}🌍{% elif type_group.grouper == 'NARRATIVE' %}📖{% else %}📸{% endif %}
+                        {% if type_group.grouper == 'WORLD' %}🌍{% elif type_group.grouper == 'NARRATIVE' %}📖{% elif type_group.grouper == 'METADATA' %}🧬{% else %}📸{% endif %}
                     </div>
                     <div>
-                        <h2 class="text-xl font-black text-white tracking-tighter uppercase">
-                            {% if type_group.grouper == 'WORLD' %}Mundos{% elif type_group.grouper == 'NARRATIVE' %}Narrativas{% elif type_group.grouper == 'IMAGE' %}Imágenes{% else %}{{ type_group.grouper }}{% endif %}
-                        </h2>
+                        <h1 class="text-xl font-black text-white tracking-tighter uppercase">
+                            {% if type_group.grouper == 'WORLD' %}Mundos{% elif type_group.grouper == 'NARRATIVE' %}Narrativas{% elif type_group.grouper == 'METADATA' %}Metadatos{% elif type_group.grouper == 'IMAGE' %}Imágenes{% else %}{{ type_group.grouper }}{% endif %}
+                        </h1>
                         <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{{ type_group.list|length }} Registros</p>
                     </div>
                     <div class="ml-auto">
@@ -128,11 +130,19 @@
                 </div>
 
                 <!-- TYPE CONTENT -->
-                <div x-show="typeExpanded" x-collapse class="bg-black/20 p-4 space-y-4">
+                <div x-show="typeExpanded" x-collapse class="bg-black/20 p-4 pt-1 space-y-4">
                     
                     {% regroup type_group.list by latest_author_name as author_list %}
                     
+                     {% if type_group.list.0.is_empty_marker %}
+                        <div class="py-12 flex flex-col items-center justify-center text-gray-600 opacity-40">
+                            <span class="text-4xl mb-4">📭</span>
+                            <p class="text-xs font-bold uppercase tracking-widest">No hay registros históricos</p>
+                        </div>
+                    {% endif %}
+                    
                     {% for author_group in author_list %}
+                    {% if not author_group.list.0.is_empty_marker %}
                     <!-- AUTHOR CONTAINER -->
                     <div x-data="{ authorExpanded: false }" class="pl-2 border-l-2 border-white/5">
                         
@@ -168,24 +178,41 @@
                                     <!-- Icon or Image Preview -->
                                     <div class="relative group-hover:scale-110 transition duration-500">
                                         {% if group.type == 'IMAGE' and group.image_url %}
-                                        <div class="w-8 h-8 rounded-lg border border-white/10 bg-black/40 backdrop-blur-md relative z-10 overflow-hidden shadow-sm">
+                                        <div class="w-10 h-10 rounded-xl border border-white/10 bg-black/40 backdrop-blur-md relative z-10 overflow-hidden shadow-sm">
                                             <img src="{{ group.image_url }}" alt="Preview" class="w-full h-full object-cover">
                                         </div>
+                                        <div class="absolute inset-0 bg-teal-500/20 blur-xl opacity-0 group-hover:opacity-100 transition duration-500"></div>
                                         {% else %}
-                                        <div class="w-8 h-8 rounded-lg flex items-center justify-center text-lg border border-white/5 bg-black/40 backdrop-blur-md relative z-10 shadow-sm">
-                                            {% if group.type == 'WORLD' %}🌍{% elif group.type == 'NARRATIVE' %}📖{% else %}🖼️{% endif %}
+                                        <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl border border-white/10 bg-black/40 backdrop-blur-md relative z-10 shadow-lg
+                                            {% if group.type == 'WORLD' %}text-blue-400
+                                            {% elif group.type == 'NARRATIVE' %}text-purple-400
+                                            {% elif group.type == 'METADATA' %}text-emerald-400
+                                            {% else %}text-teal-400{% endif %}">
+                                            
+                                            <div class="absolute inset-0 opacity-10 rounded-xl
+                                                {% if group.type == 'WORLD' %}bg-blue-500
+                                                {% elif group.type == 'NARRATIVE' %}bg-purple-500
+                                                {% elif group.type == 'METADATA' %}bg-emerald-500
+                                                {% else %}bg-teal-500{% endif %}"></div>
+                                                
+                                            {% if group.type == 'WORLD' %}🌍{% elif group.type == 'NARRATIVE' %}📖{% elif group.type == 'METADATA' %}🧬{% else %}🖼️{% endif %}
                                         </div>
+                                        <div class="absolute inset-0 blur-xl opacity-0 group-hover:opacity-100 transition duration-500
+                                            {% if group.type == 'WORLD' %}bg-blue-500/10
+                                            {% elif group.type == 'NARRATIVE' %}bg-purple-500/10
+                                            {% elif group.type == 'METADATA' %}bg-emerald-500/10
+                                            {% else %}bg-teal-500/10{% endif %}"></div>
                                         {% endif %}
                                     </div>
 
                                     <!-- Info -->
                                     <div class="flex-1 min-w-0">
                                         <div class="flex flex-wrap items-center gap-2 mb-0.5">
-                                            <h3 class="text-sm font-bold text-gray-200 group-hover:text-white transition tracking-tight truncate">{{ group.name }}</h3>
+                                            <h3 class="text-base font-black text-white group-hover:text-purple-400 transition tracking-tight truncate leading-tight">{{ group.name }}</h3>
                                             
                                             <a href="{% if group.type == 'WORLD' %}{% url 'ver_mundo' group.public_id %}{% elif group.type == 'NARRATIVE' %}{% url 'leer_narrativa' group.public_id %}{% else %}#{% endif %}" @click.stop 
-                                               class="text-[9px] bg-white/5 hover:bg-white/10 border border-white/5 px-1.5 py-px rounded text-gray-500 hover:text-blue-400 font-mono transition">
-                                                🔗 {{ group.public_id }}
+                                               class="text-[10px] bg-white/5 hover:bg-white/10 border border-white/10 px-2 py-0.5 rounded-full text-gray-500 hover:text-blue-400 font-mono transition shadow-sm">
+                                                <span class="opacity-50">🔗</span> {{ group.public_id }}
                                             </a>
                                         </div>
                                         <div class="flex items-center gap-3 text-[10px] text-gray-500 font-medium tracking-tight">
@@ -239,18 +266,35 @@
                                                     <div class="flex-1 min-w-0 w-full">
                                                         <div class="flex flex-wrap items-center gap-2 mb-1.5">
                                                             <span class="text-[9px] font-black text-gray-500 font-mono tracking-widest">{{ v.created_at|date:"Y-m-d H:i" }}</span>
+                                                            
+                                                            <!-- AUTHOR BADGE -->
+                                                            <span class="flex items-center gap-1.5 bg-white/5 border border-white/5 px-2 py-0.5 rounded text-[10px] text-gray-400 font-bold">
+                                                                <span class="text-[10px] opacity-40">{% if v.author %}👤{% else %}🤖{% endif %}</span>
+                                                                {{ v.author.username|upper|default:"SISTEMA" }}
+                                                            </span>
+
                                                             <span class="px-1.5 py-px rounded text-[9px] font-bold border uppercase tracking-wider
                                                                 {% if 'DELETE' in v.action_type %}bg-red-500/10 text-red-500 border-red-500/20
                                                                 {% elif 'CREATE' in v.action_type %}bg-emerald-500/10 text-emerald-500 border-emerald-500/20
+                                                                {% elif 'REJECT' in v.status %}bg-red-500/10 text-red-400 border-red-500/20
+                                                                {% elif 'LIVE' in v.status %}bg-purple-500/20 text-purple-300 border-purple-500/30
+                                                                {% elif 'PENDING' in v.status %}bg-yellow-500/10 text-yellow-400 border-yellow-500/20
                                                                 {% elif 'NOOS' in v.action_type %}bg-pink-500/10 text-pink-500 border-pink-500/20
                                                                 {% else %}bg-blue-500/10 text-blue-400 border-blue-500/20{% endif %}">
                                                                 {{ v.action_label|default:v.action_type }}
                                                             </span>
                                                         </div>
 
-                                                        <h4 class="text-sm font-bold text-gray-200 mb-0.5 tracking-tight truncate">{{ v.target_name }}</h4>
-                                                        {% if v.change_log %}
-                                                        <p class="text-[10px] text-gray-400 italic font-medium truncate max-w-md">"{{ v.change_log }}"</p>
+                                                        <h4 class="text-xs font-bold text-gray-200 mb-0.5 tracking-tight truncate">{{ v.target_name }}</h4>
+                                                        
+                                                        {% if v.change_log and group.type != 'METADATA' and group.type != 'IMAGE' %}
+                                                        <div class="mt-1 pl-2 border-l-2 border-white/10">
+                                                            <p class="text-[10px] text-gray-400 italic font-medium leading-relaxed">"{{ v.change_log }}"</p>
+                                                        </div>
+                                                        {% elif group.type == 'IMAGE' and v.reason %}
+                                                        <div class="mt-1 pl-2 border-l-2 border-teal-500/20">
+                                                            <p class="text-[10px] text-teal-400/60 italic font-medium leading-relaxed">"{{ v.reason }}"</p>
+                                                        </div>
                                                         {% endif %}
                                                     </div>
 
@@ -282,6 +326,7 @@
                             {% endfor %}
                         </div>
                     </div>
+                    {% endif %}
                     {% endfor %} <!-- End Author Loop -->
 
                 </div>
