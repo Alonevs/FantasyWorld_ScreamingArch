@@ -6,7 +6,7 @@ class RejectVersionUseCase:
     El rechazo mueve la versión al estado 'REJECTED', sirviendo como una 
     eliminación lógica que permite conservar el historial de cambios descartados.
     """
-    def execute(self, version_id: int, reason: str = ""):
+    def execute(self, version_id: int, reason: str = "", reviewer=None):
         try:
             # Recuperar la propuesta desde el ORM
             version = CaosVersionORM.objects.get(id=version_id)
@@ -24,6 +24,9 @@ class RejectVersionUseCase:
         # Almacenar el motivo del rechazo para dar feedback al proponente
         if reason:
             version.admin_feedback = reason
+
+        if reviewer:
+            version.reviewer = reviewer
             
         version.save()
         

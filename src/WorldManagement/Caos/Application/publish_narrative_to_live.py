@@ -6,7 +6,7 @@ class PublishNarrativeToLiveUseCase:
     Sincroniza el registro maestro de la narrativa con los textos propuestos, gestiona 
     el archivo de versiones históricas y asegura que el lector siempre vea el contenido aprobado.
     """
-    def execute(self, version_id: int):
+    def execute(self, version_id: int, reviewer=None):
         # Localizar la versión de narrativa aprobada
         try:
             version = CaosNarrativeVersionORM.objects.get(id=version_id)

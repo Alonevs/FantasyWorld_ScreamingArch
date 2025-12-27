@@ -20,14 +20,21 @@ def is_superuser(user): return user.is_superuser
 def execute_use_case_action(request, use_case_cls, id, success_msg, log_code, extra_args=None):
     """
     Executes a standard clean architecture Use Case.
-    Assumes use_case_cls() constructor and execute(id) method unless extra_args provided.
+    Assumes use_case_cls() constructor and execute(id) method.
+    Automatically passes 'reviewer' if doing APPROVE/REJECT actions.
     """
     try:
         use_case = use_case_cls()
-        if extra_args:
-             use_case.execute(id, **extra_args)
-        else:
-             use_case.execute(id)
+        args = extra_args or {}
+        
+        # Auto-inject reviewer for traceability
+        if "APPROVE" in log_code or "REJECT" in log_code or "PUBLISH" in log_code:
+            args['reviewer'] = request.user
+            
+        if "RESTORE" in log_code:
+            args['user'] = request.user
+
+        use_case.execute(id, **args)
              
         messages.success(request, success_msg)
         log_event(request.user, log_code, id)
@@ -44,6 +51,11 @@ def execute_orm_status_change(request, model_cls, id, status, success_msg, log_c
     try:
         obj = get_object_or_404(model_cls, id=id)
         obj.status = status
+        
+        # Traceability: Set reviewer if field exists
+        if hasattr(obj, 'reviewer'):
+            obj.reviewer = request.user
+            
         obj.save()
         messages.success(request, success_msg)
         if log_code: log_event(request.user, log_code, id)

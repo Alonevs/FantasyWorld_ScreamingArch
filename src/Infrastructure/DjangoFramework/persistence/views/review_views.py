@@ -8,6 +8,8 @@ from ..models import (
     CaosVersionORM, CaosNarrativeVersionORM, CaosImageProposalORM,
     CaosWorldORM, CaosNarrativeORM, CaosEventLog
 )
+from .view_utils import get_metadata_diff
+
 
 from django.http import Http404
 
@@ -34,7 +36,10 @@ def get_diff_html(a, b):
             
     return "".join(output)
 
+    return "".join(output)
+
 from .dashboard.workflow import rechazar_propuesta, rechazar_narrativa
+
 from .dashboard.assets import rechazar_imagen
 
 @login_required
@@ -64,7 +69,7 @@ def review_proposal(request, type, id):
 
     try:
         # 1. FETCH PROPOSAL & LIVE DATA
-        if type == 'WORLD':
+        if type in ['WORLD', 'METADATA']:
             proposal = get_object_or_404(CaosVersionORM, id=id)
             if proposal.world:
                 live_obj = proposal.world
@@ -80,6 +85,44 @@ def review_proposal(request, type, id):
             # Calculate Diffs
             ctx['diff_title'] = get_diff_html(ctx['live_title'], ctx['proposed_title'])
             ctx['diff_content'] = get_diff_html(ctx['live_content'], ctx['proposed_content'])
+            
+            # Metadata Diff & Listing
+            from .view_utils import get_metadata_properties_dict
+            live_meta = live_obj.metadata if live_obj else {}
+            proposed_meta = proposal.cambios.get('metadata', {}) if proposal.cambios else {}
+            
+            live_props = get_metadata_properties_dict(live_meta)
+            prop_props = get_metadata_properties_dict(proposed_meta)
+            
+            ctx['live_metadata_list'] = [{'key': k, 'value': v} for k, v in live_props.items()]
+            
+            # Prepare Decorated List for Right Side
+            diff_results = get_metadata_diff(live_meta, proposed_meta)
+            diff_map = {d['key']: d for d in diff_results}
+            ctx['metadata_diff'] = diff_results # Keep for compatibility if needed
+            
+            all_keys = sorted(set(live_props.keys()) | set(prop_props.keys()))
+            decorated_list = []
+            for k in all_keys:
+                diff = diff_map.get(k, {})
+                action = diff.get('action', 'NORMAL')
+                val = prop_props.get(k, live_props.get(k))
+                if action == 'DELETE': val = live_props.get(k)
+                
+                item = {
+                    'key': k,
+                    'value': val,
+                    'action': action,
+                    'old': diff.get('old'),
+                    'new': diff.get('new')
+                }
+                decorated_list.append(item)
+            
+            ctx['proposed_metadata_list_decorated'] = decorated_list
+            
+            # If only metadata changed, label it correctly
+            if not ctx['diff_title'] and not ctx['diff_content'] and ctx['metadata_diff']:
+                ctx['proposal_type'] = 'METADATA'
             
         elif type == 'NARRATIVE':
             proposal = get_object_or_404(CaosNarrativeVersionORM, id=id)
@@ -132,15 +175,21 @@ def review_proposal(request, type, id):
         
         if action == 'approve':
             # Redirect is fine for approve (no extra data)
-            if type == 'WORLD': return redirect('aprobar_version', id=id)
+            if type in ['WORLD', 'METADATA']: return redirect('aprobar_version', id=id)
             elif type == 'NARRATIVE': return redirect('aprobar_narrativa', id=id)
             elif type == 'IMAGE': return redirect('aprobar_imagen', id=id)
             
         elif action == 'reject':
             # DIRECT CALL to pass POST data (reason)
-            if type == 'WORLD': return rechazar_propuesta(request, id=id)
+            if type in ['WORLD', 'METADATA']: return rechazar_propuesta(request, id=id)
             elif type == 'NARRATIVE': return rechazar_narrativa(request, id=id)
             elif type == 'IMAGE': return rechazar_imagen(request, id=id)
+
+        elif action == 'archive':
+            # REDIRECT to the archive workflow
+            if type in ['WORLD', 'METADATA']: return redirect('archivar_propuesta', id=id)
+            elif type == 'NARRATIVE': return redirect('archivar_narrativa', id=id)
+            elif type == 'IMAGE': return redirect('archivar_imagen', id=id)
 
     ctx['proposal'] = proposal
     return render(request, 'staff/review_proposal.html', ctx)

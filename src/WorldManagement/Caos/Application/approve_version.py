@@ -6,7 +6,7 @@ class ApproveVersionUseCase:
     Esta acción marca la versión como lista para ser publicada, pero NO altera 
     los datos 'Live' de la entidad hasta que se ejecute la publicación formal.
     """
-    def execute(self, version_id: int):
+    def execute(self, version_id: int, reviewer=None):
         try:
             # Recuperar la versión desde la persistencia
             version = CaosVersionORM.objects.get(id=version_id)
@@ -20,6 +20,8 @@ class ApproveVersionUseCase:
         # La aprobación es un paso intermedio. 
         # Marca la transición de PENDING -> APPROVED.
         version.status = "APPROVED"
+        if reviewer:
+            version.reviewer = reviewer
         version.save()
         
         print(f" ✅ Propuesta v{version.version_number} APROBADA. Pendiente de paso a producción (Live).")

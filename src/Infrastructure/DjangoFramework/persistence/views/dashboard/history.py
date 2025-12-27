@@ -85,13 +85,9 @@ def version_history_view(request):
     """
     Unified Version History (Archived Items), Grouped by Entity.
     """
-    # 1. Base QuerySets (Status = ARCHIVED or HISTORY)
-    # 1. Base QuerySets (Status = ARCHIVED or HISTORY or REJECTED for complete history)
-    # Note: 'REJECTED' might be considered history too depending on requirements. 
-    # Sticking to ['ARCHIVED', 'HISTORY'] for now as per previous pattern, but ensuring we capture what's needed.
-    # Actually, for images, 'ARCHIVED' usually means old versions or deleted ones.
-    
-    target_statuses = ['ARCHIVED', 'HISTORY', 'REJECTED', 'APPROVED', 'LIVE', 'PENDING']
+    # Requisito del usuario: Ocultar las versiones LIVE del historial para evitar redundancia.
+    # Mostramos 'HISTORY' (versiones anteriores al Live) y 'ARCHIVED' (propuestas ejecutadas/archivadas).
+    target_statuses = ['HISTORY', 'ARCHIVED']
     
     w_qs = CaosVersionORM.objects.filter(status__in=target_statuses).select_related('author', 'world')
     n_qs = CaosNarrativeVersionORM.objects.filter(status__in=target_statuses).select_related('author', 'narrative__world')
@@ -110,6 +106,8 @@ def version_history_view(request):
         i_qs = i_qs.filter(author_id=f_user)
         
     if f_type == 'WORLD':
+        n_qs = n_qs.none(); i_qs = i_qs.none()
+    elif f_type == 'METADATA':
         n_qs = n_qs.none(); i_qs = i_qs.none()
     elif f_type == 'NARRATIVE':
         w_qs = w_qs.none(); i_qs = i_qs.none()
@@ -186,9 +184,14 @@ def version_history_view(request):
         # Determine if this is primarily a metadata update
         raw_action = v.cambios.get('action', 'UPDATE') if v.cambios else 'UPDATE'
         keys = v.cambios.keys() if v.cambios else []
-        is_metadata = 'metadata' in keys and raw_action == 'UPDATE'
+        is_metadata = ('metadata' in keys or raw_action == 'METADATA_UPDATE') and raw_action != 'DELETE'
         
         actual_type = 'METADATA' if is_metadata else 'WORLD'
+        
+        # Check if it matches selected filter
+        if f_type and f_type in ['WORLD', 'METADATA'] and actual_type != f_type:
+            continue
+
         key = f"{actual_type}_{v.world.id}"
         
         if key not in grouped_data:
@@ -226,14 +229,14 @@ def version_history_view(request):
             v.action_label = label_map.get(raw_action, raw_action)
         
         # Override action label based on status for better context
-        if v.status == 'LIVE':
-            v.action_label = f"✅ Actual: {v.action_label}"
-        elif v.status == 'PENDING':
-             v.action_label = f"⏳ Propuesta: {v.action_label}"
+        if v.status == 'ARCHIVED':
+             v.action_label = f"📂 Archivada: {v.action_label}"
         elif v.status == 'REJECTED':
              v.action_label = f"❌ Rechazada: {v.action_label}"
         elif v.status == 'APPROVED':
              v.action_label = f"☑️ Aprobada: {v.action_label}"
+        elif v.status == 'HISTORY':
+             v.action_label = f"📜 Histórica: {v.action_label}"
 
         v.action_type = v.refined_action # standardized for loop
         grouped_data[key]['versions'].append(v)
@@ -268,14 +271,14 @@ def version_history_view(request):
         }
         v.action_label = n_label_map.get(v.action_type, '✏️ Edición')
         
-        if v.status == 'LIVE':
-            v.action_label = f"✅ Actual: {v.action_label}"
-        elif v.status == 'PENDING':
-             v.action_label = f"⏳ Propuesta: {v.action_label}"
+        if v.status == 'ARCHIVED':
+            v.action_label = f"📂 Archivada: {v.action_label}"
         elif v.status == 'REJECTED':
              v.action_label = f"❌ Rechazada: {v.action_label}"
         elif v.status == 'APPROVED':
              v.action_label = f"☑️ Aprobada: {v.action_label}"
+        elif v.status == 'HISTORY':
+             v.action_label = f"📜 Histórica: {v.action_label}"
         grouped_data[key]['versions'].append(v)
         if v.created_at > grouped_data[key]['latest_date']:
             grouped_data[key]['latest_date'] = v.created_at
@@ -387,11 +390,11 @@ def version_history_cleanup_view(request):
 
     deleted_count = 0
     
-    # 1. Cleanup Worlds
-    world_ids = CaosVersionORM.objects.filter(status__in=['ARCHIVED', 'HISTORY']).values_list('world_id', flat=True).distinct()
+    # 1. Cleanup World Versions (ARCHIVED ONLY)
+    world_ids = CaosVersionORM.objects.filter(status='ARCHIVED').values_list('world_id', flat=True).distinct()
     for w_id in world_ids:
-        # Get all archived versions for this world, ordered by newest first
-        v_ids = list(CaosVersionORM.objects.filter(world_id=w_id, status__in=['ARCHIVED', 'HISTORY'])
+        # Get all ARCHIVED versions for this world
+        v_ids = list(CaosVersionORM.objects.filter(world_id=w_id, status='ARCHIVED')
                      .order_by('-created_at')
                      .values_list('id', flat=True))
         
@@ -401,10 +404,10 @@ def version_history_cleanup_view(request):
             count, _ = CaosVersionORM.objects.filter(id__in=to_delete).delete()
             deleted_count += count
 
-    # 2. Cleanup Narratives
-    narrative_ids = CaosNarrativeVersionORM.objects.filter(status__in=['ARCHIVED', 'HISTORY']).values_list('narrative_id', flat=True).distinct()
+    # 2. Cleanup Narratives (ARCHIVED ONLY)
+    narrative_ids = CaosNarrativeVersionORM.objects.filter(status='ARCHIVED').values_list('narrative_id', flat=True).distinct()
     for n_id in narrative_ids:
-        v_ids = list(CaosNarrativeVersionORM.objects.filter(narrative_id=n_id, status__in=['ARCHIVED', 'HISTORY'])
+        v_ids = list(CaosNarrativeVersionORM.objects.filter(narrative_id=n_id, status='ARCHIVED')
                      .order_by('-created_at')
                      .values_list('id', flat=True))
         
@@ -455,11 +458,12 @@ def delete_history_bulk_view(request):
         deleted_count = 0
         
         if w_ids:
-            count, _ = CaosVersionORM.objects.filter(id__in=w_ids, status__in=['ARCHIVED', 'HISTORY']).delete()
+            # Blindaje: Only allow deleting ARCHIVED (rejected/deleted proposals)
+            count, _ = CaosVersionORM.objects.filter(id__in=w_ids, status='ARCHIVED').delete()
             deleted_count += count
             
         if n_ids:
-             count, _ = CaosNarrativeVersionORM.objects.filter(id__in=n_ids, status__in=['ARCHIVED', 'HISTORY']).delete()
+             count, _ = CaosNarrativeVersionORM.objects.filter(id__in=n_ids, status='ARCHIVED').delete()
              deleted_count += count
              
         if deleted_count > 0:

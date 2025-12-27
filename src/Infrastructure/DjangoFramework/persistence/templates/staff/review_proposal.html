@@ -1,20 +1,32 @@
 {% extends "layouts/base.html" %}
 
 {% load rbac_tags %}
+{% load custom_filters %}
 
 {% block content %}
-<div class="min-h-screen bg-[#050510] pb-10"> <!-- Standard padding -->
+<div class="min-h-screen bg-[#050510]">
     
     <!-- HEADER (Sticky) -->
-    <div class="sticky top-16 z-[100] bg-[#0a0a1a] border-b border-gray-800 px-12 py-8 shadow-2xl transition-all -mt-4">
+    <div class="sticky top-16 z-[100] bg-[#0a0a1a]/80 backdrop-blur-2xl border-b border-white/5 px-12 py-8 shadow-2xl transition-all -mt-4">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
             <div class="flex items-center gap-7">
-                <a href="{% url 'dashboard' %}" class="text-gray-500 hover:text-white inline-flex items-center justify-center w-12 h-12 text-sm bg-gray-800 rounded-full transition-colors" title="Volver">
-                    <span>←</span>
+                <!-- REDESIGNED BACK BUTTON -->
+                <a href="{{ request.GET.next|default:'/dashboard' }}" 
+                   class="group/back flex items-center justify-center w-12 h-12 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition duration-500 shadow-xl relative overflow-hidden active:scale-90"
+                   title="Volver">
+                    <div class="absolute inset-0 bg-linear-to-tr from-purple-500/10 to-transparent opacity-0 group-hover/back:opacity-100 transition duration-500"></div>
+                    <span class="text-xl text-gray-400 group-hover/back:text-white group-hover/back:-translate-x-1 transition duration-300 relative z-10">←</span>
                 </a>
                 <div>
                     <h1 class="text-3xl font-black text-white flex items-center gap-4 leading-tight tracking-tight">
-                        <span class="text-2xl">🕵️</span> Revisión de {{ proposal_type }}
+                        <span class="text-2xl">🕵️</span> 
+                        {% if proposal_type == 'WORLD' or proposal_type == 'METADATA' %}
+                            {{ proposal.world.name|default:"Entidad Desconocida" }}
+                        {% elif proposal_type == 'NARRATIVE' %}
+                            {{ proposal.narrative.titulo|default:"Narrativa Desconocida" }}
+                        {% else %}
+                            Revisión de {{ proposal_type }}
+                        {% endif %}
                     </h1>
                     <p class="text-sm text-gray-500 font-mono flex items-center gap-5 mt-2">
                         <span class="text-green-500/80 font-bold uppercase tracking-wider">
@@ -56,6 +68,12 @@
                             <button type="button" class="px-5 py-2 rounded-lg bg-red-900/20 text-red-400 border border-red-900/50 hover:bg-red-900/50 text-sm font-bold transition-all" onclick="handleReject(this)">
                                 Rechazar
                             </button>
+                            
+                            <!-- ARCHIVE PENDING -->
+                            <button name="action" value="archive" class="px-5 py-2 rounded-lg bg-gray-800 text-yellow-500 border border-gray-700 hover:bg-gray-700 text-sm font-bold transition-all" data-confirm="¿Archivar esta propuesta?">
+                                Archivar
+                            </button>
+
                             <button name="action" value="approve" class="px-5 py-2 rounded-lg bg-green-600 text-white hover:bg-green-500 text-sm font-bold shadow-lg transition-all">
                                 Aprobar Cambios
                             </button>
@@ -79,7 +97,7 @@
                         <span class="text-xs font-bold text-gray-600 uppercase tracking-widest border border-white/5 px-4 py-2 rounded-lg bg-white/5">🔒 Solo Lectura</span>
                     {% endif %}
                 {% else %}
-                     <div class="flex items-center gap-3">
+                         <div class="flex items-center gap-3">
                         <div class="px-5 py-2 rounded-lg bg-gray-800/50 border border-gray-700 text-sm font-bold flex items-center gap-3">
                             {% if proposal.status == 'APPROVED' %} <span class="text-green-500">✅</span> APROBADO
                             {% elif proposal.status == 'REJECTED' %} <span class="text-red-500">✕</span> RECHAZADO
@@ -88,11 +106,30 @@
                             {% else %} <span>ℹ️</span> {{ proposal.status }} {% endif %}
                         </div>
 
-                        {% if proposal.status != 'LIVE' and proposal.status != 'PENDING' %}
-                        <form method="post" action="{% if proposal_type == 'WORLD' %}{% url 'restaurar_version' proposal.id %}{% elif proposal_type == 'NARRATIVE' %}{% url 'restaurar_narrativa' proposal.id %}{% endif %}">
+                        <!-- ACTIONS FOR APPROVED -->
+                        {% if proposal.status == 'APPROVED' %}
+                            <form method="post" action="{% if proposal_type == 'WORLD' or proposal_type == 'METADATA' %}{% url 'archivar_propuesta' proposal.id %}{% elif proposal_type == 'NARRATIVE' %}{% url 'archivar_narrativa' proposal.id %}{% endif %}">
+                                {% csrf_token %}
+                                <button type="submit" class="p-2.5 bg-gray-800 hover:bg-gray-700 text-yellow-500 rounded-lg border border-gray-700 transition" title="Archivar" data-confirm="¿Archivar propuesta aprobada?">📦</button>
+                            </form>
+                            
+                            <form method="post" action="{% if proposal_type == 'WORLD' or proposal_type == 'METADATA' %}{% url 'publicar_version' proposal.id %}{% elif proposal_type == 'NARRATIVE' %}{% url 'publicar_narrativa' proposal.id %}{% endif %}">
+                                {% csrf_token %}
+                                <button type="submit" class="px-5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500 text-sm font-bold shadow-lg" data-confirm="¿PUBLICAR EN LIVE?">🚀 Publicar LIVE</button>
+                            </form>
+
+                            <form method="post" action="{% if proposal_type == 'WORLD' or proposal_type == 'METADATA' %}{% url 'borrar_propuesta' proposal.id %}{% elif proposal_type == 'NARRATIVE' %}{% url 'borrar_narrativa_version' proposal.id %}{% endif %}">
+                                {% csrf_token %}
+                                <button type="submit" class="p-2.5 text-gray-400 hover:text-red-500 transition" title="Borrar" data-confirm="¿Eliminar registro?">🗑️</button>
+                            </form>
+                        {% endif %}
+
+                        <!-- ACTIONS FOR HISTORY/LIVE/ARCHIVED (RECOVER) -->
+                        {% if 'HISTORY' in proposal.status or proposal.status == 'LIVE' or 'ARCHIVED' in proposal.status %}
+                        <form method="post" action="{% if proposal_type == 'WORLD' or proposal_type == 'METADATA' %}{% url 'restaurar_version' proposal.id %}{% elif proposal_type == 'NARRATIVE' %}{% url 'restaurar_narrativa' proposal.id %}{% endif %}">
                             {% csrf_token %}
-                            <button type="submit" class="px-5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500 text-sm font-bold shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2" data-confirm="¿Restaurar esta versión como la versión ACTUAL?">
-                                <span>🔄</span> Restaurar Versión
+                            <button type="submit" class="px-5 py-2 rounded-lg bg-purple-600/20 text-purple-400 border border-purple-500/30 hover:bg-purple-600 hover:text-white text-sm font-bold transition-all flex items-center gap-2" data-confirm="¿Crear propuesta de recuperación basada en esta versión?">
+                                <span>♻️</span> Recuperar
                             </button>
                         </form>
                         {% endif %}
@@ -112,7 +149,7 @@
     </div>
 
     <!-- MAIN CONTENT: SPLIT VIEW -->
-    <div class="max-w-[1920px] mx-auto p-6 grid grid-cols-2 gap-0 border-l border-r border-[#2a2a35] min-h-[600px]">
+    <div class="max-w-[1920px] mx-auto p-6 grid grid-cols-2 gap-0 border-l border-r border-[#2a2a35]">
         
         <!-- LEFT: LIVE / ORIGINAL -->
         <div class="pr-6 border-r border-[#2a2a35] relative">
@@ -134,16 +171,45 @@
                             <span class="text-gray-600">Sin imagen previa</span>
                         </div>
                     {% endif %}
-                {% else %}
-                    <!-- TEXT CONTENT -->
-                    {% if live_title %}
-                        <h3 class="text-xl text-gray-300 font-bold mb-4 border-b border-gray-800 pb-2">{{ live_title }}</h3>
+                {% endif %}
+
+                {% if proposal_type != 'IMAGE' %}
+                    <!-- TEXT CONTENT (WORLD/NARRATIVE ONLY) -->
+                    {% if proposal_type == 'WORLD' or proposal_type == 'NARRATIVE' %}
+                        {% if live_title %}
+                            <h3 class="text-xl text-gray-300 font-bold mb-4 border-b border-gray-800 pb-2">{{ live_title }}</h3>
+                        {% endif %}
+                        
+                        {% if live_content %}
+                            <div class="whitespace-pre-wrap font-mono text-sm leading-relaxed mb-6">{{ live_content|safe }}</div>
+                        {% elif not live_title %}
+                            <p class="text-gray-600 italic mb-6">[Contenido vacío o inexistente]</p>
+                        {% endif %}
                     {% endif %}
-                    
-                    {% if live_content %}
-                        <div class="whitespace-pre-wrap font-mono text-sm leading-relaxed">{{ live_content|safe }}</div>
-                    {% else %}
-                        <p class="text-gray-600 italic">[Contenido vacío o inexistente]</p>
+
+                    {% if proposal_type == 'METADATA' and live_metadata_list %}
+                        <!-- LIVE METADATA ECLAI STYLE -->
+                        <div class="mt-6 space-y-2">
+                            <h4 class="text-xs font-black text-purple-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                                <span class="w-2 h-px bg-purple-500/50"></span>
+                                PROPIEDADES ACTUALES
+                            </h4>
+                            {% for item in live_metadata_list %}
+                            <div class="flex gap-2 items-center p-2 rounded border border-gray-800 bg-black/40 opacity-70">
+                                <div class="w-1/3 bg-black/60 px-2 py-1 rounded border border-gray-800/50">
+                                    <span class="text-[10px] font-mono font-bold tracking-tight text-purple-500">
+                                        {{ item.key|clean_metadata_key }}
+                                    </span>
+                                </div>
+                                <span class="text-gray-700 font-bold text-xs">:</span>
+                                <div class="flex-1 bg-black/60 px-2 py-1 rounded border border-gray-800/50 overflow-hidden">
+                                    <span class="text-xs font-medium truncate block text-gray-400">
+                                        {{ item.value }}
+                                    </span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
                     {% endif %}
                 {% endif %}
             </div>
@@ -166,17 +232,76 @@
                     {% else %}
                         <p class="text-red-400">Error: No image found in proposal.</p>
                     {% endif %}
-                {% else %}
-                    <!-- TEXT DIFF -->
-                    {% if diff_title %}
-                        <h3 class="text-xl text-white font-bold mb-4 border-b border-blue-900/50 pb-2">
-                            {{ diff_title|safe }}
-                        </h3>
+                {% endif %}
+
+                {% if proposal_type != 'IMAGE' %}
+                    <!-- TEXT DIFF (WORLD/NARRATIVE ONLY) -->
+                    {% if proposal_type == 'WORLD' or proposal_type == 'NARRATIVE' %}
+                        {% if diff_title %}
+                            <h3 class="text-xl text-white font-bold mb-4 border-b border-blue-900/50 pb-2">
+                                {{ diff_title|safe }}
+                            </h3>
+                        {% endif %}
+
+                        {% if diff_content %}
+                            <div class="whitespace-pre-wrap font-mono text-sm leading-relaxed text-gray-400 mb-6">{{ diff_content|safe }}</div>
+                        {% endif %}
                     {% endif %}
 
-                {% if diff_content %}
-                    <div class="whitespace-pre-wrap font-mono text-sm leading-relaxed text-gray-400">{{ diff_content|safe }}</div>
-                {% endif %}
+                    {% if proposal_type == 'METADATA' and proposed_metadata_list_decorated %}
+                        <!-- PROPOSED METADATA ECLAI STYLE (ALL PROPERTIES + DIFFS) -->
+                        <div class="mt-6 space-y-3">
+                            <h4 class="text-xs font-black text-blue-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                                <span class="w-2 h-px bg-blue-500/50"></span>
+                                CAMBIOS PROPUESTOS
+                            </h4>
+                            {% for item in proposed_metadata_list_decorated %}
+                            <div class="flex gap-2 items-center p-2 rounded border transition group
+                                {% if item.action == 'ADD' %}border-green-500/50 bg-green-500/5 shadow-[0_0_15px_rgba(34,197,94,0.1)]
+                                {% elif item.action == 'DELETE' %}border-red-500/50 bg-red-500/5 opacity-50
+                                {% elif item.action == 'CHANGE' %}border-blue-500/50 bg-blue-500/5
+                                {% else %}border-gray-800 bg-black/40 hover:border-purple-500/20{% endif %}">
+                                
+                                <!-- KEY BOX -->
+                                <div class="w-1/3 bg-black/60 px-2 py-1 rounded border border-gray-800/50">
+                                    <span class="text-[10px] font-mono font-bold tracking-tight
+                                        {% if item.action == 'ADD' %}text-green-400
+                                        {% elif item.action == 'DELETE' %}text-red-400 line-through
+                                        {% elif item.action == 'CHANGE' %}text-blue-400
+                                        {% else %}text-purple-400{% endif %}">
+                                        {{ item.key|clean_metadata_key }}
+                                    </span>
+                                </div>
+                                
+                                <span class="text-gray-700 font-bold text-xs">:</span>
+                                
+                                <!-- VALUE BOX -->
+                                <div class="flex-1 bg-black/60 px-2 py-1 rounded border border-gray-800/50 overflow-hidden relative">
+                                    {% if item.action == 'ADD' %}
+                                        <span class="text-xs font-medium text-green-300">{{ item.value }}</span>
+                                    {% elif item.action == 'DELETE' %}
+                                        <span class="text-xs font-medium text-red-300 line-through">{{ item.value }}</span>
+                                    {% elif item.action == 'CHANGE' %}
+                                        <div class="flex flex-col">
+                                            <span class="text-[9px] text-red-400/70 line-through mb-0.5">{{ item.old }}</span>
+                                            <span class="text-xs font-medium text-blue-200">{{ item.new }}</span>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-xs font-medium text-gray-300">{{ item.value }}</span>
+                                    {% endif %}
+                                </div>
+
+                                <!-- ACTION ICON -->
+                                <div class="shrink-0 text-[10px]">
+                                    {% if item.action == 'ADD' %}<span class="text-green-500">➕</span>
+                                    {% elif item.action == 'DELETE' %}<span class="text-red-500">🗑️</span>
+                                    {% elif item.action == 'CHANGE' %}<span class="text-blue-400">🔄</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
                 {% endif %}
             </div>
         </div>

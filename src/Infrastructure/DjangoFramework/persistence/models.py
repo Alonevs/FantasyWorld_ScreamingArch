@@ -101,8 +101,8 @@ class CaosVersionORM(models.Model):
     status = models.CharField(max_length=30, default="PENDING")
     change_log = models.CharField(max_length=255, blank=True)
     cambios = models.JSONField(default=dict, blank=True)
-    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
-    es_version_activa = models.BooleanField(default=False)
+    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='proposed_variants')
+    reviewer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_variants')
     admin_feedback = models.TextField(blank=True)
     class Meta: db_table = 'caos_versions'; ordering = ['-version_number']
 
@@ -160,7 +160,8 @@ class CaosNarrativeVersionORM(models.Model):
     status = models.CharField(max_length=30, default="PENDING") # PENDING, APPROVED, REJECTED, LIVE, ARCHIVED
     action = models.CharField(max_length=20, default="EDIT", choices=[('ADD', 'Crear'), ('EDIT', 'Editar'), ('DELETE', 'Borrar')])
     change_log = models.CharField(max_length=255, blank=True)
-    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='proposed_versions')
+    reviewer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_versions')
     admin_feedback = models.TextField(blank=True)
     
     class Meta: db_table = 'caos_narrative_versions'; ordering = ['-version_number']
@@ -198,7 +199,8 @@ class CaosImageProposalORM(models.Model):
     status = models.CharField(max_length=30, default="PENDING") # PENDING, APPROVED, REJECTED
     action = models.CharField(max_length=20, default="ADD", choices=[('ADD', 'Añadir'), ('DELETE', 'Borrar')])
     target_filename = models.CharField(max_length=255, null=True, blank=True) # For DELETE actions
-    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='proposed_images')
+    reviewer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_images')
     created_at = models.DateTimeField(auto_now_add=True)
     admin_feedback = models.TextField(blank=True)
 

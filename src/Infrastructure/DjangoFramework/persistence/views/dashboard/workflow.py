@@ -102,23 +102,23 @@ def dashboard(request):
     # =========================================================================
     # SEGMENTATION
     # =========================================================================
+    # PENDIENTES: Propuestas nuevas esperando validación
     w_pending = list(w_qs.filter(status='PENDING').order_by('-created_at'))
-    w_approved = list(w_qs.filter(status='APPROVED').order_by('-created_at'))
-    w_rejected = list(w_qs.filter(status='REJECTED').order_by('-created_at')[:10])
-    w_archived = list(w_qs.filter(status='ARCHIVED').order_by('-created_at')[:20])
-
     n_pending = list(n_qs.filter(status='PENDING').order_by('-created_at'))
-    n_approved = list(n_qs.filter(status='APPROVED').order_by('-created_at'))
-    n_rejected = list(n_qs.filter(status='REJECTED').order_by('-created_at')[:10])
-    n_archived = list(n_qs.filter(status='ARCHIVED').order_by('-created_at')[:20])
-
     i_pending = list(i_qs.filter(status='PENDING').order_by('-created_at'))
+
+    # APROBADAS: Validadas por admin, listas para publicar a LIVE
+    w_approved = list(w_qs.filter(status='APPROVED').order_by('-created_at'))
+    n_approved = list(n_qs.filter(status='APPROVED').order_by('-created_at'))
     i_approved = list(i_qs.filter(status='APPROVED').order_by('-created_at'))
-    i_rejected = list(i_qs.filter(status='REJECTED').order_by('-created_at')[:10])
-    i_archived = list(i_qs.filter(status='ARCHIVED').exclude(action='DELETE').order_by('-created_at'))
+
+    # RECHAZADAS: Propuestas descartadas (Historial de negatividad)
+    w_rejected = list(w_qs.filter(status='REJECTED').order_by('-created_at')[:20])
+    n_rejected = list(n_qs.filter(status='REJECTED').order_by('-created_at')[:20])
+    i_rejected = list(i_qs.filter(status='REJECTED').order_by('-created_at')[:20])
 
     # TAG Items
-    for x in w_pending + w_approved + w_rejected + w_archived:
+    for x in w_pending + w_approved + w_rejected:
         x.type = 'WORLD'
         x.type_label = '🌍 MUNDO'
         x.target_name = x.proposed_name
@@ -129,9 +129,11 @@ def dashboard(request):
             x.target_desc = f"📸 Cambio: {x.cambios.get('cover_image')}"
         elif x.cambios.get('action') == 'TOGGLE_VISIBILITY':
             x.target_desc = f"👁️ Visibilidad"
-        elif x.cambios.get('action') == 'METADATA_UPDATE':
+        elif x.cambios.get('action') == 'METADATA_UPDATE' or 'metadata' in x.cambios.keys():
+            x.type = 'METADATA'
+            x.type_label = '🧬 METADATOS'
             count = len(x.cambios.get('metadata', {}).get('properties', []))
-            x.target_desc = f"🧬 Metadatos ({count} variables)"
+            x.target_desc = f"🧬 Cambio en {count} variables"
         
         # Detect Deletion
         if (x.change_log and ("Eliminación" in x.change_log or "Borrar" in x.change_log)) or \
@@ -140,7 +142,7 @@ def dashboard(request):
             
         x.target_link = x.world.public_id if x.world.public_id else x.world.id
 
-    for x in n_pending + n_approved + n_rejected + n_archived:
+    for x in n_pending + n_approved + n_rejected:
         x.type = 'NARRATIVE'
         x.type_label = '📖 NARRATIVA'
         x.target_name = x.proposed_title
@@ -153,7 +155,7 @@ def dashboard(request):
            (hasattr(x, 'cambios') and x.cambios and x.cambios.get('action') == 'DELETE'):
              x.action = 'DELETE'
 
-    for x in i_pending + i_approved + i_rejected + i_archived:
+    for x in i_pending + i_approved + i_rejected:
         x.type = 'IMAGE'
         x.type_label = '🖼️ IMAGEN'
         x.target_name = x.title or "(Sin Título)"
@@ -170,7 +172,6 @@ def dashboard(request):
     pending = sorted(w_pending + n_pending + i_pending, key=lambda x: x.created_at, reverse=True)
     approved = sorted(w_approved + n_approved + i_approved, key=lambda x: x.created_at, reverse=True)
     rejected = sorted(w_rejected + n_rejected + i_rejected, key=lambda x: x.created_at, reverse=True)
-    archived = sorted(w_archived + n_archived + i_archived, key=lambda x: x.created_at, reverse=True)
 
     logs_base = CaosEventLog.objects.all().order_by('-timestamp')[:50]
     logs_world = [l for l in logs_base if 'WORLD' in l.action.upper()]
@@ -181,7 +182,6 @@ def dashboard(request):
     grouped_inbox = group_items_by_author(pending)
     grouped_approved = group_items_by_author(approved)
     grouped_rejected = group_items_by_author(rejected)
-    grouped_archived = group_items_by_author(archived)
     
     # --- ENHANCE AVAILABLE AUTHORS WITH COUNTS ---
     # We do this for the dropdown to show who has pending stuff.
@@ -194,9 +194,9 @@ def dashboard(request):
     kpis = calculate_kpis(pending, logs_base)
 
     context = {
-        'pending': pending, 'approved': approved, 'rejected': rejected, 'archived': archived,
+        'pending': pending, 'approved': approved, 'rejected': rejected,
         'grouped_inbox': grouped_inbox, 'grouped_approved': grouped_approved, 
-        'grouped_rejected': grouped_rejected, 'grouped_archived': grouped_archived,
+        'grouped_rejected': grouped_rejected,
         'logs_world': logs_world, 'logs_narrative': logs_narrative, 'logs_image': logs_image, 'logs_other': logs_other,
         'total_pending_count': kpis['total_pending_count'], 'total_activity_count': kpis['total_activity_count'],
         'available_authors': allowed_authors, 'current_author': int(filter_author_id) if filter_author_id else None,
@@ -212,21 +212,22 @@ from .utils import execute_use_case_action, execute_orm_status_change, execute_o
 
 # --- WORLD ACTIONS ---
 @login_required
-@admin_only
 def aprobar_propuesta(request, id):
-    # Verificación de Autoridad BOSS (Regla de Usuario)
+    # Verificación de Autoridad BOSS
     obj = get_object_or_404(CaosVersionORM, id=id)
-    if not (request.user.is_superuser or obj.world.author == request.user):
-        messages.error(request, "⛔ Solo el Autor (Administrador) de este mundo puede aprobar esta propuesta.")
-        return redirect('dashboard')
+    # RBAC Relax: Superusers can approve anything.
+    if not request.user.is_superuser:
+        # Original check for non-superusers
+        if obj.world.author != request.user:
+            messages.error(request, "⛔ Solo el Autor (Administrador) de este mundo puede aprobar esta propuesta.")
+            return redirect('dashboard')
     
     # Allow GET for redirects from Review System
     return execute_use_case_action(request, ApproveVersionUseCase, id, "Propuesta aprobada.", "APPROVE_WORLD_VERSION")
 
 @login_required
-@admin_only
 def rechazar_propuesta(request, id):
-    # Verificación de Autoridad BOSS (Regla de Usuario)
+    # Verificación de Autoridad BOSS
     obj = get_object_or_404(CaosVersionORM, id=id)
     if not (request.user.is_superuser or obj.world.author == request.user):
         messages.error(request, "⛔ Solo el Autor (Administrador) de este mundo puede rechazar esta propuesta.")
@@ -236,7 +237,6 @@ def rechazar_propuesta(request, id):
     return execute_use_case_action(request, RejectVersionUseCase, id, "Rechazada.", "REJECT_WORLD_VERSION", extra_args={'reason': feedback})
 
 @login_required
-@admin_only
 def publicar_version(request, version_id):
     return execute_use_case_action(request, PublishToLiveVersionUseCase, version_id, f"Versión {version_id} publicada LIVE.", "PUBLISH_LIVE")
 
@@ -263,21 +263,37 @@ def restaurar_version(request, version_id):
 
 @login_required
 def borrar_propuesta(request, version_id):
+    # Borrado suave si es archivado, o eliminación total del registro de propuesta/archivada
     obj = get_object_or_404(CaosVersionORM, id=version_id)
+    
+    # Permisos: El autor de la propuesta o un Admin
     from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
-    check_ownership(request.user, obj)
+    # Si no es admin, check_ownership lanzará excepción
+    try:
+        check_ownership(request.user, obj)
+    except:
+        if not (request.user.is_staff or request.user.is_superuser):
+            messages.error(request, "⛔ No tienes permiso para borrar esta propuesta.")
+            return redirect('dashboard')
+
     return execute_orm_delete(request, CaosVersionORM, version_id, "Eliminado.", "DELETE_VERSION")
 
 # --- NARRATIVE ACTIONS ---
 
 @login_required
-@admin_only
 def aprobar_narrativa(request, id):
+    obj = get_object_or_404(CaosNarrativeVersionORM, id=id)
+    if not (request.user.is_superuser or obj.narrative.world.author == request.user):
+        messages.error(request, "⛔ Solo el Autor (Administrador) de este mundo puede aprobar esta narrativa.")
+        return redirect('dashboard')
     return execute_use_case_action(request, ApproveNarrativeVersionUseCase, id, "Narrativa aprobada.", "APPROVE_NARRATIVE")
 
 @login_required
-@admin_only
 def rechazar_narrativa(request, id):
+    obj = get_object_or_404(CaosNarrativeVersionORM, id=id)
+    if not (request.user.is_superuser or obj.narrative.world.author == request.user):
+        messages.error(request, "⛔ Solo el Autor (Administrador) de este mundo puede rechazar esta narrativa.")
+        return redirect('dashboard')
     feedback = request.POST.get('admin_feedback', '') or request.GET.get('admin_feedback', '')
     return execute_use_case_action(request, RejectNarrativeVersionUseCase, id, "Narrativa rechazada.", "REJECT_NARRATIVE", extra_args={'reason': feedback})
 
@@ -301,9 +317,21 @@ def archivar_narrativa(request, id):
 @login_required
 def restaurar_narrativa(request, id):
     obj = get_object_or_404(CaosNarrativeVersionORM, id=id)
-    from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
-    check_ownership(request.user, obj)
-    return execute_use_case_action(request, RestoreNarrativeVersionUseCase, id, "Restaurada.", "RESTORE_NARRATIVE")
+    
+    # NUEVA LÓGICA: Crear propuesta en lugar de restaurar estado
+    new_v_num = CaosNarrativeVersionORM.objects.filter(narrative=obj.narrative).count() + 1
+    new_proposal = CaosNarrativeVersionORM.objects.create(
+        narrative=obj.narrative,
+        proposed_title=obj.proposed_title,
+        proposed_content=obj.proposed_content,
+        version_number=new_v_num,
+        status='PENDING',
+        action='EDIT',
+        change_log=f"Recuperar narrativa (v{obj.version_number})",
+        author=request.user
+    )
+    messages.success(request, f"🔄 Propuesta de restauración creada (v{new_v_num}).")
+    return redirect('dashboard')
 
 @login_required
 def borrar_narrativa_version(request, id):
@@ -330,6 +358,13 @@ def borrar_propuestas_masivo(request):
             CaosImageProposalORM.objects.filter(id__in=i_ids).update(status='PENDING')
             messages.success(request, f"🔄 {count} Elementos restaurados a Pendientes.")
             
+        elif action_type == 'archive':
+            # Bulk Archive
+            CaosVersionORM.objects.filter(id__in=w_ids).update(status='ARCHIVED')
+            CaosNarrativeVersionORM.objects.filter(id__in=n_ids).update(status='ARCHIVED')
+            CaosImageProposalORM.objects.filter(id__in=i_ids).update(status='ARCHIVED')
+            messages.success(request, f"📦 {count} Elementos movidos al Archivo.")
+
         elif action_type == 'hard_delete':
             # Hard Delete (Superuser + Admin)
             if request.user.is_superuser or request.user.profile.rank == 'ADMIN':

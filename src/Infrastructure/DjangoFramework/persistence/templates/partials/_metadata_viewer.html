@@ -1,11 +1,13 @@
 {% load custom_filters %}
 <div class="mt-8 bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
     <div class="flex items-center justify-between px-4 py-3 border-b border-gray-800 bg-black/20">
-        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-            🧬 METADATA
-        </h3>
+        <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+            🧬 METADATA {% if metadata_version %}<span class="text-purple-400 ml-2">({{ metadata_version|lower }})</span>{% endif %}
+        </h2>
         {% if user.is_superuser or is_admin_role or is_author or allow_proposals %}
-        <button onclick="openMetadataModal()" class="text-purple-500 hover:text-white text-xs transition px-2 py-1 rounded hover:bg-purple-900/30" title="Editar">⚙️ EDITAR</button>
+        <button onclick="openMetadataModal()" class="text-gray-400 hover:text-white transition-colors" title="Editar">
+            <span class="text-sm">⚙️</span>
+        </button>
         {% endif %}
     </div>
 
@@ -14,11 +16,15 @@
             <table class="w-full text-left text-sm">
                 <tbody class="divide-y divide-gray-800">
                     {% for item in metadata_obj.properties %}
-                    <tr class="group hover:bg-white/5 transition">
-                        <td class="px-4 py-2 font-mono text-[11px] text-purple-400 font-bold tracking-wide border-r border-gray-800/50">
+                    <tr class="group transition 
+                        {% if item.action == 'ADD' %}bg-green-900/10 text-green-400
+                        {% elif item.action == 'DELETE' %}bg-red-900/10 text-red-500 line-through opacity-60
+                        {% elif item.action == 'CHANGE' %}bg-blue-900/10 text-blue-400
+                        {% else %}hover:bg-white/5{% endif %}">
+                        <td class="px-4 py-2 font-mono text-[11px] {% if item.action == 'ADD' %}text-green-500{% elif item.action == 'DELETE' %}text-red-500{% elif item.action == 'CHANGE' %}text-blue-400{% else %}text-purple-400{% endif %} font-bold tracking-wide border-r border-gray-800/50">
                             {{ item.key|clean_metadata_key }}
                         </td>
-                        <td class="px-4 py-2 text-gray-300">
+                        <td class="px-4 py-2 font-mono text-xs">
                             {{ item.value }}
                         </td>
                     </tr>

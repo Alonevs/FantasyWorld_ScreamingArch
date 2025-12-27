@@ -42,18 +42,15 @@ def can_approve(user, item):
     """
     if not user.is_authenticated: return False
     
-    # 1. NO SELF APPROVAL (Except maybe Superusers? No, User says "Admin NO puede auto-aprobar")
-    # Let's enforce for everyone to be safe, or allow Superuser. 
-    # User said "Un Admin NO puede auto-aprobar".
-    # Assuming Superuser can do whatever.
+    # 1. PERMISSIO RELAX: Superusers can approve anything.
     if user.is_superuser: return True
 
+    # 2. OWNER RELAX: If I am the owner of the world, I can approve anything (including my own changes).
+    if can_publish(user, item): return True
+
+    # 3. NO SELF APPROVAL for non-owners (Collaborators/Admins on others' worlds)
     if hasattr(item, 'author') and item.author == user:
         return False
-
-    # 2. JURISDICTION
-    # If I am Owner of the world, I can approve proposals (even from valid collaborators).
-    if can_publish(user, item): return True
     
     # If I am Admin (Boss) and Author is my minion?
     try:

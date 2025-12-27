@@ -1,31 +1,37 @@
 from src.Infrastructure.DjangoFramework.persistence.models import CaosVersionORM, CaosWorldORM
-from src.WorldManagement.Caos.Application.propose_change import ProposeChangeUseCase
 
 class RestoreVersionUseCase:
     """
     Caso de Uso responsable de restaurar (Rollback) la entidad a un estado anterior.
-    En lugar de crear una copia de los datos, "promociona" una versión antigua o 
-    rechazada de nuevo al estado PENDIENTE para que los administradores la revisen
-    y publiquen, devolviendo el mundo a ese estado histórico.
+    NUEVA LÓGICA: En lugar de promocionar la versión antigua, crea una NUEVA propuesta
+    de cambio basada en los datos de la versión histórica seleccionada.
     """
     def execute(self, version_id: int, user):
         try:
-            # 1. Recuperar la versión histórica de la base de datos
-            target_version = CaosVersionORM.objects.get(id=version_id)
+            # 1. Recuperar la versión de origen (Histórica o Archivada)
+            origin_version = CaosVersionORM.objects.get(id=version_id)
+            world = origin_version.world
             
-            # 2. Re-activar la versión: Cambiamos su estado a PENDING
-            # Esto permite que aparezca de nuevo en el Dashboard para ser aprobada/publicada.
-            # Mantenemos el número de versión original para trazar el historial correctamente.
-            target_version.status = 'PENDING'
+            # 2. Calcular el siguiente número de versión para el mundo
+            # Buscamos el máximo actual y sumamos 1
+            from django.db.models import Max
+            max_v = CaosVersionORM.objects.filter(world=world).aggregate(Max('version_number'))['version_number__max'] or 0
+            next_v = max_v + 1
+
+            # 3. Crear la NUEVA propuesta basada en la antigua
+            new_proposal = CaosVersionORM.objects.create(
+                world=world,
+                proposed_name=origin_version.proposed_name,
+                proposed_description=origin_version.proposed_description,
+                version_number=next_v,
+                status='PENDING',
+                change_log=f"Recuperar versión (v{origin_version.version_number})",
+                cambios=origin_version.cambios, # Copiamos el JSON de cambios completo
+                author=user
+            )
             
-            # 3. Documentar la acción de restauración
-            # Marcamos quién ha iniciado el rollback y por qué.
-            target_version.change_log = f"ROLLBACK: Restauración forzada del estado v{target_version.version_number}"
-            target_version.author = user
-            
-            target_version.save()
-            
-            print(f" ⏪ Restauración iniciada: v{target_version.version_number} vuelve a revisión (PENDING).")
+            print(f" ⏪ Propuesta de restauración creada: Nueva v{next_v} basada en v{origin_version.version_number}.")
+            return new_proposal
             
         except CaosVersionORM.DoesNotExist:
-            raise Exception("No se ha podido localizar la versión histórica para restaurar.")
+            raise Exception("No se ha podido localizar la versión de origen para restaurar.")

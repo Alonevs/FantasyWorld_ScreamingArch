@@ -88,3 +88,56 @@ def get_admin_status(user):
         return rank == 'ADMIN', rank in ['ADMIN', 'SUBADMIN']
     except:
         return False, False
+
+def get_metadata_diff(old_meta, new_meta):
+    """
+    Compara dos diccionarios de metadatos y devuelve una lista de cambios.
+    old_meta/new_meta: {'properties': [{'key': '...', 'value': '...'}, ...]}
+    """
+    old_props = get_metadata_properties_dict(old_meta)
+    new_props = get_metadata_properties_dict(new_meta)
+    
+    diff = []
+    all_keys = sorted(set(old_props.keys()) | set(new_props.keys()))
+    
+    for key in all_keys:
+        old_val = old_props.get(key)
+        new_val = new_props.get(key)
+        
+        if old_val is None:
+            diff.append({'key': key, 'action': 'ADD', 'new': new_val})
+        elif new_val is None:
+            diff.append({'key': key, 'action': 'DELETE', 'old': old_val})
+        elif old_val != new_val:
+            diff.append({'key': key, 'action': 'CHANGE', 'old': old_val, 'new': new_val})
+            
+    return diff
+
+def get_metadata_properties_dict(raw_meta):
+    """
+    Adapta cualquier formato de metadatos (V1, V2.0, V2.1) a un diccionario plano {key: value}.
+    """
+    if not isinstance(raw_meta, dict): return {}
+    
+    props = {}
+    # CASO V2.1: {'properties': [...]}
+    if 'properties' in raw_meta and isinstance(raw_meta['properties'], list):
+        for p in raw_meta['properties']:
+            if isinstance(p, dict) and 'key' in p:
+                props[p['key']] = p.get('value', '')
+    
+    # CASO V2.0: {'datos_nucleo': {...}, 'datos_extendidos': {...}}
+    elif 'datos_nucleo' in raw_meta:
+        nucleo = raw_meta.get('datos_nucleo', {})
+        if isinstance(nucleo, dict): props.update(nucleo)
+        extendidos = raw_meta.get('datos_extendidos', {})
+        if isinstance(extendidos, dict): props.update(extendidos)
+        if 'tipo_entidad' in raw_meta: props['TIPO_ENTIDAD'] = raw_meta['tipo_entidad']
+        
+    # CASO V1.0: Plano
+    else:
+        for k, v in raw_meta.items():
+            if k not in ['cover_image', 'images', 'properties']:
+                props[k] = v
+                
+    return props

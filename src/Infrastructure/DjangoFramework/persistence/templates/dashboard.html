@@ -150,7 +150,7 @@
                                             <!-- DELETE LOGIC: Green=Keep (Reject Proposal), Red=Delete (Approve Proposal) -->
                                             
                                             <!-- Green: MANTENER (Reject deletion) -->
-                                            <form method="post" action="{% if item.type == 'WORLD' %}{% url 'archivar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'archivar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'archivar_imagen' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
+                                            <form method="post" action="{% if item.type == 'WORLD' or item.type == 'METADATA' %}{% url 'archivar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'archivar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'archivar_imagen' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
                                                 {% csrf_token %}
                                                 <input type="hidden" name="admin_feedback" value="">
                                                 <button type="button" 
@@ -161,7 +161,7 @@
                                             </form>
                                             
                                             <!-- RESTORE BUTTON (Active only) -->
-                                        <form method="post" action="{% if item.type == 'WORLD' %}{% url 'aprobar_version' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'aprobar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'aprobar_imagen' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
+                                        <form method="post" action="{% if item.type == 'WORLD' or item.type == 'METADATA' %}{% url 'borrar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'borrar_narrativa_version' item.id %}{% elif item.type == 'IMAGE' %}{% url 'borrar_imagen_definitivo' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
                                             {% csrf_token %}
                                             <button type="submit" class="text-red-500 hover:text-white hover:bg-red-600 px-3 py-1.5 rounded text-xs font-bold transition-all border border-red-900/30 hover:border-red-500 shadow-lg shadow-red-900/10 flex items-center gap-1" title="Confirmar Borrado Definitivo" data-confirm="⚠️ ¿CONFIRMAR BORRADO? Esta acción eliminará el elemento." data-destructive="true">
                                                 <span>💀</span> Borrar
@@ -173,7 +173,7 @@
                                             
                                             <!-- Approve (Step 1) -->
                                             {% if request.user|can_approve:item %}
-                                            <form method="post" action="{% if item.type == 'WORLD' %}{% url 'aprobar_version' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'aprobar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'aprobar_imagen' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
+                                            <form method="post" action="{% if item.type == 'WORLD' or item.type == 'METADATA' %}{% url 'aprobar_version' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'aprobar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'aprobar_imagen' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
                                                 {% csrf_token %}
                                                 <button type="submit" class="text-green-500 hover:text-white hover:bg-green-600 px-3 py-1.5 rounded text-xs font-bold transition-all border border-green-900/30 hover:border-green-500 shadow-lg shadow-green-900/10" title="Aprobar" data-confirm="¿Aprobar esta propuesta?">
                                                     Aprobar
@@ -188,7 +188,7 @@
 
                                             <!-- Reject (With Reason) -->
                                             {% if request.user|can_approve:item %}
-                                            <form method="post" action="{% if item.type == 'WORLD' %}{% url 'rechazar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'rechazar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'rechazar_imagen' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
+                                            <form method="post" action="{% if item.type == 'WORLD' or item.type == 'METADATA' %}{% url 'rechazar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'rechazar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'rechazar_imagen' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
                                                 {% csrf_token %}
                                                 <input type="hidden" name="admin_feedback" value="">
                                                 <button type="button" 
@@ -204,7 +204,7 @@
                                              If in DELETE mode, I replaced the block, so button missing.
                                              I should add "Ver" button to DELETE block too. -->
                                         {% if item.action == 'DELETE' %}
-                                            <a href="{% url 'review_proposal' item.type item.id %}" class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold px-3 py-2 rounded border border-gray-700 transition-all shadow-lg" title="Ver detalle">
+                                            <a href="{% url 'review_proposal' item.type item.id %}?next={{ request.get_full_path|urlencode }}" class="flex items-center justify-center w-10 h-10 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold rounded-lg border border-gray-700 transition-all shadow-lg active:scale-95" title="Revisar Desaparición">
                                                 <span>👁️</span>
                                             </a>
                                         {% endif %}
@@ -324,7 +324,7 @@
                                                 {{ item.type_label }}
                                             </span>
                                             
-                                            <a href="{% url 'review_proposal' item.type item.id %}" class="text-white font-bold hover:text-green-400 hover:underline truncate transition-colors text-sm">
+                                            <a href="{% url 'review_proposal' item.type item.id %}?next={{ request.get_full_path|urlencode }}" class="text-white font-bold hover:text-green-400 hover:underline truncate transition-colors text-sm">
                                                 {{ item.target_name|default:"(Sin Nombre)" }}
                                             </a>
                                             <span class="text-[10px] text-green-500 font-mono border border-green-500/30 px-1 rounded bg-green-900/20">READY</span>
@@ -339,11 +339,11 @@
                                     <!-- QUICK ACTIONS (APPROVED) -->
                                     <div class="flex items-center gap-2 shrink-0">
                                          <!-- Preview -->
-                                        <a href="{% if item.type == 'IMAGE' %}{% url 'revisar_imagen' item.id %}{% else %}{% url 'review_proposal' item.type item.id %}{% endif %}" class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold px-3 py-2 rounded border border-gray-700 transition-all shadow-lg" title="Ver detalle sin publicar">
+                                        <a href="{% if item.type == 'IMAGE' %}{% url 'revisar_imagen' item.id %}{% else %}{% url 'review_proposal' item.type item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}" class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold px-3 py-2 rounded border border-gray-700 transition-all shadow-lg" title="Ver detalle sin publicar">
                                             <span>👁️</span> <span class="hidden sm:inline">Ver</span>
                                         </a>
 
-                                         <form method="post" action="{% if item.type == 'WORLD' %}{% url 'archivar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'archivar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'archivar_imagen' item.id %}{% endif %}">
+                                         <form method="post" action="{% if item.type == 'WORLD' %}{% url 'archivar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'archivar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'archivar_imagen' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
                                             {% csrf_token %}
                                             <input type="hidden" name="admin_feedback" value="">
                                             {% if item.action == 'DELETE' %}
@@ -361,18 +361,28 @@
 
                                          <!-- Publish (Step 2) -->
                                         {% if user|can_publish:item %}
-                                        <form method="post" action="{% if item.type == 'WORLD' %}{% url 'publicar_version' item.id %}{% elif item.type == 'IMAGE' %}{% url 'publicar_imagen' item.id %}{% else %}{% url 'publicar_narrativa' item.id %}{% endif %}">
-                                            {% csrf_token %}
-                                            {% if item.action == 'DELETE' %}
-                                                <button type="submit" class="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-4 py-2 rounded shadow-[0_0_15px_rgba(220,38,38,0.3)] transition-all hover:-translate-y-0.5" data-confirm="⚠️ ¿EFECTUAR BORRADO DEFINITIVO EN LIVE?" data-destructive="true">
-                                                    <span>💀</span> Borrar LIVE
+                                        <div class="flex items-center gap-2">
+                                            <form method="post" action="{% if item.type == 'WORLD' or item.type == 'METADATA' %}{% url 'publicar_version' item.id %}{% elif item.type == 'IMAGE' %}{% url 'publicar_imagen' item.id %}{% else %}{% url 'publicar_narrativa' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
+                                                {% csrf_token %}
+                                                {% if item.action == 'DELETE' %}
+                                                    <button type="submit" class="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-4 py-2 rounded shadow-[0_0_15px_rgba(220,38,38,0.3)] transition-all hover:-translate-y-0.5" data-confirm="⚠️ ¿EFECTUAR BORRADO DEFINITIVO EN LIVE?" data-destructive="true">
+                                                        <span>💀</span> Borrar LIVE
+                                                    </button>
+                                                {% else %}
+                                                    <button type="submit" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-all hover:-translate-y-0.5" data-confirm="¿PUBLICAR v{{ item.version_number }} EN LIVE? (Se archivará la versión actual)">
+                                                        <span>🚀</span> Publicar LIVE
+                                                    </button>
+                                                {% endif %}
+                                            </form>
+                                            
+                                            <!-- ARCHIVE APPROVED PROPOSAL -->
+                                            <form method="post" action="{% if item.type == 'WORLD' or item.type == 'METADATA' %}{% url 'archivar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'archivar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'archivar_imagen' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="p-2 text-gray-500 hover:text-amber-500 transition-colors" title="Archivar Propuesta Aprobada" data-confirm="📦 ¿Mover al archivo? Podrás recuperarla o borrarla definitivamente desde allí.">
+                                                    📦
                                                 </button>
-                                            {% else %}
-                                                <button type="submit" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-all hover:-translate-y-0.5" data-confirm="¿PUBLICAR v{{ item.version_number }} EN LIVE? (Se archivará la versión actual)">
-                                                    <span>🚀</span> Publicar LIVE
-                                                </button>
-                                            {% endif %}
-                                        </form>
+                                            </form>
+                                        </div>
                                         {% endif %}
                                     </div>
                                 </div>
@@ -395,7 +405,7 @@
 
                 <h2 class="text-2xl font-bold text-red-400 mb-4 flex justify-between items-center">
                      <div class="flex items-center gap-3">
-                        <span>❌ Rechazadas (Últimas 10)</span>
+                        <span>❌ Rechazadas (Últimas 20)</span>
                     </div>
                     
                     <div class="flex items-center gap-2">
@@ -409,16 +419,15 @@
                             <span>🔄</span> Restaurar (<span x-text="selectionCount"></span>)
                         </button>
 
-                        <!-- BULK HARD DELETE (Superuser + Admin) -->
+                        <!-- BULK ARCHIVE -->
                         {% if request.user.is_superuser or request.user.profile.rank == 'ADMIN' %}
                         <button type="submit" form="bulk-rejected-form" 
                                 formaction="{% url 'borrar_propuestas_masivo' %}" 
-                                name="action_type" value="hard_delete" 
-                                class="text-xs bg-red-900/30 hover:bg-red-600 text-red-500 hover:text-white px-3 py-1.5 rounded border border-red-900/50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-900/20"
+                                name="action_type" value="archive" 
+                                class="text-xs bg-amber-900/30 hover:bg-amber-600 text-amber-500 hover:text-white px-3 py-1.5 rounded border border-amber-900/50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-900/20"
                                 :disabled="selectionCount === 0"
-                                data-confirm="⚠️ PELIGRO ⚠️ ¿BORRAR DEFINITIVAMENTE? Esta acción NO se puede deshacer."
-                                data-destructive="true">
-                            <span>💀</span> Borrar (<span x-text="selectionCount"></span>)
+                                data-confirm="📦 ¿Mover seleccionados al Archivo? (Podrás borrarlos definitivamente desde allí)">
+                            <span>📦</span> Archivar (<span x-text="selectionCount"></span>)
                         </button>
                         {% endif %}
                     </div>
@@ -459,7 +468,7 @@
                                     <!-- CHECKBOX -->
                                     <div class="flex items-center justify-center pt-1 pl-1">
                                         <input type="checkbox" form="bulk-rejected-form" 
-                                               name="{% if item.type == 'WORLD' %}selected_ids{% elif item.type == 'NARRATIVE' %}selected_narr_ids{% else %}selected_img_ids{% endif %}" 
+                                               name="{% if item.type == 'WORLD' or item.type == 'METADATA' %}selected_ids{% elif item.type == 'NARRATIVE' %}selected_narr_ids{% else %}selected_img_ids{% endif %}" 
                                                value="{{ item.id }}" 
                                                class="rejected-check w-4 h-4 rounded border-gray-600 bg-gray-700 text-red-500 focus:ring-red-500/50 cursor-pointer transition">
                                     </div>
@@ -475,7 +484,7 @@
                                                 {{ item.type_label }}
                                             </span>
                                             
-                                            <a href="{% url 'review_proposal' item.type item.id %}" class="text-gray-400 font-bold hover:text-white hover:underline truncate transition-colors text-sm line-through decoration-red-900/50">
+                                            <a href="{% url 'review_proposal' item.type item.id %}?next={{ request.get_full_path|urlencode }}" class="text-gray-400 font-bold hover:text-white hover:underline truncate transition-colors text-sm line-through decoration-red-900/50">
                                                 {{ item.target_name|default:"(Sin Nombre)" }}
                                             </a>
                                             <span class="text-[10px] text-red-500 font-mono border border-red-900/30 px-1 rounded bg-red-900/10">REJECTED</span>
@@ -505,14 +514,15 @@
                                     <div class="flex items-center gap-2 shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
                                         
                                         <!-- Review -->
-                                        <a href="{% url 'review_proposal' item.type item.id %}" class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold px-3 py-2 rounded border border-gray-700 transition-all shadow-lg" title="Ver detalle">
-                                            <span>👁️</span>
-                                        </a>
+                                        <a href="{% url 'review_proposal' item.type item.id %}?next={{ request.get_full_path|urlencode }}" 
+                                       class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700 transition duration-300 text-xs font-bold flex items-center gap-2 shadow-md">
+                                        <span>👁️</span> Ver
+                                    </a>
 
                                         <!-- Retouch Button (Replaces Restore for Content) -->
                                         <!-- Retouch Button (Smart Routing) -->
                                         {% if item.type == 'WORLD' and item.target_link %}
-                                            <a href="{% url 'editar_mundo' item.target_link %}?src_version={{ item.id }}" class="flex items-center gap-2 bg-blue-900/20 hover:bg-blue-600 text-blue-500 hover:text-white text-xs font-bold px-3 py-2 rounded border border-blue-900/50 transition-all shadow-lg" title="✏️ RETOCAR (Editar propuesta rechazada)">
+                                            <a href="{% url 'editar_mundo' item.target_link %}?src_version={{ item.id }}&next={{ request.get_full_path|urlencode }}" class="flex items-center gap-2 bg-blue-900/20 hover:bg-blue-600 text-blue-500 hover:text-white text-xs font-bold px-3 py-2 rounded border border-blue-900/50 transition-all shadow-lg" title="✏️ RETOCAR (Editar propuesta rechazada)">
                                                 <span>✏️</span>
                                             </a>
                                         {% elif item.type == 'NARRATIVE' and item.target_link %}
@@ -529,12 +539,12 @@
                                             </form>
                                         {% endif %}
 
-                                        <!-- Delete Forever (Admins + Superusers) -->
+                                        <!-- Archive Instead of Delete -->
                                         {% if request.user.is_superuser or request.user.profile.rank == 'ADMIN' %}
-                                        <form method="post" action="{% if item.type == 'WORLD' %}{% url 'borrar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'borrar_narrativa_version' item.id %}{% elif item.type == 'IMAGE' %}{% url 'borrar_imagen_definitivo' item.id %}{% endif %}">
+                                        <form method="post" action="{% if item.type == 'WORLD' or item.type == 'METADATA' %}{% url 'archivar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'archivar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'archivar_imagen' item.id %}{% endif %}">
                                             {% csrf_token %}
-                                            <button type="submit" class="flex items-center gap-2 bg-red-900/20 hover:bg-red-600 text-red-500 hover:text-white text-xs font-bold px-3 py-2 rounded border border-red-900/50 transition-all shadow-lg" title="ELIMINAR DEFINITIVAMENTE" data-confirm="⚠️ IRREVERSIBLE: ¿Borrar definitivamente?" data-destructive="true">
-                                                <span>💀</span>
+                                            <button type="submit" class="flex items-center gap-2 bg-amber-900/20 hover:bg-amber-600 text-amber-500 hover:text-white text-xs font-bold px-3 py-2 rounded border border-amber-900/50 transition-all shadow-lg" title="Mover al Archivo" data-confirm="📦 ¿Archivar esta propuesta?">
+                                                <span>📦</span>
                                             </button>
                                         </form>
                                         {% endif %}

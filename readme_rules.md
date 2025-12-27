@@ -66,10 +66,15 @@ Este documento oficializa las reglas, filosofías y protocolos técnicos de **Fa
 - **Sistema de Propuestas**: Al igual que el texto, la subida o borrado de imágenes genera una propuesta (`CaosImageProposalORM`).
 - **Validación**: Las imágenes deben ser aprobadas por un Admin antes de ser visibles en el "Live" de una entidad.
 
-### 3.3 Borrado Lógico (Soft Delete)
-- **Prohibición**: No existe el `DELETE` físico para entidades maestras o narrativas.
-- **Mecánica**: Se utiliza `is_active=False` y `deleted_at`.
-- **Restauración**: Mover algo de la papelera al "mundo vivo" requiere una propuesta de restauración y aprobación admin.
+### 3.3 Borrado Lógico y Papelera de Reciclaje
+- **Fase 1 (Soft Delete)**: El borrado inicial siempre es lógico (`is_active=False` para mundos/narrativas o estado `ARCHIVED` para propuestas). Los elementos van a la Papelera.
+- **Fase 2 (Hard Delete)**: El borrado físico (eliminación de DB) SOLO está permitido desde la **Papelera de Reciclaje**.
+    - **Privilegio**: Solo los Administradores o los propios Autores (para sus propuestas) pueden ejecutar un borrado definitivo.
+- **Restauración**: Mover algo de la papelera al "mundo vivo" requiere una confirmación o propuesta de restauración (si es contenido versionado).
+
+### 3.4 Blindaje del Historial (History Shielding)
+- **Regla de Oro**: La historia no se borra.
+- **Protección**: Las versiones con estado `HISTORY` (antiguas versiones `LIVE`) están protegidas por código y UI. No pueden ser seleccionadas para borrado masivo ni eliminadas individualmente por usuarios estándar. Solo el Superusuario tiene llaves maestras para purgar el historial si fuera estrictamente necesario por mantenimiento técnico.
 
 ### 3.4 Dependencia Existencial (Narrativas)
 - El **Lore** (historias, leyendas, crónicas) no tiene vida independiente.

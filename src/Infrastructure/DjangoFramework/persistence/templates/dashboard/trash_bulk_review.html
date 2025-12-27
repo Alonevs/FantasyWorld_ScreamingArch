@@ -16,118 +16,55 @@
         {% csrf_token %}
         <input type="hidden" name="action" value="process_granular">
         
-        <!-- GRID -->
-        <div class="space-y-8">
+        <!-- UNIFIED LIST -->
+        <div class="space-y-4">
+            <input type="hidden" name="trash_ids_csv" value="{{ trash_ids_csv }}">
             
-            {% if sel_images %}
-            <div>
-                <h2 class="text-xl font-bold text-yellow-400 mb-4 border-b border-gray-800 pb-2">🖼️ Imágenes ({{ sel_images|length }})</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {% for img in sel_images %}
-                    <div class="bg-gray-900/60 border border-gray-800 p-4 rounded-xl flex flex-col gap-4 group hover:border-gray-600 transition">
-                        <!-- Preview -->
-                        <div class="aspect-video bg-black rounded overflow-hidden relative border border-gray-800 shadow-lg">
-                             {% if img.trash_path %}
-                             <img src="{{ img.trash_path }}" class="w-full h-full object-contain">
-                             {% else %}
-                             <div class="flex items-center justify-center h-full text-xs text-gray-600">Sin Imagen</div>
-                             {% endif %}
-                             <div class="absolute bottom-0 left-0 right-0 bg-black/70 text-[10px] text-gray-300 p-1 truncate text-center backdrop-blur-sm">
-                                 {{ img.target_filename }}
-                             </div>
+            {% for item in items %}
+            <div class="bg-gray-900/40 border border-gray-800 p-4 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 group hover:border-gray-600 transition shadow-lg">
+                
+                <div class="flex items-center gap-4 min-w-0 flex-1">
+                    <!-- ICON/TYPE -->
+                    <div class="w-12 h-12 rounded-lg bg-black/40 flex items-center justify-center text-xl shrink-0 border border-gray-800">
+                        {% if 'MUNDO' in item.type_label %}🌍{% elif 'NARRATIVA' in item.type_label %}📜{% elif 'IMAGEN' in item.type_label %}🖼️{% elif 'METADATOS' in item.type_label %}🧬{% else %}📦{% endif %}
+                    </div>
+                    
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-[10px] font-bold text-gray-500 uppercase tracking-tighter border border-gray-800 px-1.5 rounded">{{ item.type_label }}</span>
+                            <h4 class="font-bold text-gray-300 truncate">
+                                {% if item.name %}{{ item.name }}{% elif item.titulo %}{{ item.titulo }}{% elif item.target_filename %}{{ item.target_filename }}{% else %}{{ item.id }}{% endif %}
+                            </h4>
                         </div>
-
-                        <!-- CONTROLS (2 Columns) -->
-                        <div class="grid grid-cols-2 gap-2 bg-black/20 p-2 rounded-lg">
-                            <label class="flex items-center gap-2 cursor-pointer hover:bg-white/5 p-2 rounded transition border border-transparent hover:border-gray-700">
-                                <input type="radio" name="action_image_{{ img.id }}" value="restore" class="text-green-500 focus:ring-green-500 bg-gray-800 border-gray-600">
-                                <span class="text-xs text-green-400 font-bold">♻️ Restaurar</span>
-                            </label>
-                            <label class="flex items-center gap-2 cursor-pointer hover:bg-white/5 p-2 rounded transition border border-transparent hover:border-gray-700">
-                                <input type="radio" name="action_image_{{ img.id }}" value="delete" class="text-red-500 focus:ring-red-500 bg-gray-800 border-gray-600">
-                                <span class="text-xs text-red-400 font-bold">💀 Borrar</span>
-                            </label>
-                            <label class="flex items-center gap-2 cursor-pointer hover:bg-white/5 p-2 rounded transition border border-transparent hover:border-gray-700">
-                                <input type="radio" name="action_image_{{ img.id }}" value="archive" class="text-blue-500 focus:ring-blue-500 bg-gray-800 border-gray-600">
-                                <span class="text-xs text-blue-400">📂 Archivar</span>
-                            </label>
-                             <label class="flex items-center gap-2 cursor-pointer hover:bg-white/5 p-2 rounded transition border border-transparent hover:border-gray-700">
-                                <input type="radio" name="action_image_{{ img.id }}" value="keep" checked class="text-gray-500 focus:ring-gray-500 bg-gray-800 border-gray-600">
-                                <span class="text-xs text-gray-500">🛡️ Nada</span>
-                            </label>
+                        <div class="text-[10px] text-gray-500 flex gap-2 overflow-hidden">
+                            <span class="truncate">{{ item.nice_location|default:"" }}</span>
+                            {% if item.short_desc %}
+                            <span class="text-gray-700">|</span>
+                            <span class="italic truncate">{{ item.short_desc }}</span>
+                            {% endif %}
                         </div>
                     </div>
-                    {% endfor %}
+                </div>
+
+                <!-- CONTROLS -->
+                <div class="flex flex-wrap gap-2 shrink-0 bg-black/20 p-1.5 rounded-lg border border-gray-800/50">
+                    <label class="flex items-center gap-1.5 cursor-pointer hover:bg-green-900/20 px-3 py-1.5 rounded transition group/radio">
+                        <input type="radio" name="action_{{ item.prefixed_id }}" value="restore" class="w-3 h-3 text-green-500 focus:ring-green-500 bg-gray-800 border-gray-600">
+                        <span class="text-[11px] text-green-500/80 group-hover/radio:text-green-400 font-bold">♻️ Restaurar</span>
+                    </label>
+                    
+                    <label class="flex items-center gap-1.5 cursor-pointer hover:bg-gray-800 px-3 py-1.5 rounded transition group/radio">
+                        <input type="radio" name="action_{{ item.prefixed_id }}" value="keep" checked class="w-3 h-3 text-gray-500 focus:ring-gray-500 bg-gray-800 border-gray-600">
+                        <span class="text-[11px] text-gray-500 font-bold">🛡️ Nada</span>
+                    </label>
+
+                    <label class="flex items-center gap-1.5 cursor-pointer hover:bg-red-900/20 px-3 py-1.5 rounded transition group/radio">
+                        <input type="radio" name="action_{{ item.prefixed_id }}" value="delete" class="w-3 h-3 text-red-500 focus:ring-red-500 bg-gray-800 border-gray-600">
+                        <span class="text-[11px] text-red-500/80 group-hover/radio:text-red-400 font-bold">💀 Borrar</span>
+                    </label>
                 </div>
             </div>
-            {% endif %}
-            
-            {% if sel_narratives %}
-            <div>
-                 <h2 class="text-xl font-bold text-purple-400 mb-4 border-b border-gray-800 pb-2">📜 Narrativas ({{ sel_narratives|length }})</h2>
-                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {% for n in sel_narratives %}
-                    <div class="bg-gray-900/60 border border-gray-800 p-4 rounded-xl flex flex-col gap-3">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <h4 class="font-bold text-gray-300">{{ n.titulo }}</h4>
-                                <span class="text-xs text-purple-500 bg-purple-900/10 px-2 rounded">{{ n.tipo }}</span>
-                            </div>
-                            <a href="{% url 'leer_narrativa' n.nid %}" class="text-[10px] bg-gray-800 hover:bg-gray-700 text-white px-2 py-1 rounded border border-gray-600 transition flex items-center gap-1">
-                                👁️ Abrir Completo
-                            </a>
-                        </div>
-                        
-                        <!-- PREVIEW (Summary) -->
-                         <div class="text-xs text-gray-500 font-mono bg-black/20 p-2 rounded max-h-20 overflow-hidden relative">
-                             {{ n.contenido|truncatechars:200 }}
-                             <div class="absolute bottom-0 left-0 right-0 h-8 bg-linear-to-t from-[#0f111a] to-transparent"></div>
-                         </div>
-
-                        <div class="flex flex-wrap gap-4 mt-2 border-t border-gray-800 pt-2">
-                            <label class="flex items-center gap-2 cursor-pointer hover:bg-white/5 p-1 rounded transition"><input type="radio" name="action_narrative_{{ n.nid }}" value="restore" class="text-green-500 bg-gray-700 border-gray-600 focus:ring-green-500"><span class="text-xs text-green-400 font-bold">Restaurar</span></label>
-                            <label class="flex items-center gap-2 cursor-pointer hover:bg-white/5 p-1 rounded transition"><input type="radio" name="action_narrative_{{ n.nid }}" value="keep" checked class="text-gray-500 bg-gray-700 border-gray-600 focus:ring-gray-500"><span class="text-xs text-gray-500">Mantener</span></label>
-                            <label class="flex items-center gap-2 cursor-pointer hover:bg-white/5 p-1 rounded transition"><input type="radio" name="action_narrative_{{ n.nid }}" value="delete" class="text-red-500 bg-gray-700 border-gray-600 focus:ring-red-500"><span class="text-xs text-red-400 font-bold">Borrar</span></label>
-                        </div>
-                    </div>
-                    {% endfor %}
-                 </div>
-            </div>
-            {% endif %}
-            
-            {% if sel_worlds %}
-            <div>
-                 <h2 class="text-xl font-bold text-blue-400 mb-4 border-b border-gray-800 pb-2">🌍 Mundos ({{ sel_worlds|length }})</h2>
-                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {% for w in sel_worlds %}
-                    <div class="bg-gray-900/60 border border-gray-800 p-4 rounded-xl flex flex-col gap-3">
-                        <div class="flex justify-between items-start">
-                             <div>
-                                <h4 class="font-bold text-gray-300">{{ w.name }}</h4>
-                                <span class="font-mono text-xs text-gray-600">{{ w.public_id }}</span>
-                             </div>
-                             <a href="{% url 'ver_mundo' w.public_id %}" class="text-[10px] bg-gray-800 hover:bg-gray-700 text-white px-2 py-1 rounded border border-gray-600 transition flex items-center gap-1">
-                                👁️ Abrir Completo
-                            </a>
-                        </div>
-
-                         <!-- PREVIEW (Summary) -->
-                         <div class="text-xs text-gray-500 bg-black/20 p-2 rounded max-h-20 overflow-hidden relative">
-                             {{ w.description|default:"Sin descripción"|truncatechars:200 }}
-                             <div class="absolute bottom-0 left-0 right-0 h-8 bg-linear-to-t from-[#0f111a] to-transparent"></div>
-                         </div>
-
-                        <div class="flex flex-wrap gap-4 mt-2 border-t border-gray-800 pt-2">
-                            <label class="flex items-center gap-2 cursor-pointer hover:bg-white/5 p-1 rounded transition"><input type="radio" name="action_world_{{ w.id }}" value="restore" class="text-green-500 bg-gray-700 border-gray-600 focus:ring-green-500"><span class="text-xs text-green-400 font-bold">Restaurar</span></label>
-                            <label class="flex items-center gap-2 cursor-pointer hover:bg-white/5 p-1 rounded transition"><input type="radio" name="action_world_{{ w.id }}" value="keep" checked class="text-gray-500 bg-gray-700 border-gray-600 focus:ring-gray-500"><span class="text-xs text-gray-500">Mantener</span></label>
-                            <label class="flex items-center gap-2 cursor-pointer hover:bg-white/5 p-1 rounded transition"><input type="radio" name="action_world_{{ w.id }}" value="delete" class="text-red-500 bg-gray-700 border-gray-600 focus:ring-red-500"><span class="text-xs text-red-400 font-bold">Borrar</span></label>
-                        </div>
-                    </div>
-                    {% endfor %}
-                 </div>
-            </div>
-            {% endif %}
-
+            {% endfor %}
         </div>
 
         <div class="fixed bottom-0 left-0 right-0 p-4 bg-[#0f111a] border-t border-gray-800 flex justify-center gap-4 z-50 shadow-2xl">
