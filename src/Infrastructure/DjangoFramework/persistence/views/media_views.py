@@ -2,6 +2,7 @@ import os
 import json
 import base64
 import io
+import logging
 from PIL import Image
 from django.shortcuts import redirect
 from django.contrib import messages
@@ -9,6 +10,8 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.core.files.base import ContentFile
+
+logger = logging.getLogger(__name__)
 
 from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosEventLog, CaosImageProposalORM, CaosVersionORM
 from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
@@ -22,7 +25,7 @@ def log_event(user, action, target_id, details=""):
     try:
         u = user if user.is_authenticated else None
         CaosEventLog.objects.create(user=u, action=action, target_id=target_id, details=details)
-    except Exception as e: print(f"Log Error: {e}")
+    except Exception as e: logger.error(f"Log Error: {e}", exc_info=True)
 
 @csrf_exempt
 def api_preview_foto(request, jid):
@@ -35,45 +38,33 @@ def api_preview_foto(request, jid):
 
 @csrf_exempt
 def api_save_foto(request, jid):
-    print(f"DEBUG: api_save_foto called for jid={jid}")
+    logger.debug(f"api_save_foto called for jid={jid}")
     try:
         w = resolve_jid_orm(jid); real_jid = w.id if w else jid
-        print(f"DEBUG: Resolved world: {w}")
         
         data = json.loads(request.body)
-        print("DEBUG: Request body loaded")
-        
         user = request.user if request.user.is_authenticated else None
-        print(f"DEBUG: User: {user}")
         
         # Robust base64 decoding
         img_str = data.get('image')
         if not img_str:
-            print("DEBUG: No image data found")
             return JsonResponse({'status': 'error', 'message': 'No image data'})
             
         if ';base64,' in img_str:
             format, imgstr = img_str.split(';base64,') 
         else:
             imgstr = img_str
-        
-        print(f"DEBUG: Image string length: {len(imgstr)}")
 
         # Convert to WebP
-        print("DEBUG: Decoding base64...")
         image = Image.open(io.BytesIO(base64.b64decode(imgstr)))
-        print(f"DEBUG: Image opened: {image.format} {image.size}")
         
         output = io.BytesIO()
         image.save(output, format='WEBP')
-        print("DEBUG: Image saved to WebP buffer")
         
         file_name = f"{data.get('title')}.webp"
         image_data = ContentFile(output.getvalue(), name=file_name)
-        print(f"DEBUG: ContentFile created: {file_name}")
 
         # Create Proposal
-        print("DEBUG: Creating CaosImageProposalORM...")
         CaosImageProposalORM.objects.create(
             world=w,
             image=image_data,
@@ -82,14 +73,12 @@ def api_save_foto(request, jid):
             status='PENDING',
             action='ADD'
         )
-        print("DEBUG: CaosImageProposalORM created")
         
         log_event(request.user, "PROPOSE_AI_PHOTO", real_jid, f"Title: {data.get('title')}")
-        print("DEBUG: Event logged")
         
         return JsonResponse({'status': 'ok', 'success': True, 'message': 'Imagen enviada a revisión (WebP).'})
     except Exception as e:
-        print(f"DEBUG: Exception in api_save_foto: {e}")
+        logger.error(f"Exception in api_save_foto: {e}", exc_info=True)
         import traceback
         traceback.print_exc()
         return JsonResponse({'status': 'error', 'message': str(e)})
@@ -211,7 +200,7 @@ def borrar_foto(request, jid, filename):
         messages.info(request, "🗑️ Borrado pendiente de aprobación.")
         return redirect('ver_mundo', public_id=w.public_id if w.public_id else w.id)
     except Exception as e:
-        print(f"Error borrar_foto: {e}")
+        logger.error(f"Error borrar_foto: {e}", exc_info=True)
         return redirect('home')
 
 def generar_foto_extra(request, jid):
@@ -264,5 +253,5 @@ def borrar_fotos_batch(request, jid):
         return JsonResponse({'status':'ok'})
             
     except Exception as e:
-        print(f"Error batch delete: {e}")
+        logger.error(f"Error batch delete: {e}", exc_info=True)
         return JsonResponse({'status':'error', 'message':str(e)})

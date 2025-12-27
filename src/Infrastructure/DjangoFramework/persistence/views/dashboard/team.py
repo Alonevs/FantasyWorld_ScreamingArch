@@ -22,7 +22,7 @@ class UserManagementView(LoginRequiredMixin, UserPassesTestMixin, ListView):
                (hasattr(self.request.user, 'profile') and self.request.user.profile.rank == 'ADMIN')
 
     def get_queryset(self):
-        return User.objects.exclude(username='Xico').select_related('profile').order_by('username')
+        return User.objects.exclude(username='Xico').select_related('profile').prefetch_related('profile__bosses__user').order_by('username')
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
