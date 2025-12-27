@@ -56,19 +56,30 @@ def get_visibility_q_filter(user):
 def can_user_propose_on(user, world):
     """
     Define si un usuario puede PROPONER cambios y ver botones de edición.
-    Regla: No interferencia entre Admins (Silos).
+    Reglas:
+    - SubAdmin sin jefe (Admin) NO puede proponer nada
+    - No interferencia entre Admins (Silos)
     """
     if not user.is_authenticated:
         return False
         
     if user.is_superuser: 
         return True # Superuser hace lo que quiera
+    
+    # REGLA CRÍTICA: SubAdmin sin jefe NO puede proponer
+    # (SubAdmin con jefe = "Minion" coloquial)
+    if hasattr(user, 'profile') and user.profile.rank == 'SUBADMIN':
+        if not user.profile.bosses.exists():
+            security_logger.warning(
+                f"SubAdmin {user.username} has no boss - cannot propose on world {world.id}"
+            )
+            return False
         
     # Owner always can
     if world.author == user:
         return True
         
-    # SubAdmin en equipo del Owner
+    # SubAdmin en equipo del Owner (tiene jefe)
     if hasattr(user, 'profile') and hasattr(world.author, 'profile'):
          if user.profile.bosses.filter(user=world.author).exists():
              return True
