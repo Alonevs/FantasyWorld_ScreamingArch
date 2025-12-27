@@ -108,6 +108,29 @@ Las estadísticas de usuarios solo cuentan contenido **activo y publicado**:
 - `status='LIVE'` (publicado, no borradores)
 - Para Superusers: incluye mundos huérfanos (`author=NULL`) como contenido del sistema
 
+### Mis Propuestas Enviadas
+**Implementado en:** `workflow.py` (líneas 234-270), `dashboard.html`
+
+Sistema de historial personal de propuestas organizado por tipo de contenido:
+
+#### Agrupación por Tipo
+Las propuestas se agrupan en el backend por `type` en lugar de `status`:
+```python
+my_worlds = [x for x in my_history if x.type == 'WORLD']
+my_narratives = [x for x in my_history if x.type == 'NARRATIVE']
+my_images = [x for x in my_history if x.type == 'IMAGE']
+my_metadata = [x for x in my_history if x.type == 'METADATA']
+```
+
+#### Características
+- **Oculto para Superusers**: `{% if my_history and not user.is_superuser %}`
+- **Secciones Colapsables**: Usa Alpine.js con `x-data` y `x-transition`
+- **Componente Reutilizable**: `_my_proposal_card.html` para renderizar cada propuesta
+- **Estados Soportados**: PENDING, APPROVED, REJECTED, ARCHIVED, HISTORY
+
+#### Manejo de Status HISTORY
+Las propuestas con status `HISTORY` (versiones históricas archivadas) se incluyen automáticamente en el historial personal, permitiendo al usuario revisar versiones antiguas de su trabajo.
+
 ---
 
 ## 5. Instalación y Setup

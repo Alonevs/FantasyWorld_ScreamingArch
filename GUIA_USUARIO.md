@@ -85,3 +85,26 @@ Como Admin, solo verás las propuestas de tus colaboradores cuando sean sobre:
 - **NO** verás propuestas de tus Minions sobre mundos del Sistema/Superuser
 
 Esto mantiene la privacidad y evita interferencias entre diferentes equipos administrativos.
+
+## 6. Mis Propuestas Enviadas
+
+En el Dashboard, la sección **"🗂️ Mis Propuestas Enviadas"** te muestra un historial organizado de todas tus propuestas pasadas, agrupadas por tipo de contenido:
+
+### Organización por Tipo
+- **🌍 MUNDOS**: Propuestas de creación/edición de mundos
+- **📖 NARRATIVAS**: Propuestas de narrativas
+- **🖼️ IMÁGENES**: Propuestas de imágenes
+- **🔧 METADATOS**: Cambios de visibilidad y metadatos
+
+Cada sección muestra:
+- Contador de registros
+- Estado de cada propuesta (PENDING, APPROVED, REJECTED, HISTORY)
+- Versión y fecha
+- Feedback del revisor (si fue rechazada)
+
+> [!NOTE]
+> Esta sección está **oculta para Superusers** ya que sus cambios son instantáneos y no requieren aprobación.
+
+### Acciones Disponibles
+- **👁️ Ver**: Revisar los detalles de la propuesta
+- **✏️ Retocar**: Editar propuestas rechazadas para reenviarlas
