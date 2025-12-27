@@ -33,6 +33,11 @@ from src.Infrastructure.DjangoFramework.persistence.rbac import restrict_explore
 @login_required
 @restrict_explorer # Explorers cannot access Dashboard at all
 def dashboard(request):
+    """
+    Vista principal del Panel de Control (Dashboard).
+    Centraliza las propuestas pendientes de Mundos, Narrativas e Imágenes.
+    Aplica filtros de visibilidad basados en jerarquía (Jefe/Subordinado) y permite búsqueda y filtrado por autor.
+    """
     # =========================================================================
     # JURISDICTION & ACCESS CONTROL
     # =========================================================================
@@ -56,22 +61,55 @@ def dashboard(request):
         i_qs = CaosImageProposalORM.objects.all().select_related('world', 'author')
         allowed_authors = User.objects.filter(is_active=True).order_by('username')
     else:
-        # Hierarchy Filter:
-        # 1. Myself (Always)
-        # 2. My Subordinates (If I am Admin) -> To review their work.
-        # SubAdmins do NOT see Boss's proposals (Hierarchy flows UP).
-        visible_ids = [request.user.id]
-        if hasattr(request.user, 'profile'):
-            # Only add Collaborators (Minions)
-            # If I am SubAdmin, my 'collaborators' list is empty, so I only see myself.
-            collab_ids = list(request.user.profile.collaborators.values_list('user__id', flat=True))
-            visible_ids.extend(collab_ids)
-            
-        q_filter = Q(author_id__in=visible_ids)
+        # TERRITORIAL SILO LOGIC:
+        # Admins see:
+        # 1. Their own proposals (always)
+        # 2. Their Minions' proposals ONLY if targeting Admin's territory or shared worlds
+        # 3. NOT Minions' proposals on System/Superuser worlds (those are private to Superuser)
         
-        w_qs = CaosVersionORM.objects.filter(q_filter).select_related('world', 'author')
-        i_qs = CaosImageProposalORM.objects.filter(q_filter).select_related('world', 'author')
-        n_qs = CaosNarrativeVersionORM.objects.filter(q_filter).select_related('narrative__world', 'author')
+        visible_ids = [request.user.id]
+        minion_ids = []
+        
+        if hasattr(request.user, 'profile'):
+            # Get my collaborators (Minions)
+            minion_ids = list(request.user.profile.collaborators.values_list('user__id', flat=True))
+            visible_ids.extend(minion_ids)
+        
+        # Base filter: Author must be me or my minion
+        author_filter = Q(author_id__in=visible_ids)
+        
+        # TERRITORIAL RESTRICTION for Minions' proposals:
+        # If proposal author is a Minion (not me), also check world ownership
+        if minion_ids:
+            # My proposals: no restriction
+            my_proposals = Q(author_id=request.user.id)
+            
+            # Minions' proposals: ONLY if world.author is me or another minion (NOT Superuser/System)
+            minion_proposals = Q(author_id__in=minion_ids) & (
+                Q(world__author=request.user) |  # Targeting MY worlds
+                Q(world__author_id__in=minion_ids)  # Or other minions' worlds (shared team)
+            )
+            
+            territorial_filter = my_proposals | minion_proposals
+        else:
+            # No minions, just my own stuff
+            territorial_filter = author_filter
+        
+        w_qs = CaosVersionORM.objects.filter(territorial_filter).select_related('world', 'author')
+        i_qs = CaosImageProposalORM.objects.filter(territorial_filter).select_related('world', 'author')
+        
+        # Narratives need special handling (world is nested)
+        if minion_ids:
+            my_narr = Q(author_id=request.user.id)
+            minion_narr = Q(author_id__in=minion_ids) & (
+                Q(narrative__world__author=request.user) |
+                Q(narrative__world__author_id__in=minion_ids)
+            )
+            n_territorial = my_narr | minion_narr
+        else:
+            n_territorial = Q(author_id=request.user.id)
+            
+        n_qs = CaosNarrativeVersionORM.objects.filter(n_territorial).select_related('narrative__world', 'author')
         
         # Restrict Filter Dropdown to only visible people
         allowed_authors = User.objects.filter(id__in=visible_ids).order_by('username')
@@ -193,10 +231,55 @@ def dashboard(request):
 
     kpis = calculate_kpis(pending, logs_base)
 
+    # =========================================================================
+    # MY PERSONAL HISTORY (For "My Proposals" Tab)
+    # =========================================================================
+    # Independent of hierarchy, show ME my own past interactions.
+    my_w = list(CaosVersionORM.objects.filter(author=request.user).exclude(status='PENDING').select_related('world').order_by('-created_at')[:30])
+    my_n = list(CaosNarrativeVersionORM.objects.filter(author=request.user).exclude(status='PENDING').select_related('narrative__world').order_by('-created_at')[:30])
+    my_i = list(CaosImageProposalORM.objects.filter(author=request.user).exclude(status='PENDING').select_related('world').order_by('-created_at')[:30])
+
+    # Tag My Items
+    for x in my_w:
+        x.type = 'WORLD'
+        x.type_label = '🌍 MUNDO'
+        x.target_name = x.proposed_name
+        x.target_desc = x.proposed_description
+        x.target_link = x.world.public_id if x.world.public_id else x.world.id
+    
+    for x in my_n:
+        x.type = 'NARRATIVE'
+        x.type_label = '📖 NARRATIVA'
+        x.target_name = x.proposed_title
+        x.target_desc = x.proposed_content
+        x.target_link = x.narrative.public_id if hasattr(x.narrative, 'public_id') and x.narrative.public_id else x.narrative.nid
+    
+    for x in my_i:
+        x.type = 'IMAGE'
+        x.type_label = '🖼️ IMAGEN'
+        x.target_name = x.title or "Imagen"
+        x.target_desc = x.reason or "Sin descripción"
+        x.target_link = "#" # Images don't link well if deleted/archived
+
+    my_history = sorted(my_w + my_n + my_i, key=lambda x: x.created_at, reverse=True)
+
+    # PERMISSIONS FOR UI
+    is_admin = request.user.is_superuser or (hasattr(request.user, 'profile') and request.user.profile.rank in ['ADMIN', 'SUPERADMIN'])
+    is_viewing_self = (int(filter_author_id) == request.user.id) if filter_author_id and filter_author_id.isdigit() else False
+    
+    # Can Bulk Approve? 
+    # Must be Admin. 
+    # If viewing SELF inbox, cannot approve (unless Superuser).
+    can_bulk_approve = is_admin
+    if is_viewing_self and not request.user.is_superuser:
+        can_bulk_approve = False
+
     context = {
         'pending': pending, 'approved': approved, 'rejected': rejected,
         'grouped_inbox': grouped_inbox, 'grouped_approved': grouped_approved, 
         'grouped_rejected': grouped_rejected,
+        'my_history': my_history, 
+        'can_bulk_approve': can_bulk_approve, # NEW FLAG for UI
         'logs_world': logs_world, 'logs_narrative': logs_narrative, 'logs_image': logs_image, 'logs_other': logs_other,
         'total_pending_count': kpis['total_pending_count'], 'total_activity_count': kpis['total_activity_count'],
         'available_authors': allowed_authors, 'current_author': int(filter_author_id) if filter_author_id else None,
@@ -213,6 +296,10 @@ from .utils import execute_use_case_action, execute_orm_status_change, execute_o
 # --- WORLD ACTIONS ---
 @login_required
 def aprobar_propuesta(request, id):
+    """
+    Aprueba una propuesta de cambio en un Mundo (CaosVersionORM).
+    Solo el Superusuario o el Autor del mundo (Boss) tienen permiso.
+    """
     # Verificación de Autoridad BOSS
     obj = get_object_or_404(CaosVersionORM, id=id)
     # RBAC Relax: Superusers can approve anything.
@@ -227,6 +314,10 @@ def aprobar_propuesta(request, id):
 
 @login_required
 def rechazar_propuesta(request, id):
+    """
+    Rechaza una propuesta de cambio en un Mundo.
+    Permite adjuntar feedback administrativo para explicar la razón del rechazo.
+    """
     # Verificación de Autoridad BOSS
     obj = get_object_or_404(CaosVersionORM, id=id)
     if not (request.user.is_superuser or obj.world.author == request.user):
@@ -238,10 +329,18 @@ def rechazar_propuesta(request, id):
 
 @login_required
 def publicar_version(request, version_id):
+    """
+    Publica una versión aprobada al entorno LIVE (Producción).
+    Actualiza los datos maestros del mundo y archiva la versión anterior.
+    """
     return execute_use_case_action(request, PublishToLiveVersionUseCase, version_id, f"Versión {version_id} publicada LIVE.", "PUBLISH_LIVE")
 
 @login_required
 def archivar_propuesta(request, id):
+    """
+    Mueve una propuesta al archivo sin aprobarla ni rechazarla explícitamente (Soft Archive).
+    Si la propuesta era de tipo DELETE y la acción es ejecutada por un Admin, se interpreta como un rechazo al borrado (Mantener entidad).
+    """
     obj = get_object_or_404(CaosVersionORM, id=id)
     from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
     check_ownership(request.user, obj)
@@ -256,6 +355,10 @@ def archivar_propuesta(request, id):
 
 @login_required
 def restaurar_version(request, version_id):
+    """
+    Restaura una versión desde el Archivo/Rechazados a estado PENDING.
+    Permite reiniciar el ciclo de revisión de una propuesta descartada anteriormente.
+    """
     obj = get_object_or_404(CaosVersionORM, id=version_id)
     from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
     check_ownership(request.user, obj)
@@ -263,6 +366,10 @@ def restaurar_version(request, version_id):
 
 @login_required
 def borrar_propuesta(request, version_id):
+    """
+    Elimina físicamente el registro de una propuesta (Hard Delete).
+    Solo permitido para el propio Autor de la propuesta o un Administrador con permisos elevados.
+    """
     # Borrado suave si es archivado, o eliminación total del registro de propuesta/archivada
     obj = get_object_or_404(CaosVersionORM, id=version_id)
     
@@ -282,6 +389,10 @@ def borrar_propuesta(request, version_id):
 
 @login_required
 def aprobar_narrativa(request, id):
+    """
+    Aprueba una propuesta de narrativa (CaosNarrativeVersionORM).
+    Requiere ser Superusuario o el Autor del mundo asociado.
+    """
     obj = get_object_or_404(CaosNarrativeVersionORM, id=id)
     if not (request.user.is_superuser or obj.narrative.world.author == request.user):
         messages.error(request, "⛔ Solo el Autor (Administrador) de este mundo puede aprobar esta narrativa.")
@@ -290,6 +401,9 @@ def aprobar_narrativa(request, id):
 
 @login_required
 def rechazar_narrativa(request, id):
+    """
+    Rechaza una propuesta de narrativa con feedback opcional.
+    """
     obj = get_object_or_404(CaosNarrativeVersionORM, id=id)
     if not (request.user.is_superuser or obj.narrative.world.author == request.user):
         messages.error(request, "⛔ Solo el Autor (Administrador) de este mundo puede rechazar esta narrativa.")
@@ -343,6 +457,14 @@ def borrar_narrativa_version(request, id):
 # Bulk Logic
 @login_required
 def borrar_propuestas_masivo(request): 
+    """
+    Procesador de acciones masivas para el Dashboard (Pendientes).
+    Maneja:
+    - 'reject': Rechazo masivo.
+    - 'restore': Restauración masiva (No común en dashboard, pero soportado).
+    - 'archive': Archivado masivo.
+    - 'hard_delete': Borrado físico masivo (Solo Superusuarios/Admins).
+    """
     # MULTI-PURPOSE BULK ACTION (Reject, Restore, Hard Delete)
     if request.method == 'POST':
         action_type = request.POST.get('action_type', 'reject')

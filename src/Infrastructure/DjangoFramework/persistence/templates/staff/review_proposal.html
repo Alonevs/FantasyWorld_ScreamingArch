@@ -11,7 +11,10 @@
         <div class="max-w-7xl mx-auto flex justify-between items-center">
             <div class="flex items-center gap-7">
                 <!-- REDESIGNED BACK BUTTON -->
-                <a href="{{ request.GET.next|default:'/dashboard' }}" 
+                <!-- REDESIGNED BACK BUTTON -->
+                <!-- Uses 'next', referer, or smart fallback based on permissions -->
+                <a href="{{ request.GET.next|default:request.META.HTTP_REFERER|default:'/' }}" 
+                   onclick="if(!this.search && history.length > 1){history.back(); return false;}"
                    class="group/back flex items-center justify-center w-12 h-12 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition duration-500 shadow-xl relative overflow-hidden active:scale-90"
                    title="Volver">
                     <div class="absolute inset-0 bg-linear-to-tr from-purple-500/10 to-transparent opacity-0 group-hover/back:opacity-100 transition duration-500"></div>

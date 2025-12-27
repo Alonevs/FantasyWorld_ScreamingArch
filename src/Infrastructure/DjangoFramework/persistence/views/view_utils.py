@@ -43,38 +43,16 @@ def check_world_access(request, world_orm: CaosWorldORM):
     if not world_orm:
         return False, False
 
-    is_live = (world_orm.status == 'LIVE')
-    is_superuser = request.user.is_superuser
-    is_authenticated = request.user.is_authenticated
+    # LÓGICA CENTRALIZADA (policies.py)
+    from src.Infrastructure.DjangoFramework.persistence.policies import can_user_view_world
     
-    is_strict_author = (is_authenticated and world_orm.author == request.user)
+    can_access = can_user_view_world(request.user, world_orm)
     
-    # Acceso Delegado (Sub-Admin / Colaborador)
-    # Si soy colaborador del Autor, tengo acceso total (Ver/Editar)
-    is_collaborator = False
-    if is_authenticated and not is_strict_author and world_orm.author:
-        # Comprobar colaboración explícita vía Perfil
-        # Relación Correcta: El Author.profile.collaborators me contiene (Me.profile)
-        try:
-            if hasattr(world_orm.author, 'profile') and hasattr(request.user, 'profile'):
-                if request.user.profile in world_orm.author.profile.collaborators.all():
-                    is_collaborator = True
-        except: pass
-
-    
-    # Acceso de Admin GLOBAL (Solo Superusuario)
-    # El rango 'ADMIN' ahora está en Silo (como un Usuario con funciones extra de dashboard), 
-    # por lo que no pueden editar/ver el contenido privado de otros Admins.
-    is_global_admin = False
-    if is_authenticated and request.user.is_superuser:
-        is_global_admin = True
-
-    is_author_or_team = is_strict_author or is_collaborator or is_global_admin
-    
-    # Acceso Público Estricto: Debe ser LIVE Y marcado explícitamente como visible_publico
-    is_publicly_visible = (is_live and world_orm.visible_publico)
-    
-    can_access = is_publicly_visible or is_author_or_team
+    # Flags auxiliares para UI (Is Author/Team) -> Usados para ocultar/mostrar ciertos controles menores
+    # Aunque can_edit se calcula por separado en 'get_world_details'.
+    # Recalculamos 'is_author_or_team' simplificado para mantener compatibilidad de retorno
+    is_author_or_team = (request.user.is_authenticated and world_orm.author == request.user) 
+    if not is_author_or_team and request.user.is_superuser: is_author_or_team = True
     
     return can_access, is_author_or_team
 

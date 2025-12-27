@@ -41,6 +41,12 @@ def check_ownership(user, obj):
                 if user.profile.rank == 'ADMIN':
                     if owner.profile in user.profile.collaborators.all():
                         return True
+                    
+                    # Caso C (FEDERADO): Admin puede ver contenido del Superadmin (para proponer).
+                    # Esto desbloquea la vista de "Offline" del Superadmin para los Admins.
+                    if owner.is_superuser:
+                        return True
+
         except Exception:
             pass
             

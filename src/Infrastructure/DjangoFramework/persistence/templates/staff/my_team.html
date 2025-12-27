@@ -116,31 +116,58 @@
                         </div>
 
                         <!-- Actions Footer -->
-                        <div class="bg-black/30 p-3 border-t border-white/5 flex justify-between items-center">
+                        <div class="bg-black/30 p-3 border-t border-white/5 flex flex-col gap-2">
                             {% if item.is_in_team %}
-                                <a href="{% url 'collaborator_work' item.user.id %}" class="bg-blue-900/30 hover:bg-blue-600 text-blue-300 hover:text-white text-[10px] font-bold px-3 py-1.5 rounded-lg transition-all border border-blue-900/50 flex items-center gap-1">
-                                    <span>📂</span> Trabajo
-                                </a>
-                                
-                                <!-- Option to Remove (Restricted) -->
-                                {% if user.is_superuser or user.profile.rank == 'ADMIN' %}
-                                <form method="post" class="inline">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="action" value="remove">
-                                    <input type="hidden" name="target_id" value="{{ item.user.id }}">
-                                    <button type="submit" 
-                                            class="text-red-400 hover:text-white text-[10px] font-bold underline decoration-red-900/50 hover:decoration-red-500 transition-colors ml-2"
-                                            data-confirm="¿Dejar de colaborar con {{ item.user.username }}?" 
-                                            data-destructive="true">Expulsar</button>
-                                </form>
-                                {% endif %}
-                            {% else %}
-                                <span class="text-gray-600 text-[10px]">Sin relación</span>
-                                <!-- Option to Recruit (Restricted) -->
-                                {% if user.is_superuser or user.profile.rank == 'ADMIN' %}
-                                <div class="flex items-center gap-2">
-                                    <a href="{% url 'dashboard' %}?author={{ item.user.id }}" class="text-purple-400 hover:text-white text-[10px] font-bold underline decoration-purple-900/50 hover:decoration-purple-500 transition-colors mr-2">📬 Buzón</a>
+                                <div class="flex justify-between items-center">
+                                    <a href="{% url 'collaborator_work' item.user.id %}" class="bg-blue-900/30 hover:bg-blue-600 text-blue-300 hover:text-white text-[10px] font-bold px-3 py-1.5 rounded-lg transition-all border border-blue-900/50 flex items-center gap-1">
+                                        <span>📂</span> Trabajo
+                                    </a>
                                     
+                                    <!-- Remove from Team -->
+                                    {% if user.is_superuser or user.profile.rank == 'ADMIN' %}
+                                    <form method="post" class="inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="remove">
+                                        <input type="hidden" name="target_id" value="{{ item.user.id }}">
+                                        <button type="submit" 
+                                                class="text-red-400 hover:text-white text-[10px] font-bold underline decoration-red-900/50 hover:decoration-red-500 transition-colors"
+                                                data-confirm="¿Dejar de colaborar con {{ item.user.username }}?" 
+                                                data-destructive="true">Expulsar</button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Rank Management (Restricted to Team Members) -->
+                                {% if user.profile.rank == 'ADMIN' %}
+                                    <div class="flex gap-2 mt-1 border-t border-white/5 pt-2">
+                                        {% if item.user.profile.rank == 'USER' %}
+                                        <form method="post" class="flex-1">{% csrf_token %}
+                                            <input type="hidden" name="action" value="promote_subadmin">
+                                            <input type="hidden" name="target_id" value="{{ item.user.id }}">
+                                            <button type="submit" class="w-full bg-emerald-900/20 hover:bg-emerald-600 text-emerald-400 hover:text-white text-[10px] font-bold py-1 rounded border border-emerald-900/50 transition truncate">
+                                                🛡️ Hacer SubAdmin
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                        
+                                        {% if item.user.profile.rank == 'SUBADMIN' %}
+                                        <form method="post" class="flex-1">{% csrf_token %}
+                                            <input type="hidden" name="action" value="demote">
+                                            <input type="hidden" name="target_id" value="{{ item.user.id }}">
+                                            <button type="submit" class="w-full bg-orange-900/20 hover:bg-orange-600 text-orange-400 hover:text-white text-[10px] font-bold py-1 rounded border border-orange-900/50 transition truncate">
+                                                📉 Bajar
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+
+                            {% else %}
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-600 text-[10px]">Sin relación</span>
+                                    
+                                    <!-- Recruit Button -->
+                                    {% if user.is_superuser or user.profile.rank == 'ADMIN' %}
                                     <form method="post" class="inline">
                                         {% csrf_token %}
                                         <input type="hidden" name="action" value="add">
@@ -149,8 +176,8 @@
                                             <span>+</span> Reclutar
                                         </button>
                                     </form>
+                                    {% endif %}
                                 </div>
-                                {% endif %}
                             {% endif %}
                         </div>
                     </div>

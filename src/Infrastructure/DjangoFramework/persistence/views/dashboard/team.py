@@ -27,6 +27,20 @@ class UserManagementView(LoginRequiredMixin, UserPassesTestMixin, ListView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['form'] = SubadminCreationForm()
+        
+        # Inject IDs of my collaborators for UI logic
+        if hasattr(self.request.user, 'profile'):
+             ctx['my_team_ids'] = set(self.request.user.profile.collaborators.values_list('user__id', flat=True))
+        else:
+             ctx['my_team_ids'] = set()
+        
+        # Enrich users with boss names for display
+        for u in ctx['users']:
+            if hasattr(u, 'profile'):
+                u.boss_names = [boss.user.username for boss in u.profile.bosses.all()]
+            else:
+                u.boss_names = []
+             
         return ctx
     
     def post(self, request, *args, **kwargs):
@@ -55,11 +69,16 @@ def toggle_admin_role(request, user_id):
             return redirect('user_management')
 
         # 2. ADMIN IMMUNITY (Admins cannot demote themselves or other Admins)
-        if not request.user.is_superuser:
-            is_target_admin = hasattr(target_u, 'profile') and target_u.profile.rank == 'ADMIN'
             if is_target_admin:
                 messages.error(request, "⛔ No puedes modificar el rango de otros Administradores.")
                 return redirect('user_management')
+            
+            # SCOPE CHECK: target_u MUST be in my team (collaborators)
+            if hasattr(request.user, 'profile'):
+                 # Check if target is in my list of collaborators
+                 if not request.user.profile.collaborators.filter(id=target_u.profile.id).exists():
+                      messages.error(request, f"⛔ {target_u.username} NO es parte de tu equipo directo.")
+                      return redirect('user_management')
             
         # 3. DIRECTIONAL LOGIC
         action = request.GET.get('action') # 'up' or 'down'
@@ -71,6 +90,11 @@ def toggle_admin_role(request, user_id):
                 target_u.profile.rank = 'SUBADMIN'
                 messages.success(request, f"🛡️ {target_u.username} ascendido a SUBADMIN.")
             elif current_rank == 'SUBADMIN':
+                # SECURITY: Only Superuser can promote to ADMIN
+                if not request.user.is_superuser:
+                    messages.error(request, "⛔ Solo el Superadmin puede nombrar Administradores.")
+                    return redirect('user_management')
+
                 target_u.profile.rank = 'ADMIN'
                 target_u.groups.add(admins_group)
                 messages.success(request, f"💎 {target_u.username} ascendido a ADMIN.")
@@ -234,4 +258,51 @@ class CollaboratorWorkView(LoginRequiredMixin, TemplateView):
         context['worlds'] = CaosWorldORM.objects.filter(author=target_user)
         # Using filter logic for narratives
         context['narratives'] = CaosNarrativeORM.objects.filter(created_by=target_user).order_by('-created_at')[:10] # Approximation
+        return context
+
+class UserDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
+    template_name = 'staff/user_detail.html'
+    
+    def test_func(self):
+        # Allow Superuser, Admin, or the user themselves
+        # Actually any authenticated user might be able to see a public profile? 
+        # For now, restrict to Staff logic (Staff, Admin, Superuser)
+        user = self.request.user
+        if user.is_superuser or user.is_staff: return True
+        if hasattr(user, 'profile') and user.profile.rank in ['ADMIN', 'SUBADMIN']: return True
+        # Allow viewing own profile
+        if str(user.id) == str(self.kwargs.get('pk')): return True
+        return False
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        target_id = self.kwargs.get('pk')
+        target_user = get_object_or_404(User, id=target_id)
+        
+        if not hasattr(target_user, 'profile'):
+            UserProfile.objects.create(user=target_user)
+            target_user.refresh_from_db()
+            
+        context['target_user'] = target_user
+        # Relationships
+        context['bosses'] = target_user.profile.bosses.all()
+        context['minions'] = target_user.profile.collaborators.all()
+        
+        # Stats (Optional simple stats)
+        if target_user.is_superuser:
+            # Superuser gets credit for Orphans (System Worlds), but filtered for quality (LIVE + Active)
+            # "Ghosts" (Deleted/Drafts) are excluded from the public score.
+            context['worlds_count'] = CaosWorldORM.objects.filter(
+                (Q(author=target_user) | Q(author__isnull=True)) & 
+                Q(is_active=True, status='LIVE')
+            ).count()
+            
+            context['narratives_count'] = CaosNarrativeORM.objects.filter(
+                (Q(created_by=target_user) | Q(created_by__isnull=True)) &
+                Q(is_active=True)
+            ).count()
+        else:
+            context['worlds_count'] = CaosWorldORM.objects.filter(author=target_user, is_active=True).count()
+            context['narratives_count'] = CaosNarrativeORM.objects.filter(created_by=target_user, is_active=True).count()
+        
         return context

@@ -1,4 +1,4 @@
-<div x-data="{ mobileMenuOpen: false }" class="fixed top-0 left-0 w-full z-100">
+<div x-data="{ mobileMenuOpen: false }" class="fixed top-0 left-0 w-full z-[100]" style="z-index: 100;">
     <!-- Main Header Bar -->
     <div class="w-full h-16 bg-dark/60 backdrop-blur-xl flex items-center justify-between px-4 md:px-8 border-b border-white/5 shadow-2xl relative z-20">
         
@@ -95,7 +95,7 @@
                             {% if user.is_superuser or user.profile.rank == 'ADMIN' %}text-amber-400
                             {% elif user.profile.rank == 'SUBADMIN' %}text-cyan-400
                             {% else %}text-gray-400{% endif %}">
-                            {{ user.profile.rank|default:"User" }}
+                            {% if user.is_superuser %}SUPERADMIN{% else %}{{ user.profile.rank|default:"User" }}{% endif %}
                         </span>
                     </div>
 

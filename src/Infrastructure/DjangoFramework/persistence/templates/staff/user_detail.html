@@ -1,0 +1,124 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Perfil: {{ target_user.username }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-12 px-6">
+    <!-- Back Button -->
+    <a href="{% url 'user_management' %}" class="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition">
+        <span>⬅️</span> Volver a Gestión de Usuarios
+    </a>
+
+    <!-- Hero Profile -->
+    <div class="bg-card border border-gray-800 rounded-2xl p-8 mb-8 relative overflow-hidden shadow-2xl">
+        <!-- Rank Stripe -->
+        <div class="absolute top-0 left-0 w-full h-2 
+            {% if target_user.profile.rank == 'ADMIN' %}bg-linear-to-r from-amber-500 to-yellow-600
+            {% elif target_user.profile.rank == 'SUBADMIN' %}bg-linear-to-r from-emerald-500 to-teal-600
+            {% else %}bg-gray-700{% endif %}">
+        </div>
+
+        <div class="flex flex-col md:flex-row items-center gap-8 relative z-10">
+            <!-- Avatar -->
+            <div class="w-24 h-24 rounded-full bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-3xl font-bold text-white shadow-lg ring-4 ring-black/50">
+                {{ target_user.username|slice:":1"|upper }}
+            </div>
+            
+            <div class="text-center md:text-left flex-1">
+                <h1 class="text-3xl font-bold text-white mb-2">{{ target_user.username }}</h1>
+                <div class="flex items-center justify-center md:justify-start gap-4 text-sm">
+                    <span class="text-gray-400">{{ target_user.email|default:"Sin email" }}</span>
+                    <span class="text-gray-600">•</span>
+                    {% if target_user.is_superuser %}
+                        <span class="text-yellow-500 font-bold">👑 SUPERADMIN</span>
+                    {% elif target_user.profile.rank == 'ADMIN' %}
+                        <span class="text-amber-500 font-bold">💎 ADMIN</span>
+                    {% elif target_user.profile.rank == 'SUBADMIN' %}
+                        <span class="text-emerald-500 font-bold">🛡️ SUBADMIN</span>
+                    {% else %}
+                        <span class="text-gray-500 font-bold">👤 USUARIO</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="flex gap-6 mt-6 md:mt-0">
+                <div class="text-center bg-black/20 rounded-lg p-3 border border-gray-800 min-w-[80px]">
+                    <div class="text-2xl font-bold text-blue-400">{{ worlds_count }}</div>
+                    <div class="text-[10px] uppercase text-gray-500 font-bold">Mundos</div>
+                </div>
+                <div class="text-center bg-black/20 rounded-lg p-3 border border-gray-800 min-w-[80px]">
+                    <div class="text-2xl font-bold text-purple-400">{{ narratives_count }}</div>
+                    <div class="text-[10px] uppercase text-gray-500 font-bold">Historias</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Collaboration Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        
+        <!-- 1. BOSSES (Who I work for) -->
+        <div class="bg-card border border-gray-800 rounded-2xl p-6">
+            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <span class="text-amber-500">👑</span> Jefes / Mentores
+                <span class="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">{{ bosses|length }}</span>
+            </h3>
+            
+            {% if bosses %}
+                <div class="space-y-3">
+                    {% for item in bosses %}
+                        <div class="flex items-center gap-3 bg-black/20 border border-gray-800 p-3 rounded-xl hover:border-amber-500/30 transition">
+                            <div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-white">
+                                {{ item.user.username|slice:":1"|upper }}
+                            </div>
+                            <div>
+                                <div class="font-bold text-white text-sm">{{ item.user.username }}</div>
+                                <div class="text-[10px] text-gray-400">{{ item.get_rank_display }}</div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-8 border border-dashed border-gray-800 rounded-xl">
+                    <p class="text-gray-500 text-sm">Sin jefes asignados.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- 2. MINIONS (My Team) -->
+        <div class="bg-card border border-gray-800 rounded-2xl p-6">
+            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <span class="text-blue-400">🤝</span> Equipo / Colaboradores
+                <span class="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">{{ minions|length }}</span>
+            </h3>
+
+            {% if minions %}
+                <div class="space-y-3">
+                    {% for item in minions %}
+                        <div class="flex items-center gap-3 bg-black/20 border border-gray-800 p-3 rounded-xl hover:border-blue-500/30 transition">
+                            <div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-white">
+                                {{ item.user.username|slice:":1"|upper }}
+                            </div>
+                            <div class="flex-1">
+                                <div class="font-bold text-white text-sm">{{ item.user.username }}</div>
+                                <div class="text-[10px] text-gray-400">{{ item.get_rank_display }}</div>
+                            </div>
+                            <!-- Link to Work -->
+                            <a href="{% url 'collaborator_work' item.user.id %}" class="bg-blue-900/20 text-blue-400 p-2 rounded-lg hover:bg-blue-500 hover:text-white transition">
+                                📂
+                            </a>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-8 border border-dashed border-gray-800 rounded-xl">
+                    <p class="text-gray-500 text-sm">Este usuario no tiene equipo.</p>
+                </div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}

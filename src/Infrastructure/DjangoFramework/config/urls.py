@@ -25,7 +25,7 @@ from src.Infrastructure.DjangoFramework.persistence.views.dashboard.assets impor
     restaurar_imagen_papelera, manage_trash_bulk
 )
 from src.Infrastructure.DjangoFramework.persistence.views.dashboard.team import (
-    UserManagementView, toggle_admin_role, MyTeamView, CollaboratorWorkView
+    UserManagementView, toggle_admin_role, MyTeamView, CollaboratorWorkView, UserDetailView
 )
 from src.Infrastructure.DjangoFramework.persistence.views.dashboard.history import (
     audit_log_view, version_history_view, version_history_cleanup_view, delete_history_bulk_view
@@ -108,6 +108,7 @@ urlpatterns = [
     
     # Gestión de Usuarios (Superadmin)
     path('usuarios/', UserManagementView.as_view(), name='user_management'),
+    path('usuarios/<int:pk>/', UserDetailView.as_view(), name='user_detail'),
     path('usuarios/<int:user_id>/toggle-role/', toggle_admin_role, name='toggle_admin_role'),
     
     # Team Management

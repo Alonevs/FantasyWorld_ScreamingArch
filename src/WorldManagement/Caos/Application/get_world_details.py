@@ -17,6 +17,8 @@ class GetWorldDetailsUseCase:
         if not w_domain:
             return None
 
+        from django.db.models import Q # Import needed for Federated Logic
+
         # 2. Obtener el objeto ORM (referencia directa para acceder a relaciones de base de datos)
         # Nota: Idealmente esto debería pasar por DTOs en el repositorio, pero se mantiene así por agilidad actual.
         from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM
@@ -54,16 +56,15 @@ class GetWorldDetailsUseCase:
         # Filtro Global: Los BORRADORES (DRAFT) no se ven en la vista Live (solo en el Dashboard)
         all_descendants = all_descendants.exclude(status='DRAFT')
 
-        # Lógica de Privacidad y Roles
-        is_global_admin = False
+        # 2. Filtrado Base
+        # Lógica CENTRALIZADA en policies.py (Misma que Home)
         if user and user.is_authenticated:
-             if user.is_superuser or user.is_staff:
-                 is_global_admin = True
-             elif hasattr(user, 'profile') and user.profile.rank in ['ADMIN', 'SUBADMIN']:
-                 is_global_admin = True
-        
-        # Si no es administrador, solo mostramos contenido marcado como publico
-        if not is_global_admin:
+             from src.Infrastructure.DjangoFramework.persistence.policies import get_visibility_q_filter
+             
+             q_filter = get_visibility_q_filter(user)
+             all_descendants = all_descendants.filter(q_filter)
+        else:
+             # Anonimo
              all_descendants = all_descendants.filter(visible_publico=True)
 
         nodes_map = {d.id: d for d in all_descendants}
@@ -201,7 +202,11 @@ class GetWorldDetailsUseCase:
                     is_subadmin = True
         except: pass
         
-        can_edit = (is_author or is_super or is_subadmin)
+        # FIX CENTRALIZADO: Usar Policy para permisos de edición/propuesta
+        from src.Infrastructure.DjangoFramework.persistence.policies import can_user_propose_on
+        can_edit = can_user_propose_on(user, w)
+
+        # 9. Construcción del Diccionario de Resultado para el Template
 
         # 9. Construcción del Diccionario de Resultado para el Template
         return {
@@ -227,5 +232,7 @@ class GetWorldDetailsUseCase:
             'propuestas': props, 
             'historial': historial,
             'is_preview': False,
-            'can_edit': can_edit
+            'can_edit': can_edit,
+            'is_subadmin': is_subadmin, # Expose for UI logic (AI Button)
+            'is_admin_role': hasattr(user, 'profile') and user.profile.rank in ['ADMIN', 'SUPERADMIN'] # Ensure explicit role check is available too
         }

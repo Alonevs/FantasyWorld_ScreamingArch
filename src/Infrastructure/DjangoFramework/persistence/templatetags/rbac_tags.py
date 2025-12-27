@@ -56,33 +56,13 @@ def can_approve(user, item):
     try:
         if user.profile.rank == 'ADMIN':
             # Check if Item Author is in my 'collaborators' (I am their boss)
-            # But wait, item.author might be 'Alone'. If 'Alone' proposes on my world, I can approve (I am Owner).
-            # If 'Alone' proposes on HIS world, I (Pepe) cannot approve.
-            # So 'can_publish' covers Owner case.
             
-            # What if I am Collaborator on Alone's world?
-            # User says: "El botón... OCULTOS para el autor... si no es el Dueño o Superadmin."
-            # "Un Admin NO puede auto-aprobar sus cambios en un mundo que pertenece a otro".
-            # What about approving OTHER's changes?
-            # "Solo el Dueño... o Superadmin... pueden ver... PUBLICAR".
-            # Logic for APPROVE (Draft -> Ready) is distinct from PUBLISH (Ready -> Live).
-            # Usually Collaborators can Approve others' work?
-            # User didn't explicitly forbid Collaborators from Approving OTHERS.
-            # "El botón de 'APROBAR'... ocultos para el autor...". (Implies valid for non-author).
-            # But "Un Admin NO puede auto-aprobar...".
-            
-            # Let's be strict: Only Owner/Superadmin can Approve too?
-            # No, "Distinción crítica: Permitir crear propuestas... Mantener que solo dueño... PUBLICAR".
-            # So Creation is allowed. Approval?
-            # If logic is Create -> Pending -> Approve -> Approved -> Publish -> Live.
-            # If Collaborator creates Pending. Who Approves? Owner.
-            # Can Collaborator Approve Owner's proposal? Probably not.
-            # Can Collaborator A Approve Collaborator B? Maybe.
-            
-            # SAFEST BET: Only Owner/Superadmin/Boss can Approve.
-            # Collaborators can PROPOSE (Create).
-            
-            # Check if Item Author is my minion (I am their Boss)
+            # CASE: ADMIN SELF-APPROVAL (AUTONOMY)
+            # If I am ADMIN and I Own the world, I can approve my own proposals (e.g. creating a new world feature).
+            # This is "Self-Management" for Bosses.
+            if hasattr(item, 'author') and item.author == user and can_publish(user, item):
+                return True
+
             if hasattr(item.author, 'profile'):
                 if item.author.profile in user.profile.collaborators.all():
                     return True

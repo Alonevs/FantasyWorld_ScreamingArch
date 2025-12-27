@@ -21,6 +21,10 @@ from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaos
 
 @login_required
 def aprobar_imagen(request, id):
+    """
+    Aprueba una propuesta de imagen, cambiando su estado a APPROVED.
+    Solo el Autor del mundo (Administrator) o el Superusuario pueden ejecutar esta acción.
+    """
     prop = get_object_or_404(CaosImageProposalORM, id=id)
     if not (request.user.is_superuser or (prop.world and prop.world.author == request.user)):
         messages.error(request, "⛔ Solo el Autor (Administrador) de este mundo puede aprobar esta imagen.")
@@ -39,6 +43,10 @@ def aprobar_imagen(request, id):
 
 @login_required
 def rechazar_imagen(request, id):
+    """
+    Rechaza una propuesta de imagen y registra el feedback del administrador.
+    La imagen pasa a estado REJECTED y no será visible en el mundo.
+    """
     prop = get_object_or_404(CaosImageProposalORM, id=id)
     if not (request.user.is_superuser or (prop.world and prop.world.author == request.user)):
         messages.error(request, "⛔ Solo el Autor (Administrador) de este mundo puede rechazar esta imagen.")
@@ -59,6 +67,11 @@ def rechazar_imagen(request, id):
 
 @login_required
 def archivar_imagen(request, id):
+    """
+    Mueve una propuesta de imagen al archivo (Papelera Soft) o la mantiene si se rechaza un borrado.
+    Si la acción era DELETE, actúa como un rechazo del borrado (Keep).
+    Si era una propuesta normal, la cambia a estado ARCHIVED.
+    """
     try:
         prop = get_object_or_404(CaosImageProposalORM, id=id)
         from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
@@ -84,6 +97,12 @@ def archivar_imagen(request, id):
 
 @login_required
 def publicar_imagen(request, id):
+    """
+    Ejecuta la publicación física de una imagen en el sistema de archivos (Live).
+    - Si es una ADD/EDIT: Guarda el archivo en la carpeta estática del mundo.
+    - Si es una DELETE: Elimina físicamente el archivo del disco.
+    Tras el éxito, la propuesta pasa a ARCHIVED con el usuario como reviewer.
+    """
     prop = get_object_or_404(CaosImageProposalORM, id=id)
     if not (request.user.is_superuser or (prop.world and prop.world.author == request.user)):
         messages.error(request, "⛔ Solo el Autor (Administrador) de este mundo puede publicar esta imagen.")
@@ -122,6 +141,10 @@ def publicar_imagen(request, id):
 
 @login_required
 def restaurar_imagen(request, id):
+    """
+    Restaura una imagen desde el estado ARCHIVED/REJECTED a PENDING.
+    Permite que la propuesta vuelva al flujo de revisión del Dashboard.
+    """
     try:
         prop = get_object_or_404(CaosImageProposalORM, id=id)
         from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
@@ -135,6 +158,10 @@ def restaurar_imagen(request, id):
 
 @login_required
 def borrar_imagen_definitivo(request, id):
+    """
+    Mueve una imagen al estado TRASHED (Papelera de reciclaje).
+    Es el paso previo antes de la eliminación física definitiva de la base de datos.
+    """
     try:
         prop = get_object_or_404(CaosImageProposalORM, id=id)
         from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
@@ -211,6 +238,11 @@ class ImageProposalDetailView(LoginRequiredMixin, View):
 
 @login_required
 def ver_papelera(request):
+    """
+    Vista principal de la Papelera de Reciclaje.
+    Recopila Mundos y Narrativas inactivos (Soft Deleted) y Propuestas/Imágenes en estado ARCHIVED/TRASHED.
+    Permite filtrar por usuario y prepara los datos agrupados para visualización por tipo.
+    """
     # 0. Common Data
     users = User.objects.all().order_by('username')
     f_user = request.GET.get('user')
@@ -405,6 +437,13 @@ def borrar_narrativa_definitivo(request, nid):
 @login_required
 @admin_only
 def manage_trash_bulk(request):
+    """
+    Gestor de Acciones Masivas para la Papelera.
+    Procesa solicitudes POST para:
+    1. 'review': Mostrar pantalla de confirmación con los items seleccionados.
+    2. 'hard_delete': Eliminar FÍSICAMENTE de la base de datos (Irreversible).
+    3. 'process_granular': Ejecutar acciones específicas (Restaurar/Borrar) ítem por ítem.
+    """
     if request.method == 'POST':
         action = request.POST.get('action')
         

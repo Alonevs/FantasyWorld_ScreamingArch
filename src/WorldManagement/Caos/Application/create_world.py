@@ -13,13 +13,14 @@ class CreateWorldUseCase:
     def __init__(self, repository: CaosRepository):
         self.repository = repository
 
-    def execute(self, name: str, description: str) -> str:
+    def execute(self, name: str, description: str, author=None) -> str:
         """
         Ejecuta la lógica de creación del mundo raíz.
 
         Args:
             name (str): Nombre del mundo.
             description (str): Descripción narrativa inicial.
+            author (User, optional): El usuario creador.
 
         Returns:
             str: El J-ID generado (ej. "01", "02").
@@ -44,8 +45,21 @@ class CreateWorldUseCase:
             name=name, 
             lore_description=description
         )
+        # Note: Domain entity currently doesn't track author explicitly in constructor, 
+        # but we handle persistence via ORM below or in Repo.
         
         self.repository.save(new_world)
+        
+        # FIX: Explicitly set author on ORM if possible (Repo usually handles bare entity, 
+        # but here we might need to bypass or update repo to support author).
+        # Since repository.save() might create the ORM, we update it immediately to be safe:
+        try:
+            w_orm = CaosWorldORM.objects.get(id=jid_entidad)
+            if author and author.is_authenticated:
+                w_orm.author = author
+                w_orm.current_author_name = author.username
+                w_orm.save()
+        except: pass
         
         # --- PASO 3: CREACIÓN DE LA PROPUESTA (ECLAI Workflow) ---
         # Todo nuevo mundo nace como una propuesta PENDIENTE de revisión.
@@ -59,7 +73,7 @@ class CreateWorldUseCase:
                 version_number=1,
                 status='PENDING',
                 change_log="Alta inicial de Entidad Raíz (Nivel 1)",
-                author=None
+                author=author if author and author.is_authenticated else None
             )
         except Exception as e: 
             print(f"Error al generar propuesta inicial: {e}")

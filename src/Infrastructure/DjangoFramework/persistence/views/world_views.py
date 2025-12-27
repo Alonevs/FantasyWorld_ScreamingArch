@@ -69,7 +69,11 @@ def home(request):
         repo = DjangoCaosRepository()
         # Para la creación, el autor es el usuario actual
         try:
-            jid = CreateWorldUseCase(repo).execute(request.POST.get('world_name'), request.POST.get('world_desc'))
+            jid = CreateWorldUseCase(repo).execute(
+                name=request.POST.get('world_name'), 
+                description=request.POST.get('world_desc'),
+                author=request.user
+            )
             w = CaosWorldORM.objects.get(id=jid)
             w.author = request.user
             w.save()
@@ -114,20 +118,12 @@ def home(request):
     if is_global_admin:
         pass # Todos (excepto DRAFTS que están excluidos en la consulta base)
     elif request.user.is_authenticated:
-        # El usuario ve: LIVE O (Su PROPIO contenido) O (El de su JEFE)
-        # Nota: Si visible_publico=False pero soy colaborador, debería verlo.
-        # Pero para la parte 'LIVE', debemos respetar visible_publico=True para extraños.
+        # Lógica CENTRALIZADA en policies.py
+        # Esto asegura consistencia entre Home, Detalles y Dashboard.
+        from src.Infrastructure.DjangoFramework.persistence.policies import get_visibility_q_filter
         
-        # Filtro Complejo:
-        # (Estado=LIVE Y Visible=True)  <--- Contenido Público
-        # O (Autor = Yo)                 <--- Mi Contenido
-        # O (Autor EN MisJefes)          <--- Contenido del Jefe
-        
-        ms = ms.filter(
-            Q(status='LIVE', visible_publico=True) | 
-            Q(author=request.user) |
-            Q(author__in=my_bosses_users)
-        )
+        q_filter = get_visibility_q_filter(request.user)
+        ms = ms.filter(q_filter)
     else:
         # Anónimo: Solo LIVE Y visiblemente Público
         ms = ms.filter(status='LIVE', visible_publico=True)
@@ -277,14 +273,16 @@ def ver_mundo(request, public_id):
     context['author_live_user'] = w_orm.author
     
     # CHEQUEO DE PERMISOS
-    is_admin, is_team_member = get_admin_status(request.user)
-
-    context['is_author'] = is_author_or_team
-    context['can_edit'] = is_author_or_team
-    # Regla 1.1 y 3.1: Solo personal autorizado (Autor, Colaborador o Admin asignado) puede proponer.
-    context['allow_proposals'] = is_author_or_team or is_admin 
-    context['is_admin_role'] = is_admin
-    # ---------------------------------
+    # NOTA: Los permisos (can_edit, is_admin_role, etc.) ya vienen calculados 
+    # robustamente desde GetWorldDetailsUseCase (que usa policies.py).
+    # NO debemos sobrescribirlos aquí con lógica simplificada.
+    
+    # is_admin ya se calcula en el usecase como 'is_admin_role'
+    # allow_proposals no se usa mucho, pero si se usara, debería venir del use case intentando unificar.
+    # Por seguridad, solo inyectamos lo que NO venga del use case.
+    
+    if 'can_edit' not in context: # Fallback por si acaso
+         context['can_edit'] = is_author_or_team
     # ---------------------------------
     
     # --- OPCIONES DE CREACIÓN PROFUNDA ---

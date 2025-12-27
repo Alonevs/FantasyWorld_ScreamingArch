@@ -12,7 +12,9 @@ from operator import attrgetter
 @login_required
 def audit_log_view(request):
     """
-    Detailed Audit Log with Filters.
+    Vista detallada del Registro de Auditoría (Audit Log).
+    Muestra todas las acciones registradas en el sistema (Global para Admins).
+    Permite filtrar por Usuario, Tipo de Acción y Búsqueda de texto libre.
     """
     logs = CaosEventLog.objects.all().order_by('-timestamp')
     users = User.objects.all().order_by('username')
@@ -83,7 +85,9 @@ def audit_log_view(request):
 @login_required
 def version_history_view(request):
     """
-    Unified Version History (Archived Items), Grouped by Entity.
+    Historial Unificado de Versiones y Propuestas Archivadas.
+    Agrupa los cambios por Entidad (Mundo/Narrativa) y previene la visualización
+    de versiones que aún están activas (LIVE) para evitar redundancia.
     """
     # Requisito del usuario: Ocultar las versiones LIVE del historial para evitar redundancia.
     # Mostramos 'HISTORY' (versiones anteriores al Live) y 'ARCHIVED' (propuestas ejecutadas/archivadas).
@@ -424,7 +428,9 @@ def version_history_cleanup_view(request):
 @login_required
 def delete_history_bulk_view(request):
     """
-    Manual Bulk Deletion of History Items (Superuser Only).
+    Acción de Borrado Masivo Manual para el Historial.
+    Exclusivo para Superusuarios (Admin Supremo).
+    Permite purgar registros históricos o propuestas archivadas seleccionando IDs específicos.
     """
     from django.contrib import messages
     from .utils import log_event
