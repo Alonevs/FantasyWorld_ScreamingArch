@@ -52,3 +52,36 @@ Como Admin o Superadmin, tu trabajo es revisar y pulsar **✅ APROBAR** para que
 
 ## 4. Navegación Móvil
 El nuevo **Header Premium** incluye un menú hamburguesa en la parte superior izquierda en dispositivos móviles. Desde allí puedes acceder rápidamente a tu trabajo, al dashboard o a la gestión de tu equipo sin que la pantalla se sature de botones.
+
+## 5. Gestión de Equipo
+
+### Reclutamiento
+Como **Admin** o **Superuser**, puedes reclutar colaboradores desde `/usuarios/`:
+1. Busca al usuario en la lista
+2. Haz clic en **"+ Reclutar"** si no está en tu equipo
+3. Una vez reclutado, aparecerá el badge **"✓ En Equipo"**
+
+### Gestión de Rangos
+Los rangos se gestionan directamente desde la columna "Rol Actual":
+1. Haz clic en el badge de rango (🛡️ ADMIN, 🔭 EXPLORER, etc.)
+2. Aparecerá un menú desplegable con opciones:
+   - **⬆️ Subir Rango**: Promocionar al siguiente nivel
+   - **⬇️ Degradar**: Bajar al nivel anterior
+3. Solo puedes gestionar rangos de usuarios en tu equipo (o todos si eres Superuser)
+
+> [!IMPORTANT]
+> Solo el **Superuser** puede promover usuarios a **ADMIN**. Los Admins regulares solo pueden promover hasta **SUBADMIN**.
+
+### Perfiles de Usuario
+Haz clic en el nombre de cualquier usuario para ver su perfil detallado:
+- **Estadísticas**: Mundos y narrativas publicadas (solo contenido activo)
+- **Jefes**: A quién reporta este usuario
+- **Equipo**: Quiénes son sus colaboradores directos
+
+### Silos Territoriales
+Como Admin, solo verás las propuestas de tus colaboradores cuando sean sobre:
+- **Tu propio contenido**
+- **Contenido de tu equipo**
+- **NO** verás propuestas de tus Minions sobre mundos del Sistema/Superuser
+
+Esto mantiene la privacidad y evita interferencias entre diferentes equipos administrativos.

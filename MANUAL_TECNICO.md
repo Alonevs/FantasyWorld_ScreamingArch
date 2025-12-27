@@ -69,9 +69,44 @@ La aplicación implementa una jerarquía de acceso granular gestionada a través
 - **SUPERUSER**: Acceso global absoluto.
 
 ### Lógica de Silos (Permissions)
-- Los permisos se validan en `permissions.py` y `view_utils.py`.
+- Los permisos se validan centralizadamente en `policies.py`.
 - Un **Admin** solo puede ver y aprobar propuestas de usuarios que lo tengan como jefe (`collaborators`).
 - El acceso a mundos privados está restringido al autor, su equipo y los Superadmins.
+
+### Silos Territoriales (Dashboard)
+**Implementado en:** `workflow.py` (líneas 63-115)
+
+Para evitar que los Admins vean propuestas de sus Minions sobre contenido del Sistema/Superuser, se implementó un filtro territorial:
+
+- **Regla**: Un Admin solo ve propuestas de sus colaboradores si el `world.author` del mundo objetivo es:
+  - El propio Admin
+  - Otro miembro del equipo del Admin
+  - **NO** el Superuser o mundos huérfanos (Sistema)
+
+**Ejemplo:**
+- María (Minion de Pepe) hace una propuesta sobre un mundo de Alone (Superuser)
+- Pepe (Admin) **NO** verá esa propuesta en su Dashboard
+- Solo Alone (Superuser) la verá
+
+Esto mantiene la privacidad entre diferentes silos administrativos.
+
+### Gestión de Usuarios
+**Implementado en:** `team.py`, `user_management.html`
+
+#### Interfaz de Gestión
+- **Dropdown de Rangos**: Los badges de rango (🛡️ ADMIN, 🔭 EXPLORER) son clickeables y muestran opciones de promoción/degradación
+- **Badges de Equipo**: Muestra los jefes de cada usuario con badges "👑 Nombre"
+- **Botón Reclutar**: Permite a Admins/Superusers añadir usuarios a su equipo
+- **Páginas de Perfil**: Vista detallada en `/usuarios/<id>/` con:
+  - Estadísticas (mundos, narrativas)
+  - Lista de jefes
+  - Lista de colaboradores (minions)
+
+#### Filtrado de Estadísticas
+Las estadísticas de usuarios solo cuentan contenido **activo y publicado**:
+- `is_active=True` (no en papelera)
+- `status='LIVE'` (publicado, no borradores)
+- Para Superusers: incluye mundos huérfanos (`author=NULL`) como contenido del sistema
 
 ---
 
