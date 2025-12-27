@@ -1,0 +1,51 @@
+<div class="bg-[#111] p-4 rounded-xl border border-gray-800 flex items-center gap-4 hover:border-gray-700 transition group relative overflow-hidden">
+    
+    <!-- Status Strip -->
+    <div class="absolute left-0 top-0 bottom-0 w-1 
+        {% if item.status == 'APPROVED' %}bg-green-500
+        {% elif item.status == 'REJECTED' %}bg-red-500
+        {% elif item.status == 'ARCHIVED' %}bg-amber-500
+        {% else %}bg-blue-500{% endif %}">
+    </div>
+
+    <!-- Type Icon -->
+    <div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0
+        {% if item.type == 'WORLD' %}bg-blue-900/20 text-blue-400
+        {% elif item.type == 'NARRATIVE' %}bg-purple-900/20 text-purple-400
+        {% elif item.type == 'IMAGE' %}bg-pink-900/20 text-pink-400
+        {% else %}bg-gray-800 text-gray-400{% endif %}">
+        <span class="text-lg">
+            {% if item.type == 'WORLD' %}🌍{% elif item.type == 'NARRATIVE' %}📖{% elif item.type == 'IMAGE' %}🖼️{% else %}📄{% endif %}
+        </span>
+    </div>
+
+    <!-- Content -->
+    <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-3 mb-1">
+            <span class="font-bold text-gray-300 truncate">{{ item.target_name }}</span>
+        </div>
+        
+        <div class="text-xs text-gray-500 flex items-center gap-3">
+            <span>v{{ item.version_number }}</span>
+            <span>•</span>
+            <span>{{ item.created_at|timesince }} ago</span>
+            {% if item.admin_feedback %}
+                <span class="text-red-400 italic">• 💬 "{{ item.admin_feedback }}"</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Action -->
+    <div class="opacity-0 group-hover:opacity-100 transition-opacity">
+        {% if item.status == 'REJECTED' and item.target_link and item.type != 'IMAGE' %}
+            {% if item.type == 'WORLD' %}
+            <a href="{% url 'editar_mundo' item.target_link %}?src_version={{ item.id }}" class="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-500 transition font-bold shadow-lg shadow-blue-900/20">✏️ Retocar</a>
+            {% elif item.type == 'NARRATIVE' %}
+            <a href="{% url 'leer_narrativa' item.target_link %}?src_version={{ item.id }}&edit=true" class="text-xs bg-purple-600 text-white px-3 py-1.5 rounded hover:bg-purple-500 transition font-bold shadow-lg shadow-purple-900/20">✏️ Retocar</a>
+            {% endif %}
+        {% else %}
+            <a href="{% url 'review_proposal' item.type item.id %}" class="text-xs bg-gray-800 text-gray-300 px-3 py-1.5 rounded hover:bg-gray-700 border border-gray-700 transition">👁️ Ver</a>
+        {% endif %}
+    </div>
+
+</div>

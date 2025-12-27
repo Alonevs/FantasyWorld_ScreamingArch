@@ -262,6 +262,12 @@ def dashboard(request):
         x.target_link = "#" # Images don't link well if deleted/archived
 
     my_history = sorted(my_w + my_n + my_i, key=lambda x: x.created_at, reverse=True)
+    
+    # Group by TYPE for organized display (instead of status)
+    my_worlds = [x for x in my_history if x.type == 'WORLD']
+    my_narratives = [x for x in my_history if x.type == 'NARRATIVE']
+    my_images = [x for x in my_history if x.type == 'IMAGE']
+    my_metadata = [x for x in my_history if x.type == 'METADATA']
 
     # PERMISSIONS FOR UI
     is_admin = request.user.is_superuser or (hasattr(request.user, 'profile') and request.user.profile.rank in ['ADMIN', 'SUPERADMIN'])
@@ -278,7 +284,9 @@ def dashboard(request):
         'pending': pending, 'approved': approved, 'rejected': rejected,
         'grouped_inbox': grouped_inbox, 'grouped_approved': grouped_approved, 
         'grouped_rejected': grouped_rejected,
-        'my_history': my_history, 
+        'my_history': my_history,
+        'my_worlds': my_worlds, 'my_narratives': my_narratives, 
+        'my_images': my_images, 'my_metadata': my_metadata,
         'can_bulk_approve': can_bulk_approve, # NEW FLAG for UI
         'logs_world': logs_world, 'logs_narrative': logs_narrative, 'logs_image': logs_image, 'logs_other': logs_other,
         'total_pending_count': kpis['total_pending_count'], 'total_activity_count': kpis['total_activity_count'],
