@@ -1,5 +1,9 @@
+import logging
 from django.db.models import Q
 from .models import CaosWorldORM
+
+# Security logger
+security_logger = logging.getLogger('security')
 
 def get_visibility_q_filter(user):
     """
@@ -18,6 +22,12 @@ def get_visibility_q_filter(user):
 
     if user.is_superuser:
         return Q() # Todo
+    
+    # 1.5. Explorer: Ve igual que anónimo (solo LIVE público)
+    # Diferencia con anónimo: Explorer podrá puntuar mundos (futuro)
+    if hasattr(user, 'profile') and user.profile.rank == 'EXPLORER':
+        security_logger.debug(f"Explorer {user.username} accessing with public-only filter")
+        return Q(status='LIVE', visible_publico=True)
 
     # 2. Definir 'Jefes' (Para SubAdmins)
     my_bosses_users = []
@@ -76,24 +86,33 @@ def can_user_view_world(user, world):
     Determina si un usuario tiene permiso estricto para ver un mundo específico.
     Debe reflejar la misma lógica que get_visibility_q_filter y check_world_access.
     """
-    if not world: return False
+    if not world: 
+        return False
     
     # 1. Público y LIVE
     if world.status == 'LIVE' and world.visible_publico:
         return True
         
     if not user.is_authenticated:
+        security_logger.debug(f"Anonymous user denied access to world {world.id} (not public)")
         return False
+    
+    # 2. Explorer: Solo ve LIVE público (igual que anónimo)
+    if hasattr(user, 'profile') and user.profile.rank == 'EXPLORER':
+        result = (world.status == 'LIVE' and world.visible_publico)
+        if not result:
+            security_logger.info(f"Explorer {user.username} denied access to non-public world {world.id}")
+        return result
         
-    # 2. Superuser
+    # 3. Superuser
     if user.is_superuser:
         return True
         
-    # 3. Propio
+    # 4. Propio
     if world.author == user:
         return True
         
-    # 4. Colaboración (Boss/Minion)
+    # 5. Colaboración (Boss/Minion)
     if hasattr(user, 'profile') and hasattr(world.author, 'profile'):
         # Caso A: Soy colaborador del autor (Minion ve al Boss)
         # Nota: La lógica dice "El Jefe puede editar lo del Subadmin...". 
@@ -105,11 +124,17 @@ def can_user_view_world(user, world):
              if world.author.profile.bosses.filter(user=user).exists(): # world.author tiene de jefe a user
                  return True
 
-    # 5. Regla Admin -> Superuser (Para proponer)
+    # 6. Regla Admin -> Superuser (Para proponer)
     if hasattr(user, 'profile') and user.profile.rank in ['ADMIN', 'SUPERADMIN']:
         if not world.author or world.author.is_superuser:
             return True
-            
+    
+    # Access denied - log for security audit
+    security_logger.warning(
+        f"Access denied: {user.username} (rank: {user.profile.rank if hasattr(user, 'profile') else 'N/A'}) "
+        f"attempted to access world {world.id} (status: {world.status}, public: {world.visible_publico}, "
+        f"author: {world.author.username if world.author else 'None'})"
+    )
     return False
 
 def can_user_delete_request(user, world):
