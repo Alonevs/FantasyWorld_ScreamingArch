@@ -84,12 +84,11 @@ def analyze_metadata_api(request):
         
         use_case = GenerateContextualMetadataUseCase(repo, service)
         extracted_data = use_case.execute(w_orm.id)
-        
         if not extracted_data:
             return JsonResponse({
                 'success': False, 
                 'error': 'AI returned empty data. Check server console for "LlamaService" logs.',
-                'debug_info': 'Connection to Port 5000 failed or JSON parse error.'
+                'debug_info': 'Connection to AI Service failed or JSON parse error.'
             })
         
         return JsonResponse({
@@ -158,7 +157,37 @@ def api_generate_title(request):
         clean_title = NarrativeService.generate_magic_title(text, world_id=world_id)
 
         return JsonResponse({'success': True, 'title': clean_title})
-
     except Exception as e:
         print(f"❌ ERROR API TITLE: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@csrf_exempt
+@login_required
+@require_POST
+def api_generate_lore(request):
+    """Genera lore creativo basado en el nombre y contexto del mundo."""
+    try:
+        data = json.loads(request.body)
+        world_id = data.get('world_id')
+        current_description = data.get('current_description', '') # Capture user context
+        
+        if not world_id:
+            return JsonResponse({'success': False, 'error': 'Missing world_id'})
+
+        repo = DjangoCaosRepository()
+        service = Llama3Service()
+        
+        from src.WorldManagement.Caos.Application.generate_lore import GenerateWorldLoreUseCase
+        use_case = GenerateWorldLoreUseCase(repo, service)
+        
+        # Execute with Context and Preview Mode (Do NOT save to DB yet)
+        lore_text = use_case.execute(world_id, current_context=current_description, preview_mode=True)
+        
+        if lore_text:
+            return JsonResponse({'success': True, 'lore': lore_text})
+        else:
+            return JsonResponse({'success': False, 'error': 'La IA no pudo generar el lore.'})
+
+    except Exception as e:
+        print(f"❌ ERROR LORE GEN: {str(e)}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)

@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -37,8 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'tailwind',
-    'theme',
+    # 'tailwind',  # Not installed
+    # 'theme',  # Not installed
     'django_browser_reload',
     'debug_toolbar',
     'src.Infrastructure.DjangoFramework.persistence.apps.PersistenceConfig',
@@ -46,6 +47,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'src.Infrastructure.DjangoFramework.config.middleware.PerformanceLoggingMiddleware',
+    'src.Infrastructure.DjangoFramework.config.middleware.AuditLogMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -173,13 +175,22 @@ LOGGING = {
             'format': '{levelname} {asctime} {module} {message}',
             'style': '{',
         },
+        'json': {
+            '()': 'src.Infrastructure.DjangoFramework.persistence.logging_utils.CustomJsonFormatter',
+        },
     },
     'handlers': {
         'file': {
-            'level': 'ERROR', # Solo guarda errores graves
+            'level': 'INFO',
             'class': 'logging.FileHandler',
-            'filename': 'errores_django.log', # Nombre del archivo
+            'filename': BASE_DIR / 'logs/django.log',
             'formatter': 'verbose',
+        },
+        'audit_file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs/audit.json.log',
+            'formatter': 'json',
         },
         'console': {
             'class': 'logging.StreamHandler',
@@ -187,9 +198,14 @@ LOGGING = {
     },
     'loggers': {
         'django': {
-            'handlers': ['file', 'console'], # Escribe en archivo Y en pantalla
+            'handlers': ['file', 'console'],
             'level': 'INFO',
             'propagate': True,
+        },
+        'audit': {
+            'handlers': ['audit_file'],
+            'level': 'INFO',
+            'propagate': False,
         },
     },
 }
@@ -199,6 +215,7 @@ LOGGING = {
 # ==========================================
 import os
 AI_API_BASE_URL = os.getenv('AI_API_URL', 'http://127.0.0.1:5000') # Base de Text-Gen-WebUI
+SD_API_URL = os.getenv('SD_API_URL', 'http://127.0.0.1:7860') # Base de Stable Diffusion
 AI_TIMEOUT = 120 # Segundos ("Pollo a 120s")
 # reload2
 # reload3

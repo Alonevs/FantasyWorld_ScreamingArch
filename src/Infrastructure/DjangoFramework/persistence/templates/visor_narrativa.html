@@ -66,6 +66,18 @@
     <!-- DOCUMENTO PRINCIPAL -->
     <div class="paper p-8 md:p-12 mb-20 relative" data-world-id="{{ narr.world.id }}">
         
+        <!-- DRAFT RECOVERY BANNER -->
+        {% if has_draft %}
+            <div id="draft-alert" class="bg-blue-900/90 border border-blue-400 text-blue-100 p-4 rounded mb-8 text-center shadow-[0_0_20px_rgba(59,130,246,0.4)] backdrop-blur animate-pulse">
+                <h3 class="font-bold text-lg mb-1">💾 BORRADOR DETECTADO</h3>
+                <p class="text-sm">Tienes un auto-guardado del <strong>{{ draft_version.created_at|date:"H:i" }}</strong> con cambios sin enviar.</p>
+                <div class="mt-4 flex justify-center gap-4">
+                    <button onclick="restoreDraft()" class="bg-blue-500 hover:bg-blue-400 text-white px-4 py-2 rounded-lg font-bold transition">Recuperar Trabajo</button>
+                    <button onclick="dismissDraft()" class="bg-gray-700 hover:bg-gray-600 text-gray-300 px-4 py-2 rounded-lg transition">Ignorar</button>
+                </div>
+            </div>
+        {% endif %}
+
         <!-- RETOUCH WARNING -->
         {% if is_retouch_mode %}
             <div class="bg-purple-900/90 border border-purple-500 text-purple-100 p-4 rounded mb-8 text-center shadow-[0_0_20px_rgba(168,85,247,0.4)] backdrop-blur">
@@ -163,5 +175,25 @@
                 el.classList.remove('flex');
             }
         }
+
+        {% if has_draft %}
+        function restoreDraft() {
+            const titleInput = document.querySelector('input[name="titulo"]') || document.querySelector('input[name="title"]');
+            const textarea = document.querySelector('textarea[name="content"]') || document.querySelector('textarea[name="contenido"]');
+            
+            // Populating from template variables
+            titleInput.value = `{{ draft_version.proposed_title|escapejs }}`;
+            textarea.value = `{{ draft_version.proposed_content|escapejs }}`;
+            
+            updateWordCount(textarea);
+            toggleEdit();
+            dismissDraft();
+        }
+
+        function dismissDraft() {
+            const alert = document.getElementById('draft-alert');
+            if(alert) alert.remove();
+        }
+        {% endif %}
     </script>
 {% endblock %}

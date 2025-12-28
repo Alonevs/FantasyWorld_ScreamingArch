@@ -118,6 +118,13 @@ def publicar_imagen(request, id):
             
             if os.path.exists(file_path):
                 os.remove(file_path)
+                
+                # Metadata Cleanup: If this WAS the cover image, clear it
+                if prop.world.metadata and prop.world.metadata.get('cover_image') == prop.target_filename:
+                    prop.world.metadata['cover_image'] = None
+                    prop.world.save()
+                    messages.info(request, "ℹ️ La portada del mundo ha sido reseteada porque la imagen fue borrada.")
+                
                 messages.success(request, f"🗑️ Imagen '{prop.target_filename}' borrada definitivamente de LIVE.")
                 log_event(request.user, "DELETE_IMAGE_LIVE", prop.world.id, details=f"Archivo: {prop.target_filename}")
             else:

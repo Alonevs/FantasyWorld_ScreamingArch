@@ -237,4 +237,47 @@
             const filename = document.getElementById('lb-name').innerText;
             if(filename !== "-") window.location.href = "{% url 'set_cover_image' jid '123456' %}".replace('123456', encodeURIComponent(filename));
         }
+
+        async function generateAILore() {
+            const btn = document.getElementById('btn-gen-lore');
+            const icon = document.getElementById('lore-gen-icon');
+            const textarea = document.getElementById('edit-description');
+            const originalText = btn.innerHTML;
+
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            icon.classList.add('animate-spin');
+            btn.innerHTML = '🕒 GENERANDO...';
+
+            try {
+                const response = await fetch('/api/ai/generate-lore/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({ 
+                        world_id: '{{ jid }}',
+                        current_description: textarea.value // Send what the user has typed
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    textarea.value = data.lore;
+                    textarea.classList.add('ring-2', 'ring-accent');
+                    setTimeout(() => textarea.classList.remove('ring-2', 'ring-accent'), 2000);
+                } else {
+                    await CaosModal.alert("Error de IA", data.error || "No se pudo generar el lore.");
+                }
+            } catch (e) {
+                console.error(e);
+                await CaosModal.alert("Error de Conexión", "Asegúrate de que el servidor de IA esté activo.");
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                icon.classList.remove('animate-spin');
+                btn.innerHTML = originalText;
+            }
+        }
     </script>

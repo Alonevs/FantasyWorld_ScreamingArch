@@ -157,7 +157,7 @@ class CaosNarrativeVersionORM(models.Model):
     proposed_content = models.TextField()
     version_number = models.IntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=30, default="PENDING") # PENDING, APPROVED, REJECTED, LIVE, ARCHIVED
+    status = models.CharField(max_length=30, default="PENDING") # PENDING, APPROVED, REJECTED, LIVE, ARCHIVED, DRAFT
     action = models.CharField(max_length=20, default="EDIT", choices=[('ADD', 'Crear'), ('EDIT', 'Editar'), ('DELETE', 'Borrar')])
     change_log = models.CharField(max_length=255, blank=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='proposed_versions')
@@ -243,3 +243,21 @@ def create_user_profile(sender, instance, created, **kwargs):
 def save_user_profile(sender, instance, **kwargs):
     if hasattr(instance, 'profile'):
         instance.profile.save()
+
+class Message(models.Model):
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages')
+    subject = models.CharField(max_length=200)
+    body = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.sender.username} → {self.recipient.username}: {self.subject}"
+    
+    @property
+    def is_read(self):
+        return self.read_at is not None

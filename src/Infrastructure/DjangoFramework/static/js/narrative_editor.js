@@ -24,6 +24,53 @@ function initEditor(isCreationMode, editParam) {
         const ta = document.querySelector('textarea[name="content"]') || document.querySelector('textarea[name="contenido"]');
         if(ta) updateWordCount(ta);
     }, 500);
+
+    // Auto-save Logic (Phase 3)
+    if (!isCreationMode) {
+        startAutosave();
+    }
+}
+
+let lastAutosaveContent = '';
+function startAutosave() {
+    setInterval(async () => {
+        const titleInput = document.querySelector('input[name="titulo"]') || document.querySelector('input[name="title"]');
+        const textarea = document.querySelector('textarea[name="content"]') || document.querySelector('textarea[name="contenido"]');
+        const status = document.getElementById('ai-status'); // Repurpose or use new
+        
+        if (!textarea || !titleInput) return;
+
+        const currentContent = titleInput.value + textarea.value;
+        if (currentContent === lastAutosaveContent) return; // No changes
+
+        const nid = window.location.pathname.split('/').filter(p => p).pop();
+        if (!nid || nid === 'NEW') return;
+
+        const formData = new FormData();
+        formData.append('titulo', titleInput.value);
+        formData.append('contenido', textarea.value);
+
+        try {
+            const response = await fetch(`/api/narrativa/autosave/${nid}/`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            });
+            const data = await response.json();
+            if (data.success) {
+                lastAutosaveContent = currentContent;
+                if (status) {
+                    const originalStatus = status.innerText;
+                    status.innerText = `💾 Auto-guardado (${data.saved_at})`;
+                    setTimeout(() => { if(status.innerText.includes('Auto-guardado')) status.innerText = originalStatus; }, 3000);
+                }
+            }
+        } catch (e) {
+            console.error('Autosave error:', e);
+        }
+    }, 60000); // Save every 60 seconds
 }
 
 async function uploadNarrativeFile(input) {

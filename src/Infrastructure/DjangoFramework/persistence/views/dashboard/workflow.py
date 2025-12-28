@@ -131,11 +131,18 @@ def dashboard(request):
         i_qs = i_qs.filter(title__icontains=search_query)
 
     if filter_type == 'WORLD':
+        # Exclude SET_COVER from main world list as it's image-related
+        w_qs = w_qs.exclude(cambios__action='SET_COVER')
         n_qs = n_qs.none(); i_qs = i_qs.none()
     elif filter_type == 'NARRATIVE':
         w_qs = w_qs.none(); i_qs = i_qs.none()
     elif filter_type == 'IMAGE':
-        w_qs = w_qs.none(); n_qs = n_qs.none()
+        # Include normal image proposals PLUS SET_COVER actions from worlds
+        w_qs = w_qs.filter(cambios__action='SET_COVER')
+        n_qs = n_qs.none()
+    elif filter_type == 'METADATA':
+        w_qs = w_qs.filter(cambios__action='METADATA_UPDATE')
+        n_qs = n_qs.none(); i_qs = i_qs.none()
 
     # =========================================================================
     # SEGMENTATION
@@ -164,7 +171,9 @@ def dashboard(request):
         x.parent_context = "Universo"
         x.feedback = getattr(x, 'admin_feedback', '') # Ensure mapped
         if x.cambios.get('action') == 'SET_COVER':
-            x.target_desc = f"📸 Cambio: {x.cambios.get('cover_image')}"
+            x.type_label = '🖼️ PORTADA'
+            x.is_image_context = True
+            x.target_desc = f"📸 Nueva Portada: {x.cambios.get('cover_image')}"
         elif x.cambios.get('action') == 'TOGGLE_VISIBILITY':
             x.target_desc = f"👁️ Visibilidad"
         elif x.cambios.get('action') == 'METADATA_UPDATE' or 'metadata' in x.cambios.keys():
@@ -243,8 +252,15 @@ def dashboard(request):
     for x in my_w:
         x.type = 'WORLD'
         x.type_label = '🌍 MUNDO'
+        
+        if x.cambios and x.cambios.get('action') == 'SET_COVER':
+            x.type_label = '🖼️ PORTADA'
+            x.is_image_context = True
+            x.target_desc = f"📸 Portada: {x.cambios.get('cover_image')}"
+        else:
+            x.target_desc = x.proposed_description
+
         x.target_name = x.proposed_name
-        x.target_desc = x.proposed_description
         x.target_link = x.world.public_id if x.world.public_id else x.world.id
     
     for x in my_n:
@@ -519,11 +535,17 @@ def aprobar_propuestas_masivo(request):
     if request.method == 'POST':
         w_ids = request.POST.getlist('selected_ids')
         n_ids = request.POST.getlist('selected_narr_ids')
+        i_ids = request.POST.getlist('selected_img_ids')
         
         for id in w_ids: execute_use_case_action(request, ApproveVersionUseCase, id, "", "")
         for id in n_ids: execute_use_case_action(request, ApproveNarrativeVersionUseCase, id, "", "")
         
-        messages.success(request, f"✅ {len(w_ids)+len(n_ids)} Propuestas aprobadas.")
+        if i_ids:
+            from .assets import aprobar_imagen
+            for iid in i_ids: aprobar_imagen(request, iid)
+        
+        total = len(w_ids) + len(n_ids) + len(i_ids)
+        messages.success(request, f"✅ {total} Propuestas aprobadas.")
     next_url = request.GET.get('next') or request.POST.get('next')
     return redirect(next_url) if next_url else redirect('dashboard')
 
@@ -567,16 +589,13 @@ def publicar_propuestas_masivo(request):
             execute_use_case_action(request, PublishNarrativeToLiveUseCase, nid, "", "")
             count += 1
             
-        # Image publishing
-        from .assets import publicar_imagen
-        for iid in i_ids:
-            # We skip the redirect by passing a custom flag or just ignoring the result
-            # But publicar_imagen returns a redirect. We can call the logic directly or 
-            # wrap it. For simplicity, we just call it and ignore the redirect.
-            try:
-                publicar_imagen(request, iid)
-                count += 1
-            except: pass
+        if i_ids:
+            from .assets import publicar_imagen
+            for iid in i_ids:
+                try:
+                    publicar_imagen(request, iid)
+                    count += 1
+                except: pass
         
         if count > 0:
             messages.success(request, f"🚀 {count} Propuestas ejecutadas correctamente (Publicadas/Borradas).")

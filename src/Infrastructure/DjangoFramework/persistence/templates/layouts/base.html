@@ -87,6 +87,119 @@
     {% block modals %}
     {% endblock %}
     
+    <!-- Initial Search Modal Overlay -->
+    <div x-data="{ 
+            open: false, 
+            search: '', 
+            results: { worlds: [], narratives: [] },
+            loading: false,
+            fetchResults() {
+                if (this.search.length < 2) {
+                    this.results = { worlds: [], narratives: [] };
+                    return;
+                }
+                this.loading = true;
+                fetch(`/buscar/?q=${this.search}&format=json`)
+                    .then(res => res.json())
+                    .then(data => {
+                        this.results = data;
+                        this.loading = false;
+                    });
+            }
+         }" 
+         @open-search.window="open = true; $nextTick(() => $refs.searchInput.focus())"
+         @keydown.escape.window="open = false">
+        
+        <!-- Search Modal Overlay -->
+        <div id="search-modal" 
+             x-show="open" 
+             style="display: none;"
+         class="fixed inset-0 z-[200] flex items-start justify-center pt-16 px-4 bg-black/60 backdrop-blur-sm">
+            
+            <div class="relative w-full max-w-2xl transform transition-all pt-4">
+                <!-- Search Box -->
+                <div class="bg-card/40 border border-white/10 rounded-3xl shadow-2xl overflow-hidden backdrop-blur-3xl">
+                    <div class="p-6 border-b border-white/5 flex items-center gap-4">
+                        <span class="text-2xl">🔍</span>
+                        <input x-ref="searchInput" 
+                               type="text" 
+                               x-model="search" 
+                               @input.debounce.300ms="fetchResults()"
+                               @keydown.enter="window.location.href = `/buscar/?q=${search}`"
+                               placeholder="Buscar en el Nexo (Mundos, Metadatos, Crónicas...)" 
+                               class="w-full bg-transparent text-2xl font-bold text-white placeholder:text-gray-600 focus:outline-none">
+                        <button @click="open = false" class="text-gray-500 hover:text-white transition-colors">ESC</button>
+                    </div>
+
+                    <!-- Results Area -->
+                    <div class="max-h-[60vh] overflow-y-auto p-6 space-y-8 custom-scrollbar">
+                        <template x-if="loading">
+                            <div class="flex justify-center py-12">
+                                <div class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                            </div>
+                        </template>
+
+                        <template x-if="!loading && search.length >= 2">
+                            <div class="space-y-8">
+                                <!-- Worlds -->
+                                <template x-if="results.worlds.length > 0">
+                                    <div>
+                                        <h3 class="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4">Mundos Detectados</h3>
+                                        <div class="grid gap-2">
+                                            <template x-for="w in results.worlds" :key="w.id">
+                                                <a :href="w.url" class="flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-accent/10 hover:border-accent/30 transition-all group">
+                                                    <div>
+                                                        <div class="font-bold text-white group-hover:text-accent transition-colors" x-text="w.name"></div>
+                                                        <div class="text-[10px] text-gray-500" x-text="w.match === 'Metadata' ? 'Match en Metadatos JSONB' : 'Nombre/Descripción'"></div>
+                                                    </div>
+                                                    <span class="text-gray-600 group-hover:text-accent group-hover:translate-x-1 transition-all">➜</span>
+                                                </a>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <!-- Narratives -->
+                                <template x-if="results.narratives.length > 0">
+                                    <div>
+                                        <h3 class="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4">Crónicas y Lore</h3>
+                                        <div class="grid gap-2">
+                                            <template x-for="n in results.narratives" :key="n.id">
+                                                <a :href="n.url" class="flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-purple-500/10 hover:border-purple-500/30 transition-all group">
+                                                    <div class="font-bold text-white group-hover:text-purple-400 transition-colors" x-text="n.name"></div>
+                                                    <span class="text-gray-600 group-hover:text-purple-400 group-hover:translate-x-1 transition-all">➜</span>
+                                                </a>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <!-- No Results -->
+                                <template x-if="results.worlds.length === 0 && results.narratives.length === 0">
+                                    <div class="py-12 text-center">
+                                        <p class="text-gray-500 font-bold italic">No se hallaron coincidencias para "<span x-text="search" class="text-gray-400"></span>"</p>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+
+                        <template x-if="search.length < 2 && !loading">
+                            <div class="py-12 text-center opacity-30">
+                                <p class="text-sm font-bold tracking-widest uppercase">Escribe al menos 2 caracteres...</p>
+                            </div>
+                        </template>
+                    </div>
+                    
+                    <!-- Footer -->
+                    <div class="p-4 bg-black/20 border-t border-white/5 flex justify-between items-center text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                        <span>Filtro JSONB Activo</span>
+                        <span>Presiona ENTER para ver todo</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- System Modals -->
     {% include 'components/_global_modals.html' %}
 
@@ -132,6 +245,37 @@
                 });
             }
     </script>
+    
+    {% if user.is_authenticated %}
+    <script>
+            // Messaging Polling
+            function updateUnreadCount() {
+                fetch('{% url "unread_count" %}')
+                    .then(response => response.json())
+                    .then(data => {
+                        const count = data.unread_count;
+                        const badgeDesktop = document.getElementById('msg-badge-desktop');
+                        const badgeMobile = document.getElementById('msg-badge-mobile');
+                        
+                        if (count > 0) {
+                            if (badgeDesktop) badgeDesktop.classList.remove('hidden');
+                            if (badgeMobile) {
+                                badgeMobile.classList.remove('hidden');
+                                badgeMobile.textContent = count;
+                            }
+                        } else {
+                            if (badgeDesktop) badgeDesktop.classList.add('hidden');
+                            if (badgeMobile) badgeMobile.classList.add('hidden');
+                        }
+                    })
+                    .catch(error => console.error('Error fetching unread count:', error));
+            }
+            
+            updateUnreadCount();
+            setInterval(updateUnreadCount, 30000);
+    </script>
+    {% endif %}
+
 
 </body>
 </html>

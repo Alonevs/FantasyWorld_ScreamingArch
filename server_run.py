@@ -12,9 +12,20 @@ def main():
         
     print("Iniciando el servidor de Django...")
     
+    # Auto-detect virtualenv python
+    python_exe = sys.executable
+    if os.name == 'nt': # Windows
+        venv_python = os.path.join("venv", "Scripts", "python.exe")
+    else: # Unix
+        venv_python = os.path.join("venv", "bin", "python")
+        
+    if os.path.exists(venv_python):
+        python_exe = venv_python
+        print(f"🐍 Usando entorno virtual: {venv_python}")
+
     # Run the server
     try:
-        subprocess.run([sys.executable, manage_py_path, "runserver"], check=True)
+        subprocess.run([python_exe, manage_py_path, "runserver"], check=True)
     except KeyboardInterrupt:
         print("\nServidor detenido.")
     except Exception as e:

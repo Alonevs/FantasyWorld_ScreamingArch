@@ -120,9 +120,9 @@
                                         <div class="flex items-center gap-2 mb-1">
                                             <!-- TYPE BADGE -->
                                             <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold border opacity-80
-                                                {% if item.type == 'WORLD' %} bg-blue-900/20 text-blue-400 border-blue-900/50
+                                                {% if item.type == 'WORLD' and not item.is_image_context %} bg-blue-900/20 text-blue-400 border-blue-900/50
                                                 {% elif item.type == 'NARRATIVE' %} bg-purple-900/20 text-purple-400 border-purple-900/50
-                                                {% elif item.type == 'IMAGE' %} bg-pink-900/20 text-pink-400 border-pink-900/50
+                                                {% elif item.type == 'IMAGE' or item.is_image_context %} bg-pink-900/20 text-pink-400 border-pink-900/50
                                                 {% else %} bg-gray-800 text-gray-400 border-gray-700 {% endif %}">
                                                 {{ item.type_label }}
                                             </span>
@@ -422,9 +422,9 @@
                                     <div class="flex-1 min-w-0">
                                         <div class="flex items-center gap-2 mb-1">
                                             <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold border opacity-80
-                                                {% if item.type == 'WORLD' %} bg-blue-900/20 text-blue-400 border-blue-900/50
+                                                {% if item.type == 'WORLD' and not item.is_image_context %} bg-blue-900/20 text-blue-400 border-blue-900/50
                                                 {% elif item.type == 'NARRATIVE' %} bg-purple-900/20 text-purple-400 border-purple-900/50
-                                                {% elif item.type == 'IMAGE' %} bg-pink-900/20 text-pink-400 border-pink-900/50
+                                                {% elif item.type == 'IMAGE' or item.is_image_context %} bg-pink-900/20 text-pink-400 border-pink-900/50
                                                 {% else %} bg-gray-800 text-gray-400 border-gray-700 {% endif %}">
                                                 {{ item.type_label }}
                                             </span>
@@ -582,9 +582,9 @@
                                     <div class="flex-1 min-w-0">
                                         <div class="flex items-center gap-2 mb-1">
                                             <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold border opacity-60 grayscale
-                                                {% if item.type == 'WORLD' %} bg-blue-900/20 text-blue-400 border-blue-900/50
+                                                {% if item.type == 'WORLD' and not item.is_image_context %} bg-blue-900/20 text-blue-400 border-blue-900/50
                                                 {% elif item.type == 'NARRATIVE' %} bg-purple-900/20 text-purple-400 border-purple-900/50
-                                                {% elif item.type == 'IMAGE' %} bg-pink-900/20 text-pink-400 border-pink-900/50
+                                                {% elif item.type == 'IMAGE' or item.is_image_context %} bg-pink-900/20 text-pink-400 border-pink-900/50
                                                 {% else %} bg-gray-800 text-gray-400 border-gray-700 {% endif %}">
                                                 {{ item.type_label }}
                                             </span>

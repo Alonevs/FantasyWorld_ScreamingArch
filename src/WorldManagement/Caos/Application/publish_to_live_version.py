@@ -7,7 +7,8 @@ class PublishToLiveVersionUseCase:
     gestiona el historial archivando las versiones anteriores y maneja acciones especiales
     como borrado lógico, restauración o cambio de visibilidad.
     """
-    def execute(self, version_id: int, user=None):
+    def execute(self, version_id: int, user=None, reviewer=None):
+        effective_user = reviewer or user
         try:
             version = CaosVersionORM.objects.get(id=version_id)
         except CaosVersionORM.DoesNotExist:
@@ -34,8 +35,8 @@ class PublishToLiveVersionUseCase:
             print(f" 🗑️ Ejecutando eliminación lógica de mundo '{version.world.name}' (v{version.version_number})")
             version.world.soft_delete()
             
-            if user:
-                 try: CaosEventLog.objects.create(user=user, action="SOFT_DELETE", target_id=version.world.id, details=f"Aprobada v{version.version_number} (Borrado)")
+            if effective_user:
+                 try: CaosEventLog.objects.create(user=effective_user, action="SOFT_DELETE", target_id=version.world.id, details=f"Aprobada v{version.version_number} (Borrado)")
                  except: pass
 
             # El borrado se considera una acción que termina en ARCHIVED si es una propuesta ejecutada

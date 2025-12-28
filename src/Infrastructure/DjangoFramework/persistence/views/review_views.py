@@ -124,6 +124,19 @@ def review_proposal(request, type, id):
             if not ctx['diff_title'] and not ctx['diff_content'] and ctx['metadata_diff']:
                 ctx['proposal_type'] = 'METADATA'
             
+            # 🖼️ IF SET_COVER: Force image preview mode even if technical type is WORLD
+            if proposal.cambios and proposal.cambios.get('action') == 'SET_COVER':
+                filename = proposal.cambios.get('cover_image')
+                ctx['image_url'] = f"/static/persistence/img/{proposal.world.id}/{filename}"
+                
+                # Live image (Original cover)
+                live_filename = live_obj.metadata.get('cover_image') if live_obj and live_obj.metadata else None
+                if live_filename:
+                    ctx['live_image_url'] = f"/static/persistence/img/{proposal.world.id}/{live_filename}"
+                
+                ctx['diff_content'] = f"📸 Propuesta de Cambio de Portada: {filename}"
+                ctx['is_image'] = True
+            
         elif type == 'NARRATIVE':
             proposal = get_object_or_404(CaosNarrativeVersionORM, id=id)
             if proposal.narrative:

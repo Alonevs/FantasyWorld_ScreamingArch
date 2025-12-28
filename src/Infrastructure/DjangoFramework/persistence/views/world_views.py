@@ -149,6 +149,8 @@ def home(request):
     for m in final_list:
         # Pasar world_instance=m para evitar re-consultar metadatos (N+1 fix)
         imgs = get_world_images(m.id, world_instance=m)
+        if imgs:
+            imgs.sort(key=lambda x: x.get('is_cover', False), reverse=True)
         cover = imgs[0]['url'] if imgs else None
         if m.metadata and 'cover_image' in m.metadata:
             target = m.metadata['cover_image']
@@ -158,8 +160,12 @@ def home(request):
         if cover:
             background_images.append(cover)
  
-        # Recolectar hasta 5 imágenes para el slideshow
-        entity_images = [i['url'] for i in imgs][:5] if imgs else []
+        # Recolectar hasta 5 imágenes para el slideshow (Priorizando PORTADA)
+        entity_images = [i['url'] for i in imgs] if imgs else []
+        if cover and cover in entity_images:
+            entity_images.remove(cover)
+            entity_images.insert(0, cover)
+        entity_images = entity_images[:5]
         
         # SOBRESCRITURA VISUAL DE NOMBRE (Solicitado: "solo visual")
         # Si es Nivel 1 (id="01..."), mostrar "CAOS". Nivel 2 -> "ABISMOS", etc.
@@ -695,147 +701,4 @@ def ver_metadatos(request, public_id):
              context['metadata_obj'] = {} 
     
     return render(request, 'ver_metadatos.html', context)
-
-# --- AUTO-NOOS API ---
-@csrf_exempt 
-def api_auto_noos(request, jid):
-    try:
-        print(f"🤖 [Auto-Noos] Inicio para JID: {jid}")
-        repo = DjangoCaosRepository()
-        w_domain = resolve_world_id(repo, jid)
-        
-        if not w_domain:
-            return JsonResponse({'status': 'error', 'message': 'Mundo no encontrado'})
-        
-        # 1. Reunir Contexto
-        sources_found = []
-        context_parts = [f"Entidad: {w_domain.name}"]
-        
-        # A. Descripción
-        # CORRECCIÓN: La Entidad de Dominio usa lore_description, el ORM usa description.
-        # Comprobar ambos por seguridad (Objeto Híbrido)
-        desc_val = getattr(w_domain, 'lore_description', '') or getattr(w_domain, 'description', '')
-        if desc_val and len(desc_val.strip()) > 5:
-            context_parts.append(f"Descripción: {desc_val}")
-            sources_found.append("Descripción")
-            
-        # B. Metadatos Existentes
-        try:
-            w_orm = CaosWorldORM.objects.get(id=w_domain.id.value)
-            raw_meta = w_orm.metadata or {}
-            if isinstance(raw_meta, dict):
-                 # Aplanar dict existente si es adecuado
-                 if 'properties' in raw_meta and raw_meta['properties']:
-                     context_parts.append(f"Metadatos Existentes: {json.dumps(raw_meta['properties'])}")
-                     sources_found.append("Metadatos")
-        except Exception as e:
-            print(f"⚠️ Error al leer metadatos existentes: {e}")
-        
-        # C. Narrativas
-        try:
-            narrs = w_orm.narrativas.filter(is_active=True).order_by('-updated_at')[:5]
-            if narrs.exists():
-                narr_text = "\nInformación Narrativa:\n"
-                has_narr = False
-                for n in narrs:
-                    if n.contenido and len(n.contenido.strip()) > 10:
-                        narr_text += f"- {n.titulo}: {n.contenido[:400]}...\n"
-                        has_narr = True
-                if has_narr:
-                    context_parts.append(narr_text)
-                    sources_found.append("Narrativa")
-        except Exception as e:
-            print(f"⚠️ Error al leer narrativas: {e}")
-
-        if not sources_found:
-             # FALLBACK: Si hay casi nada de contexto, forzar generación creativa basada en el Nombre
-             print("⚠️ Poco contexto. Activando Modo Creativo.")
-             context_text = f"Entidad: {w_domain.name}\n(Esta entidad no tiene descripción. INVENTA atributos coherentes con un mundo de fantasía basados en su nombre)."
-        else:
-             context_text = "\n\n".join(context_parts)
-
-        # 2. RESOLVER ESQUEMA (Fuente de Verdad: metadata_router.py)
-        try:
-            from src.WorldManagement.Caos.Domain.metadata_router import get_schema_for_hierarchy
-            
-            raw_id = w_domain.id.value
-            level = len(raw_id) // 2
-            
-            target_schema = get_schema_for_hierarchy(raw_id, level)
-            
-            if target_schema:
-                print(f"📏 [Auto-Noos] Usando Esquema Estricto para Nivel {level} (JID {raw_id})")
-            else:
-                print(f"ℹ️ [Auto-Noos] Sin esquema explícito para Nivel {level} (Modo Genérico)")
- 
-        except Exception as e:
-            print(f"⚠️ Fallo en la resolución del esquema: {e}")
-
-        # 3. Ingeniería de Prompts
-        system_prompt = (
-            "Eres el Oráculo del Caos (Auto-Noos). Extrae metadatos del texto.\n"
-            "Devuelve SOLO JSON con formato: { \"properties\": [ {\"key\": \"Nombre\", \"value\": \"Valor\"} ] }.\n"
-        )
-
-        # 3. Ingeniería de Prompts (Modo Conciso)
-        base_system_prompt = (
-            "Eres un Motor de Base de Datos Semántica para Worldbuilding.\n"
-            "Tu objetivo es extraer atributos técnicos de una narrativa para rellenar una ficha JSON.\n\n"
-            "REGLAS ABSOLUTAS DE FORMATO:\n"
-            "1. LONGITUD MÁXIMA: Los valores deben tener entre 1 y 3 palabras. NUNCA frases completas.\n"
-            "   - ⛔ MALO: 'El clima es muy seco con tormentas de arena'\n"
-            "   - ✅ BUENO: 'Árido / Tormentoso'\n"
-            "2. ESTILO: Usa un tono técnico, científico o de RPG. Sé directo.\n"
-            "3. VALORES PROHIBIDOS: No uses 'TRUE', 'FALSE', 'SI', 'NO' ni copies los ejemplos. Interpreta el texto.\n"
-            "   - Si el esquema dice 'leyes_fisicas', no ponas 'TRUE'. Pon 'Inestables', 'Rígidas', 'Mágicas'.\n"
-            "4. DATOS EXTRA: Si detectas conceptos únicos (razas, materiales, dioses), añádelos como claves nuevas, manteniendo el valor corto.\n"
-            "5. TU SALIDA DEBE SER SOLO EL JSON LIMPIO."
-        )
-
-        if target_schema and 'campos_fijos' in target_schema:
-            fixed = json.dumps(target_schema['campos_fijos'], ensure_ascii=False)
-            system_prompt = base_system_prompt + f"\n\n⚠️ ESQUEMA OBLIGATORIO: Debes priorizar y rellenar estos campos: {fixed}."
-        else:
-            system_prompt = base_system_prompt + "\n\nTAREA: Extrae los 5-10 atributos técnicos/sociológicos más críticos para definir esta entidad."
-
-        user_prompt = f"Analiza este texto narrativo:\n\n{context_text}"
-        
-        # 4. Llamada IA (Usando API de Chat Estructurado)
-        print(f"🤖 Enviando Prompt a la IA ({len(user_prompt)} caracteres). Max Tokens: 200")
-        
-        # Usar generate_structure con límite estricto de tokens para forzar concisión
-        data = Llama3Service().generate_structure(system_prompt, user_prompt, max_tokens=200)
-        
-        print(f"📥 Datos de Respuesta IA: {str(data)[:100]}...")
-
-        if not data:
-             return JsonResponse({'status': 'error', 'message': 'La IA no devolvió datos válidos.'})
-
-        # 5. Analizar/Normalizar (Los datos ya son un dict)
-        properties = []
-        
-        # Normalizar
-        if 'properties' in data and isinstance(data['properties'], list):
-            properties = data['properties']
-        else:
-            # Fallback de dict plano
-            exclude = ['properties', 'datos_nucleo', 'datos_extendidos', 'tipo_entidad']
-            # Comprobar estructura de esquema anidada
-            if 'datos_nucleo' in data:
-                for k,v in data.get('datos_nucleo', {}).items(): properties.append({'key': k, 'value': str(v)})
-                for k,v in data.get('datos_extendidos', {}).items(): properties.append({'key': k, 'value': str(v)})
-            else:
-                for k,v in data.items():
-                    if k not in exclude and not isinstance(v, dict):
-                        properties.append({'key': k, 'value': str(v)})
-    
-        if not properties:
-            return JsonResponse({'status': 'error', 'message': 'La IA no extrajo datos válidos.'})
-
-        return JsonResponse({'status': 'success', 'properties': properties})
-
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return JsonResponse({'status': 'error', 'message': f"Error del Servidor: {str(e)}"})
 

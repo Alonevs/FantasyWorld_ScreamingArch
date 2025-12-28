@@ -1,6 +1,6 @@
 <div x-data="{ mobileMenuOpen: false }" class="fixed top-0 left-0 w-full z-[100]" style="z-index: 100;">
     <!-- Main Header Bar -->
-    <div class="w-full h-16 bg-dark/60 backdrop-blur-xl flex items-center justify-between px-4 md:px-8 border-b border-white/5 shadow-2xl relative z-20">
+    <div class="fixed top-0 left-0 right-0 z-100 bg-linear-to-r from-red-950/90 to-black/90 text-red-200 py-1 px-4 text-[10px] uppercase font-bold tracking-[0.2em] flex justify-between items-center border-b border-red-900 shadow-lg backdrop-blur select-none">
         
         <!-- Left: Brand & Mobile Toggle -->
         <div class="flex items-center gap-4">
@@ -60,6 +60,17 @@
                             {% endif %}
                         {% endif %}
                     </div>
+
+                    <button @click="$dispatch('open-search')" class="flex items-center gap-2 px-4 py-2 text-gray-400 hover:text-accent hover:bg-accent/5 rounded-xl transition-all duration-300 group">
+                        <span class="text-lg group-hover:scale-110 transition-transform">🔍</span>
+                        <span class="text-xs font-bold uppercase tracking-widest bg-dark">Buscar</span>
+                    </button>
+
+                    <a href="{% url 'inbox' %}" class="flex items-center gap-2 px-4 py-2 text-gray-400 hover:text-blue-400 hover:bg-blue-500/5 rounded-xl transition-all duration-300 group relative">
+                        <span class="text-lg group-hover:scale-110 transition-transform">✉️</span>
+                        <span class="text-xs font-bold uppercase tracking-widest bg-dark">Mensajes</span>
+                        <span id="msg-badge-desktop" class="hidden absolute top-1 right-1 w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+                    </a>
 
                     {% if user.is_superuser or user.profile.rank == 'ADMIN' or user.profile.rank == 'SUBADMIN' %}
                         <a href="{% url 'my_team' %}" class="flex items-center gap-2 px-4 py-2 text-gray-400 hover:text-amber-400 hover:bg-amber-500/5 rounded-xl transition-all duration-300 group">
@@ -167,7 +178,22 @@
                         <span class="text-xl">📬</span>
                         <span class="font-bold">BUZÓN DE PROPUESTAS</span>
                     </a>
+                {% endif %}
 
+                <button @click="$dispatch('open-search'); mobileMenuOpen = false" class="flex items-center gap-4 p-4 bg-white/5 rounded-2xl text-gray-300 border border-white/5">
+                    <span class="text-xl">🔍</span>
+                    <span class="font-bold">BUSCAR</span>
+                </button>
+
+                <a href="{% url 'inbox' %}" class="flex items-center justify-between p-4 bg-blue-500/10 rounded-2xl text-blue-400 border border-blue-500/20">
+                    <div class="flex items-center gap-4">
+                        <span class="text-xl">✉️</span>
+                        <span class="font-bold">MENSAJES</span>
+                    </div>
+                    <span id="msg-badge-mobile" class="hidden bg-blue-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">0</span>
+                </a>
+
+                {% if user.is_superuser or user.profile.rank == 'ADMIN' or user.profile.rank == 'SUBADMIN' %}
                     <a href="{% url 'my_team' %}" class="flex items-center gap-4 p-4 bg-white/5 rounded-2xl text-gray-300 border border-white/5">
                         <span class="text-xl">👥</span>
                         <span class="font-bold">GESTIÓN DE EQUIPO</span>

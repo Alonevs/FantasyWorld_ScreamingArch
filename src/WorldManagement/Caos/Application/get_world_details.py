@@ -125,9 +125,8 @@ class GetWorldDetailsUseCase:
         hijos = []
         for h in visible_children:
             h_pid = h.public_id if h.public_id else h.id
-            imgs = get_world_images(h.id)
-            
-            # Resolución de Imagen de Portada
+            # Resolución de Imagen de Portada (Pass instance to avoid N+1 and get latest meta)
+            imgs = get_world_images(h.id, world_instance=h)
             img_url = None
             if imgs:
                 cover_img = next((img for img in imgs if img.get('is_cover')), None)
@@ -152,13 +151,19 @@ class GetWorldDetailsUseCase:
             if not h.id.startswith(jid):
                 is_jumped = True
 
+            # Prepare images list with cover first
+            all_h_imgs = [i['url'] for i in imgs] if imgs else []
+            if img_url and img_url in all_h_imgs:
+                all_h_imgs.remove(img_url)
+                all_h_imgs.insert(0, img_url)
+
             child_data = {
                 'id': h.id, 
                 'public_id': h_pid, 
                 'name': h.name, 
                 'short': h.id[len(jid):], 
                 'img': img_url,
-                'images': [i['url'] for i in imgs][:5] if imgs else [],
+                'images': all_h_imgs[:5],
                 'level': level,
                 'relative_level': relative_level,
                 'missing_parent_id': getattr(h, 'missing_parent_id', None),
@@ -170,7 +175,10 @@ class GetWorldDetailsUseCase:
         hijos.sort(key=lambda x: (x['is_jumped'], x['level'], x['id']))
 
         # 4. Obtener Imágenes de la Entidad actual
-        imgs = get_world_images(jid)
+        imgs = get_world_images(jid, world_instance=w)
+        # Prioritize cover image in the gallery list
+        if imgs:
+            imgs.sort(key=lambda x: x.get('is_cover', False), reverse=True)
         
         # 5. Formatear Metadatos (JSON)
         meta_str = json.dumps(w.metadata, indent=2) if w.metadata else "{}"

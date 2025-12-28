@@ -1,0 +1,92 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block title %}Resultados: {{ query }} | ECLAI Universe{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-12">
+    <div class="animate-fade-in-up">
+        <h1 class="text-4xl md:text-5xl font-black tracking-tighter text-white mb-4 uppercase">
+            RESULTADOS PARA <span class="text-accent">"{{ query }}"</span>
+        </h1>
+        <p class="text-gray-400 text-lg mb-12">Explora los hallazgos en los registros de ECLAI.</p>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
+            <!-- Left: Worlds Results -->
+            <div class="lg:col-span-2 space-y-8">
+                <section>
+                    <h2 class="text-xl font-black text-white mb-6 flex items-center gap-3">
+                        <span class="w-2 h-8 bg-blue-500 rounded-full"></span>
+                        MUNDOS ({{ worlds|length }})
+                    </h2>
+                    
+                    <div class="grid gap-4">
+                        {% for w in worlds %}
+                        <a href="{{ w.url }}" class="group block bg-white/5 border border-white/10 rounded-3xl p-6 hover:bg-white/10 hover:border-blue-500/50 transition-all duration-300">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="text-lg font-bold text-white group-hover:text-blue-400 transition-colors">{{ w.name }}</h3>
+                                <span class="text-[10px] font-black bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full uppercase tracking-widest">
+                                    {{ w.match }}
+                                </span>
+                            </div>
+                            <p class="text-gray-500 text-sm">Entidad catastral detectada en la base de datos.</p>
+                        </a>
+                        {% empty %}
+                        <div class="py-12 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
+                            <span class="text-4xl mb-4 block filter grayscale opacity-50">🌍</span>
+                            <p class="text-gray-500 font-bold uppercase tracking-widest text-xs">No se encontraron mundos.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <section>
+                    <h2 class="text-xl font-black text-white mb-6 flex items-center gap-3">
+                        <span class="w-2 h-8 bg-purple-500 rounded-full"></span>
+                        NARRATIVAS ({{ narratives|length }})
+                    </h2>
+                    
+                    <div class="grid gap-4">
+                        {% for n in narratives %}
+                        <a href="{{ n.url }}" class="group block bg-white/5 border border-white/10 rounded-3xl p-6 hover:bg-white/10 hover:border-purple-500/50 transition-all duration-300">
+                            <h3 class="text-lg font-bold text-white group-hover:text-purple-400 transition-colors mb-2">{{ n.name }}</h3>
+                            <p class="text-gray-500 text-sm">Crónica e historial registrado.</p>
+                        </a>
+                        {% empty %}
+                        <div class="py-12 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
+                            <span class="text-4xl mb-4 block filter grayscale opacity-50">📜</span>
+                            <p class="text-gray-500 font-bold uppercase tracking-widest text-xs">No se encontraron narrativas.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </section>
+            </div>
+
+            <!-- Right: Search Again / Stats -->
+            <div class="space-y-6">
+                <div class="bg-card/50 backdrop-blur-xl border border-white/10 rounded-3xl p-8 sticky top-24">
+                    <h3 class="text-xs font-black text-gray-500 uppercase tracking-widest mb-6">Nueva Búsqueda</h3>
+                    <form action="{% url 'global_search' %}" method="GET" class="relative">
+                        <input type="text" name="q" value="{{ query }}" placeholder="¿Qué buscas?"
+                               class="w-full bg-dark/80 border border-white/10 rounded-2xl px-6 py-4 text-white placeholder:text-gray-600 focus:outline-none focus:border-accent transition-colors">
+                        <button type="submit" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors">
+                            🔍
+                        </button>
+                    </form>
+                    
+                    <div class="mt-8 pt-8 border-t border-white/5 space-y-4">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-gray-500 font-bold">TOTAL HALLADOS</span>
+                            <span class="text-accent font-black">{{ worlds|length|add:narratives|length }}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-gray-500 font-bold">PROFUNDIDAD JSONB</span>
+                            <span class="text-emerald-500 font-black">ACTIVA</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

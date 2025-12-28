@@ -166,7 +166,7 @@
             </div>
             
             <div class="prose prose-invert max-w-none text-gray-400">
-                {% if proposal_type == 'IMAGE' %}
+                {% if proposal_type == 'IMAGE' or is_image %}
                     {% if live_image_url %}
                         <img src="{{ live_image_url }}" class="rounded-lg border border-gray-700 w-full opacity-50 grayscale hover:grayscale-0 transition-all">
                     {% else %}
@@ -175,10 +175,10 @@
                         </div>
                     {% endif %}
                 {% endif %}
-
-                {% if proposal_type != 'IMAGE' %}
+                
+                {% if proposal_type != 'IMAGE' and not is_image %}
                     <!-- TEXT CONTENT (WORLD/NARRATIVE ONLY) -->
-                    {% if proposal_type == 'WORLD' or proposal_type == 'NARRATIVE' %}
+                    {% if proposal_type == 'WORLD' or proposal_type == 'NARRATIVE' or proposal_type == 'METADATA' %}
                         {% if live_title %}
                             <h3 class="text-xl text-gray-300 font-bold mb-4 border-b border-gray-800 pb-2">{{ live_title }}</h3>
                         {% endif %}
@@ -229,7 +229,7 @@
             </div>
 
             <div class="prose prose-invert max-w-none text-gray-400">
-                {% if proposal_type == 'IMAGE' %}
+                {% if proposal_type == 'IMAGE' or is_image %}
                      {% if image_url %}
                         <img src="{{ image_url }}" class="rounded-lg border-2 border-blue-500/50 w-full shadow-[0_0_30px_-5px_rgba(59,130,246,0.2)]">
                     {% else %}
@@ -237,9 +237,9 @@
                     {% endif %}
                 {% endif %}
 
-                {% if proposal_type != 'IMAGE' %}
+                {% if proposal_type != 'IMAGE' and not is_image %}
                     <!-- TEXT DIFF (WORLD/NARRATIVE ONLY) -->
-                    {% if proposal_type == 'WORLD' or proposal_type == 'NARRATIVE' %}
+                    {% if proposal_type == 'WORLD' or proposal_type == 'NARRATIVE' or proposal_type == 'METADATA' %}
                         {% if diff_title %}
                             <h3 class="text-xl text-white font-bold mb-4 border-b border-blue-900/50 pb-2">
                                 {{ diff_title|safe }}

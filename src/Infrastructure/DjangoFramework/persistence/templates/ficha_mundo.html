@@ -189,6 +189,14 @@
                          data-url="{% static "persistence/img/" %}{{ img.url }}" 
                          data-filename="{{ img.filename|escapejs }}"
                          onclick="if(!selectionMode) openLightbox(this.dataset.url, this.dataset.filename)">
+                        
+                        {% if img.is_cover %}
+                        <!-- Cover Badge -->
+                        <div class="absolute top-2 left-2 z-20 px-2 py-0.5 bg-accent text-[10px] font-black text-white rounded shadow-lg border border-white/20 uppercase tracking-tighter">
+                            Portada
+                        </div>
+                        {% endif %}
+
                         <img src="{% static 'persistence/img/' %}{{ img.url }}" alt="{{ img.filename }}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500 opacity-90 group-hover:opacity-100">
                         
                         <!-- Metadata Overlay -->

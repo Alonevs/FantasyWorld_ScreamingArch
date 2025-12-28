@@ -9,8 +9,8 @@ from src.FantasyWorld.AI_Generation.Domain.interfaces import ImageGenerator
 
 class StableDiffusionService(ImageGenerator):
     def __init__(self):
-        # ✅ PUERTO CONFIRMADO POR TU TEST
-        self.api_url = "http://127.0.0.1:7860"
+        # ✅ PUERTO CONFIRMADO POR TU TEST (7860 para SD WebUI)
+        self.api_url = getattr(settings, 'SD_API_URL', "http://127.0.0.1:7860")
         self.headers = {"Content-Type": "application/json"}
 
     def generate_concept_art(self, prompt: str, category: str = "defecto") -> str:
@@ -43,7 +43,7 @@ class StableDiffusionService(ImageGenerator):
                 return None
 
         except requests.exceptions.ConnectionError:
-            print(f"💀 NO CONECTA al puerto 7861. ¿Seguro que la ventana negra sigue abierta?")
+            print(f"💀 NO CONECTA a la IA de imagen. ¿Seguro que la ventana negra sigue abierta?")
             return None
         except Exception as e:
             print(f"⚠️ Error inesperado en SD: {e}")

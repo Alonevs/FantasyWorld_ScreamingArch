@@ -6,10 +6,10 @@ from django.conf.urls.static import static
 from src.Infrastructure.DjangoFramework.persistence.views.world_views import (
     home, ver_mundo, editar_mundo, borrar_mundo, 
     toggle_lock, toggle_visibilidad, init_hemisferios, escanear_planeta,
-    mapa_arbol, comparar_version, ver_metadatos, api_auto_noos,
+    mapa_arbol, comparar_version, ver_metadatos,
     toggle_entity_status
 )
-from src.Infrastructure.DjangoFramework.persistence.views.ai_views import analyze_metadata_api, edit_narrative_api, api_generate_title
+from src.Infrastructure.DjangoFramework.persistence.views.ai_views import analyze_metadata_api, edit_narrative_api, api_generate_title, api_generate_lore
 from src.Infrastructure.DjangoFramework.persistence.views.dashboard.workflow import (
     dashboard, centro_control, aprobar_propuesta, rechazar_propuesta, publicar_version, archivar_propuesta,
     restaurar_version, borrar_propuesta, borrar_propuestas_masivo,
@@ -38,10 +38,33 @@ from src.Infrastructure.DjangoFramework.persistence.views import review_views # 
 from src.Infrastructure.DjangoFramework.persistence.views.narrative_views import (
     ver_narrativa_mundo, leer_narrativa, editar_narrativa, borrar_narrativa, 
     crear_nueva_narrativa, crear_sub_narrativa, revisar_narrativa_version,
-    pre_crear_root, pre_crear_child, import_narrative_file
+    pre_crear_root, pre_crear_child, import_narrative_file, autosave_narrative
 )
 
+from src.Infrastructure.DjangoFramework.persistence.views.messaging_views import (
+    inbox, send_message, mark_as_read, unread_count
+)
+
+from src.Infrastructure.DjangoFramework.persistence.views.search_views import global_search
+
 urlpatterns = [
+    path('api/ai/generate-lore/', api_generate_lore, name='api_generate_lore'),
+    path('api/narrativa/autosave/<str:nid>/', autosave_narrative, name='autosave_narrative'),
+
+    # ==========================================
+    # BÚSQUEDA
+    # ==========================================
+    path('buscar/', global_search, name='global_search'),
+
+    # ==========================================
+    # MENSAJERÍA
+    # ==========================================
+    path('mensajes/', inbox, name='inbox'),
+    path('mensajes/enviar/', send_message, name='send_message'),
+    path('mensajes/enviar/<int:user_id>/', send_message, name='send_message_to'),
+    path('mensajes/marcar-leido/<int:message_id>/', mark_as_read, name='mark_as_read'),
+    path('api/mensajes/no-leidos/', unread_count, name='unread_count'),
+
     # Tailwind (Recarga automática en desarrollo)
     path("__reload__/", include("django_browser_reload.urls")),
     
@@ -170,7 +193,6 @@ urlpatterns = [
     path('api/ai/edit-narrative/', edit_narrative_api, name='edit_narrative_api'),
     path('api/ai/generate-title/', api_generate_title, name='api_generate_title'),
     path('api/narrative/import-file/', import_narrative_file, name='import_narrative_file'),
-    path('api/auto_noos/<str:jid>/', api_auto_noos, name='api_auto_noos'),
     
     # 🌟 NEW UNIFIED REVIEW VIEW 🌟
     path('revisar/<str:type>/<int:id>/', review_views.review_proposal, name='review_proposal'),

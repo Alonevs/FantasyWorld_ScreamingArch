@@ -85,7 +85,17 @@ def leer_narrativa(request, nid):
            context['is_author'] = is_author_or_team or is_team_member
            context['allow_proposals'] = is_team_member
            context['is_admin_role'] = is_admin
-        
+           
+           # CHECK FOR DRAFTS (Phase 3)
+           if request.user.is_authenticated:
+               draft = CaosNarrativeVersionORM.objects.filter(
+                   narrative=n_orm, 
+                   author=request.user, 
+                   status='DRAFT'
+               ).first()
+               if draft:
+                   context['has_draft'] = True
+                   context['draft_version'] = draft
 
         if not context:
             messages.error(request, f"No se encontró la narrativa: {nid}")
@@ -167,6 +177,42 @@ def editar_narrativa(request, nid):
             print(f"Error: {e}")
             messages.error(request, f"Error al editar: {e}")
     return redirect('leer_narrativa', nid=nid)
+
+@csrf_exempt
+@login_required
+@require_POST
+def autosave_narrative(request, nid):
+    """Guarda un borrador automático de la narrativa."""
+    try:
+        title = request.POST.get('titulo') or request.POST.get('title')
+        content = request.POST.get('contenido') or request.POST.get('content')
+        
+        # Resolve narrative
+        try: n_orm = CaosNarrativeORM.objects.get(nid=nid)
+        except: n_orm = CaosNarrativeORM.objects.get(public_id=nid)
+
+        # Check latest draft by this user
+        draft, created = CaosNarrativeVersionORM.objects.get_or_create(
+            narrative=n_orm,
+            author=request.user,
+            status='DRAFT',
+            defaults={
+                'proposed_title': title,
+                'proposed_content': content,
+                'version_number': n_orm.current_version_number + 1,
+                'action': 'EDIT',
+                'change_log': 'Auto-guardado'
+            }
+        )
+        
+        if not created:
+            draft.proposed_title = title
+            draft.proposed_content = content
+            draft.save()
+            
+        return JsonResponse({'success': True, 'saved_at': draft.created_at.strftime('%H:%M:%S')})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 @login_required
 def borrar_narrativa(request, nid):
