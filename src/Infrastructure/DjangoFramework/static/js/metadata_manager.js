@@ -5,9 +5,10 @@
 
 let _currentWorldId = null;
 
-function initMetadata(savedProps, worldId) {
+function initMetadataManager(savedProps, worldId) {
     if (savedProps && savedProps.length > 0) {
-        document.getElementById('empty-state').classList.add('hidden');
+        const emptyMsg = document.getElementById('empty-msg');
+        if(emptyMsg) emptyMsg.classList.add('hidden');
         savedProps.forEach(p => renderRow(p.key, p.value));
     }
     _currentWorldId = worldId;
@@ -28,47 +29,85 @@ function closeMetadataModal() {
 // VISUAL HELPER: Humanizer
 function formatLabel(key) {
     if (!key) return '';
-    // 1. Quitar guiones bajos
     let text = key.replace(/_/g, ' ');
-    // 2. Title Case (lowercase base first deals with ALLCAPS)
     return text.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
 }
 
-function renderRow(key, value) {
+function renderRow(key, value, isEditableKey = false) {
     // FILTER: Ignore massive text (hallucinations or descriptions) to keep UI clean
-    if (value && value.length > 50) {
+    if (value && typeof value === 'string' && value.length > 200) {
         console.warn(`Auto-Noos: Skipped long value for key '${key}' (${value.length} chars).`);
         return;
     }
 
-    document.getElementById('empty-state').classList.add('hidden');
+    // Handle Objects/Arrays (e.g. timeline lists)
+    let displayValue = value;
+    if (typeof value === 'object' && value !== null) {
+        displayValue = JSON.stringify(value);
+    } else if (value === null || value === undefined) {
+        displayValue = "";
+    }
+
+    const emptyMsg = document.getElementById('empty-msg');
+    if(emptyMsg) emptyMsg.classList.add('hidden');
     
-    const container = document.getElementById('dynamic-rows');
+    const container = document.getElementById('metadata-rows-container');
     const row = document.createElement('div');
     row.className = "flex items-center gap-2 group bg-black/40 p-2 rounded border border-gray-800 hover:border-purple-500 transition-colors animate-in fade-in slide-in-from-bottom-2 duration-200";
     
-    // Removed 'uppercase' class to respect formatLabel
-    row.innerHTML = `
-        <div class="w-1/3 flex items-center">
-            <span class="w-full bg-transparent text-purple-400 text-xs font-bold font-mono tracking-wider truncate" title="${key}">
+    // Condition handling for Key Field
+    let keyFieldHtml = '';
+    if (isEditableKey) {
+        keyFieldHtml = `
+            <input type="text" name="prop_keys[]" value="${key}" 
+                   class="w-full bg-black/50 border border-gray-700 text-purple-400 text-xs font-bold font-mono tracking-wider p-1 rounded focus:border-purple-500 focus:outline-none placeholder-purple-900/50" 
+                   placeholder="NOMBRE_VARIABLE">
+        `;
+    } else {
+        keyFieldHtml = `
+            <span class="w-full bg-transparent text-purple-400 text-xs font-bold font-mono tracking-wider truncate cursor-help" title="${key}">
                 ${formatLabel(key)}
             </span>
             <input type="hidden" name="prop_keys[]" value="${key}">
+        `;
+    }
+
+    row.innerHTML = `
+        <div class="w-1/3 flex items-center">
+            ${keyFieldHtml}
         </div>
-        <div class="w-2/3 border-l border-gray-700 pl-3 flex justify-between items-center">
-            <input type="text" name="prop_values[]" value="${value}" class="w-full bg-transparent text-gray-200 text-sm focus:outline-none placeholder-gray-600" placeholder="Valor asignado...">
-            <button type="button" onclick="this.closest('.flex').remove(); checkEmpty();" class="text-gray-600 hover:text-red-500 transition px-2 opacity-0 group-hover:opacity-100">×</button>
+        <div class="w-2/3 border-l border-gray-700 pl-3 flex justify-between items-center bg-black/20 rounded-r">
+            <input type="text" name="prop_values[]" value='${displayValue}' class="w-full bg-transparent text-gray-200 text-sm focus:outline-none placeholder-gray-600 px-2" placeholder="Valor asignado...">
+            <button type="button" onclick="this.closest('.group').remove(); checkEmpty();" class="text-gray-600 hover:text-red-500 transition px-2 opacity-0 group-hover:opacity-100 font-bold" title="Eliminar Fila">×</button>
         </div>
     `;
     container.appendChild(row);
 }
 
-// ... checkEmpty() stays same ...
+function checkEmpty() {
+    const container = document.getElementById('metadata-rows-container');
+    const emptyMsg = document.getElementById('empty-msg');
+    // Check if there are any flex rows (actual data rows)
+    const hasRows = container.querySelectorAll('.flex').length > 0;
+    
+    if (!hasRows) {
+        emptyMsg.classList.remove('hidden');
+    }
+}
+
+async function addMetadataRow() {
+    // Direct edit mode: Create empty row with editable key
+    renderRow("", "", true);
+}
+
+async function runAutoNoos() {
+    await requestAIAnalysis();
+}
 
 async function requestAIAnalysis() {
     const loader = document.getElementById('aiLoading');
-    const container = document.getElementById('dynamic-rows');
-    const emptyMsg = document.getElementById('empty-state');
+    const container = document.getElementById('metadata-rows-container');
+    const emptyMsg = document.getElementById('empty-msg');
     
     loader.classList.remove('hidden');
     
@@ -85,6 +124,13 @@ async function requestAIAnalysis() {
         const data = await response.json();
         
         if (data.success && data.metadata) {
+            
+            // SYSTEM LOG TRACE (User Feedback)
+            if(data.metadata.analysis_trace && data.metadata.analysis_trace.length > 0) {
+                const traceMsg = data.metadata.analysis_trace.join('\n');
+                CaosModal.alert("Análisis Completado", `Sistema Auto-Noos:\n${traceMsg}`);
+            }
+
             container.innerHTML = ''; 
             container.appendChild(emptyMsg);
             emptyMsg.classList.add('hidden');
@@ -105,6 +151,8 @@ async function requestAIAnalysis() {
             }
         } else {
             console.log("Auto-Noos: No variables found or partial data.");
+            const errorMsg = data.error || "No se pudieron extraer datos relevantes.";
+            CaosModal.alert("Aviso AI", errorMsg);
         }
 
     } catch (e) {

@@ -1,9 +1,0 @@
-id
-created_at
-author_id
-status
-action
-target_filename
-world_id
-image
-title

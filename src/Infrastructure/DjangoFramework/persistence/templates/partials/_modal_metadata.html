@@ -65,22 +65,18 @@
 </div>
 
 {{ jid|json_script:"world-jid" }}
-<script id="metadata-props" type="application/json">
-    [
-    {% if metadata_obj.properties %}
-        {% for p in metadata_obj.properties %}
-            {"key": "{{ p.key|escapejs }}", "value": "{{ p.value|escapejs }}"}{% if not forloop.last %},{% endif %}
-        {% endfor %}
-    {% endif %}
-    ]
-</script>
+{{ metadata_obj.properties|json_script:"metadata-props-data" }}
 
-<script src="{% static 'js/metadata_manager.js' %}"></script>
+<script src="{% static 'js/metadata_manager.js' %}?v={{ now|date:'U' }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         try {
-            const savedProps = JSON.parse(document.getElementById('metadata-props').textContent);
+            const rawData = document.getElementById('metadata-props-data').textContent;
+            console.log("RAW METADATA:", rawData);
+            const savedProps = JSON.parse(rawData);
+            console.log("PARSED PROPS:", savedProps);
             const jid = JSON.parse(document.getElementById('world-jid').textContent);
+            
             if(typeof initMetadataManager === 'function') {
                 initMetadataManager(savedProps, jid);
             } else {

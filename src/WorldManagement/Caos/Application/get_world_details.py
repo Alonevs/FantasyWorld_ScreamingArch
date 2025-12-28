@@ -199,6 +199,53 @@ class GetWorldDetailsUseCase:
         except Exception as e:
             print(f"Error resolviendo esquema en GetWorldDetails: {e}")
 
+        # --- FIX: Metadata Wrapper para fusionar Default Schema + Stored Data ---
+        class MetadataWrapper:
+            def __init__(self, data, schema_fields):
+                self.properties = []
+                # 1. Normalización de entrada (Soporte para cuando metadata es una Lista pura)
+                if isinstance(data, list):
+                    for p in data:
+                        if isinstance(p, dict) and 'key' in p:
+                            self.properties.append(p)
+                    self._data = {} # Evita errores de .get() en el resto del init
+                else:
+                    self._data = data or {}
+                
+                # 2. Extraer 'properties' si existen en formato dict
+                if isinstance(self._data, dict) and 'properties' in self._data:
+                    props_list = self._data.get('properties', [])
+                    if isinstance(props_list, list):
+                        for p in props_list:
+                            if p not in self.properties:
+                                self.properties.append(p)
+                
+                # 3. Soporte para Estructura V2 (datos_nucleo / datos_extendidos)
+                for key_v2 in ['datos_nucleo', 'datos_extendidos']:
+                    field_data = self._data.get(key_v2)
+                    if isinstance(field_data, dict):
+                        for k, v in field_data.items():
+                            if not any(p.get('key') == k for p in self.properties):
+                                 self.properties.append({'key': k, 'value': v})
+                
+                # 4. Fusionar campos faltantes del esquema
+                existing_keys = {p.get('key') for p in self.properties if p.get('key')}
+                if schema_fields:
+                    for k, v in schema_fields.items():
+                        if k not in existing_keys:
+                            val = 0 if k == 'current_epoch' else ([] if k in ('timeline', 'events') else v)
+                            self.properties.append({'key': k, 'value': val, 'action': 'ADD'})
+
+            def __getitem__(self, item):
+                return self._data.get(item) if isinstance(self._data, dict) else None
+            
+            def get(self, item, default=None):
+                return self._data.get(item, default) if isinstance(self._data, dict) else default
+
+        schema_fields = schema.get("campos_fijos", {}) if schema else {}
+        metadata_wrapper = MetadataWrapper(w.metadata, schema_fields)
+
+
         # 8. Cálculo de Permisos (Lógica Boss/Minion M2M)
         is_author = (user and w.author == user)
         is_super = (user and user.is_superuser)
@@ -232,7 +279,7 @@ class GetWorldDetailsUseCase:
             'is_locked': w.is_locked, 
             'nid_lore': w.id_lore, 
             'metadata': meta_str, 
-            'metadata_obj': w.metadata, 
+            'metadata_obj': metadata_wrapper, 
             'metadata_schema': schema,
             'imagenes': imgs, 
             'hijos': hijos, 

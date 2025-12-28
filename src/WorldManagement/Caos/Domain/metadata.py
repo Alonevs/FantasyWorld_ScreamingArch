@@ -112,10 +112,12 @@ INHERITANCE_RULES = {
 
 CHRONOLOGY_MIXIN = {
     "chronology": {
-        "start_year": 0, # Año absoluto de creación/nacimiento (Entero)
-        "end_year": None, # Año absoluto de destrucción/muerte (Entero o Null)
-        "events": [], # Lista de hitos: [{"year": 100, "summary": "Evento"}]
-        "current_age": "Calculado" # Campo virtual para la UI
+        "start_year": 0, 
+        "end_year": None, 
+        "current_epoch": 0, # NEW: Era actual (0 = Era Primordial)
+        "timeline": [], # NEW: Lista acumulativa de hitos históricos [{"epoch":0, "year":100, "event":"Nacimiento"}]
+        "events": [], # Legacy
+        "current_age": "Calculado" 
     }
 }
 

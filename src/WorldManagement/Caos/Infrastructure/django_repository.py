@@ -123,7 +123,7 @@ class DjangoCaosRepository(CaosRepository):
             exif = image.getexif()
             exif[0x013b] = artist # Artista
             exif[0x0131] = "ECLAI World Builder v4.9" # Software
-            exif[0x0132] = datetime.now().strftime("%Y-%m-%d %H:%M:%S") # Timestamp
+            exif[0x0132] = datetime.now().strftime("%d/%m/%Y") # Timestamp
             return exif
         except:
             return image.getexif()
@@ -137,7 +137,7 @@ class DjangoCaosRepository(CaosRepository):
             
             world.metadata['gallery_log'][filename] = {
                 "uploader": uploader,
-                "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "date": datetime.now().strftime("%d/%m/%Y"),
                 "origin": origin,
                 "title": title or "Sin Título"
             }

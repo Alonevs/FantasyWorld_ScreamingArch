@@ -81,7 +81,7 @@
                 <tbody class="divide-y divide-gray-800/50 text-sm md:text-base">
                     {% for log in page_obj %}
                     <tr class="hover:bg-white/5 transition-colors group">
-                        <td class="p-4 text-gray-400 whitespace-nowrap font-mono text-xs">{{ log.timestamp|date:"Y-m-d H:i" }}</td>
+                        <td class="p-4 text-gray-400 whitespace-nowrap font-mono text-xs">{{ log.timestamp|date:"d/m/Y H:i" }}</td>
                         <td class="p-4">
                             <span class="flex items-center gap-2" title="{{ log.inferred_label }}">
                                 <span class="text-lg">{{ log.inferred_icon }}</span>

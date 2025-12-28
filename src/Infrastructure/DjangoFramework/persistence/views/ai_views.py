@@ -83,8 +83,9 @@ def analyze_metadata_api(request):
         from src.WorldManagement.Caos.Application.generate_contextual_metadata import GenerateContextualMetadataUseCase
         
         use_case = GenerateContextualMetadataUseCase(repo, service)
-        extracted_data = use_case.execute(w_orm.id)
-        if not extracted_data:
+        # FIX: Pasa el texto extraído (Lore) al caso de uso para que no dependa solo de world.description
+        extracted_data = use_case.execute(w_orm.id, external_context=texto_final)
+        if extracted_data is None:
             return JsonResponse({
                 'success': False, 
                 'error': 'AI returned empty data. Check server console for "LlamaService" logs.',

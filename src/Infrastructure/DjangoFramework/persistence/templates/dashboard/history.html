@@ -216,7 +216,7 @@
                                             </a>
                                         </div>
                                         <div class="flex items-center gap-3 text-[10px] text-gray-500 font-medium tracking-tight">
-                                            <span class="flex items-center gap-1"><span class="opacity-50">🗓️</span> {{ group.latest_date|date:"d M, H:i" }}</span>
+                                            <span class="flex items-center gap-1"><span class="opacity-50">🗓️</span> {{ group.latest_date|date:"d/m/Y" }}</span>
                                             <span class="w-0.5 h-2 bg-gray-700 rounded-full"></span>
                                             <span class="flex items-center gap-1"><span class="opacity-50">📑</span> {{ group.versions|length }} v</span>
                                             {% if group.latest_action_label %}
@@ -269,7 +269,7 @@
                                                     
                                                     <div class="flex-1 min-w-0 w-full">
                                                         <div class="flex flex-wrap items-center gap-2 mb-1.5">
-                                                            <span class="text-[9px] font-black text-gray-500 font-mono tracking-widest">{{ v.created_at|date:"Y-m-d H:i" }}</span>
+                                                            <span class="text-[9px] font-black text-gray-500 font-mono tracking-widest">{{ v.created_at|date:"d/m/Y" }}</span>
                                                             
                                                             <!-- AUTHOR BADGE -->
                                                             <span class="flex items-center gap-1.5 bg-white/5 border border-white/5 px-2 py-0.5 rounded text-[10px] text-gray-400 font-bold">

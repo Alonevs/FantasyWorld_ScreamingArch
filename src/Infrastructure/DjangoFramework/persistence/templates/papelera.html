@@ -139,7 +139,7 @@
                                             </div>
                                             
                                             <div class="text-[10px] text-gray-400 flex flex-wrap gap-2 items-center opacity-70 group-hover:opacity-100 transition-opacity">
-                                                <span class="text-red-400/80 font-mono">{{ item.deleted_at|date:"d M H:i" }}</span>
+                                                <span class="text-red-400/80 font-mono">{{ item.deleted_at|date:"d/m/Y" }}</span>
                                                 <span class="text-gray-700">|</span>
                                                 <span class="flex items-center gap-1">👤 <span class="text-gray-300">{% firstof item.author.username item.created_by.username "Alone" %}</span></span>
                                                 

@@ -9,8 +9,8 @@ from src.FantasyWorld.AI_Generation.Domain.interfaces import ImageGenerator
 
 class StableDiffusionService(ImageGenerator):
     def __init__(self):
-        # ✅ PUERTO CONFIRMADO POR TU TEST (7860 para SD WebUI)
-        self.api_url = getattr(settings, 'SD_API_URL', "http://127.0.0.1:7860")
+        # ✅ PUERTO 7861 (Stable Diffusion con --api)
+        self.api_url = getattr(settings, 'SD_API_URL', "http://127.0.0.1:7861")
         self.headers = {"Content-Type": "application/json"}
 
     def generate_concept_art(self, prompt: str, category: str = "defecto") -> str:
@@ -31,15 +31,16 @@ class StableDiffusionService(ImageGenerator):
         }
 
         try:
-            # 1. Llamada directa (Sin cambios de modelo, usamos el que ya tienes cargado)
+            start_time = time.time()
             response = requests.post(f"{self.api_url}/sdapi/v1/txt2img", json=payload, timeout=120)
+            elapsed = time.time() - start_time
             
             if response.status_code == 200:
+                print(f"✅ [SD] 200 OK. Imagen generada en {elapsed:.1f}s.")
                 r = response.json()
-                # Devolvemos el string base64 directamente
                 return r['images'][0]
             else:
-                print(f"❌ Error SD ({response.status_code}): {response.text[:100]}")
+                print(f"❌ Error SD ({response.status_code}) tras {elapsed:.1f}s: {response.text[:100]}")
                 return None
 
         except requests.exceptions.ConnectionError:

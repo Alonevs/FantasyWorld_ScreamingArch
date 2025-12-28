@@ -43,15 +43,6 @@ class CreateEntityFullUseCase:
         desc = datos.get("descripcion", f"Una entidad de tipo {tipo}.")
         rasgos = datos.get("rasgos", f"Rasgos descriptivos de {name}.")
 
-        # 3.5 Validación de Integridad Temporal (Sanity Check de la IA)
-        from src.WorldManagement.Caos.Domain.Services.temporal_validator import TemporalValidator, TemporalConsistencyError
-        try:
-            TemporalValidator().validate_consistency(datos, parent.metadata)
-        except TemporalConsistencyError as e:
-            print(f"⚠️ Alerta: La IA generó una inconsistencia temporal ({e}). Corrigiendo...")
-            # En lugar de abortar, limpiamos la cronología inventada para permitir la creación
-            if 'chronology' in datos:
-                datos['chronology'] = {'start_year': parent.metadata.get('chronology', {}).get('start_year', 0)}
 
 
         # 4. Generación Artística (Concept Art)

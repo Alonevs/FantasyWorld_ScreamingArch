@@ -30,19 +30,6 @@ class ProposeChangeUseCase:
             changes_json['metadata'] = metadata_proposal
             changes_json['action'] = 'METADATA_UPDATE'
 
-        if metadata_proposal and 'chronology' in metadata_proposal:
-             parent_id = world_id[:-2]
-             if len(parent_id) >= 2:
-                 from src.WorldManagement.Caos.Domain.Services.temporal_validator import TemporalValidator, TemporalConsistencyError
-                 try:
-                     parent = CaosWorldORM.objects.get(id=parent_id)
-                     validator = TemporalValidator()
-                     # Validamos la Propuesta (Hijo) contra el Padre (Live)
-                     validator.validate_consistency(metadata_proposal, parent.metadata)
-                 except CaosWorldORM.DoesNotExist:
-                     pass
-                 except TemporalConsistencyError as e:
-                     raise Exception(f"⛔ Error Temporal: {e}")
 
         # 4. Crear la Propuesta (Registro de Versión)
         # Este registro actúa como un "clon" del estado futuro deseado.

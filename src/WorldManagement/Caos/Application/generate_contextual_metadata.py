@@ -20,12 +20,12 @@ class GenerateContextualMetadataUseCase:
         self.repo = repository
         self.ai = ai_service
 
-    def execute(self, world_id: str, force_type: Optional[str] = None):
+    def execute(self, world_id: str, force_type: Optional[str] = None, external_context: Optional[str] = None):
         """
         Inicia el proceso de generación de metadatos.
         Funciona en dos modos:
         - Cold Start: Si no hay texto, inicializa una ficha técnica vacía pero estructurada.
-        - Análisis: Si hay texto, extrae los datos técnicos usando el modelo de lenguaje.
+        - Análisis: Si hay texto (externo o interno), extrae los datos técnicos.
         """
         # 1. Cargar la entidad desde el repositorio
         world = self.repo.find_by_id(WorldID(world_id))
@@ -64,7 +64,23 @@ class GenerateContextualMetadataUseCase:
             schema = get_schema_for_type(entity_type) if entity_type else None
         
         # --- LÓGICA DE DETECCIÓN DE ESTADO (Cold Start vs Análisis) ---
-        lore_content = world.lore_description or world.description or ""
+        # FIX: Concatenar ambas fuentes (Lore + Descripción)
+        full_text_analysis = ""
+        analysis_trace = []
+
+        if external_context and len(external_context) > 10:
+            full_text_analysis += f"--- CONTENIDO NARRATIVO (LORE) ---\n{external_context}\n\n"
+            analysis_trace.append("Lectura de Lore Narrativo: OK")
+        else:
+             analysis_trace.append("Lectura de Lore Narrativo: VACÍO")
+
+        if world.lore_description and len(world.lore_description) > 5:
+            full_text_analysis += f"--- DESCRIPCIÓN --- \n{world.lore_description}\n\n"
+            analysis_trace.append("Lectura de Descripción (Lore): OK")
+        else:
+            analysis_trace.append("Lectura de Descripción: VACÍA")
+
+        lore_content = full_text_analysis
         is_lore_empty = len(lore_content.strip()) < 10
 
         meta_json = None
@@ -73,6 +89,7 @@ class GenerateContextualMetadataUseCase:
             # RAMA A: INICIALIZACIÓN (Sin Lore)
             # Preparamos una ficha vacía con los campos obligatorios del esquema.
             print(f" ❄️ Cold Start: Inicializando metadatos vacíos estructurados...")
+            analysis_trace.append("Modo: Cold Start (Sin datos suficientes)")
             datos_nucleo = {k: "Pendiente" for k in schema['campos_fijos'].keys()}
             
             meta_json = {
@@ -84,18 +101,26 @@ class GenerateContextualMetadataUseCase:
         elif schema and not is_lore_empty:
             # RAMA B: EXTRACCIÓN (Con Lore)
             # Usamos el esquema para guiar a la IA en la extracción de datos técnicos.
-            meta_json = self._extract_with_schema(world, entity_type, schema)
+            raw_ai_data = self._extract_with_schema(world, entity_type, schema)
+            
+            # Normalización V2
+            meta_json = {
+                "tipo_entidad": entity_type or "NIVEL_AUTO",
+                "datos_nucleo": raw_ai_data,
+                "datos_extendidos": {} # Placeholder para que el JS no rompa
+            }
             
         elif not schema and not is_lore_empty:
             # Fallback a extracción genérica (Legacy / Sin esquema específico)
+            # Legacy return structure: {"properties": [...]}
             meta_json = self.ai.extract_metadata(lore_content)
 
         # 5. RETORNO (Modo Propuesta)
-        # Los metadatos generados NO se guardan automáticamente.
-        # Se devuelven como una propuesta para que el usuario la valide en la interfaz (ECLAI UI).
-        if meta_json:
+        if meta_json is not None:
             if entity_type and 'tipo_entidad' not in meta_json:
                  meta_json['tipo_entidad'] = entity_type
+            
+            meta_json['analysis_trace'] = analysis_trace  # NEW: Return logs
             
             print(f" 📤 Propuesta de metadatos generada correctamente.")
             return meta_json
@@ -141,24 +166,36 @@ class GenerateContextualMetadataUseCase:
         campos_extra_str = json.dumps(schema.get('campos_ia_extra', []), indent=2, ensure_ascii=False)
         
         system_prompt = f"""
-        Eres un Analista de Datos de Worldbuilding. Tu tarea es extraer información técnica del Lore.
+        Eres un Extractor de Datos JSON. Tu objetivo es estructurar la información NARRATIVA en un formato TÉCNICO.
+        
+        EJEMPLO DE RAZONAMIENTO:
+        Texto: "La ciudad de Aethelgard fue construida en el año 200 de la Era Dorada por el Rey Thror."
+        Salida JSON:
+        {{
+            "nombre": "Aethelgard",
+            "fundador": "Rey Thror",
+            "timeline": [
+                {{"epoch": 0, "year": 200, "event": "Fundación", "details": "Construida por Rey Thror"}}
+            ]
+        }}
         """
         
         user_prompt = f"""
-        Texto del Lore: '{world.lore_description or world.description}'
+        Texto del Lore a Analizar: 
+        '''
+        {world.lore_description}
+        '''
         
-        Esquema OBLIGATORIO (Campos Fijos): 
+        Esquema Objetivo (Campos a rellenar): 
         {campos_fijos_str}
         
-        Campos Opcionales Sugeridos:
-        {campos_extra_str}
-        
-        INSTRUCCIONES ESTRICTAS:
-            - FORMATO: Claves en 'snake_case' técnico.
-            - VALORES: Concisos (Máximo 3-5 palabras).
-            - NO inventes datos. Si no existe, usa "Pendiente".
-            - DATOS EXTENDIDOS: Añade a 'datos_extendidos' cualquier dato relevante fuera del esquema fijo.
-            - Devuelve SOLO el JSON sin texto introductorio.
+        INSTRUCCIONES:
+            1. Analiza el texto en busca de valores para las claves del esquema.
+            2. Si el texto dice "hace mucho tiempo", intenta estimar la Era o pon "Desconocida".
+            3. CRONOLOGÍA: Busca fechas, años o eras y crea objetos en la lista 'timeline'.
+            4. Si un dato no se menciona, usa "Pendiente".
+            
+            Devuelve SOLO el JSON.
         """
         
         return self.ai.generate_structure(system_prompt, user_prompt)

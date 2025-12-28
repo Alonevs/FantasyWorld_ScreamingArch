@@ -118,6 +118,15 @@ def get_world_images(jid, world_instance=None):
                     
                     # Lógica de Fecha: Metadata > Fecha modificación archivo > Hoy
                     date_str = meta.get('date', '')
+                    if date_str and ' ' in str(date_str):
+                        # Limpiamos horas y minutos (cualquier cosa tras el espacio)
+                        date_str = str(date_str).split(' ')[0]
+                    
+                    # Normalización opcional: Convertir YYYY-MM-DD a DD/MM/YYYY si se desea total consistencia
+                    if date_str and '-' in date_str and len(date_str) == 10:
+                        parts = date_str.split('-')
+                        if len(parts[0]) == 4: # YYYY-MM-DD
+                            date_str = f"{parts[2]}/{parts[1]}/{parts[0]}"
                     if not date_str:
                         try:
                             timestamp = os.path.getmtime(os.path.join(str(target), f))

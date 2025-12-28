@@ -215,26 +215,8 @@ LOGGING = {
 # ==========================================
 import os
 AI_API_BASE_URL = os.getenv('AI_API_URL', 'http://127.0.0.1:5000') # Base de Text-Gen-WebUI
-SD_API_URL = os.getenv('SD_API_URL', 'http://127.0.0.1:7860') # Base de Stable Diffusion
+SD_API_URL = os.getenv('SD_API_URL', 'http://127.0.0.1:7861') # Base de Stable Diffusion
 AI_TIMEOUT = 120 # Segundos ("Pollo a 120s")
-# reload2
-# reload3
-# reload4
-# reload5
-# reload6
-# reload7
-# reload8
-# reload9
-# reload10
-# reload11
-# reload12
-# reload13
-# reload14
-# reload15
-# reload16
-# reload17
-# reload18
-# reload19
 
 def custom_show_toolbar(request):
     # Solo mostrar si el usuario está autenticado y es Superusuario
