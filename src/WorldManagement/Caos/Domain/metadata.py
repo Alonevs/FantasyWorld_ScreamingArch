@@ -102,6 +102,24 @@ INHERITANCE_RULES = {
     
     # Herencia de SOCIEDAD: El idioma y la tecnología fluyen desde el país hacia el individuo.
     "idioma_oficial": {"source": "SOCIEDAD_SCHEMA", "targets": ["CIUDAD", "LUGAR", "CRIATURA"]},
+
     # Un objeto hereda el nivel tecnológico del lugar donde fue forjado.
     "nivel_tecnologico": {"source": "SOCIEDAD_SCHEMA", "targets": ["CIUDAD", "OBJETO"]} 
 }
+
+# --- 6. ESTÁNDARES TRANSVERSALES (Mixins) ---
+# Estructuras de datos que se aplican a TODAS las entidades para garantizar consistencia.
+
+CHRONOLOGY_MIXIN = {
+    "chronology": {
+        "start_year": 0, # Año absoluto de creación/nacimiento (Entero)
+        "end_year": None, # Año absoluto de destrucción/muerte (Entero o Null)
+        "events": [], # Lista de hitos: [{"year": 100, "summary": "Evento"}]
+        "current_age": "Calculado" # Campo virtual para la UI
+    }
+}
+
+# Inyectamos la cronología en todos los esquemas maestros
+for schema_key in METADATA_SCHEMAS:
+    if "campos_fijos" in METADATA_SCHEMAS[schema_key]:
+        METADATA_SCHEMAS[schema_key]["campos_fijos"].update(CHRONOLOGY_MIXIN["chronology"])
