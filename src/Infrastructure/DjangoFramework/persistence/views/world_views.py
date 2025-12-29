@@ -11,7 +11,7 @@ from django.contrib.auth.decorators import login_required
 from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosVersionORM, CaosNarrativeORM, CaosEventLog, MetadataTemplate
 from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
 # IMPORTE Q
-from django.db.models import Q
+from django.db.models import Q, Case, When, Value, IntegerField
 from django.http import Http404
 from src.WorldManagement.Caos.Application.create_world import CreateWorldUseCase
 from src.WorldManagement.Caos.Application.create_child import CreateChildWorldUseCase
@@ -85,48 +85,39 @@ def home(request):
     
     # Mostrar mundos 'LIVE' (y 'DRAFTS' para el Autor/Superusuario)
     # 1. Base: Excluir borrados, inválidos y DRAFTS (Flujo Estricto)
-    ms = CaosWorldORM.objects.filter(is_active=True).exclude(status='DELETED').exclude(status='DRAFT') \
-        .exclude(description__isnull=True).exclude(description__exact='') \
-        .exclude(description__iexact='None') \
-        .exclude(id__endswith='00', name__startswith='Nexo Fantasma') \
-        .exclude(id__endswith='00', name__startswith='Ghost') \
-        .exclude(id__endswith='00', name='Placeholder') \
-        .select_related('born_in_epoch', 'died_in_epoch') \
-        .prefetch_related('versiones', 'narrativas') \
-        .order_by('id')
-
-    # 2. Lógica de Visibilidad
-    is_global_admin = False
+    # 1. Base: Excluir solo lo que está en la papelera (soft-delete)
+    # El resto de estados (DRAFT, OFFLINE) se filtran por permisos más abajo.
+    ms = CaosWorldORM.objects.filter(is_active=True).exclude(status='DELETED')
     
-    # Identificación de mis jefes (personas con las que colaboro)
-    my_bosses_users = [] 
+    # Exclusión de descripciones vacías, EXCEPTO para Caos Prime (JhZCO1vxI7)
+    ms = ms.exclude(
+        Q(description__isnull=True) | Q(description__exact='') | Q(description__iexact='None'),
+        ~Q(public_id='JhZCO1vxI7')
+    )
     
-    if request.user.is_authenticated:
-        if request.user.is_superuser:
-            is_global_admin = True
-        elif hasattr(request.user, 'profile'):
-             # Se eliminó el chequeo de "Admin Global". Cada uno está en su silo.
-             
-             # Obtener jefes (Usuarios que me tienen en su lista de colaboradores)
-             # Relación: UserProfile.collaborators -> M2M a UserProfile (related_name='bosses')
-             # Así que 'request.user.profile.bosses.all()' devuelve los perfiles de mis jefes.
-             try:
-                 boss_profiles = request.user.profile.bosses.all()
-                 my_bosses_users = [bp.user for bp in boss_profiles]
-             except: pass
+    ms = ms.exclude(id__endswith='00', name__startswith='Nexo Fantasma') \
+        .exclude(id__endswith='00', name__startswith='Ghost')
+    
+    # Regla Especial (01XX): Ocultar hijos directos de Caos Prime para no-Admins en el Home
+    is_privileged = request.user.is_superuser or (hasattr(request.user, 'profile') and request.user.profile.rank == 'ADMIN')
+    if not is_privileged:
+        ms = ms.exclude(id__regex=r'^01[0-9]{2}$')
 
-    if is_global_admin:
-        pass # Todos (excepto DRAFTS que están excluidos en la consulta base)
-    elif request.user.is_authenticated:
-        # Lógica CENTRALIZADA en policies.py
-        # Esto asegura consistencia entre Home, Detalles y Dashboard.
-        from src.Infrastructure.DjangoFramework.persistence.policies import get_visibility_q_filter
-        
-        q_filter = get_visibility_q_filter(request.user)
-        ms = ms.filter(q_filter)
-    else:
-        # Anónimo: Solo LIVE Y visiblemente Público
-        ms = ms.filter(status='LIVE', visible_publico=True)
+    ms = ms.prefetch_related('versiones', 'narrativas') \
+        .order_by(
+            Case(
+                When(public_id='JhZCO1vxI7', then=Value(0)),
+                default=Value(1),
+                output_field=IntegerField(),
+            ),
+            'name'  # Secondary sort by name
+        )
+
+    # 2. Lógica de Visibilidad Centralizada
+    from src.Infrastructure.DjangoFramework.persistence.policies import get_visibility_q_filter
+    
+    q_filter = get_visibility_q_filter(request.user)
+    ms = ms.filter(q_filter)
 
     # LÓGICA REPRESENTATIVA:
     # Objetivo: Ocultar "Fantasmas" (Versiones) pero MOSTRAR "Hermanos".
@@ -454,19 +445,11 @@ def editar_mundo(request, jid):
         print(f"Error renderizando vista de edición: {e}")
         return redirect('home')
 
-def get_entity_smart(identifier):
-    """Ayuda a encontrar la entidad ya sea por ID (int) o Code (str)"""
-    # 1. Intentar por CÓDIGO (NanoID)
-    entity = CaosWorldORM.objects.filter(public_id=identifier).first()
-    if entity:
-        return entity
-    # 2. Intentar por ID (Legacy)
-    # En este proyecto el ID es CharField, así que buscamos directo
-    return CaosWorldORM.objects.filter(id=identifier).first()
+
 
 @login_required
 def toggle_entity_status(request, jid):
-    w = get_entity_smart(jid)
+    w = resolve_jid_orm(jid)
     if not w:
         raise Http404("Entidad no encontrada")
 
@@ -489,8 +472,11 @@ def toggle_entity_status(request, jid):
 def borrar_mundo(request, jid): 
     try: 
         # Búsqueda Robusta
-        w = CaosWorldORM.objects.filter(Q(id=jid) | Q(public_id=jid)).first()
-        if not w: w = get_object_or_404(CaosWorldORM, id=jid)
+        # Búsqueda Robusta usando helper estandarizado
+        w = resolve_jid_orm(jid)
+        if not w:
+            messages.error(request, "Entidad no encontrada")
+            return redirect('home')
         
         check_ownership(request.user, w) # Chequeo de Seguridad
         
@@ -684,7 +670,7 @@ def mapa_arbol(request, public_id):
 @login_required
 def toggle_lock(request, jid):
     
-    w_orm = get_entity_smart(jid)
+    w_orm = resolve_jid_orm(jid)
     if not w_orm:
         raise Http404("Entidad no encontrada")
 

@@ -27,10 +27,12 @@
             </a>
 
             {% if user.is_authenticated %}
+                {% if user_role >= 50 or user.is_superuser %}
                 <a href="{% url 'my_work' %}" class="flex items-center gap-2 px-4 py-2 text-gray-400 hover:text-emerald-400 hover:bg-emerald-500/5 rounded-xl transition-all duration-300 group">
                     <span class="text-lg group-hover:scale-110 transition-transform">🏰</span>
                     <span class="text-xs font-bold uppercase tracking-widest bg-dark">Mis Mundos</span>
                 </a>
+                {% endif %}
 
                 {% if user.is_superuser or user.profile.rank == 'ADMIN' or user.profile.rank == 'SUBADMIN' %}
                     <div class="relative group" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
@@ -89,34 +91,116 @@
         <!-- Right: User Identity & Actions -->
         <div class="flex items-center gap-4">
             {% if user.is_authenticated %}
-                <!-- Identity Group (Glass Capsule) -->
-                <div class="flex items-center bg-white/5 border border-white/10 rounded-full pl-2 pr-1 py-1 gap-3 hover:bg-white/10 transition-all duration-300">
-                    <!-- Rank Icon -->
-                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-inner
-                        {% if user.is_superuser or user.profile.rank == 'ADMIN' %}bg-linear-to-br from-amber-400 to-yellow-600 text-dark
-                        {% elif user.profile.rank == 'SUBADMIN' %}bg-linear-to-br from-cyan-400 to-blue-600 text-dark
-                        {% else %}bg-linear-to-br from-gray-600 to-gray-800 text-white{% endif %}">
-                        {% if user.is_superuser or user.profile.rank == 'ADMIN' %}👑{% elif user.profile.rank == 'SUBADMIN' %}🛡️{% else %}🧭{% endif %}
-                    </div>
-                    
-                    <!-- Name & Rank -->
-                    <div class="flex flex-col pr-2 leading-none">
-                        <span class="text-white font-bold text-xs tracking-wide">{{ user.username }}</span>
-                        <span class="text-[9px] font-black uppercase tracking-tighter opacity-50
-                            {% if user.is_superuser or user.profile.rank == 'ADMIN' %}text-amber-400
-                            {% elif user.profile.rank == 'SUBADMIN' %}text-cyan-400
-                            {% else %}text-gray-400{% endif %}">
-                            {% if user.is_superuser %}SUPERADMIN{% else %}{{ user.profile.rank|default:"User" }}{% endif %}
-                        </span>
+                <!-- Interactive User Panel Dropdown -->
+                <div class="relative flex items-center" x-data="{ userMenuOpen: false }">
+                    <!-- Split Capsule: Profile Link + Dropdown Trigger -->
+                    <div class="flex items-center bg-white/5 border border-white/10 rounded-full hover:bg-white/10 transition-all duration-300 relative group">
+                        
+                        <!-- Profile Link (Left Side) -->
+                        <a href="{% url 'user_detail' user.id %}" class="flex items-center pl-2 pr-3 py-1 gap-3 border-r border-white/10 hover:bg-white/5 rounded-l-full transition-colors group/profile">
+                            <!-- Unread Badge (Floating on Avatar) -->
+                            {% if unread_messages_count %}
+                            <span class="absolute top-0 left-0 w-4 h-4 bg-blue-500 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-[#0a0a0a] shadow-lg animate-bounce z-20">
+                                {{ unread_messages_count }}
+                            </span>
+                            {% endif %}
+
+                            <!-- Rank Icon -->
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-inner transition-transform group-hover/profile:scale-110
+                                {% if user.is_superuser or user.profile.rank == 'ADMIN' %}bg-linear-to-br from-amber-400 to-yellow-600 text-dark
+                                {% elif user.profile.rank == 'SUBADMIN' %}bg-linear-to-br from-cyan-400 to-blue-600 text-dark
+                                {% else %}bg-linear-to-br from-gray-600 to-gray-800 text-white{% endif %}">
+                                {% if user.is_superuser or user.profile.rank == 'ADMIN' %}👑{% elif user.profile.rank == 'SUBADMIN' %}🛡️{% else %}🧭{% endif %}
+                            </div>
+                            
+                            <!-- Name & Rank -->
+                            <div class="flex flex-col leading-none text-left hidden sm:flex">
+                                <span class="text-white font-bold text-xs tracking-wide">{{ user.username }}</span>
+                                <span class="text-[9px] font-black uppercase tracking-tighter opacity-50
+                                    {% if user.is_superuser or user.profile.rank == 'ADMIN' %}text-amber-400
+                                    {% elif user.profile.rank == 'SUBADMIN' %}text-cyan-400
+                                    {% else %}text-gray-400{% endif %}">
+                                    {% if user.is_superuser %}SUPERADMIN{% else %}{{ user.profile.rank|default:"User" }}{% endif %}
+                                </span>
+                            </div>
+                        </a>
+
+                        <!-- Dropdown Trigger (Right Side) -->
+                        <button @click="userMenuOpen = !userMenuOpen" 
+                                @click.away="userMenuOpen = false"
+                                class="px-3 py-3 h-full flex items-center justify-center text-[10px] text-gray-500 hover:text-white transition-colors rounded-r-full">
+                            <span class="transition-transform duration-300" :class="{ 'rotate-180': userMenuOpen }">▼</span>
+                        </button>
                     </div>
 
-                    <!-- Logout Button (Pegado al nombre) -->
-                    <form action="{% url 'logout' %}" method="post" class="flex">
-                        {% csrf_token %}
-                        <button type="submit" class="w-8 h-8 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all duration-300 flex items-center justify-center text-xs group/logout" title="Cerrar Sesión">
-                            <span class="group-hover:scale-110 transition-transform">⏻</span>
-                        </button>
-                    </form>
+                    <!-- Dropdown Menu (Z-index increased to ensure it's on top) -->
+                    <div x-show="userMenuOpen" 
+                         x-transition:enter="transition ease-out duration-200"
+                         x-transition:enter-start="opacity-0 scale-95 translate-y-[-10px]"
+                         x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                         x-transition:leave="transition ease-in duration-150"
+                         x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                         x-transition:leave-end="opacity-0 scale-95 translate-y-[-10px]"
+                         class="absolute right-0 top-full mt-3 w-64 bg-[#0d0d0d]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[120]">
+                        
+                        <!-- Header -->
+                        <div class="px-5 py-4 bg-linear-to-br from-white/5 to-transparent border-b border-white/5">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-lg font-bold text-white shadow-lg">
+                                    {{ user.username|slice:":1"|upper }}
+                                </div>
+                                <div class="flex flex-col">
+                                    <span class="text-sm font-bold text-white">{{ user.username }}</span>
+                                    <span class="text-[10px] text-gray-500">{{ user.email }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Links Section -->
+                        <div class="p-2 space-y-0.5">
+                            <a href="{% url 'user_detail' user.id %}" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-all group">
+                                <span class="text-lg opacity-50 group-hover:opacity-100 group-hover:scale-110 transition-all">👤</span>
+                                <div class="flex flex-col">
+                                    <span class="text-xs font-bold uppercase tracking-widest">Mi Perfil</span>
+                                    <span class="text-[9px] opacity-40">Ver mis mundos e historias</span>
+                                </div>
+                            </a>
+
+                            <a href="{% url 'inbox' %}" class="flex items-center justify-between px-4 py-3 rounded-xl hover:bg-white/5 text-gray-400 hover:text-blue-400 transition-all group">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-lg opacity-50 group-hover:opacity-100 group-hover:scale-110 transition-all">✉️</span>
+                                    <div class="flex flex-col">
+                                        <span class="text-xs font-bold uppercase tracking-widest">Mensajes</span>
+                                        <span class="text-[9px] opacity-40">Bandeja de comunicación</span>
+                                    </div>
+                                </div>
+                                {% if unread_messages_count %}
+                                <span class="bg-blue-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg shadow-blue-500/20">
+                                    {{ unread_messages_count }}
+                                </span>
+                                {% endif %}
+                            </a>
+
+                            <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 text-gray-400 hover:text-accent transition-all group opacity-50 cursor-not-allowed">
+                                <span class="text-lg opacity-50">⚙️</span>
+                                <div class="flex flex-col">
+                                    <span class="text-xs font-bold uppercase tracking-widest">Ajustes</span>
+                                    <span class="text-[9px] opacity-40 italic">Próximamente...</span>
+                                </div>
+                            </a>
+                        </div>
+
+                        <!-- Footer / Logout -->
+                        <div class="p-2 bg-white/5 border-t border-white/5">
+                            <form action="{% url 'logout' %}" method="post">
+                                {% csrf_token %}
+                                <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500/10 text-red-500 hover:text-red-300 transition-all group">
+                                    <span class="text-lg group-hover:rotate-12 transition-transform">⏻</span>
+                                    <span class="text-xs font-bold uppercase tracking-widest">Cerrar Sesión</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             {% else %}
                 <a href="{% url 'login' %}" class="bg-linear-to-br from-accent to-purple-600 text-white text-xs font-black px-6 py-2.5 rounded-full transition-all duration-300 shadow-lg shadow-accent/20 hover:scale-105 active:scale-95 tracking-widest">
@@ -162,10 +246,17 @@
             </a>
 
             {% if user.is_authenticated %}
+                <a href="{% url 'user_detail' user.id %}" class="flex items-center gap-4 p-4 bg-indigo-500/10 rounded-2xl text-indigo-400 border border-indigo-500/20">
+                    <span class="text-xl">👤</span>
+                    <span class="font-bold uppercase tracking-widest text-xs">Mi Perfil</span>
+                </a>
+
+                {% if user_role >= 50 or user.is_superuser %}
                 <a href="{% url 'my_work' %}" class="flex items-center gap-4 p-4 bg-white/5 rounded-2xl text-gray-300 border border-white/5">
                     <span class="text-xl">🏰</span>
-                    <span class="font-bold">MIS MUNDOS</span>
+                    <span class="font-bold uppercase tracking-widest text-xs">Mis Mundos</span>
                 </a>
+                {% endif %}
 
                 {% if user.is_superuser or user.profile.rank == 'ADMIN' or user.profile.rank == 'SUBADMIN' %}
                     <a href="{% url 'dashboard' %}" class="flex items-center gap-4 p-4 bg-purple-500/10 rounded-2xl text-purple-400 border border-purple-500/20">

@@ -1,0 +1,247 @@
+
+<!-- TIMELINE SNAPSHOT MODAL -->
+<div id="timelineModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/80 backdrop-blur-sm">
+    <div class="bg-gray-900 border border-indigo-900/50 rounded-xl p-6 w-full max-w-2xl shadow-2xl relative max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-4 sticky top-0 bg-gray-900 pb-2 border-b border-gray-800">
+            <h3 class="text-2xl font-bold text-white flex items-center gap-2">
+                📅 Proponer Snapshot Temporal
+            </h3>
+            <button onclick="closeTimelineModal()" class="text-gray-400 hover:text-white text-2xl">✕</button>
+        </div>
+        
+        <p class="text-sm text-gray-400 mb-6">
+            Crea un snapshot histórico de esta entidad en un año específico. Esto permite documentar cómo era la entidad en diferentes momentos del tiempo.
+        </p>
+        
+        <form id="timelineForm" class="space-y-4">
+            <!-- Año del Snapshot -->
+            <div>
+                <label class="block text-sm font-bold text-gray-300 mb-2">
+                    📆 Año del Snapshot <span class="text-red-400">*</span>
+                </label>
+                <input 
+                    type="number" 
+                    id="timeline-year" 
+                    name="year"
+                    min="0" 
+                    max="9999" 
+                    placeholder="Ej: 1500"
+                    class="w-full bg-black/50 border border-gray-700 rounded-lg p-3 text-white focus:border-indigo-500 outline-none"
+                    required
+                >
+                <p class="text-xs text-gray-500 mt-1">Año en el que ocurre este estado de la entidad</p>
+            </div>
+            
+            <!-- Descripción del Snapshot -->
+            <div>
+                <label class="block text-sm font-bold text-gray-300 mb-2">
+                    📝 Descripción Histórica <span class="text-red-400">*</span>
+                </label>
+                <textarea 
+                    id="timeline-description" 
+                    name="description"
+                    rows="6"
+                    placeholder="Describe cómo era la entidad en este año...&#10;&#10;Ejemplo: En el año 1500, Jade era una próspera ciudad comercial con una población de 50,000 habitantes..."
+                    class="w-full bg-black/50 border border-gray-700 rounded-lg p-3 text-white focus:border-indigo-500 outline-none resize-none"
+                    required
+                ></textarea>
+                <p class="text-xs text-gray-500 mt-1">Mínimo 50 caracteres</p>
+            </div>
+            
+            <!-- Metadata del Snapshot -->
+            <div>
+                <label class="block text-sm font-bold text-gray-300 mb-2">
+                    🏛️ Metadata del Período
+                </label>
+                <div class="space-y-2" id="metadata-fields">
+                    <!-- Población -->
+                    <div class="flex gap-2">
+                        <input 
+                            type="text" 
+                            value="poblacion"
+                            readonly
+                            class="w-1/3 bg-gray-800 border border-gray-700 rounded-lg p-2 text-gray-400 text-sm"
+                        >
+                        <input 
+                            type="text" 
+                            id="meta-poblacion"
+                            placeholder="Ej: 50000"
+                            class="flex-1 bg-black/50 border border-gray-700 rounded-lg p-2 text-white text-sm focus:border-indigo-500 outline-none"
+                        >
+                    </div>
+                    
+                    <!-- Gobierno -->
+                    <div class="flex gap-2">
+                        <input 
+                            type="text" 
+                            value="gobierno"
+                            readonly
+                            class="w-1/3 bg-gray-800 border border-gray-700 rounded-lg p-2 text-gray-400 text-sm"
+                        >
+                        <input 
+                            type="text" 
+                            id="meta-gobierno"
+                            placeholder="Ej: Monarquía"
+                            class="flex-1 bg-black/50 border border-gray-700 rounded-lg p-2 text-white text-sm focus:border-indigo-500 outline-none"
+                        >
+                    </div>
+                    
+                    <!-- Estado -->
+                    <div class="flex gap-2">
+                        <input 
+                            type="text" 
+                            value="estado"
+                            readonly
+                            class="w-1/3 bg-gray-800 border border-gray-700 rounded-lg p-2 text-gray-400 text-sm"
+                        >
+                        <input 
+                            type="text" 
+                            id="meta-estado"
+                            placeholder="Ej: Próspera"
+                            class="flex-1 bg-black/50 border border-gray-700 rounded-lg p-2 text-white text-sm focus:border-indigo-500 outline-none"
+                        >
+                    </div>
+                </div>
+                <p class="text-xs text-gray-500 mt-2">Propiedades específicas de este período temporal</p>
+            </div>
+            
+            <!-- Razón del Cambio -->
+            <div>
+                <label class="block text-sm font-bold text-gray-300 mb-2">
+                    💬 Razón de la Propuesta
+                </label>
+                <input 
+                    type="text" 
+                    id="timeline-changelog"
+                    name="change_log"
+                    placeholder="Ej: Añadir período de expansión comercial"
+                    class="w-full bg-black/50 border border-gray-700 rounded-lg p-3 text-white focus:border-indigo-500 outline-none"
+                >
+            </div>
+            
+            <!-- Botones -->
+            <div class="flex justify-end gap-3 pt-4 border-t border-gray-800">
+                <button 
+                    type="button"
+                    onclick="closeTimelineModal()" 
+                    class="px-6 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition"
+                >
+                    Cancelar
+                </button>
+                <button 
+                    type="submit"
+                    class="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg transition shadow-lg"
+                >
+                    📤 Enviar Propuesta
+                </button>
+            </div>
+        </form>
+        
+        <!-- Loading State -->
+        <div id="timeline-loading" class="hidden absolute inset-0 bg-gray-900/90 flex items-center justify-center rounded-xl">
+            <div class="text-center">
+                <div class="animate-spin text-4xl mb-2">⏳</div>
+                <p class="text-white font-bold">Enviando propuesta...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openTimelineModal() {
+        const modal = document.getElementById('timelineModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        
+        // Reset form
+        document.getElementById('timelineForm').reset();
+    }
+    
+    function closeTimelineModal() {
+        const modal = document.getElementById('timelineModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+    
+    // Handle form submission
+    document.getElementById('timelineForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Get form data
+        const year = parseInt(document.getElementById('timeline-year').value);
+        const description = document.getElementById('timeline-description').value;
+        const changeLog = document.getElementById('timeline-changelog').value;
+        
+        // Validate
+        if (!year || year < 0 || year > 9999) {
+            await CaosModal.alert("Error", "El año debe estar entre 0 y 9999");
+            return;
+        }
+        
+        if (!description || description.length < 50) {
+            await CaosModal.alert("Error", "La descripción debe tener al menos 50 caracteres");
+            return;
+        }
+        
+        // Build metadata
+        const metadata = {
+            datos_nucleo: {}
+        };
+        
+        const poblacion = document.getElementById('meta-poblacion').value;
+        const gobierno = document.getElementById('meta-gobierno').value;
+        const estado = document.getElementById('meta-estado').value;
+        
+        if (poblacion) metadata.datos_nucleo.poblacion = poblacion;
+        if (gobierno) metadata.datos_nucleo.gobierno = gobierno;
+        if (estado) metadata.datos_nucleo.estado = estado;
+        
+        // Prepare payload
+        const payload = {
+            year: year,
+            description: description,
+            metadata: metadata,
+            images: [],
+            cover_image: null,
+            change_log: changeLog || `Snapshot del año ${year}`
+        };
+        
+        // Show loading
+        document.getElementById('timeline-loading').classList.remove('hidden');
+        
+        try {
+            const response = await fetch('/api/world/{{ public_id }}/timeline/propose/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            const data = await response.json();
+            
+            // Hide loading
+            document.getElementById('timeline-loading').classList.add('hidden');
+            
+            if (response.ok && data.success) {
+                await CaosModal.alert(
+                    "✅ Propuesta Enviada",
+                    `Tu snapshot del año ${year} ha sido enviado para revisión. ID: ${data.proposal_id}`
+                );
+                closeTimelineModal();
+            } else {
+                await CaosModal.alert(
+                    "❌ Error",
+                    data.error || "No se pudo crear la propuesta"
+                );
+            }
+        } catch (error) {
+            document.getElementById('timeline-loading').classList.add('hidden');
+            await CaosModal.alert(
+                "❌ Error de Conexión",
+                "No se pudo conectar con el servidor"
+            );
+        }
+    });
+</script>

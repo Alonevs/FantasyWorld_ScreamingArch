@@ -1,0 +1,113 @@
+
+<!-- BATCH DELETE UI -->
+<div id="batchDeleteModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/80 backdrop-blur-sm">
+    <div class="bg-gray-900 border border-gray-700 rounded-xl p-6 w-full max-w-md shadow-2xl relative">
+        <h3 class="text-xl font-bold text-white mb-2">🗑️ Borrar Fotos</h3>
+        <p class="text-xs text-gray-400 mb-4">Vas a borrar <span id="batch-delete-count" class="text-white font-bold">0</span> imágenes. Se creará una propuesta.</p>
+        <textarea id="batch-delete-reason" class="w-full bg-black/50 border border-gray-700 rounded p-2 text-gray-200 text-sm focus:border-red-500 outline-none mb-4 h-24" placeholder="Motivo (Obligatorio)..."></textarea>
+        <div class="flex justify-end gap-2">
+            <button onclick="closeBatchDeleteModal()" class="text-gray-300 text-sm hover:text-white px-3">Cancelar</button>
+            <button onclick="submitBatchDelete()" class="px-4 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-500">Confirmar</button>
+        </div>
+    </div>
+</div>
+
+<div id="batch-toolbar" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900/90 border border-red-500/30 rounded-full px-6 py-2 shadow-xl items-center gap-4 backdrop-blur animate-fade-in-up">
+    <span class="text-white text-xs font-bold"><span id="selected-count" class="text-red-400">0</span> seleccionadas</span>
+    <button onclick="openBatchDeleteModal()" id="btn-batch-delete" disabled class="text-xs bg-red-600/20 text-red-500 border border-red-900 hover:bg-red-600 hover:text-white px-3 py-1 rounded transition font-bold disabled:opacity-50">🗑️ BORRAR</button>
+    <button onclick="toggleSelectionMode()" class="text-gray-500 hover:text-white ml-2">✕</button>
+</div>
+
+<script>
+    function openBatchDeleteModal() {
+        const el = document.getElementById('batchDeleteModal');
+        el.classList.remove('hidden');
+        el.classList.add('flex');
+    }
+    function closeBatchDeleteModal() {
+        const el = document.getElementById('batchDeleteModal');
+        el.classList.add('hidden');
+        el.classList.remove('flex');
+    }
+
+    let selectionMode = false; let selectedImages = new Set();
+    
+    function toggleSelectionMode() {
+        selectionMode = !selectionMode;
+        const btn = document.getElementById('btn-manage-photos');
+        if(btn) btn.classList.toggle('bg-gray-600', selectionMode);
+        
+        document.querySelectorAll('.selection-checkbox').forEach(el => el.classList.toggle('hidden', !selectionMode));
+        document.querySelectorAll('.batch-hide').forEach(el => el.classList.toggle('hidden', selectionMode));
+        
+        const toolbar = document.getElementById('batch-toolbar');
+        toolbar.classList.toggle('hidden', !selectionMode);
+        toolbar.classList.toggle('flex', selectionMode);
+        
+        if(!selectionMode) { selectedImages.clear(); updateSelectionUI(); document.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = false); }
+    }
+    
+    async function toggleImageSelection(fn, cb) {
+        if(cb.checked) {
+            if(selectedImages.size >= 5) { 
+                cb.checked = false; 
+                await CaosModal.alert("Límite Alcanzado", "Máximo 5 imágenes para borrado en lote."); 
+                return; 
+            }
+            selectedImages.add(fn);
+        } else selectedImages.delete(fn);
+        updateSelectionUI();
+    }
+    
+    function updateSelectionUI() {
+        document.getElementById('selected-count').innerText = selectedImages.size;
+        document.getElementById('batch-delete-count').innerText = selectedImages.size;
+        document.getElementById('btn-batch-delete').disabled = selectedImages.size === 0;
+        // Opacity update
+        const btn = document.getElementById('btn-batch-delete');
+        btn.classList.toggle('opacity-50', selectedImages.size === 0);
+    }
+    
+    async function submitBatchDelete() {
+        const reason = document.getElementById('batch-delete-reason').value;
+        if(!reason.trim()) { 
+            await CaosModal.alert("Campo Obligatorio", "Debes especificar un motivo para el borrado.");
+            return; 
+        }
+        
+        fetch("{% url 'borrar_fotos_batch' jid %}", { 
+            method: "POST", 
+            headers: { 
+                "Content-Type": "application/json", 
+                "X-CSRFToken": "{{ csrf_token }}" 
+            }, 
+            body: JSON.stringify({ 
+                filenames: Array.from(selectedImages), 
+                reason: reason,
+                period: '{{ current_period_slug|escapejs }}'
+            }) 
+        })
+        .then(r => r.json())
+        .then(async d => { 
+            if(d.status === 'ok') location.reload(); 
+            else await CaosModal.alert("Error en el Sistema", d.message); 
+        });
+    }
+
+    async function solicitarBorradoIndividual(jid, filename) {
+        const reason = await CaosModal.prompt("📝 Motivo del borrado", "Explica brevemente por qué quieres eliminar esta imagen:", "Ej: Imagen duplicada, borrosa...");
+        if (reason === null) return;
+        
+        if (!reason.trim()) { 
+            await CaosModal.alert("Motivo Obligatorio", "El motivo del borrado es necesario para procesar la solicitud.");
+            return; 
+        }
+        
+        // URL construction fix
+        const url = `{% url "borrar_foto" "JID_PLACEHOLDER" "FILE_PLACEHOLDER" %}`
+            .replace('JID_PLACEHOLDER', jid)
+            .replace('FILE_PLACEHOLDER', filename) + "?reason=" + encodeURIComponent(reason);
+            
+        window.location.href = url;
+    }
+</script>

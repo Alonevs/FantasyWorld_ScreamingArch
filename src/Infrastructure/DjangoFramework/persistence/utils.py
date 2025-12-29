@@ -2,18 +2,14 @@ import os
 from django.conf import settings
 from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM
 
-def generate_breadcrumbs(jid):
+def generate_breadcrumbs(jid, user=None):
     """
     Genera una lista de 'migas de pan' (breadcrumbs) robusta y procesada.
-    Se encarga de:
-    1. Manejar longitudes variables (Niveles básicos vs Niveles finales de 4 chars).
-    2. Resolver nombres reales desde la base de datos en una única consulta.
-    3. Filtrar 'Nexos Fantasma' (Gaps) intermedios para un historial limpio.
-    4. Aplicar truncamiento inteligente (Shortening) para no saturar el UI.
+    Ahora incorpora chequeo de permisos para no 'dar pistas' de mundos restringidos.
     """
     ids = _parse_jid_hierarchy(jid)
     worlds_data = _fetch_worlds_data(ids)
-    breadcrumbs = _build_breadcrumb_list(ids, worlds_data, jid)
+    breadcrumbs = _build_breadcrumb_list(ids, worlds_data, jid, user)
     return _apply_truncation(breadcrumbs)
 
 
@@ -47,55 +43,47 @@ def _parse_jid_hierarchy(jid: str) -> list:
 def _fetch_worlds_data(ids: list) -> dict:
     """
     Recupera datos de ancestros en una única consulta optimizada.
-    
-    Args:
-        ids: Lista de IDs a buscar
-        
-    Returns:
-        Diccionario con datos de cada mundo {id: {name, desc, public_id}}
+    Incluye campos necesarios para el chequeo de permisos (status, visibility, author).
     """
     return {
-        w.id: {'name': w.name, 'desc': w.description, 'public_id': w.public_id} 
-        for w in CaosWorldORM.objects.filter(id__in=ids).only('id', 'name', 'description', 'public_id')
+        w.id: w for w in CaosWorldORM.objects.filter(id__in=ids).select_related('author').only(
+            'id', 'name', 'description', 'public_id', 'status', 'visible_publico', 'author'
+        )
     }
 
 
-def _build_breadcrumb_list(ids: list, worlds_data: dict, current_jid: str) -> list:
+def _build_breadcrumb_list(ids: list, worlds_data: dict, current_jid: str, user=None) -> list:
     """
-    Construye lista de breadcrumbs con filtrado de gaps.
+    Construye lista de breadcrumbs con filtrado de gaps y SEGURIDAD (RBAC).
+    """
+    from src.Infrastructure.DjangoFramework.persistence.policies import can_user_view_world
     
-    Args:
-        ids: Lista de IDs jerárquicos
-        worlds_data: Datos de mundos recuperados de la DB
-        current_jid: ID actual (destino final)
-        
-    Returns:
-        Lista de breadcrumbs con 'id' y 'label'
-    """
     full_list = []
     
     for i, pid in enumerate(ids):
-        w_data = worlds_data.get(pid)
+        w_obj = worlds_data.get(pid)
         is_root = (len(pid) <= 2)
         has_data = False
         label = f"Nivel {i+1}"
         link_id = pid  # ID por defecto
         
-        if w_data:
-            label = w_data['name']
-            desc = w_data['desc']
-            link_id = w_data['public_id'] or pid  # Preferimos el NanoID para la URL
+        if w_obj:
+            label = w_obj.name
+            desc = w_obj.description
+            link_id = w_obj.public_id or pid
             if desc and desc.strip() and desc.lower() != 'none':
                 has_data = True
+            
+            # FILTRO DE SEGURIDAD (RBAC):
+            # Si el usuario NO tiene permiso para ver este ancestro, no lo listamos.
+            if user and not can_user_view_world(user, w_obj):
+                continue
         
         # LÓGICA DE FILTRADO DE GAPS:
-        # Ocultamos entidades puramente estructurales (Nombre 'Nexo' y ID termina en '00')
-        # para que la navegación parezca directa entre niveles con contenido.
         is_ghost_name = "nexo" in label.lower() or "fantasma" in label.lower() or "ghost" in label.lower()
         is_generic_ghost = pid.endswith("00") and is_ghost_name
         is_last = (pid == current_jid)
         
-        # Mostramos si es raíz, si es el destino final, o si tiene contenido literario real.
         should_show = (is_root or has_data or is_last)
         if is_generic_ghost and not is_last:
             should_show = False

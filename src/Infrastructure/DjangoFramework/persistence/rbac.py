@@ -13,8 +13,8 @@ ROLE_HIERARCHY = {
     'SUPERADMIN': 100,  # "Alone" - Acceso total y supervisión técnica global.
     'ADMIN': 50,        # "Boss" - Dueño de sus mundos y gestor de su equipo.
     'SUBADMIN': 20,     # "Colaborador" - Ayuda en mundos ajenos (solo visualiza borradores).
-    'USER': 0,          # "Explorador" - Solo puede leer contenido público 'Live'.
-    'EXPLORER': 0       # Alias heredado.
+    'EXPLORER': 0,      # "Explorador" - Solo puede leer contenido público 'Live'.
+    'USER': 0           # Alias de compatibilidad.
 }
 
 def get_user_rank_value(user) -> int:

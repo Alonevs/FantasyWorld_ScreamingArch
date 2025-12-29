@@ -82,11 +82,11 @@ def toggle_admin_role(request, user_id):
             
         # 3. DIRECTIONAL LOGIC
         action = request.GET.get('action') # 'up' or 'down'
-        current_rank = target_u.profile.rank if hasattr(target_u, 'profile') else 'USER'
+        current_rank = target_u.profile.rank if hasattr(target_u, 'profile') else 'EXPLORER'
         admins_group, _ = Group.objects.get_or_create(name='Admins')
 
         if action == 'up':
-            if current_rank == 'USER':
+            if current_rank == 'EXPLORER':
                 target_u.profile.rank = 'SUBADMIN'
                 messages.success(request, f"🛡️ {target_u.username} ascendido a SUBADMIN.")
             elif current_rank == 'SUBADMIN':
@@ -106,7 +106,7 @@ def toggle_admin_role(request, user_id):
                 target_u.groups.remove(admins_group)
                 messages.warning(request, f"📉 {target_u.username} degradado a SUBADMIN.")
             elif current_rank == 'SUBADMIN':
-                target_u.profile.rank = 'USER'
+                target_u.profile.rank = 'EXPLORER'
                 messages.warning(request, f"📉 {target_u.username} degradado a EXPLORADOR.")
             target_u.profile.save()
             
@@ -198,11 +198,11 @@ class MyTeamView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
             elif action == 'remove':
                 my_profile.collaborators.remove(target_profile)
                 
-                # Check if orphan (no more bosses) -> Auto-Demote to USER
+                # Check if orphan (no more bosses) -> Auto-Demote to EXPLORER
                 if target_profile.bosses.count() == 0:
-                    target_profile.rank = 'USER'
+                    target_profile.rank = 'EXPLORER'
                     target_profile.save()
-                    messages.warning(request, f"📉 {target_user.username} ha vuelto a ser Usuario (sin jefe).")
+                    messages.warning(request, f"📉 {target_user.username} ha vuelto a ser Explorador (sin jefe).")
                 
                 messages.warning(request, f"❌ {target_user.username} eliminado de tu equipo.")
                 
@@ -228,8 +228,8 @@ class MyTeamView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
                     if g: target_user.groups.remove(g)
                     messages.warning(request, f"📉 {target_user.username} degradado a SUBADMIN.")
                 elif current_rank == 'SUBADMIN':
-                    target_profile.rank = 'USER'
-                    messages.warning(request, f"📉 {target_user.username} degradado a USUARIO.")
+                    target_profile.rank = 'EXPLORER'
+                    messages.warning(request, f"📉 {target_user.username} degradado a EXPLORADOR.")
                 target_profile.save()
 
         except Exception as e: messages.error(request, f"Error: {e}") 

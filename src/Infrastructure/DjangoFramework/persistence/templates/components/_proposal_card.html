@@ -122,26 +122,30 @@
             <a href="{% url 'revisar_narrativa_version' item.id %}" class="px-4 py-2 bg-blue-900/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg border border-blue-900/50 transition font-bold text-sm">👁️ {% if variant == 'pending' %}Ver{% else %}Ver{% endif %}</a>
         {% endif %}
 
-        <!-- CONTEXTUAL BUTTONS -->
+        <!-- CONTEXTUAL BUTTONS (Requires Authority) -->
         {% if variant == 'pending' %}
-            {% if item.type == 'WORLD' %}
-                <a href="{% url 'aprobar_propuesta' item.id %}" class="px-4 py-2 bg-green-900/20 hover:bg-green-600 text-green-400 hover:text-white rounded-lg border border-green-900/50 transition font-bold shadow-lg shadow-green-900/20" data-confirm="¿Aprobar esta propuesta?">✅ Aprobar</a>
-                <a href="{% url 'rechazar_propuesta' item.id %}" class="px-4 py-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg border border-red-900/50 transition font-bold" data-confirm="¿Rechazar esta propuesta?" data-destructive="true">✕ Rechazar</a>
-            {% else %}
-                <a href="{% url 'aprobar_narrativa' item.id %}" class="px-4 py-2 bg-green-900/20 hover:bg-green-600 text-green-400 hover:text-white rounded-lg border border-green-900/50 transition font-bold shadow-lg shadow-green-900/20" data-confirm="¿Aprobar esta narrativa?">✅ Aprobar</a>
-                <a href="{% url 'rechazar_narrativa' item.id %}" class="px-4 py-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg border border-red-900/50 transition font-bold" data-confirm="¿Rechazar esta narrativa?" data-destructive="true">✕ Rechazar</a>
+            {% if item.has_authority %}
+                {% if item.type == 'WORLD' %}
+                    <a href="{% url 'aprobar_propuesta' item.id %}" class="px-4 py-2 bg-green-900/20 hover:bg-green-600 text-green-400 hover:text-white rounded-lg border border-green-900/50 transition font-bold shadow-lg shadow-green-900/20" data-confirm="¿Aprobar esta propuesta?">✅ Aprobar</a>
+                    <a href="{% url 'rechazar_propuesta' item.id %}" class="px-4 py-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg border border-red-900/50 transition font-bold" data-confirm="¿Rechazar esta propuesta?" data-destructive="true">✕ Rechazar</a>
+                {% else %}
+                    <a href="{% url 'aprobar_narrativa' item.id %}" class="px-4 py-2 bg-green-900/20 hover:bg-green-600 text-green-400 hover:text-white rounded-lg border border-green-900/50 transition font-bold shadow-lg shadow-green-900/20" data-confirm="¿Aprobar esta narrativa?">✅ Aprobar</a>
+                    <a href="{% url 'rechazar_narrativa' item.id %}" class="px-4 py-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg border border-red-900/50 transition font-bold" data-confirm="¿Rechazar esta narrativa?" data-destructive="true">✕ Rechazar</a>
+                {% endif %}
             {% endif %}
         
         {% elif variant == 'approved' %}
-             {% if item.type == 'WORLD' %}
-                <a href="{% url 'publicar_version' item.id %}" class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg shadow-lg shadow-green-900/50 transition font-bold flex items-center gap-2" data-confirm="¿PUBLICAR esta versión a LIVE? Esto sobreescribirá los datos actuales.">
-                    🚀 PUBLICAR
-                </a>
-            {% else %}
-                <a href="{% url 'publicar_narrativa' item.id %}" class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg shadow-lg shadow-green-900/50 transition font-bold flex items-center gap-2" data-confirm="¿PUBLICAR esta narrativa a LIVE?">
-                    🚀 PUBLICAR
-                </a>
-            {% endif %}
+             {% if item.has_authority %}
+                 {% if item.type == 'WORLD' %}
+                    <a href="{% url 'publicar_version' item.id %}" class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg shadow-lg shadow-green-900/50 transition font-bold flex items-center gap-2" data-confirm="¿PUBLICAR esta versión a LIVE? Esto sobreescribirá los datos actuales.">
+                        🚀 PUBLICAR
+                    </a>
+                {% else %}
+                    <a href="{% url 'publicar_narrativa' item.id %}" class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg shadow-lg shadow-green-900/50 transition font-bold flex items-center gap-2" data-confirm="¿PUBLICAR esta narrativa a LIVE?">
+                        🚀 PUBLICAR
+                    </a>
+                {% endif %}
+             {% endif %}
 
         {% elif variant == 'archived' %}
             {% if item.type == 'WORLD' %}
@@ -155,11 +159,13 @@
             {% endif %}
         {% endif %}
 
-        <!-- DELETE ALWAYS AVAILABLE -->
-        {% if item.type == 'WORLD' %}
-            <a href="{% url 'borrar_propuesta' item.id %}" class="px-4 py-2 bg-gray-800 hover:bg-red-600 text-gray-400 hover:text-white rounded-lg border border-gray-700 transition font-bold" data-confirm="⚠️ ¿BORRAR DEFINITIVAMENTE? No se podrá recuperar." data-destructive="true">🗑️</a>
-        {% else %}
-             <a href="{% url 'borrar_narrativa_version' item.id %}" class="px-4 py-2 bg-gray-800 hover:bg-red-600 text-gray-400 hover:text-white rounded-lg border border-gray-700 transition font-bold" data-confirm="⚠️ ¿BORRAR DEFINITIVAMENTE? No se podrá recuperar." data-destructive="true">🗑️</a>
+        <!-- DELETE ALWAYS AVAILABLE IF HAS AUTHORITY -->
+        {% if item.has_authority %}
+            {% if item.type == 'WORLD' %}
+                <a href="{% url 'borrar_propuesta' item.id %}" class="px-4 py-2 bg-gray-800 hover:bg-red-600 text-gray-400 hover:text-white rounded-lg border border-gray-700 transition font-bold" data-confirm="⚠️ ¿BORRAR DEFINITIVAMENTE? No se podrá recuperar." data-destructive="true">🗑️</a>
+            {% else %}
+                 <a href="{% url 'borrar_narrativa_version' item.id %}" class="px-4 py-2 bg-gray-800 hover:bg-red-600 text-gray-400 hover:text-white rounded-lg border border-gray-700 transition font-bold" data-confirm="⚠️ ¿BORRAR DEFINITIVAMENTE? No se podrá recuperar." data-destructive="true">🗑️</a>
+            {% endif %}
         {% endif %}
     </div>
 

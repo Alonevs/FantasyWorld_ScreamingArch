@@ -44,15 +44,13 @@ def check_world_access(request, world_orm: CaosWorldORM):
         return False, False
 
     # LÓGICA CENTRALIZADA (policies.py)
-    from src.Infrastructure.DjangoFramework.persistence.policies import can_user_view_world
+    from src.Infrastructure.DjangoFramework.persistence.policies import can_user_view_world, get_user_access_level
     
     can_access = can_user_view_world(request.user, world_orm)
     
     # Flags auxiliares para UI (Is Author/Team) -> Usados para ocultar/mostrar ciertos controles menores
-    # Aunque can_edit se calcula por separado en 'get_world_details'.
-    # Recalculamos 'is_author_or_team' simplificado para mantener compatibilidad de retorno
-    is_author_or_team = (request.user.is_authenticated and world_orm.author == request.user) 
-    if not is_author_or_team and request.user.is_superuser: is_author_or_team = True
+    access_level = get_user_access_level(request.user, world_orm)
+    is_author_or_team = (access_level in ['OWNER', 'COLLABORATOR', 'SUPERUSER'])
     
     return can_access, is_author_or_team
 

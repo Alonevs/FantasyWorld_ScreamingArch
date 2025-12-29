@@ -30,6 +30,11 @@ class GetWorldDetailsUseCase:
         jid = w.id
         safe_pid = w.public_id if w.public_id else jid
         
+        # 3. VERIFICAR PERMISO DE ACCESO (Seguridad)
+        from src.Infrastructure.DjangoFramework.persistence.policies import can_user_view_world
+        if not can_user_view_world(user, w):
+            return None # El controlador manejará esto como un 404/403
+        
         # Utilidades para gestión de imágenes y migas de pan
         from src.Infrastructure.DjangoFramework.persistence.utils import get_world_images, generate_breadcrumbs
         
@@ -262,6 +267,12 @@ class GetWorldDetailsUseCase:
         from src.Infrastructure.DjangoFramework.persistence.policies import can_user_propose_on
         can_edit = can_user_propose_on(user, w)
 
+        # Authority Check (Boss level: Superuser or Owner)
+        has_authority = False
+        if user:
+            if user.is_superuser: has_authority = True
+            elif w.author == user: has_authority = True
+
         # 9. Construcción del Diccionario de Resultado para el Template
 
         # 9. Construcción del Diccionario de Resultado para el Template
@@ -284,11 +295,12 @@ class GetWorldDetailsUseCase:
             'metadata_schema': schema,
             'imagenes': imgs, 
             'hijos': hijos, 
-            'breadcrumbs': generate_breadcrumbs(jid), 
+            'breadcrumbs': generate_breadcrumbs(jid, user=user), 
             'propuestas': props, 
             'historial': historial,
             'is_preview': False,
             'can_edit': can_edit,
+            'has_authority': has_authority,
             'is_subadmin': is_subadmin, # Expose for UI logic (AI Button)
-            'is_admin_role': hasattr(user, 'profile') and user.profile.rank in ['ADMIN', 'SUPERADMIN'] # Ensure explicit role check is available too
+            'is_admin_role': user and (user.is_superuser or (hasattr(user, 'profile') and user.profile.rank in ['ADMIN', 'SUBADMIN']))
         }

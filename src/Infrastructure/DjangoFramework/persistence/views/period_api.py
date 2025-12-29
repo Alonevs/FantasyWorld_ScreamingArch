@@ -14,6 +14,7 @@ from src.Infrastructure.DjangoFramework.persistence.models import (
     TimelinePeriodVersion
 )
 from src.Shared.Services.TimelinePeriodService import TimelinePeriodService
+from src.Infrastructure.DjangoFramework.persistence.views.view_utils import resolve_jid_orm
 
 
 @csrf_exempt
@@ -31,7 +32,9 @@ def create_period(request, world_id):
     }
     """
     try:
-        world = get_object_or_404(CaosWorldORM, public_id=world_id)
+        world = resolve_jid_orm(world_id)
+        if not world:
+             return JsonResponse({'error': 'Mundo no encontrado'}, status=404)
         data = json.loads(request.body)
         
         title = data.get('title', '').strip()
@@ -295,7 +298,9 @@ def list_world_periods(request, world_id):
     GET /api/world/{world_id}/periods
     """
     try:
-        world = get_object_or_404(CaosWorldORM, id=world_id)
+        world = resolve_jid_orm(world_id)
+        if not world:
+             return JsonResponse({'error': 'Mundo no encontrado'}, status=404)
         periods = TimelinePeriodService.get_periods_for_world(world)
         
         return JsonResponse({

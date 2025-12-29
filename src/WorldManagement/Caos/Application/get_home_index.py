@@ -73,10 +73,11 @@ class GetHomeIndexUseCase:
         final_list = []
         for key, candidates in indexed_groups.items():
             # Ordenamos por ID para asegurar que el 01 sea el representante (primogénito)
-            candidates.sort(key=lambda x: x.id)
+            # EXCEPCIÓN: Caos Prime (JhZCO1vxI7) siempre gana si está en el grupo.
+            candidates.sort(key=lambda x: (0 if x.public_id == 'JhZCO1vxI7' else 1, x.id))
             final_list.append(candidates[0])
 
-        # Ordenación final por J-ID para mantener la coherencia visual en pantalla
-        final_list.sort(key=lambda x: x.id)
+        # Ordenación final: Caos Prime primero (JhZCO1vxI7), luego por J-ID para coherencia
+        final_list.sort(key=lambda x: (0 if x.public_id == 'JhZCO1vxI7' else 1, x.id))
         
         return final_list

@@ -4,127 +4,222 @@
 {% block title %}Perfil: {{ target_user.username }}{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto py-12 px-6">
-    <!-- Back Button -->
-    <a href="{% url 'user_management' %}" class="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition">
-        <span>⬅️</span> Volver a Gestión de Usuarios
-    </a>
+<div class="mt-8"></div>
 
-    <!-- Hero Profile -->
-    <div class="bg-card border border-gray-800 rounded-2xl p-8 mb-8 relative overflow-hidden shadow-2xl">
-        <!-- Rank Stripe -->
-        <div class="absolute top-0 left-0 w-full h-2 
-            {% if target_user.profile.rank == 'ADMIN' %}bg-linear-to-r from-amber-500 to-yellow-600
-            {% elif target_user.profile.rank == 'SUBADMIN' %}bg-linear-to-r from-emerald-500 to-teal-600
-            {% else %}bg-gray-700{% endif %}">
-        </div>
+<div class="max-w-6xl mx-auto py-8 px-4 sm:px-6">
+    <!-- Back Navigation -->
+    <div class="mb-8 flex justify-between items-center">
+        <a href="{% url 'home' %}" class="inline-flex items-center gap-2 text-gray-400 hover:text-white transition group">
+            <span class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center group-hover:scale-110 transition-transform">🏠</span>
+            <span class="text-[10px] font-black tracking-widest uppercase">Regresar al Inicio</span>
+        </a>
+        
+        {% if user.is_superuser %}
+        <a href="{% url 'user_management' %}" class="px-4 py-2 bg-purple-600/20 hover:bg-purple-600 text-purple-400 hover:text-white rounded-xl text-[10px] font-black tracking-widest uppercase border border-purple-500/30 transition shadow-lg shadow-purple-900/20">
+            👥 Gestión de Usuarios
+        </a>
+        {% endif %}
+    </div>
 
-        <div class="flex flex-col md:flex-row items-center gap-8 relative z-10">
-            <!-- Avatar -->
-            <div class="w-24 h-24 rounded-full bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-3xl font-bold text-white shadow-lg ring-4 ring-black/50">
-                {{ target_user.username|slice:":1"|upper }}
+    <!-- PROFILE HERO CARD -->
+    <div class="bg-card border border-white/10 rounded-[2rem] overflow-hidden shadow-2xl relative mb-12">
+        <!-- Animated Background Decor -->
+        <div class="absolute top-0 right-0 w-1/2 h-full bg-linear-to-bl from-indigo-500/10 via-purple-500/5 to-transparent skew-x-12 transform origin-top-right"></div>
+        <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-accent/10 rounded-full blur-[100px] animate-pulse"></div>
+
+        <div class="relative z-10 p-8 lg:p-12 flex flex-col lg:flex-row items-center lg:items-end gap-8 lg:gap-12">
+            <!-- Avatar Section -->
+            <div class="relative group">
+                <div class="w-32 h-32 lg:w-40 lg:h-40 rounded-[2.5rem] bg-linear-to-br from-indigo-500 via-purple-600 to-accent p-1 shadow-2xl shadow-purple-500/40 group-hover:rotate-3 transition-transform duration-500">
+                    <div class="w-full h-full rounded-[2.3rem] bg-[#0a0a0a] flex items-center justify-center text-5xl lg:text-6xl font-black text-white">
+                        {{ target_user.username|slice:":1"|upper }}
+                    </div>
+                </div>
+                <!-- Status Badge -->
+                <div class="absolute -bottom-2 -right-2 px-4 py-1.5 rounded-full bg-green-500 text-[#0a0a0a] text-[10px] font-black uppercase tracking-widest shadow-xl border-4 border-[#0a0a0a]">
+                    Online
+                </div>
             </div>
-            
-            <div class="text-center md:text-left flex-1">
-                <h1 class="text-3xl font-bold text-white mb-2">{{ target_user.username }}</h1>
-                <div class="flex items-center justify-center md:justify-start gap-4 text-sm mb-4">
-                    <span class="text-gray-400">{{ target_user.email|default:"Sin email" }}</span>
-                    <span class="text-gray-600">•</span>
-                    {% if target_user.is_superuser %}
-                        <span class="text-yellow-500 font-bold">👑 SUPERADMIN</span>
-                    {% elif target_user.profile.rank == 'ADMIN' %}
-                        <span class="text-amber-500 font-bold">💎 ADMIN</span>
-                    {% elif target_user.profile.rank == 'SUBADMIN' %}
-                        <span class="text-emerald-500 font-bold">🛡️ SUBADMIN</span>
-                    {% else %}
-                        <span class="text-gray-500 font-bold">👤 USUARIO</span>
+
+            <!-- Info Section -->
+            <div class="flex-1 text-center lg:text-left">
+                <div class="flex flex-col lg:flex-row items-center lg:items-end gap-4 mb-4">
+                    <h1 class="text-4xl lg:text-6xl font-black text-white tracking-tighter">{{ target_user.username }}</h1>
+                    
+                    <div class="px-4 py-1.5 rounded-xl border font-black text-[10px] tracking-[0.2em] uppercase
+                        {% if target_user.is_superuser %}bg-yellow-500/10 border-yellow-500/50 text-yellow-400
+                        {% elif target_user.profile.rank == 'ADMIN' %}bg-amber-500/10 border-amber-500/50 text-amber-400
+                        {% elif target_user.profile.rank == 'SUBADMIN' %}bg-cyan-500/10 border-cyan-500/50 text-cyan-400
+                        {% else %}bg-gray-500/10 border-gray-500/50 text-gray-400{% endif %}">
+                        {% if target_user.is_superuser %}👑 SUPERADMIN{% else %}{{ target_user.profile.rank|default:"EXPLORER" }}{% endif %}
+                    </div>
+                </div>
+                
+                <p class="text-gray-400 text-sm lg:text-base max-w-xl mb-8 leading-relaxed italic">
+                    "Viajero incansable del multiverso. Explorando las fronteras del Caos desde {{ target_user.date_joined|date:"F Y" }}."
+                </p>
+
+                <div class="flex flex-wrap justify-center lg:justify-start gap-4">
+                    {% if target_user.id != user.id %}
+                    <a href="{% url 'send_message_to' target_user.id %}" class="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-black tracking-[0.2em] rounded-2xl transition-all duration-300 shadow-xl shadow-blue-500/20 hover:scale-105 active:scale-95 uppercase flex items-center gap-2">
+                        <span>✉️</span> Iniciar Comunicación
+                    </a>
+                    {% endif %}
+                    
+                    {% if target_user.id == user.id or user.is_superuser %}
+                    <button class="px-8 py-3 bg-white/5 hover:bg-white/10 text-white text-[10px] font-black tracking-[0.2em] rounded-2xl border border-white/10 transition-all duration-300 uppercase flex items-center gap-2">
+                        <span>✏️</span> Editar Perfil Lore
+                    </button>
                     {% endif %}
                 </div>
-
-                {% if target_user.id != user.id %}
-                    <a href="{% url 'send_message_to' target_user.id %}" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-black tracking-widest px-6 py-3 rounded-xl transition-all duration-300 shadow-xl shadow-blue-500/20 hover:scale-105 active:scale-95 uppercase">
-                        <span>✉️</span> Enviar Mensaje
-                    </a>
-                {% endif %}
             </div>
 
-            <!-- Stats -->
-            <div class="flex gap-6 mt-6 md:mt-0">
-                <div class="text-center bg-black/20 rounded-lg p-3 border border-gray-800 min-w-[80px]">
-                    <div class="text-2xl font-bold text-blue-400">{{ worlds_count }}</div>
-                    <div class="text-[10px] uppercase text-gray-500 font-bold">Mundos</div>
+            <!-- Stats Ribbon -->
+            <div class="flex lg:flex-col gap-4">
+                <div class="bg-white/5 border border-white/10 rounded-2xl p-4 min-w-[120px] backdrop-blur-md">
+                    <div class="text-3xl font-black text-white mb-1">{{ worlds_count }}</div>
+                    <div class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Mundos Forjados</div>
                 </div>
-                <div class="text-center bg-black/20 rounded-lg p-3 border border-gray-800 min-w-[80px]">
-                    <div class="text-2xl font-bold text-purple-400">{{ narratives_count }}</div>
-                    <div class="text-[10px] uppercase text-gray-500 font-bold">Historias</div>
+                <div class="bg-white/5 border border-white/10 rounded-2xl p-4 min-w-[120px] backdrop-blur-md">
+                    <div class="text-3xl font-black text-accent mb-1">{{ narratives_count }}</div>
+                    <div class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Historias Escritas</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Collaboration Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <!-- MAIN CONTENT GRID -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        <!-- 1. BOSSES (Who I work for) -->
-        <div class="bg-card border border-gray-800 rounded-2xl p-6">
-            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <span class="text-amber-500">👑</span> Jefes / Mentores
-                <span class="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">{{ bosses|length }}</span>
-            </h3>
-            
-            {% if bosses %}
-                <div class="space-y-3">
+        <!-- LEFT: Team & Relationships -->
+        <div class="lg:col-span-1 space-y-8">
+            <!-- Mentors/Bosses -->
+            <div class="bg-card border border-white/10 rounded-3xl p-6 shadow-xl">
+                <h3 class="text-sm font-black text-gray-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-3">
+                    <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                    Mentores & Jefes
+                </h3>
+                
+                <div class="space-y-4">
                     {% for item in bosses %}
-                        <div class="flex items-center gap-3 bg-black/20 border border-gray-800 p-3 rounded-xl hover:border-amber-500/30 transition">
-                            <div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-white">
-                                {{ item.user.username|slice:":1"|upper }}
-                            </div>
-                            <div>
-                                <div class="font-bold text-white text-sm">{{ item.user.username }}</div>
-                                <div class="text-[10px] text-gray-400">{{ item.get_rank_display }}</div>
-                            </div>
+                    <a href="{% url 'user_detail' item.user.id %}" class="flex items-center gap-4 p-3 rounded-2xl hover:bg-white/5 transition border border-transparent hover:border-white/10 group">
+                        <div class="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center text-xs font-bold text-white group-hover:scale-110 transition-transform">
+                            {{ item.user.username|slice:":1"|upper }}
                         </div>
+                        <div class="flex-1">
+                            <div class="text-sm font-bold text-white">{{ item.user.username }}</div>
+                            <div class="text-[9px] text-amber-500/70 font-black uppercase">{{ item.get_rank_display }}</div>
+                        </div>
+                    </a>
+                    {% empty %}
+                    <div class="py-12 flex flex-col items-center justify-center text-gray-600 border border-dashed border-white/10 rounded-2xl">
+                        <span class="text-3xl mb-2">🧭</span>
+                        <span class="text-[10px] font-bold uppercase tracking-widest">Sin Mentores</span>
+                    </div>
                     {% endfor %}
                 </div>
-            {% else %}
-                <div class="text-center py-8 border border-dashed border-gray-800 rounded-xl">
-                    <p class="text-gray-500 text-sm">Sin jefes asignados.</p>
-                </div>
-            {% endif %}
-        </div>
+            </div>
 
-        <!-- 2. MINIONS (My Team) -->
-        <div class="bg-card border border-gray-800 rounded-2xl p-6">
-            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <span class="text-blue-400">🤝</span> Equipo / Colaboradores
-                <span class="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">{{ minions|length }}</span>
-            </h3>
-
-            {% if minions %}
-                <div class="space-y-3">
+            <!-- Team/Collaborators -->
+            <div class="bg-card border border-white/10 rounded-3xl p-6 shadow-xl">
+                <h3 class="text-sm font-black text-gray-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-3">
+                    <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                    Equipo de Trabajo
+                </h3>
+                
+                <div class="space-y-4">
                     {% for item in minions %}
-                        <div class="flex items-center gap-3 bg-black/20 border border-gray-800 p-3 rounded-xl hover:border-blue-500/30 transition">
-                            <div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-white">
-                                {{ item.user.username|slice:":1"|upper }}
-                            </div>
-                            <div class="flex-1">
-                                <div class="font-bold text-white text-sm">{{ item.user.username }}</div>
-                                <div class="text-[10px] text-gray-400">{{ item.get_rank_display }}</div>
-                            </div>
-                            <!-- Link to Work -->
-                            <a href="{% url 'collaborator_work' item.user.id %}" class="bg-blue-900/20 text-blue-400 p-2 rounded-lg hover:bg-blue-500 hover:text-white transition">
-                                📂
-                            </a>
+                    <div class="flex items-center gap-4 p-3 rounded-2xl bg-white/5 border border-white/5">
+                        <div class="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center text-xs font-bold text-white">
+                            {{ item.user.username|slice:":1"|upper }}
                         </div>
+                        <div class="flex-1">
+                            <div class="text-sm font-bold text-white">{{ item.user.username }}</div>
+                            <div class="text-[9px] text-blue-400/70 font-black uppercase">{{ item.get_rank_display }}</div>
+                        </div>
+                        <a href="{% url 'collaborator_work' item.user.id %}" class="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center hover:bg-indigo-500 hover:text-white transition shadow-lg">
+                            📂
+                        </a>
+                    </div>
+                    {% empty %}
+                    <div class="py-12 flex flex-col items-center justify-center text-gray-600 border border-dashed border-white/10 rounded-2xl">
+                        <span class="text-3xl mb-2">🤝</span>
+                        <span class="text-[10px] font-bold uppercase tracking-widest">Sin Colaboradores</span>
+                    </div>
                     {% endfor %}
                 </div>
-            {% else %}
-                <div class="text-center py-8 border border-dashed border-gray-800 rounded-xl">
-                    <p class="text-gray-500 text-sm">Este usuario no tiene equipo.</p>
-                </div>
-            {% endif %}
+            </div>
         </div>
 
+        <!-- RIGHT: Professional Bio & Social Activity -->
+        <div class="lg:col-span-2 space-y-8">
+            <!-- Lore & Biography (Placeholder) -->
+            <div class="bg-card border border-white/10 rounded-[2.5rem] p-8 lg:p-10">
+                <div class="flex justify-between items-center mb-8">
+                    <h3 class="text-xl font-black text-white tracking-widest uppercase italic">Manuscrito del Viajero</h3>
+                    <span class="text-[9px] font-bold text-gray-500 bg-white/5 px-3 py-1 rounded-full uppercase">Fragmento de Memoria</span>
+                </div>
+                
+                <div class="prose prose-invert max-w-none mb-10">
+                    <p class="text-gray-400 leading-relaxed text-lg">
+                        Este espacio está reservado para la biografía épica del usuario. Aquí podrás describir tus orígenes, tus motivaciones en el multiverso de ECLAI y tus mayores logros como creador.
+                    </p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                        <div class="p-6 rounded-2xl bg-linear-to-br from-indigo-500/10 to-transparent border border-white/5">
+                            <div class="text-indigo-400 font-black text-xs uppercase mb-3 tracking-widest">Especialidad</div>
+                            <p class="text-sm text-gray-400 italic">"Forjador de Mundos Distópicos y Narrativas de Transfondo Oscuro."</p>
+                        </div>
+                        <div class="p-6 rounded-2xl bg-linear-to-br from-purple-500/10 to-transparent border border-white/5">
+                            <div class="text-purple-400 font-black text-xs uppercase mb-3 tracking-widest">Afiliación</div>
+                            <p class="text-sm text-gray-400 italic">"Gremio de Exploradores de la Novena Esfera."</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Interactive Activity Heatmap Placeholder -->
+                <div class="h-1 bg-white/5 rounded-full mb-8"></div>
+                
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <div class="flex-1 p-6 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-center text-gray-600">
+                        <div class="text-center">
+                            <span class="block text-2xl mb-1">💬</span>
+                            <span class="text-[10px] uppercase font-black tracking-widest">0 Comentarios Recibidos</span>
+                        </div>
+                    </div>
+                    <div class="flex-1 p-6 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-center text-gray-600">
+                        <div class="text-center">
+                            <span class="block text-2xl mb-1">⭐</span>
+                            <span class="text-[10px] uppercase font-black tracking-widest">0 Reseñas Favoritas</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Danger Zone / Account Settings (Only for Owner) -->
+            {% if target_user.id == user.id or user.is_superuser %}
+            <div class="bg-red-950/20 border border-red-900/30 rounded-3xl p-8">
+                <h3 class="text-sm font-black text-red-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-3">
+                    <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                    Terminal de Seguridad
+                </h3>
+                
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <button class="flex-1 px-6 py-4 bg-gray-900 border border-gray-800 text-gray-400 text-[10px] font-black tracking-widest rounded-xl hover:bg-gray-800 hover:text-white transition uppercase">
+                        🔒 Cambiar Contraseña
+                    </button>
+                    <button class="flex-1 px-6 py-4 bg-gray-900 border border-gray-800 text-gray-400 text-[10px] font-black tracking-widest rounded-xl hover:bg-gray-800 hover:text-white transition uppercase">
+                        📨 Configurar Notificaciones
+                    </button>
+                    <button class="flex-1 px-6 py-4 bg-red-600/10 border border-red-600/30 text-red-500 text-[10px] font-black tracking-widest rounded-xl hover:bg-red-600 hover:text-white transition uppercase shadow-lg shadow-red-900/20">
+                        ⚠️ Solicitar Baja de Cuenta
+                    </button>
+                </div>
+                <p class="mt-4 text-[10px] text-gray-600 italic text-center">
+                    Nota: La baja de cuenta eliminará todos tus mundos y versiones de forma permanente tras una revisión administrativa.
+                </p>
+            </div>
+            {% endif %}
+        </div>
     </div>
 </div>
 {% endblock %}

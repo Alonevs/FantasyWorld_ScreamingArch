@@ -26,7 +26,7 @@ from src.WorldManagement.Caos.Application.restore_narrative_version import Resto
 from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
 
 # Modules
-from .utils import log_event, is_admin_or_staff
+from .utils import log_event, is_admin_or_staff, has_authority_over_proposal
 from .metrics import group_items_by_author, calculate_kpis
 from src.Infrastructure.DjangoFramework.persistence.rbac import restrict_explorer, admin_only, requires_role
 
@@ -278,6 +278,11 @@ def dashboard(request):
     approved = sorted(w_approved + n_approved + i_approved + p_approved, key=lambda x: x.created_at, reverse=True)
     rejected = sorted(w_rejected + n_rejected + i_rejected + p_rejected, key=lambda x: x.created_at, reverse=True)
 
+    # Authority Enrichment
+    for group in [pending, approved, rejected, timeline_pending, timeline_approved, timeline_rejected]:
+        for item in group:
+            item.has_authority = has_authority_over_proposal(request.user, item)
+
     logs_base = CaosEventLog.objects.all().order_by('-timestamp')[:50]
     logs_world = [l for l in logs_base if 'WORLD' in l.action.upper()]
     logs_narrative = [l for l in logs_base if 'NARRATIVE' in l.action.upper()]
@@ -395,14 +400,10 @@ def aprobar_propuesta(request, id):
     Aprueba una propuesta de cambio en un Mundo (CaosVersionORM).
     Solo el Superusuario o el Autor del mundo (Boss) tienen permiso.
     """
-    # Verificación de Autoridad BOSS
     obj = get_object_or_404(CaosVersionORM, id=id)
-    # RBAC Relax: Superusers can approve anything.
-    if not request.user.is_superuser:
-        # Original check for non-superusers
-        if obj.world.author != request.user:
-            messages.error(request, "⛔ Solo el Autor (Administrador) de este mundo puede aprobar esta propuesta.")
-            return redirect('dashboard')
+    if not has_authority_over_proposal(request.user, obj):
+        messages.error(request, "⛔ Solo el Administrador de este mundo puede aprobar esta propuesta.")
+        return redirect('dashboard')
     
     # Allow GET for redirects from Review System
     return execute_use_case_action(request, ApproveVersionUseCase, id, "Propuesta aprobada.", "APPROVE_WORLD_VERSION")
@@ -413,10 +414,9 @@ def rechazar_propuesta(request, id):
     Rechaza una propuesta de cambio en un Mundo.
     Permite adjuntar feedback administrativo para explicar la razón del rechazo.
     """
-    # Verificación de Autoridad BOSS
     obj = get_object_or_404(CaosVersionORM, id=id)
-    if not (request.user.is_superuser or obj.world.author == request.user):
-        messages.error(request, "⛔ Solo el Autor (Administrador) de este mundo puede rechazar esta propuesta.")
+    if not has_authority_over_proposal(request.user, obj):
+        messages.error(request, "⛔ Solo el Administrador de este mundo puede rechazar esta propuesta.")
         return redirect('dashboard')
 
     feedback = request.POST.get('admin_feedback', '') or request.GET.get('admin_feedback', '')
@@ -489,8 +489,8 @@ def aprobar_narrativa(request, id):
     Requiere ser Superusuario o el Autor del mundo asociado.
     """
     obj = get_object_or_404(CaosNarrativeVersionORM, id=id)
-    if not (request.user.is_superuser or obj.narrative.world.author == request.user):
-        messages.error(request, "⛔ Solo el Autor (Administrador) de este mundo puede aprobar esta narrativa.")
+    if not has_authority_over_proposal(request.user, obj):
+        messages.error(request, "⛔ Solo el Administrador de este mundo puede aprobar esta narrativa.")
         return redirect('dashboard')
     return execute_use_case_action(request, ApproveNarrativeVersionUseCase, id, "Narrativa aprobada.", "APPROVE_NARRATIVE")
 
@@ -500,8 +500,8 @@ def rechazar_narrativa(request, id):
     Rechaza una propuesta de narrativa con feedback opcional.
     """
     obj = get_object_or_404(CaosNarrativeVersionORM, id=id)
-    if not (request.user.is_superuser or obj.narrative.world.author == request.user):
-        messages.error(request, "⛔ Solo el Autor (Administrador) de este mundo puede rechazar esta narrativa.")
+    if not has_authority_over_proposal(request.user, obj):
+        messages.error(request, "⛔ Solo el Administrador de este mundo puede rechazar esta narrativa.")
         return redirect('dashboard')
     feedback = request.POST.get('admin_feedback', '') or request.GET.get('admin_feedback', '')
     return execute_use_case_action(request, RejectNarrativeVersionUseCase, id, "Narrativa rechazada.", "REJECT_NARRATIVE", extra_args={'reason': feedback})
@@ -742,8 +742,8 @@ from src.Shared.Services.TimelinePeriodService import TimelinePeriodService
 @login_required
 def aprobar_periodo(request, id):
     obj = get_object_or_404(TimelinePeriodVersion, id=id)
-    if not (request.user.is_superuser or obj.period.world.author == request.user):
-        messages.error(request, "⛔ Solo el Autor de este mundo puede aprobar este periodo.")
+    if not has_authority_over_proposal(request.user, obj):
+        messages.error(request, "⛔ Solo el Administrador de este mundo puede aprobar este periodo.")
         return redirect('dashboard')
     
     try:
@@ -761,8 +761,8 @@ def publicar_periodo(request, id):
     Publica una versión de periodo aprobada al estado LIVE.
     """
     obj = get_object_or_404(TimelinePeriodVersion, id=id)
-    if not (request.user.is_superuser or obj.period.world.author == request.user):
-        messages.error(request, "⛔ Solo el Autor puede publicar este periodo.")
+    if not has_authority_over_proposal(request.user, obj):
+        messages.error(request, "⛔ Solo el Administrador puede publicar este periodo.")
         return redirect('dashboard')
     
     try:

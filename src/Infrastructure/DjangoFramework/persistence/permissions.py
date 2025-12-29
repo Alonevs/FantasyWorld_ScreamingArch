@@ -18,37 +18,12 @@ def check_ownership(user, obj):
     if user.is_superuser: 
         return True
          
-    # 2. IDENTIFICACIÓN DEL PROPIETARIO
-    owner = None
-    if hasattr(obj, 'author'):
-        owner = obj.author
-    elif hasattr(obj, 'created_by'):
-        owner = obj.created_by
-        
-    if owner:
-        # Acceso directo por autoría
-        if owner == user: 
-            return True
-        
-        # 3. LÓGICA DE JURISDICCIÓN (Colaboración Boss/Minion)
-        try:
-            if hasattr(owner, 'profile') and hasattr(user, 'profile'):
-                # Caso A: El usuario actual es un colaborador autorizado del propietario (Minion trabajando para Boss).
-                if user.profile in owner.profile.collaborators.all():
-                    return True
-                
-                # Caso B: El usuario es el Jefe (ADMIN) y el propietario es uno de sus colaboradores (Boss editando a Minion).
-                if user.profile.rank == 'ADMIN':
-                    if owner.profile in user.profile.collaborators.all():
-                        return True
-                    
-                    # Caso C (FEDERADO): Admin puede ver contenido del Superadmin (para proponer).
-                    # Esto desbloquea la vista de "Offline" del Superadmin para los Admins.
-                    if owner.is_superuser:
-                        return True
-
-        except Exception:
-            pass
+    # 2. CENTRALIZACIÓN DE POLÍTICAS
+    from src.Infrastructure.DjangoFramework.persistence.policies import get_user_access_level
+    access = get_user_access_level(user, obj)
+    
+    if access in ['OWNER', 'COLLABORATOR', 'SUPERUSER']:
+        return True
             
     # Denegación por defecto si no se cumple ninguna jerarquía de poder.
     raise PermissionDenied("⛔ ACCESO DENEGADO: No tienes jurisdicción sobre este contenido.")

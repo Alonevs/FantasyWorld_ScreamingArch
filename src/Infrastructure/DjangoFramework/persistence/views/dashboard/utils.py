@@ -1,7 +1,8 @@
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
-from src.Infrastructure.DjangoFramework.persistence.models import CaosEventLog
+from src.Infrastructure.DjangoFramework.persistence.models import CaosEventLog, CaosVersionORM, CaosNarrativeVersionORM, CaosImageProposalORM, TimelinePeriodVersion
+from src.Infrastructure.DjangoFramework.persistence.policies import get_user_access_level
 
 def log_event(user, action, target_id, details=""):
     try:
@@ -15,6 +16,34 @@ def is_admin_or_staff(user):
 
 def is_superuser(user): return user.is_superuser
 
+def has_authority_over_proposal(user, obj):
+    """
+    Determina si un usuario tiene autoridad para aprobar/rechazar/borrar una propuesta.
+    Un usuario tiene autoridad si:
+    1. Es Superuser.
+    2. Es el Autor del Mundo asociado (Boss).
+    3. Es el Autor de la propuesta (Solo para BORRAR su propia propuesta).
+    """
+    if user.is_superuser: return True
+    
+    # Obtener el mundo asociado al objeto
+    world = None
+    if hasattr(obj, 'world'): world = obj.world
+    elif hasattr(obj, 'narrative'): world = obj.narrative.world
+    elif hasattr(obj, 'period'): world = obj.period.world
+    
+    if world:
+        # Usar la política centralizada: OWNER o SUPERUSER tienen autoridad total.
+        access = get_user_access_level(user, world)
+        if access in ['OWNER', 'SUPERUSER']:
+            return True
+            
+    # Caso especial: El autor de la propuesta puede borrar su propia propuesta PENDIENTE
+    if hasattr(obj, 'author') and obj.author == user and obj.status == 'PENDING':
+        return True
+        
+    return False
+
 # --- GENERIC ACTION HELPERS ---
 
 def execute_use_case_action(request, use_case_cls, id, success_msg, log_code, extra_args=None):
@@ -24,6 +53,28 @@ def execute_use_case_action(request, use_case_cls, id, success_msg, log_code, ex
     Automatically passes 'reviewer' if doing APPROVE/REJECT actions.
     """
     try:
+        # SECURITY CHECK: Verify authority before executing Use Case
+        # Assuming the model can be inferred or passed. 
+        # For simplicity, we fetch the object first.
+        # This is a bit redundant with UseCase internal fetch, but essential for security.
+        # We need the class to fetch. Since use_case_cls doesn't give it easily, 
+        # we assume current views pass the object already or we fetch it here.
+        # REFACTOR: In this project, execute_use_case_action is called with the ID. 
+        # We'll infer the model based on log_code.
+        model_map = {
+            'WORLD': CaosVersionORM,
+            'NARRATIVE': CaosNarrativeVersionORM,
+            'IMAGE': CaosImageProposalORM,
+            'PERIOD': TimelinePeriodVersion
+        }
+        model_key = next((k for k in model_map if k in log_code), 'WORLD')
+        target_model = model_map.get(model_key)
+        
+        obj = get_object_or_404(target_model, id=id)
+        if not has_authority_over_proposal(request.user, obj):
+            messages.error(request, "⛔ No tienes autoridad para realizar esta acción sobre este elemento.")
+            return redirect('dashboard')
+
         use_case = use_case_cls()
         args = extra_args or {}
         
@@ -50,6 +101,12 @@ def execute_orm_status_change(request, model_cls, id, status, success_msg, log_c
     """
     try:
         obj = get_object_or_404(model_cls, id=id)
+
+        # SECURITY CHECK
+        if not has_authority_over_proposal(request.user, obj):
+            messages.error(request, "⛔ No tienes autoridad para modificar este elemento.")
+            return redirect('dashboard')
+
         obj.status = status
         
         # Traceability: Set reviewer if field exists
@@ -68,6 +125,12 @@ def execute_orm_status_change(request, model_cls, id, status, success_msg, log_c
 def execute_orm_delete(request, model_cls, id, success_msg, log_code=None):
     try:
         obj = get_object_or_404(model_cls, id=id)
+
+        # SECURITY CHECK
+        if not has_authority_over_proposal(request.user, obj):
+            messages.error(request, "⛔ No tienes autoridad para eliminar este elemento.")
+            return redirect('dashboard')
+
         obj.delete()
         messages.success(request, success_msg)
         if log_code: log_event(request.user, log_code, id)

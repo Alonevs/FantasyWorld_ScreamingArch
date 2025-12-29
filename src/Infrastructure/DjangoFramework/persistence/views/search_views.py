@@ -11,10 +11,11 @@ def global_search(request):
     results_narratives = []
     
     if query:
+        from src.Infrastructure.DjangoFramework.persistence.policies import get_visibility_q_filter
+        vis_q = get_visibility_q_filter(request.user)
+        
         # 1. Search in Worlds (including JSONB metadata)
-        # We use icontains for basic fields and @> or other operators for JSONB would be nice,
-        # but Django's metadata__contains for JSONField works well with Postgres.
-        worlds = CaosWorldORM.objects.filter(
+        worlds = CaosWorldORM.objects.filter(vis_q).filter(
             Q(name__icontains=query) |
             Q(description__icontains=query) |
             Q(metadata__icontains=query) # Deep search in JSONB
@@ -29,8 +30,22 @@ def global_search(request):
                 'match': 'Metadata' if query.lower() in str(w.metadata).lower() else 'Nombre/Desc'
             })
             
-        # 2. Search in Narratives
-        narratives = CaosNarrativeORM.objects.filter(
+        # 2. Search in Narratives (Filter by Parent World Visibility)
+        # Re-prefixing world visibility filter for narratives
+        # We need to ensure we can see the world 'n.world'
+        narratives_vis_q = Q()
+        if not request.user.is_superuser:
+            # We filter by the visibility of the related world
+            # Note: get_visibility_q_filter returns Q objects for CaosWorldORM.
+            # We can use it with 'world__' prefix.
+            from src.Infrastructure.DjangoFramework.persistence.policies import get_visibility_q_filter
+            world_q = get_visibility_q_filter(request.user)
+            
+            # Reconstruct Q with world__ prefix
+            # This is a bit manual but safe.
+            narratives_vis_q = Q(world__in=CaosWorldORM.objects.filter(world_q))
+
+        narratives = CaosNarrativeORM.objects.filter(narratives_vis_q).filter(
             Q(titulo__icontains=query) |
             Q(contenido__icontains=query)
         ).filter(is_active=True).distinct()[:20]

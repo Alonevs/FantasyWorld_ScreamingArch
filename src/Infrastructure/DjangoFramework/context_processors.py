@@ -73,4 +73,12 @@ def admin_bar_context(request):
     except Exception:
         context['show_bar'] = False
         
+    # --- MESSAGING NOTIFICATIONS ---
+    try:
+        from src.Infrastructure.DjangoFramework.persistence.models import Message
+        unread_count = Message.objects.filter(recipient=request.user, read_at__isnull=True).count()
+        context['unread_messages_count'] = unread_count
+    except Exception:
+        context['unread_messages_count'] = 0
+            
     return context

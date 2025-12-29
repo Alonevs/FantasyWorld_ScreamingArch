@@ -337,10 +337,10 @@ class UserProfile(models.Model):
     RANK_CHOICES = [
         ('ADMIN', 'Admin'),
         ('SUBADMIN', 'Subadmin'),
-        ('USER', 'Explorador')
+        ('EXPLORER', 'Explorador')
     ]
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    rank = models.CharField(max_length=20, choices=RANK_CHOICES, default='USER')
+    rank = models.CharField(max_length=20, choices=RANK_CHOICES, default='EXPLORER')
     # M2M Relationship: A user can have multiple collaborators (minions/partners)
     collaborators = models.ManyToManyField('self', symmetrical=False, related_name='bosses', blank=True)
 
