@@ -46,7 +46,7 @@
                             <span class="opacity-50">{% if is_delete %}Borrado solicitado por{% else %}Solicitado por{% endif %}</span>
                             <span class="flex items-center gap-2 text-white bg-white/10 px-3 py-1 rounded-full border border-white/10 shadow-inner" title="ID: {{ proposal.author.id|default:'?' }}">
                                 <span class="text-yellow-500/70 text-xs">👤</span>
-                                <span>{{ proposal.author.username|default:"Sistema / Anónimo" }}</span>
+                                <span>{{ proposal.author.username|default:"Anónimo" }}</span>
                             </span>
                         </span>
                     </p>
@@ -77,8 +77,8 @@
                                 Archivar
                             </button>
 
-                            <button name="action" value="approve" class="px-5 py-2 rounded-lg bg-green-600 text-white hover:bg-green-500 text-sm font-bold shadow-lg transition-all">
-                                Aprobar Cambios
+                            <button name="action" value="approve" class="px-5 py-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white text-sm font-bold shadow-lg shadow-green-900/50 hover:shadow-green-500/30 transition-all duration-300 border border-green-400/30">
+                                Aprobar
                             </button>
 
                             <script>

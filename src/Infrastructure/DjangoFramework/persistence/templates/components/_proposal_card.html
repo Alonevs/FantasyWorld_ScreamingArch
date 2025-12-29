@@ -126,10 +126,10 @@
         {% if variant == 'pending' %}
             {% if item.has_authority %}
                 {% if item.type == 'WORLD' %}
-                    <a href="{% url 'aprobar_propuesta' item.id %}" class="px-4 py-2 bg-green-900/20 hover:bg-green-600 text-green-400 hover:text-white rounded-lg border border-green-900/50 transition font-bold shadow-lg shadow-green-900/20" data-confirm="¿Aprobar esta propuesta?">✅ Aprobar</a>
+                    <a href="{% url 'aprobar_propuesta' item.id %}" class="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white rounded-lg border border-green-400/30 transition-all duration-300 font-bold shadow-lg shadow-green-900/50 hover:shadow-green-500/30" data-confirm="¿Aprobar esta propuesta?">✅ Aprobar</a>
                     <a href="{% url 'rechazar_propuesta' item.id %}" class="px-4 py-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg border border-red-900/50 transition font-bold" data-confirm="¿Rechazar esta propuesta?" data-destructive="true">✕ Rechazar</a>
                 {% else %}
-                    <a href="{% url 'aprobar_narrativa' item.id %}" class="px-4 py-2 bg-green-900/20 hover:bg-green-600 text-green-400 hover:text-white rounded-lg border border-green-900/50 transition font-bold shadow-lg shadow-green-900/20" data-confirm="¿Aprobar esta narrativa?">✅ Aprobar</a>
+                    <a href="{% url 'aprobar_narrativa' item.id %}" class="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white rounded-lg border border-green-400/30 transition-all duration-300 font-bold shadow-lg shadow-green-900/50 hover:shadow-green-500/30" data-confirm="¿Aprobar esta narrativa?">✅ Aprobar</a>
                     <a href="{% url 'rechazar_narrativa' item.id %}" class="px-4 py-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg border border-red-900/50 transition font-bold" data-confirm="¿Rechazar esta narrativa?" data-destructive="true">✕ Rechazar</a>
                 {% endif %}
             {% endif %}

@@ -237,7 +237,8 @@ def ver_mundo(request, public_id):
                 description=c_desc, 
                 reason=reason, 
                 generate_image=use_ai, 
-                target_level=target_level
+                target_level=target_level,
+                user=request.user
             )
             
             try:

@@ -1,4 +1,6 @@
 from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosEventLog
+from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
+from src.WorldManagement.Caos.Application.create_child import CreateChildWorldUseCase
 
 class EntityService:
     """
@@ -9,7 +11,7 @@ class EntityService:
         self.repo = DjangoCaosRepository()
         self.creator = CreateChildWorldUseCase(self.repo)
 
-    def create_entity(self, parent_id: str, name: str, description: str, reason: str, generate_image: bool = False, target_level: int = None) -> str:
+    def create_entity(self, parent_id: str, name: str, description: str, reason: str, generate_image: bool = False, target_level: int = None, user=None) -> str:
         """
         Crea una nueva entidad hija (o raíz si parent_id es adecuado).
         Usa lógica de Padding y Proposals.
@@ -20,7 +22,8 @@ class EntityService:
             description=description,
             reason=reason,
             generate_image=generate_image,
-            target_level=target_level
+            target_level=target_level,
+            user=user
         )
 
     def soft_delete_entity(self, jid: str, user=None) -> bool:
