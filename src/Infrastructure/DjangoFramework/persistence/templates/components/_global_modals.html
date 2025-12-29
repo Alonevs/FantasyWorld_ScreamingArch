@@ -176,6 +176,55 @@
 
                 this.elements.btnConfirm.addEventListener('click', confirmHandler);
             });
+        },
+
+        custom({ title, html, confirmText = "Confirmar", cancelText = "Cancelar", onConfirm = null }) {
+            return new Promise((resolve) => {
+                this._reset();
+                
+                // Show modal with custom HTML
+                this.elements.backdrop.classList.remove('hidden');
+                this.elements.backdrop.classList.add('flex');
+                this.elements.backdrop.offsetHeight; // Trigger reflow
+                
+                this.elements.backdrop.classList.remove('opacity-0');
+                this.elements.panel.classList.remove('scale-95');
+                this.elements.panel.classList.add('scale-100');
+                
+                this.elements.title.textContent = title;
+                this.elements.message.innerHTML = html; // Allow custom HTML
+                this.elements.icon.textContent = "✨";
+                
+                // Set button texts
+                this.elements.btnConfirm.innerHTML = confirmText;
+                this.elements.btnCancel.innerHTML = cancelText;
+                this.elements.btnConfirm.classList.add('bg-blue-600');
+                
+                // Handlers
+                const confirmHandler = async () => {
+                    if (onConfirm) {
+                        const result = await onConfirm();
+                        // If onConfirm returns false, don't close modal
+                        if (result === false) return;
+                    }
+                    resolve(true);
+                    cleanup();
+                };
+                
+                const cancelHandler = () => {
+                    resolve(false);
+                    cleanup();
+                };
+
+                const cleanup = () => {
+                    this.elements.btnConfirm.removeEventListener('click', confirmHandler);
+                    this.elements.btnCancel.removeEventListener('click', cancelHandler);
+                    this._close();
+                };
+
+                this.elements.btnConfirm.addEventListener('click', confirmHandler);
+                this.elements.btnCancel.addEventListener('click', cancelHandler);
+            });
         }
     };
     

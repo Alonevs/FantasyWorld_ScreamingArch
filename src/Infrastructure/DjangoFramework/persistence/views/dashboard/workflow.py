@@ -681,6 +681,16 @@ def publicar_propuestas_masivo(request):
                     count += 1
                 except: pass
         
+        # Periodos
+        p_ids = request.POST.getlist('selected_period_ids')
+        if p_ids:
+            for pid in p_ids:
+                try:
+                    obj = TimelinePeriodVersion.objects.get(id=pid)
+                    TimelinePeriodService.publish_version(obj, request.user)
+                    count += 1
+                except: pass
+        
         if count > 0:
             messages.success(request, f"🚀 {count} Propuestas ejecutadas correctamente (Publicadas/Borradas).")
             log_event(request.user, "BULK_PUBLISH", f"Publicadas {count} propuestas mixtas.")
@@ -738,11 +748,30 @@ def aprobar_periodo(request, id):
     
     try:
         TimelinePeriodService.approve_version(obj, request.user)
-        messages.success(request, "✅ Periodo actualizado/eliminado correctamente.")
+        messages.success(request, "✅ Periodo aprobado (Listo para publicar).")
         log_event(request.user, "APPROVE_PERIOD", f"Aprobado {obj.period.title} v{obj.version_number}")
     except Exception as e:
         messages.error(request, f"Error: {e}")
     
+    return redirect('dashboard')
+
+@login_required
+def publicar_periodo(request, id):
+    """
+    Publica una versión de periodo aprobada al estado LIVE.
+    """
+    obj = get_object_or_404(TimelinePeriodVersion, id=id)
+    if not (request.user.is_superuser or obj.period.world.author == request.user):
+        messages.error(request, "⛔ Solo el Autor puede publicar este periodo.")
+        return redirect('dashboard')
+    
+    try:
+        TimelinePeriodService.publish_version(obj, request.user)
+        messages.success(request, f"🚀 Periodo '{obj.period.title}' actualizado a v{obj.version_number}.")
+        log_event(request.user, "PUBLISH_PERIOD", f"Publicado {obj.period.title} v{obj.version_number}")
+    except Exception as e:
+        messages.error(request, f"Error al publicar: {e}")
+        
     return redirect('dashboard')
 
 @login_required

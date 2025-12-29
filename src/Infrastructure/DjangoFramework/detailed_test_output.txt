@@ -1,0 +1,828 @@
+﻿python : Creating test 
+database for alias 
+'default' 
+('test_eclai')...
+En línea: 1 Carácter: 1
++ python manage.py test p
+ersistence.tests.test_per
+iod_workflow --verbos ...
++ ~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo       
+   : N    otSpecified: 
+(Creating test     d...te
+st_eclai')...:String    
+) [], RemoteException
+    + 
+FullyQualifiedErrorId : 
+N    ativeCommandError
+ 
+
+Found 15 test(s).
+Operations to perform:
+  Synchronize unmigrated apps: debug_toolbar, django_browser_reload, messages, staticfiles
+  Apply all migrations: admin, auth, contenttypes, persistence, sessions
+Running pre-migrate handlers for application admin
+Running pre-migrate handlers for application auth
+Running pre-migrate handlers for application contenttypes
+Running pre-migrate handlers for application sessions
+Running pre-migrate handlers for application persistence
+Synchronizing apps without migrations:
+  Creating tables...
+    Running deferred SQL...
+Running migrations:
+  Applying contenttypes.0001_initial... OK (0.000s)
+  Applying auth.0001_initial... OK (0.063s)
+  Applying admin.0001_initial... OK (0.000s)
+  Applying admin.0002_logentry_remove_auto_add... OK (0.015s)
+  Applying admin.0003_logentry_add_action_flag_choices... OK (0.000s)
+  Applying contenttypes.0002_remove_content_type_name... OK (0.000s)
+  Applying auth.0002_alter_permission_name_max_length... OK (0.016s)
+  Applying auth.0003_alter_user_email_max_length... OK (0.000s)
+  Applying auth.0004_alter_user_username_opts... OK (0.000s)
+  Applying auth.0005_alter_user_last_login_null... OK (0.000s)
+  Applying auth.0006_require_contenttypes_0002... OK (0.000s)
+  Applying auth.0007_alter_validators_add_error_messages... OK (0.000s)
+  Applying auth.0008_alter_user_username_max_length... OK (0.016s)
+  Applying auth.0009_alter_user_last_name_max_length... OK (0.000s)
+  Applying auth.0010_alter_group_name_max_length... OK (0.015s)
+  Applying auth.0011_update_proxy_permissions... OK (0.000s)
+  Applying auth.0012_alter_user_first_name_max_length... OK (0.000s)
+  Applying persistence.0001_initial... OK (0.031s)
+  Applying persistence.0002_caosnarrativeorm... OK (0.016s)
+  Applying persistence.0003_caosnarrativeorm_menciones... OK (0.016s)
+  Applying persistence.0004_alter_caosnarrativeorm_tipo... OK (0.000s)
+  Applying persistence.0005_caosnarrativeorm_created_by_and_more... OK (0.015s)
+  Applying persistence.0006_caosworldorm_public_id... OK (0.000s)
+  Applying persistence.0007_alter_caosworldorm_public_id... OK (0.016s)
+  Applying persistence.0008_caosnarrativeorm_public_id_and_more... OK (0.016s)
+  Applying persistence.0009_alter_caosworldorm_public_id... OK (0.015s)
+  Applying persistence.0010_alter_caosnarrativeorm_public_id... OK (0.016s)
+  Applying persistence.0011_alter_caosepochorm_options_and_more... OK (0.015s)
+  Applying persistence.0012_alter_caosepochorm_options_and_more... OK (0.063s)
+  Applying persistence.0013_caosnarrativeorm_current_version_number_and_more... OK (0.016s)
+  Applying persistence.0014_caosimageproposalorm... OK (0.015s)
+  Applying persistence.0015_caosimageproposalorm_action_and_more... OK (0.016s)
+  Applying persistence.0016_caosnarrativeversionorm_action... OK (0.015s)
+  Applying persistence.0017_metadatatemplate... OK (0.000s)
+  Applying persistence.0018_caosworldorm_deleted_at_caosworldorm_is_active... OK (0.016s)
+  Applying persistence.0019_caosnarrativeorm_deleted_at_and_more... OK (0.000s)
+  Applying persistence.0020_caosworldorm_author... OK (0.016s)
+  Applying persistence.0021_contributionproposal_userprofile... OK (0.031s)
+  Applying persistence.0022_remove_userprofile_boss_userprofile_collaborators... OK (0.016s)
+  Applying persistence.0023_remove_caosworldorm_id_codificado_and_more... OK (0.031s)
+  Applying persistence.0024_caosimageproposalorm_admin_feedback_and_more... OK (0.015s)
+  Applying persistence.0025_remove_caosversionorm_es_version_activa_and_more... OK (0.063s)
+  Applying persistence.0026_message... OK (0.016s)
+  Applying persistence.0027_chronicleeventorm... OK (0.031s)
+  Applying persistence.0028_chronicleeventorm_narrative_summary... OK (0.000s)
+  Applying persistence.0030_add_metadata_gin_indexes... OK (0.015s)
+  Applying persistence.0031_extend_version_for_timeline... OK (0.094s)
+  Applying persistence.0032_delete_chronicleeventorm... OK (0.016s)
+  Applying persistence.0033_create_timeline_period_models... OK (0.078s)
+  Applying persistence.0034_add_period_to_media_narrative... OK (0.016s)
+  Applying persistence.0035_timelineperiod_metadata_timelineperiodversion_action_and_more... OK (0.031s)
+test_bulk_publish_multipl
+e_periods (persistence.te
+sts.test_period_workflow.
+PeriodBulkActionsTestCase
+.test_bulk_publish_multip
+le_periods)
+Test: Publicar m·ltiples 
+periodos a la vez ... 
+ERROR
+test_bulk_publish_with_er
+rors_continues (persisten
+ce.tests.test_period_work
+flow.PeriodBulkActionsTes
+tCase.test_bulk_publish_w
+ith_errors_continues)
+Test: Si un periodo 
+falla, los demßs 
+contin·an publicßndose 
+... ERROR
+test_anonymous_cannot_app
+rove (persistence.tests.t
+est_period_workflow.Perio
+dPermissionsTestCase.test
+_anonymous_cannot_approve
+)
+Test: Un usuario an¾nimo 
+no puede aprobar ... 
+[PERFORMANCE] View '/peri
+odo/propuesta/1/aprobar/'
+ took 0.004s
+ok
+test_author_can_approve_o
+wn_period (persistence.te
+sts.test_period_workflow.
+PeriodPermissionsTestCase
+.test_author_can_approve_
+own_period)
+Test: El autor del mundo 
+puede aprobar periodos 
+de su mundo ... 
+[PERFORMANCE] View '/peri
+odo/propuesta/2/aprobar/'
+ took 0.006s
+ok
+test_non_author_cannot_ap
+prove (persistence.tests.
+test_period_workflow.Peri
+odPermissionsTestCase.tes
+t_non_author_cannot_appro
+ve)
+Test: Un usuario que no 
+es autor ni superuser no 
+puede aprobar ... 
+[PERFORMANCE] View '/peri
+odo/propuesta/3/aprobar/'
+ took 0.003s
+ok
+test_superuser_can_approv
+e_any_period (persistence
+.tests.test_period_workfl
+ow.PeriodPermissionsTestC
+ase.test_superuser_can_ap
+prove_any_period)
+Test: El superuser puede 
+aprobar cualquier 
+periodo ... 
+[PERFORMANCE] View '/peri
+odo/propuesta/4/aprobar/'
+ took 0.176s
+ok
+test_approve_period_does_
+not_modify_live (persiste
+nce.tests.test_period_wor
+kflow.PeriodWorkflowTestC
+ase.test_approve_period_d
+oes_not_modify_live)
+Test: Aprobar un periodo 
+NO modifica el periodo 
+Live (solo cambia a 
+APPROVED) ... ok
+test_cannot_delete_curren
+t_period (persistence.tes
+ts.test_period_workflow.P
+eriodWorkflowTestCase.tes
+t_cannot_delete_current_p
+eriod)
+Test: No se puede 
+eliminar el periodo 
+actual (is_current=True) 
+... ERROR
+test_cannot_publish_non_a
+pproved_period (persisten
+ce.tests.test_period_work
+flow.PeriodWorkflowTestCa
+se.test_cannot_publish_no
+n_approved_period)
+Test: No se puede 
+publicar un periodo que 
+no estß APPROVED ... ok
+test_create_period_propos
+al (persistence.tests.tes
+t_period_workflow.PeriodW
+orkflowTestCase.test_crea
+te_period_proposal)
+Test: Crear una 
+propuesta de nuevo 
+periodo genera 
+TimelinePeriodVersion 
+con status PENDING ... ok
+test_delete_period_workfl
+ow (persistence.tests.tes
+t_period_workflow.PeriodW
+orkflowTestCase.test_dele
+te_period_workflow)
+Test: Workflow de 
+eliminaci¾n de periodo 
+... ok
+test_metadata_changes_are
+_tracked (persistence.tes
+ts.test_period_workflow.P
+eriodWorkflowTestCase.tes
+t_metadata_changes_are_tr
+acked)
+Test: Los cambios en 
+metadata se rastrean 
+correctamente ... ok
+test_publish_approved_per
+iod_updates_live (persist
+ence.tests.test_period_wo
+rkflow.PeriodWorkflowTest
+Case.test_publish_approve
+d_period_updates_live)
+Test: Publicar un 
+periodo APPROVED aplica 
+los cambios al periodo 
+Live ... ok
+test_reject_period (persi
+stence.tests.test_period_
+workflow.PeriodWorkflowTe
+stCase.test_reject_period
+)
+Test: Rechazar un 
+periodo cambia su status 
+a REJECTED ... ok
+test_version_numbering_in
+crements (persistence.tes
+ts.test_period_workflow.P
+eriodWorkflowTestCase.tes
+t_version_numbering_incre
+ments)
+Test: Los n·meros de 
+versi¾n se incrementan 
+correctamente ... ok
+
+=========================
+=========================
+====================
+ERROR: test_bulk_publish_
+multiple_periods (persist
+ence.tests.test_period_wo
+rkflow.PeriodBulkActionsT
+estCase.test_bulk_publish
+_multiple_periods)
+Test: Publicar m·ltiples 
+periodos a la vez
+-------------------------
+-------------------------
+--------------------
+Traceback (most recent 
+call last):
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\backends\
+utils.py", line 105, in 
+_execute
+    return 
+self.cursor.execute(sql, 
+params)
+           ^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\psycopg\cursor.py",
+ line 117, in execute
+    raise 
+ex.with_traceback(None)
+psycopg.errors.UniqueViol
+ation: llave duplicada 
+viola restricci¾n de 
+unicidad ½persistence_tim
+elineperiod_world_id_slug
+_28b0f6a0_uniq╗
+DETAIL:  Ya existe la 
+llave (world_id, 
+slug)=(01010101, ).
+
+The above exception was 
+the direct cause of the 
+following exception:
+
+Traceback (most recent 
+call last):
+  File "C:\Users\xico0\De
+sktop\FantasyWorld_Scream
+ingArch\src\Infrastructur
+e\DjangoFramework\persist
+ence\tests\test_period_wo
+rkflow.py", line 318, in 
+setUp
+    period = TimelinePeri
+od.objects.create(
+             ^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\models\ma
+nager.py", line 87, in 
+manager_method
+    return getattr(self.g
+et_queryset(), 
+name)(*args, **kwargs)
+           ^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\models\qu
+ery.py", line 665, in 
+create
+    obj.save(force_insert
+=True, using=self.db)
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\models\ba
+se.py", line 902, in save
+    self.save_base(
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\models\ba
+se.py", line 1008, in 
+save_base
+    updated = 
+self._save_table(
+              
+^^^^^^^^^^^^^^^^^
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\models\ba
+se.py", line 1169, in 
+_save_table
+    results = 
+self._do_insert(
+              
+^^^^^^^^^^^^^^^^
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\models\ba
+se.py", line 1210, in 
+_do_insert
+    return 
+manager._insert(
+           
+^^^^^^^^^^^^^^^^
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\models\ma
+nager.py", line 87, in 
+manager_method
+    return getattr(self.g
+et_queryset(), 
+name)(*args, **kwargs)
+           ^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\models\qu
+ery.py", line 1873, in 
+_insert
+    return query.get_comp
+iler(using=using).execute
+_sql(returning_fields)
+           ^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\models\sq
+l\compiler.py", line 
+1882, in execute_sql
+    cursor.execute(sql, 
+params)
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\backends\
+utils.py", line 79, in 
+execute
+    return self._execute_
+with_wrappers(
+           ^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\backends\
+utils.py", line 92, in 
+_execute_with_wrappers
+    return executor(sql, 
+params, many, context)
+           ^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\backends\
+utils.py", line 100, in 
+_execute
+    with self.db.wrap_dat
+abase_errors:
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\utils.py"
+, line 91, in __exit__
+    raise dj_exc_value.wi
+th_traceback(traceback) 
+from exc_value
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\backends\
+utils.py", line 105, in 
+_execute
+    return 
+self.cursor.execute(sql, 
+params)
+           ^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\psycopg\cursor.py",
+ line 117, in execute
+    raise 
+ex.with_traceback(None)
+django.db.utils.Integrity
+Error: llave duplicada 
+viola restricci¾n de 
+unicidad ½persistence_tim
+elineperiod_world_id_slug
+_28b0f6a0_uniq╗
+DETAIL:  Ya existe la 
+llave (world_id, 
+slug)=(01010101, ).
+
+=========================
+=========================
+====================
+ERROR: test_bulk_publish_
+with_errors_continues (pe
+rsistence.tests.test_peri
+od_workflow.PeriodBulkAct
+ionsTestCase.test_bulk_pu
+blish_with_errors_continu
+es)
+Test: Si un periodo 
+falla, los demßs 
+contin·an publicßndose
+-------------------------
+-------------------------
+--------------------
+Traceback (most recent 
+call last):
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\backends\
+utils.py", line 105, in 
+_execute
+    return 
+self.cursor.execute(sql, 
+params)
+           ^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\psycopg\cursor.py",
+ line 117, in execute
+    raise 
+ex.with_traceback(None)
+psycopg.errors.UniqueViol
+ation: llave duplicada 
+viola restricci¾n de 
+unicidad ½persistence_tim
+elineperiod_world_id_slug
+_28b0f6a0_uniq╗
+DETAIL:  Ya existe la 
+llave (world_id, 
+slug)=(01010101, ).
+
+The above exception was 
+the direct cause of the 
+following exception:
+
+Traceback (most recent 
+call last):
+  File "C:\Users\xico0\De
+sktop\FantasyWorld_Scream
+ingArch\src\Infrastructur
+e\DjangoFramework\persist
+ence\tests\test_period_wo
+rkflow.py", line 318, in 
+setUp
+    period = TimelinePeri
+od.objects.create(
+             ^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\models\ma
+nager.py", line 87, in 
+manager_method
+    return getattr(self.g
+et_queryset(), 
+name)(*args, **kwargs)
+           ^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\models\qu
+ery.py", line 665, in 
+create
+    obj.save(force_insert
+=True, using=self.db)
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\models\ba
+se.py", line 902, in save
+    self.save_base(
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\models\ba
+se.py", line 1008, in 
+save_base
+    updated = 
+self._save_table(
+              
+^^^^^^^^^^^^^^^^^
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\models\ba
+se.py", line 1169, in 
+_save_table
+    results = 
+self._do_insert(
+              
+^^^^^^^^^^^^^^^^
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\models\ba
+se.py", line 1210, in 
+_do_insert
+    return 
+manager._insert(
+           
+^^^^^^^^^^^^^^^^
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\models\ma
+nager.py", line 87, in 
+manager_method
+    return getattr(self.g
+et_queryset(), 
+name)(*args, **kwargs)
+           ^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\models\qu
+ery.py", line 1873, in 
+_insert
+    return query.get_comp
+iler(using=using).execute
+_sql(returning_fields)
+           ^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\models\sq
+l\compiler.py", line 
+1882, in execute_sql
+    cursor.execute(sql, 
+params)
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\backends\
+utils.py", line 79, in 
+execute
+    return self._execute_
+with_wrappers(
+           ^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\backends\
+utils.py", line 92, in 
+_execute_with_wrappers
+    return executor(sql, 
+params, many, context)
+           ^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\backends\
+utils.py", line 100, in 
+_execute
+    with self.db.wrap_dat
+abase_errors:
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\utils.py"
+, line 91, in __exit__
+    raise dj_exc_value.wi
+th_traceback(traceback) 
+from exc_value
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\django\db\backends\
+utils.py", line 105, in 
+_execute
+    return 
+self.cursor.execute(sql, 
+params)
+           ^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^
+  File "C:\Users\xico0\Ap
+pData\Local\Programs\Pyth
+on\Python311\Lib\site-pac
+kages\psycopg\cursor.py",
+ line 117, in execute
+    raise 
+ex.with_traceback(None)
+django.db.utils.Integrity
+Error: llave duplicada 
+viola restricci¾n de 
+unicidad ½persistence_tim
+elineperiod_world_id_slug
+_28b0f6a0_uniq╗
+DETAIL:  Ya existe la 
+llave (world_id, 
+slug)=(01010101, ).
+
+=========================
+=========================
+====================
+ERROR: test_cannot_delete
+_current_period (persiste
+nce.tests.test_period_wor
+kflow.PeriodWorkflowTestC
+ase.test_cannot_delete_cu
+rrent_period)
+Test: No se puede 
+eliminar el periodo 
+actual (is_current=True)
+-------------------------
+-------------------------
+--------------------
+Traceback (most recent 
+call last):
+  File "C:\Users\xico0\De
+sktop\FantasyWorld_Scream
+ingArch\src\Infrastructur
+e\DjangoFramework\persist
+ence\tests\test_period_wo
+rkflow.py", line 213, in 
+test_cannot_delete_curren
+t_period
+    version = TimelinePer
+iodService.propose_delete
+(
+              ^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^
+^
+  File "C:\Users\xico0\De
+sktop\FantasyWorld_Scream
+ingArch\src\Shared\Servic
+es\TimelinePeriodService.
+py", line 119, in 
+propose_delete
+    raise ValueError("No 
+se puede proponer 
+eliminar el perÝodo 
+ACTUAL")
+ValueError: No se puede 
+proponer eliminar el 
+perÝodo ACTUAL
+
+-------------------------
+-------------------------
+--------------------
+Ran 15 tests in 14.364s
+
+FAILED (errors=3)
+Destroying test database 
+for alias 'default' 
+('test_eclai')...
+
+  Applying sessions.0001_initial... OK (0.015s)
+Running post-migrate handlers for application admin
+Adding content type 'admin | logentry'
+Adding permission 'Permission object (1)'
+Adding permission 'Permission object (2)'
+Adding permission 'Permission object (3)'
+Adding permission 'Permission object (4)'
+Running post-migrate handlers for application auth
+Adding content type 'auth | permission'
+Adding content type 'auth | group'
+Adding content type 'auth | user'
+Adding permission 'Permission object (5)'
+Adding permission 'Permission object (6)'
+Adding permission 'Permission object (7)'
+Adding permission 'Permission object (8)'
+Adding permission 'Permission object (9)'
+Adding permission 'Permission object (10)'
+Adding permission 'Permission object (11)'
+Adding permission 'Permission object (12)'
+Adding permission 'Permission object (13)'
+Adding permission 'Permission object (14)'
+Adding permission 'Permission object (15)'
+Adding permission 'Permission object (16)'
+Running post-migrate handlers for application contenttypes
+Adding content type 'contenttypes | contenttype'
+Adding permission 'Permission object (17)'
+Adding permission 'Permission object (18)'
+Adding permission 'Permission object (19)'
+Adding permission 'Permission object (20)'
+Running post-migrate handlers for application sessions
+Adding content type 'sessions | session'
+Adding permission 'Permission object (21)'
+Adding permission 'Permission object (22)'
+Adding permission 'Permission object (23)'
+Adding permission 'Permission object (24)'
+Running post-migrate handlers for application persistence
+Adding content type 'persistence | caosepochorm'
+Adding content type 'persistence | caosworldorm'
+Adding content type 'persistence | caosversionorm'
+Adding content type 'persistence | caosnarrativeorm'
+Adding content type 'persistence | caoseventlog'
+Adding content type 'persistence | caosnarrativeversionorm'
+Adding content type 'persistence | caosimageproposalorm'
+Adding content type 'persistence | metadatatemplate'
+Adding content type 'persistence | contributionproposal'
+Adding content type 'persistence | userprofile'
+Adding content type 'persistence | message'
+Adding content type 'persistence | timelineperiod'
+Adding content type 'persistence | timelineperiodversion'
+Adding permission 'Permission object (25)'
+Adding permission 'Permission object (26)'
+Adding permission 'Permission object (27)'
+Adding permission 'Permission object (28)'
+Adding permission 'Permission object (29)'
+Adding permission 'Permission object (30)'
+Adding permission 'Permission object (31)'
+Adding permission 'Permission object (32)'
+Adding permission 'Permission object (33)'
+Adding permission 'Permission object (34)'
+Adding permission 'Permission object (35)'
+Adding permission 'Permission object (36)'
+Adding permission 'Permission object (37)'
+Adding permission 'Permission object (38)'
+Adding permission 'Permission object (39)'
+Adding permission 'Permission object (40)'
+Adding permission 'Permission object (41)'
+Adding permission 'Permission object (42)'
+Adding permission 'Permission object (43)'
+Adding permission 'Permission object (44)'
+Adding permission 'Permission object (45)'
+Adding permission 'Permission object (46)'
+Adding permission 'Permission object (47)'
+Adding permission 'Permission object (48)'
+Adding permission 'Permission object (49)'
+Adding permission 'Permission object (50)'
+Adding permission 'Permission object (51)'
+Adding permission 'Permission object (52)'
+Adding permission 'Permission object (53)'
+Adding permission 'Permission object (54)'
+Adding permission 'Permission object (55)'
+Adding permission 'Permission object (56)'
+Adding permission 'Permission object (57)'
+Adding permission 'Permission object (58)'
+Adding permission 'Permission object (59)'
+Adding permission 'Permission object (60)'
+Adding permission 'Permission object (61)'
+Adding permission 'Permission object (62)'
+Adding permission 'Permission object (63)'
+Adding permission 'Permission object (64)'
+Adding permission 'Permission object (65)'
+Adding permission 'Permission object (66)'
+Adding permission 'Permission object (67)'
+Adding permission 'Permission object (68)'
+Adding permission 'Permission object (69)'
+Adding permission 'Permission object (70)'
+Adding permission 'Permission object (71)'
+Adding permission 'Permission object (72)'
+Adding permission 'Permission object (73)'
+Adding permission 'Permission object (74)'
+Adding permission 'Permission object (75)'
+Adding permission 'Permission object (76)'
+System check identified no issues (0 silenced).
+[PERFORMANCE] View '/periodo/propuesta/1/aprobar/' took 0.004s
+[PERFORMANCE] View '/periodo/propuesta/2/aprobar/' took 0.006s
+[PERFORMANCE] View '/periodo/propuesta/3/aprobar/' took 0.003s
+[PERFORMANCE] View '/periodo/propuesta/4/aprobar/' took 0.176s

@@ -16,7 +16,7 @@ from src.Infrastructure.DjangoFramework.persistence.views.dashboard.workflow imp
     aprobar_contribucion, rechazar_contribucion,
     aprobar_narrativa, rechazar_narrativa, publicar_narrativa, archivar_narrativa,
     restaurar_narrativa, borrar_narrativa_version, 
-    aprobar_periodo, rechazar_periodo, archivar_periodo,
+    aprobar_periodo, rechazar_periodo, archivar_periodo, publicar_periodo,
     ProposalDetailView, aprobar_propuestas_masivo, archivar_propuestas_masivo, publicar_propuestas_masivo
 )
 from src.Infrastructure.DjangoFramework.persistence.views.dashboard.assets import (
@@ -47,6 +47,7 @@ from src.Infrastructure.DjangoFramework.persistence.views.messaging_views import
 )
 
 from src.Infrastructure.DjangoFramework.persistence.views.search_views import global_search
+from src.Infrastructure.DjangoFramework.persistence.views import period_api
 
 # Timeline API (old system - snapshots)
 from src.Infrastructure.DjangoFramework.persistence.views.timeline_api import (
@@ -168,6 +169,7 @@ urlpatterns = [
     
     # Acciones de Periodos (Timeline)
     path('periodo/propuesta/<int:id>/aprobar/', aprobar_periodo, name='aprobar_periodo'),
+    path('periodo/propuesta/<int:id>/publicar/', publicar_periodo, name='publicar_periodo'),
     path('periodo/propuesta/<int:id>/rechazar/', rechazar_periodo, name='rechazar_periodo'),
     path('periodo/propuesta/<int:id>/archivar/', archivar_periodo, name='archivar_periodo'),
 

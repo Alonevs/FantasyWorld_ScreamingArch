@@ -469,7 +469,7 @@
                                          <!-- Publish (Step 2) -->
                                         {% if user|can_publish:item %}
                                         <div class="flex items-center gap-2">
-                                            <form method="post" action="{% if item.type == 'WORLD' or item.type == 'METADATA' %}{% url 'publicar_version' item.id %}{% elif item.type == 'IMAGE' %}{% url 'publicar_imagen' item.id %}{% elif item.type == 'PERIOD' %}{% url 'aprobar_periodo' item.id %}{% else %}{% url 'publicar_narrativa' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
+                                            <form method="post" action="{% if item.type == 'WORLD' or item.type == 'METADATA' %}{% url 'publicar_version' item.id %}{% elif item.type == 'IMAGE' %}{% url 'publicar_imagen' item.id %}{% elif item.type == 'PERIOD' %}{% url 'publicar_periodo' item.id %}{% else %}{% url 'publicar_narrativa' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
                                                 {% csrf_token %}
                                                 {% if item.action == 'DELETE' %}
                                                     <button type="submit" class="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-4 py-2 rounded shadow-[0_0_15px_rgba(220,38,38,0.3)] transition-all hover:-translate-y-0.5" data-confirm="⚠️ ¿EFECTUAR BORRADO DEFINITIVO EN LIVE?" data-destructive="true">

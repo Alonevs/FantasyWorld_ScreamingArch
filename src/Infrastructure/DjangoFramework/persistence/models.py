@@ -409,7 +409,7 @@ class TimelinePeriod(models.Model):
     )
     
     slug = models.SlugField(
-        max_length=100,
+        max_length=150,
         help_text='URL-friendly: "inicios", "expansion"'
     )
     

@@ -31,7 +31,7 @@ def create_period(request, world_id):
     }
     """
     try:
-        world = get_object_or_404(CaosWorldORM, id=world_id)
+        world = get_object_or_404(CaosWorldORM, public_id=world_id)
         data = json.loads(request.body)
         
         title = data.get('title', '').strip()
@@ -91,11 +91,12 @@ def propose_period_edit(request, period_id):
         title = data.get('title', '').strip() or None
         description = data.get('description', '').strip() or None
         change_log = data.get('change_log', '').strip()
+        metadata = data.get('metadata')
         
         # Validar que al menos uno de los campos cambie
-        if not title and not description:
+        if not title and not description and metadata is None:
             return JsonResponse({
-                'error': 'Debes proponer al menos un cambio (título o descripción)'
+                'error': 'Debes proponer al menos un cambio (título, descripción o metadatos)'
             }, status=400)
         
         # Crear propuesta
@@ -103,6 +104,7 @@ def propose_period_edit(request, period_id):
             period=period,
             title=title,
             description=description,
+            metadata=metadata,
             author=request.user,
             change_log=change_log
         )

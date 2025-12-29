@@ -137,21 +137,35 @@ class TimelinePeriodService:
     @staticmethod
     def approve_version(version, reviewer):
         """
-        Aprueba una versión y actualiza el período.
+        Aprueba una versión (Estado: APPROVED).
+        NO publica los cambios al Live todavía.
         
         Args:
             version: TimelinePeriodVersion instance
             reviewer: User que aprueba (admin)
-        
-        Returns:
-            TimelinePeriod instance actualizado o None si se eliminó
         """
-        # Actualizar versión
         version.status = 'APPROVED'
         version.reviewer = reviewer
         version.reviewed_at = timezone.now()
         version.save()
+        return version
+
+    @staticmethod
+    def publish_version(version, user=None):
+        """
+        Publica una versión APROBADA al entorno LIVE.
+        Actualiza los datos del TimelinePeriod.
         
+        Args:
+            version: TimelinePeriodVersion instance
+            user: User que publica (opcional)
+            
+        Returns:
+            TimelinePeriod instance actualizado o None (si fue borrado)
+        """
+        if version.status != 'APPROVED':
+            raise ValueError("Solo se pueden publicar versiones APROBADAS.")
+
         period = version.period
 
         # --- LÓGICA POR ACCIÓN ---
@@ -174,6 +188,10 @@ class TimelinePeriodService:
             period.metadata = version.proposed_metadata
         
         period.save()
+        
+        # Opcional: Marcar versión como PUBLICADA/ARCHIVADA o mantener APPROVED?
+        # En el modelo World se mantiene APPROVED pero se archivan las anteriores.
+        # Aquí simplificamos manteniendo APPROVED como estado final visible.
         
         return period
     

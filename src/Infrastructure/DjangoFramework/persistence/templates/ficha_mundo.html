@@ -143,41 +143,7 @@
                          <span class="font-bold">✏️ MODO RETOQUE</span>
                     </div>
                 {% endif %}
-                {% if timeline_periods %}
-                <!-- PERIOD SELECTOR (Cards Style) -->
-                <div class="flex flex-wrap justify-end gap-2 mt-2 w-full md:w-auto">
-                    <!-- Current/Present Button -->
-                    <a href="{% url 'ver_mundo' public_id %}" 
-                       class="group relative w-16 p-2 rounded-lg border-2 transition-all duration-300 text-center {% if not is_period_view %}bg-green-600 border-green-500 shadow-lg shadow-green-900/50{% else %}bg-gray-800 border-gray-700 hover:border-green-500 hover:bg-gray-700{% endif %}">
-                        <div class="text-lg mb-0.5">⭐</div>
-                        <div class="text-[9px] font-bold uppercase tracking-wider leading-none {% if not is_period_view %}text-white{% else %}text-gray-400 group-hover:text-green-400{% endif %}">
-                            ACTUAL
-                        </div>
-                    </a>
-                    
-                    <!-- Historical Periods -->
-                    {% for period in timeline_periods %}
-                    <a href="?period={{ period.slug }}" 
-                       class="group relative w-16 p-2 rounded-lg border-2 transition-all duration-300 text-center {% if is_period_view and viewing_period.slug == period.slug %}bg-indigo-600 border-indigo-500 shadow-lg shadow-indigo-900/50{% else %}bg-gray-800 border-gray-700 hover:border-indigo-500 hover:bg-gray-700{% endif %}">
-                        <div class="text-lg mb-0.5">📜</div>
-                        <div class="text-[9px] font-bold uppercase tracking-wider leading-none truncate {% if is_period_view and viewing_period.slug == period.slug %}text-white{% else %}text-gray-400 group-hover:text-indigo-400{% endif %}">
-                            {{ period.title }}
-                        </div>
-                    </a>
-                    {% endfor %}
-                    
-                    <!-- New Period Button -->
-                    {% if can_edit %}
-                    <button onclick="openCreatePeriodModal()" 
-                            class="group relative w-16 p-2 rounded-lg border-2 border-dashed border-gray-600 hover:border-purple-500 transition-all duration-300 text-center bg-gray-900/50 hover:bg-purple-900/20">
-                        <div class="text-lg mb-0.5">➕</div>
-                        <div class="text-[9px] font-bold text-gray-400 group-hover:text-purple-400 uppercase tracking-wider leading-none">
-                            NUEVO
-                        </div>
-                    </button>
-                    {% endif %}
-                </div>
-                {% endif %}
+                {% include "components/_period_selector.html" %}
 
             </div>
             {% endif %}
@@ -309,11 +275,7 @@
                     🌳 Mapa Árbol
                 </a>
                 
-                {% if user.is_authenticated %}
-                <button onclick="openTimelineModal()" class="w-full px-4 py-2 bg-indigo-900/30 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded flex items-center gap-2 transition border border-indigo-900/50 text-sm font-bold">
-                    📅 Snapshot Temporal
-                </button>
-                {% endif %}
+
                 
                 <div class="mt-8 pt-4 border-t border-gray-800">
                     {% if user_role >= 20 or user.is_superuser %}
@@ -773,7 +735,7 @@
                     }
                     
                     try {
-                        const response = await fetch(`/api/world/{{ world_id }}/period/create`, {
+                        const response = await fetch(`/api/world/{{ public_id }}/period/create`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -942,15 +904,20 @@
             });
         }
 
-        function addMetadataRow() {
-            const container = document.getElementById('edit-period-metadata-container');
-            const div = document.createElement('div');
-            div.className = 'grid grid-cols-2 gap-2 mt-2';
-            div.innerHTML = `
-                <input type="text" placeholder="Clave" class="meta-key px-3 py-1 bg-gray-900 border border-gray-700 rounded text-xs text-white">
-                <input type="text" placeholder="Valor" class="meta-val px-3 py-1 bg-gray-900 border border-gray-700 rounded text-xs text-white">
-            `;
-            container.appendChild(div);
-        }
+        // Expose function globally so it can be called from dynamic modal HTML
+        window.addEditMetadataRow = function() {
+            setTimeout(() => {
+                const container = document.getElementById('edit-period-metadata-container');
+                if (!container) {
+                    console.error('Container edit-period-metadata-container not found in DOM');
+                    return;
+                }
+                const div = document.createElement('div');
+                div.className = 'grid grid-cols-2 gap-2 mt-2';
+                div.innerHTML = '<input type="text" placeholder="Clave" class="meta-key px-3 py-1 bg-gray-900 border border-gray-700 rounded text-xs text-white">' +
+                                '<input type="text" placeholder="Valor" class="meta-val px-3 py-1 bg-gray-900 border border-gray-700 rounded text-xs text-white">';
+                container.appendChild(div);
+            }, 50); // Small delay to ensure DOM is ready if called immediately
+        };
     </script>
 {% endblock %}

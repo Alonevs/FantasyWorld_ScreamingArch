@@ -77,15 +77,22 @@ def review_proposal(request, type, id):
 
     try:
         # 1. FETCH PROPOSAL & LIVE DATA
+        # 1. FETCH PROPOSAL & LIVE DATA
         if type in ['WORLD', 'METADATA']:
-            proposal = get_object_or_404(CaosVersionORM, id=id)
-            if proposal.world:
-                live_obj = proposal.world
+            # TRY CaosVersionORM first
+            try:
+                proposal = CaosVersionORM.objects.get(id=id)
+            except CaosVersionORM.DoesNotExist:
+                # If not found, try TimelinePeriodVersion (for PERIOD metadata updates)
+                if TimelinePeriodVersion.objects.filter(id=id).exists():
+                    return redirect('revisar_propuesta', type='PERIOD', id=id)
+                raise Http404("Propuesta no encontrada")
+
+            live_obj = proposal.world if proposal.world else None
+            if live_obj:
                 ctx['live_title'] = live_obj.name
                 ctx['live_content'] = live_obj.description
-                
-            ctx['proposed_title'] = proposal.proposed_name
-            ctx['proposed_content'] = proposal.proposed_description
+                ctx['live_version_number'] = live_obj.current_version_number
             ctx['change_log'] = proposal.change_log
             if live_obj:
                 ctx['live_version_number'] = live_obj.current_version_number
@@ -188,7 +195,7 @@ def review_proposal(request, type, id):
             ctx['change_log'] = proposal.change_log
             
             # Metadata Table Support for Periods
-            from .view_utils import get_metadata_properties_dict, get_metadata_diff
+            from .view_utils import get_metadata_properties_dict
             live_meta = period.metadata if period else {}
             proposed_meta = proposal.proposed_metadata or {}
             
