@@ -61,19 +61,58 @@
             document.getElementById('ai-step-1').classList.add('hidden');
             document.getElementById('ai-step-loading').classList.remove('hidden');
             
+            let errors = [];
+            
             for(let i=0; i<count; i++) {
                 try {
+                    console.log(`🎨 Generando imagen ${i+1}/${count}...`);
                     const r = await fetch("{% url 'api_preview_foto' jid %}");
-                    const d = await r.json();
-                    if(d.status === 'ok') {
-                        generatedImages.push({ base64: d.image, title: "" });
+                    
+                    if (!r.ok) {
+                        console.error(`❌ HTTP Error: ${r.status} ${r.statusText}`);
+                        errors.push(`Error HTTP ${r.status}: ${r.statusText}`);
+                        continue;
                     }
-                } catch(e) { console.error(e); }
+                    
+                    const d = await r.json();
+                    console.log('📦 Respuesta recibida:', d);
+                    
+                    if(d.status === 'ok' && d.image) {
+                        generatedImages.push({ base64: d.image, title: "" });
+                        console.log(`✅ Imagen ${i+1} generada correctamente`);
+                    } else if (d.status === 'error') {
+                        console.error(`❌ Error del servidor: ${d.message}`);
+                        errors.push(`Error: ${d.message || 'Desconocido'}`);
+                    } else {
+                        console.error('❌ Respuesta inesperada:', d);
+                        errors.push('Respuesta inesperada del servidor');
+                    }
+                } catch(e) { 
+                    console.error('❌ Exception:', e);
+                    errors.push(`Error de red: ${e.message}`);
+                }
             }
 
             document.getElementById('ai-step-loading').classList.add('hidden');
             document.getElementById('ai-step-result').classList.remove('hidden');
-            renderStagingArea();
+            
+            // Show errors if any
+            if (errors.length > 0 && generatedImages.length === 0) {
+                const container = document.getElementById('staging-area');
+                container.innerHTML = `
+                    <div class="bg-red-900/20 border border-red-500/30 rounded-lg p-4 text-sm">
+                        <div class="font-bold text-red-400 mb-2">❌ No se pudo generar ninguna imagen</div>
+                        <div class="text-red-300 text-xs space-y-1">
+                            ${errors.map(e => `<div>• ${e}</div>`).join('')}
+                        </div>
+                        <div class="mt-3 text-xs text-gray-400">
+                            💡 Verifica la consola del navegador (F12) para más detalles
+                        </div>
+                    </div>
+                `;
+            } else {
+                renderStagingArea();
+            }
         }
 
         function renderStagingArea() {

@@ -16,7 +16,7 @@
 
     <!-- 2. CURRENT / LIVE (Present) -->
     <a href="{% url 'ver_mundo' public_id %}" 
-       class="group relative w-16 p-2 rounded-lg border-2 transition-all duration-300 text-center z-10 {% if not is_period_view %}bg-green-600 border-green-500 shadow-lg shadow-green-900/50 scale-105{% else %}bg-gray-800 border-gray-700 hover:border-green-500 hover:bg-gray-700{% endif %}">
+       class="group relative w-16 p-2 rounded-lg border-2 transition-all duration-300 text-center {% if not is_period_view %}bg-green-600 border-green-500 shadow-lg shadow-green-900/50 scale-105{% else %}bg-gray-800 border-gray-700 hover:border-green-500 hover:bg-gray-700{% endif %}">
         <div class="text-lg mb-0.5">⭐</div>
         <div class="text-[9px] font-bold uppercase tracking-wider leading-none {% if not is_period_view %}text-white{% else %}text-gray-400 group-hover:text-green-400{% endif %}">
             ACTUAL

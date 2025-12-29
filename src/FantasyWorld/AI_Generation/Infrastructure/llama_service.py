@@ -32,6 +32,12 @@ class Llama3Service(LoreGenerator):
             else:
                 print(f"⚠️ [LlamaService] Error Status {r.status_code}: {r.text}")
                 
+        except requests.exceptions.ConnectionError:
+            print(f"❌ NO SE PUDO CONECTAR al servidor de GENERACIÓN DE TEXTO (Qwen/Llama)")
+            print(f"   URL esperada: {self.api_url_completion}")
+            print(f"   💡 Asegúrate de que Text-Generation-WebUI esté corriendo en puerto 5000")
+        except requests.exceptions.Timeout:
+            print(f"⏳ TIMEOUT: El servidor de texto tardó más de {self.timeout}s en responder")
         except Exception as e: 
             print(f"⚠️ [LlamaService] Exception: {e}")
     def generate_raw(self, system, user, max_tokens=600, temperature=0.7):
@@ -162,6 +168,12 @@ Constraints:
             if r.status_code == 200:
                 content = r.json()['choices'][0]['message']['content']
                 return self._clean_json(content)
+        except requests.exceptions.ConnectionError:
+            print(f"❌ NO SE PUDO CONECTAR al servidor de GENERACIÓN DE TEXTO (Qwen/Llama)")
+            print(f"   URL esperada: {self.api_url_chat}")
+            print(f"   💡 Asegúrate de que Text-Generation-WebUI esté corriendo en puerto 5000")
+        except requests.exceptions.Timeout:
+            print(f"⏳ TIMEOUT: El servidor de texto tardó más de 90s en responder")
         except Exception as e:
             print(f"⚠️ Error IA Estructura: {e}")
         return {}
@@ -187,6 +199,11 @@ Constraints:
                 return content.strip()
             else:
                 print(f"⚠️ [Llama] Error Status {r.status_code}")
+        except requests.exceptions.ConnectionError:
+            print(f"❌ NO SE PUDO CONECTAR al servidor de GENERACIÓN DE TEXTO (Qwen/Llama)")
+            print(f"   URL esperada: {self.api_url_chat}")
+            print(f"   💡 Asegúrate de que Text-Generation-WebUI esté corriendo en puerto 5000")
+            raise Exception("❌ No se pudo conectar al servidor de texto (Qwen/Llama). Verifica que esté corriendo en puerto 5000.")
         except requests.exceptions.Timeout:
             print(f"⏳ [Llama] Timeout reached after {self.timeout}s.")
             raise Exception(f"⏳ La IA está tardando demasiado (Timeout > {self.timeout}s). Intenta con trozos más pequeños.")

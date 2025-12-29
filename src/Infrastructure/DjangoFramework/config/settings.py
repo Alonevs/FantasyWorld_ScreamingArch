@@ -219,7 +219,7 @@ LOGGING = {
 # ==========================================
 import os
 AI_API_BASE_URL = os.getenv('AI_API_URL', 'http://127.0.0.1:5000') # Base de Text-Gen-WebUI
-SD_API_URL = os.getenv('SD_API_URL', 'http://127.0.0.1:7861') # Base de Stable Diffusion
+SD_API_URL = os.getenv('SD_API_URL', 'http://127.0.0.1:7860') # Base de Stable Diffusion (Puerto por defecto)
 AI_TIMEOUT = 120 # Segundos ("Pollo a 120s")
 
 def custom_show_toolbar(request):

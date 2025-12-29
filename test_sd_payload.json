@@ -1,0 +1,10 @@
+{
+  "prompt": "test image, simple landscape",
+  "negative_prompt": "bad quality",
+  "steps": 10,
+  "width": 512,
+  "height": 512,
+  "cfg_scale": 7,
+  "sampler_name": "Euler a",
+  "seed": -1
+}

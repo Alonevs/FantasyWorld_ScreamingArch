@@ -44,7 +44,12 @@ class StableDiffusionService(ImageGenerator):
                 return None
 
         except requests.exceptions.ConnectionError:
-            print(f"💀 NO CONECTA a la IA de imagen. ¿Seguro que la ventana negra sigue abierta?")
+            print(f"❌ NO SE PUDO CONECTAR al servidor de GENERACIÓN DE IMÁGENES (Stable Diffusion)")
+            print(f"   URL esperada: {self.api_url}")
+            print(f"   💡 Asegúrate de que Stable Diffusion WebUI esté corriendo con --api en puerto 7861")
+            return None
+        except requests.exceptions.Timeout:
+            print(f"⏳ TIMEOUT: El servidor de imágenes tardó demasiado en responder")
             return None
         except Exception as e:
             print(f"⚠️ Error inesperado en SD: {e}")

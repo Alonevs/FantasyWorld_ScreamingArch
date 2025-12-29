@@ -32,9 +32,23 @@ def api_preview_foto(request, jid):
     if request.method != 'GET': return JsonResponse({'success': False})
     try:
         w = resolve_jid_orm(jid); real_jid = w.id if w else jid
+        
+        logger.info(f"🎨 Iniciando generación de imagen para mundo: {w.name if w else jid}")
         b64 = GenerateWorldMapUseCase(DjangoCaosRepository(), StableDiffusionService()).generate_preview(real_jid)
+        
+        if b64 is None:
+            logger.error("❌ generate_preview devolvió None - Revisa los logs de los servicios de IA")
+            return JsonResponse({
+                'status': 'error', 
+                'success': False,
+                'message': 'Error al generar la imagen. Verifica que los servidores de IA estén corriendo correctamente (Qwen en puerto 5000 y Stable Diffusion en puerto 7861).'
+            })
+        
+        logger.info(f"✅ Imagen generada correctamente ({len(b64)} chars)")
         return JsonResponse({'status': 'ok', 'success': True, 'image': b64})
-    except Exception as e: return JsonResponse({'status': 'error', 'message': str(e)})
+    except Exception as e:
+        logger.error(f"❌ Exception en api_preview_foto: {e}", exc_info=True)
+        return JsonResponse({'status': 'error', 'success': False, 'message': str(e)})
 
 @csrf_exempt
 def api_save_foto(request, jid):
