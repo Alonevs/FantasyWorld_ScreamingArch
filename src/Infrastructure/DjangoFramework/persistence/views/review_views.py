@@ -189,6 +189,7 @@ def review_proposal(request, type, id):
                 live_obj = period
                 ctx['live_title'] = live_obj.title
                 ctx['live_content'] = live_obj.description
+                ctx['live_version_number'] = live_obj.current_version_number
             
             ctx['proposed_title'] = proposal.proposed_title
             ctx['proposed_content'] = proposal.proposed_description

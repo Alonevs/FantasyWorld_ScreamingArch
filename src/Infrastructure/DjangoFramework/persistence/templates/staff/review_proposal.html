@@ -33,7 +33,7 @@
                     </h1>
                     <p class="text-sm text-gray-500 font-mono flex items-center gap-5 mt-2">
                         <span class="text-green-500/80 font-bold uppercase tracking-wider">
-                            ACTUAL (v{{ live_version_number|default:"?" }})
+                            ACTUAL (v{{ live_version_number|default_if_none:"?" }})
                         </span> 
                         <span class="opacity-30">vs</span> 
                         <span class="text-blue-400 font-bold uppercase tracking-wider">
@@ -67,7 +67,7 @@
                                 Confirmar Borrado
                             </button>
                         {% else %}
-                            <input type="hidden" name="reason" id="review_reject_reason_input">
+                            <input type="hidden" name="admin_feedback" id="review_reject_reason_input">
                             <button type="button" class="px-5 py-2 rounded-lg bg-red-900/20 text-red-400 border border-red-900/50 hover:bg-red-900/50 text-sm font-bold transition-all" onclick="handleReject(this)">
                                 Rechazar
                             </button>
@@ -111,28 +111,28 @@
 
                         <!-- ACTIONS FOR APPROVED -->
                         {% if proposal.status == 'APPROVED' %}
-                            <form method="post" action="{% if proposal_type == 'WORLD' or proposal_type == 'METADATA' %}{% url 'archivar_propuesta' proposal.id %}{% elif proposal_type == 'NARRATIVE' %}{% url 'archivar_narrativa' proposal.id %}{% endif %}">
+                            <form method="post" action="{% if proposal_type == 'WORLD' or proposal_type == 'METADATA' %}{% url 'archivar_propuesta' proposal.id %}{% elif proposal_type == 'NARRATIVE' %}{% url 'archivar_narrativa' proposal.id %}{% elif proposal_type == 'PERIOD' %}{% url 'archivar_periodo' proposal.id %}{% endif %}">
                                 {% csrf_token %}
                                 <button type="submit" class="p-2.5 bg-gray-800 hover:bg-gray-700 text-yellow-500 rounded-lg border border-gray-700 transition" title="Archivar" data-confirm="¿Archivar propuesta aprobada?">📦</button>
                             </form>
                             
-                            <form method="post" action="{% if proposal_type == 'WORLD' or proposal_type == 'METADATA' %}{% url 'publicar_version' proposal.id %}{% elif proposal_type == 'NARRATIVE' %}{% url 'publicar_narrativa' proposal.id %}{% endif %}">
+                            <form method="post" action="{% if proposal_type == 'WORLD' or proposal_type == 'METADATA' %}{% url 'publicar_version' proposal.id %}{% elif proposal_type == 'NARRATIVE' %}{% url 'publicar_narrativa' proposal.id %}{% elif proposal_type == 'PERIOD' %}{% url 'publicar_periodo' proposal.id %}{% endif %}">
                                 {% csrf_token %}
                                 <button type="submit" class="px-5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500 text-sm font-bold shadow-lg" data-confirm="¿PUBLICAR EN LIVE?">🚀 Publicar LIVE</button>
                             </form>
 
-                            <form method="post" action="{% if proposal_type == 'WORLD' or proposal_type == 'METADATA' %}{% url 'borrar_propuesta' proposal.id %}{% elif proposal_type == 'NARRATIVE' %}{% url 'borrar_narrativa_version' proposal.id %}{% endif %}">
+                            <form method="post" action="{% if proposal_type == 'WORLD' or proposal_type == 'METADATA' %}{% url 'borrar_propuesta' proposal.id %}{% elif proposal_type == 'NARRATIVE' %}{% url 'borrar_narrativa_version' proposal.id %}{% elif proposal_type == 'PERIOD' %}{% url 'borrar_periodo' proposal.id %}{% endif %}">
                                 {% csrf_token %}
                                 <button type="submit" class="p-2.5 text-gray-400 hover:text-red-500 transition" title="Borrar" data-confirm="¿Eliminar registro?">🗑️</button>
                             </form>
                         {% endif %}
 
-                        <!-- ACTIONS FOR HISTORY/LIVE/ARCHIVED (RECOVER) -->
-                        {% if 'HISTORY' in proposal.status or proposal.status == 'LIVE' or 'ARCHIVED' in proposal.status %}
-                        <form method="post" action="{% if proposal_type == 'WORLD' or proposal_type == 'METADATA' %}{% url 'restaurar_version' proposal.id %}{% elif proposal_type == 'NARRATIVE' %}{% url 'restaurar_narrativa' proposal.id %}{% endif %}">
+                        <!-- ACTIONS FOR HISTORY/LIVE/ARCHIVED/REJECTED (RECOVER/RETOUCH) -->
+                        {% if 'HISTORY' in proposal.status or proposal.status == 'LIVE' or 'ARCHIVED' in proposal.status or proposal.status == 'REJECTED' %}
+                        <form method="post" action="{% if proposal_type == 'WORLD' or proposal_type == 'METADATA' %}{% url 'restaurar_version' proposal.id %}{% elif proposal_type == 'NARRATIVE' %}{% url 'restaurar_narrativa' proposal.id %}{% elif proposal_type == 'PERIOD' %}{% url 'restaurar_periodo' proposal.id %}{% endif %}">
                             {% csrf_token %}
-                            <button type="submit" class="px-5 py-2 rounded-lg bg-purple-600/20 text-purple-400 border border-purple-500/30 hover:bg-purple-600 hover:text-white text-sm font-bold transition-all flex items-center gap-2" data-confirm="¿Crear propuesta de recuperación basada en esta versión?">
-                                <span>♻️</span> Recuperar
+                            <button type="submit" name="action" value="{% if proposal.status == 'REJECTED' %}retouch{% else %}restore{% endif %}" class="px-5 py-2 rounded-lg bg-purple-600/20 text-purple-400 border border-purple-500/30 hover:bg-purple-600 hover:text-white text-sm font-bold transition-all flex items-center gap-2" data-confirm="{% if proposal.status == 'REJECTED' %}¿Retocar esta propuesta? (Abrirá el editor){% else %}¿Recuperar esta versión al historial?{% endif %}">
+                                <span>♻️</span> {% if proposal.status == 'REJECTED' %}Retocar{% else %}Recuperar{% endif %}
                             </button>
                         </form>
                         {% endif %}
@@ -149,6 +149,16 @@
             </p>
         </div>
         {% endif %}
+
+        <!-- REJECTION FEEDBACK -->
+        {% if proposal.admin_feedback %}
+        <div class="max-w-7xl mx-auto mt-2 px-4 border-t border-red-900/30 pt-3 bg-red-900/10 pb-3">
+             <p class="text-xs text-red-300 font-mono truncate opacity-90 hover:opacity-100 transition-opacity flex items-center gap-2">
+                <span class="text-red-500 font-bold uppercase tracking-tighter w-4 h-4 rounded-full border border-red-500 flex items-center justify-center text-[9px]">!</span> 
+                <span class="font-bold">CAUSA DEL RECHAZO:</span> "{{ proposal.admin_feedback }}"
+            </p>
+        </div>
+        {% endif %}
     </div>
 
     <!-- MAIN CONTENT: SPLIT VIEW -->
@@ -158,7 +168,7 @@
         <div class="pr-6 border-r border-[#2a2a35] relative">
              <div class="bg-[#050510] py-5 px-3 border-b border-gray-800 mb-6 flex justify-between items-center transition-all">
                 <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-gray-600"></span> ACTUAL (v{{ live_version_number|default:"?" }})
+                    <span class="w-2 h-2 rounded-full bg-gray-600"></span> ACTUAL (v{{ live_version_number|default_if_none:"?" }})
                 </h2>
                 {% if not live_title and not live_content and not image_url %}
                     <span class="text-[10px] bg-red-900/30 text-red-500 px-3 py-1 rounded font-bold">NUEVO ELEMENTO</span>
@@ -178,7 +188,7 @@
                 
                 {% if proposal_type != 'IMAGE' and not is_image %}
                     <!-- TEXT CONTENT (WORLD/NARRATIVE ONLY) -->
-                    {% if proposal_type == 'WORLD' or proposal_type == 'NARRATIVE' or proposal_type == 'METADATA' %}
+                    {% if proposal_type == 'WORLD' or proposal_type == 'NARRATIVE' or proposal_type == 'METADATA' or proposal_type == 'PERIOD' %}
                         {% if live_title %}
                             <h3 class="text-xl text-gray-300 font-bold mb-4 border-b border-gray-800 pb-2">{{ live_title }}</h3>
                         {% endif %}
@@ -239,7 +249,7 @@
 
                 {% if proposal_type != 'IMAGE' and not is_image %}
                     <!-- TEXT DIFF (WORLD/NARRATIVE ONLY) -->
-                    {% if proposal_type == 'WORLD' or proposal_type == 'NARRATIVE' or proposal_type == 'METADATA' %}
+                    {% if proposal_type == 'WORLD' or proposal_type == 'NARRATIVE' or proposal_type == 'METADATA' or proposal_type == 'PERIOD' %}
                         {% if diff_title %}
                             <h3 class="text-xl text-white font-bold mb-4 border-b border-blue-900/50 pb-2">
                                 {{ diff_title|safe }}

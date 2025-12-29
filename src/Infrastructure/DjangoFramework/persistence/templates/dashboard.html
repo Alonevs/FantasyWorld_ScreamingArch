@@ -605,17 +605,18 @@
                                             <span>👁️</span> Ver
                                         </a>
 
-                                        <!-- Restore Button -->
-                                        <form method="post" action="{% if item.type == 'IMAGE' %}{% url 'restaurar_imagen' item.id %}{% else %}{% url 'restaurar_version' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
+                                        <!-- Restore/Retouch Button -->
+                                        <form method="post" action="{% if item.type == 'IMAGE' %}{% url 'restaurar_imagen' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'restaurar_narrativa' item.id %}{% elif item.type == 'PERIOD' %}{% url 'restaurar_periodo' item.id %}{% else %}{% url 'restaurar_version' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
                                             {% csrf_token %}
-                                            <button type="submit" class="text-blue-500 hover:text-white hover:bg-blue-600 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-blue-900/30 transition-all" data-confirm="¿Restaurar a Pendientes?">
-                                                🔄 Restaurar
+                                            <input type="hidden" name="action" value="retouch">
+                                            <button type="submit" class="text-blue-500 hover:text-white hover:bg-blue-600 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-blue-900/30 transition-all flex items-center gap-1" data-confirm="¿Retocar esta propuesta? (Abrirá el editor con los datos rechazados)">
+                                                <span>♻️</span> Retocar
                                             </button>
                                         </form>
 
                                         <!-- Archive -->
                                         {% if request.user.is_superuser or request.user.profile.rank == 'ADMIN' %}
-                                        <form method="post" action="{% if item.type == 'WORLD' or item.type == 'METADATA' %}{% url 'archivar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'archivar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'archivar_imagen' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
+                                        <form method="post" action="{% if item.type == 'WORLD' or item.type == 'METADATA' %}{% url 'archivar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'archivar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'archivar_imagen' item.id %}{% elif item.type == 'PERIOD' %}{% url 'archivar_periodo' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
                                             {% csrf_token %}
                                             <button type="submit" class="text-amber-500 hover:text-white hover:bg-amber-600 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-amber-900/30 transition-all" title="Mover al Archivo" data-confirm="📦 ¿Archivar esta propuesta?">
                                                 📦

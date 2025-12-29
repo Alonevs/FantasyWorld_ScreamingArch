@@ -297,13 +297,15 @@
     {% include "partials/_world_modals.html" %}
     {% include "partials/_world_scripts.html" %}
     
-    {% if edit_mode %}
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Auto Open Edit Modal
-            setTimeout(() => { if(typeof openEditModal === 'function') openEditModal(); }, 300);
-            
-            // If Retouch Mode, lock navigation
+            // Auto Open Period Edit Modal (URL param check)
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('edit_period') === 'true') {
+                 setTimeout(() => { if(typeof openEditPeriodModal === 'function') openEditPeriodModal(); }, 500);
+            }
+
+            // If Retouch Mode (World), lock navigation
             const isRetouchMode = Boolean(parseInt("{{ is_retouch_mode|yesno:'1,0' }}"));
             if (isRetouchMode) {
                 // Disable links in children grid and Images
@@ -321,6 +323,14 @@
                     genBtn.classList.add('opacity-50', 'cursor-not-allowed');
                 }
             }
+        });
+    </script>
+
+    {% if edit_mode %}
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Auto Open Edit Modal (World)
+            setTimeout(() => { if(typeof openEditModal === 'function') openEditModal(); }, 300);
         });
     </script>
     {% endif %}

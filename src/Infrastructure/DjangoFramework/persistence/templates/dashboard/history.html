@@ -56,6 +56,7 @@
                         <option value="NARRATIVE" {% if current_type == 'NARRATIVE' %}selected{% endif %}>📖 Narrativas</option>
                         <option value="METADATA" {% if current_type == 'METADATA' %}selected{% endif %}>🧬 Metadatos</option>
                         <option value="IMAGE" {% if current_type == 'IMAGE' %}selected{% endif %}>📸 Imágenes</option>
+                        <option value="PERIOD" {% if current_type == 'PERIOD' %}selected{% endif %}>📅 Periodos</option>
                     </select>
                     <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-600 group-hover:text-purple-400 transition">▼</div>
                 </div>
@@ -115,12 +116,13 @@
                             {% if type_group.grouper == 'WORLD' %}text-blue-500
                             {% elif type_group.grouper == 'NARRATIVE' %}text-purple-500
                             {% elif type_group.grouper == 'METADATA' %}text-emerald-500
+                            {% elif type_group.grouper == 'PERIOD' %}text-green-500
                             {% else %}text-teal-500{% endif %}"></div>
-                        {% if type_group.grouper == 'WORLD' %}🌍{% elif type_group.grouper == 'NARRATIVE' %}📖{% elif type_group.grouper == 'METADATA' %}🧬{% else %}📸{% endif %}
+                        {% if type_group.grouper == 'WORLD' %}🌍{% elif type_group.grouper == 'NARRATIVE' %}📖{% elif type_group.grouper == 'METADATA' %}🧬{% elif type_group.grouper == 'PERIOD' %}📅{% else %}📸{% endif %}
                     </div>
                     <div>
                         <h1 class="text-xl font-black text-white tracking-tighter uppercase">
-                            {% if type_group.grouper == 'WORLD' %}Mundos{% elif type_group.grouper == 'NARRATIVE' %}Narrativas{% elif type_group.grouper == 'METADATA' %}Metadatos{% elif type_group.grouper == 'IMAGE' %}Imágenes{% else %}{{ type_group.grouper }}{% endif %}
+                            {% if type_group.grouper == 'WORLD' %}Mundos{% elif type_group.grouper == 'NARRATIVE' %}Narrativas{% elif type_group.grouper == 'METADATA' %}Metadatos{% elif type_group.grouper == 'IMAGE' %}Imágenes{% elif type_group.grouper == 'PERIOD' %}Periodos{% else %}{{ type_group.grouper }}{% endif %}
                         </h1>
                         <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{{ type_group.list|length }} Registros</p>
                     </div>
@@ -195,12 +197,13 @@
                                                 {% elif group.type == 'METADATA' %}bg-emerald-500
                                                 {% else %}bg-teal-500{% endif %}"></div>
                                                 
-                                            {% if group.type == 'WORLD' %}🌍{% elif group.type == 'NARRATIVE' %}📖{% elif group.type == 'METADATA' %}🧬{% else %}🖼️{% endif %}
+                                            {% if group.type == 'WORLD' %}🌍{% elif group.type == 'NARRATIVE' %}📖{% elif group.type == 'METADATA' %}🧬{% elif group.type == 'PERIOD' %}📅{% else %}🖼️{% endif %}
                                         </div>
                                         <div class="absolute inset-0 blur-xl opacity-0 group-hover:opacity-100 transition duration-500
                                             {% if group.type == 'WORLD' %}bg-blue-500/10
                                             {% elif group.type == 'NARRATIVE' %}bg-purple-500/10
                                             {% elif group.type == 'METADATA' %}bg-emerald-500/10
+                                            {% elif group.type == 'PERIOD' %}bg-green-500/10
                                             {% else %}bg-teal-500/10{% endif %}"></div>
                                         {% endif %}
                                     </div>
@@ -310,7 +313,7 @@
                                                             <span class="text-sm">👁️</span>
                                                         </a>
 
-                                                        <form method="post" action="{% if group.type == 'WORLD' %}{% url 'restaurar_version' v.id %}{% elif group.type == 'NARRATIVE' %}{% url 'restaurar_narrativa' v.id %}{% endif %}?next={{ request.get_full_path|urlencode }}" class="flex-1 md:flex-none">
+                                                        <form method="post" action="{% if group.type == 'WORLD' %}{% url 'restaurar_version' v.id %}{% elif group.type == 'NARRATIVE' %}{% url 'restaurar_narrativa' v.id %}{% elif group.type == 'PERIOD' %}{% url 'restaurar_periodo' v.id %}{% endif %}?next={{ request.get_full_path|urlencode }}" class="flex-1 md:flex-none">
                                                             {% csrf_token %}
                                                             <button type="submit" class="w-full h-8 md:w-auto md:px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-lg shadow-md shadow-blue-900/20 transition duration-300 text-xs font-bold flex items-center justify-center gap-2 active:scale-95 border border-blue-500 hover:border-blue-400 group/restore" title="Restaurar esta versión">
                                                                 <span class="text-sm group-hover/restore:rotate-180 transition duration-500">🔄</span>

@@ -1,5 +1,9 @@
 
 <!-- PERIOD MANAGEMENT (New Timeline System) -->
+{{ viewing_period.metadata|json_script:"period-metadata-store" }}
+{% if retouch_proposal %}
+    {{ retouch_proposal.proposed_metadata|json_script:"retouch-metadata-store" }}
+{% endif %}
 <script>
     // Create Period Modal
     function openCreatePeriodModal() {
@@ -98,16 +102,44 @@
         });
     }
     
-    // Edit Period Modal (contextual - edits current viewing period)
     function openEditPeriodModal() {
-        const periodTitle = "{{ viewing_period.title|escapejs }}";
-        const periodDescription = `{{ viewing_period.description|escapejs }}`;
+        let periodTitle = "{{ viewing_period.title|escapejs }}";
+        let periodDescription = `{{ viewing_period.description|escapejs }}`;
         const periodId = "{{ viewing_period.id|default:'' }}";
         const isCurrent = "{{ viewing_period.is_current|yesno:'true,false' }}" === "true";
+        let metaStoreId = "period-metadata-store";
+
+        {% if retouch_proposal %}
+            periodTitle = "{{ retouch_proposal.proposed_title|escapejs }}";
+            periodDescription = `{{ retouch_proposal.proposed_description|escapejs }}`;
+            metaStoreId = "retouch-metadata-store";
+            console.log("✏️ Loading Retouch Data...");
+        {% endif %}
         
-        if (!periodId) {
-            CaosModal.alert("❌ Error", "No se puede editar el período ACTUAL desde aquí.");
-            return;
+        // Parse metadata safely from JSON script
+        let currentMetadata = {};
+        try {
+            const metaScript = document.getElementById(metaStoreId);
+            if(metaScript) currentMetadata = JSON.parse(metaScript.textContent);
+        } catch(e) { console.error("Error parsing period metadata", e); }
+
+        // Generate Metadata Rows HTML
+        let metadataRowsHtml = '';
+        if (currentMetadata && Object.keys(currentMetadata).length > 0) {
+            Object.entries(currentMetadata).forEach(([k, v]) => {
+                metadataRowsHtml += `
+                <div class="grid grid-cols-2 gap-2 mt-2">
+                    <input type="text" value="${k}" class="meta-key px-3 py-1 bg-gray-900 border border-gray-700 rounded text-xs text-white" placeholder="Clave">
+                    <input type="text" value="${v}" class="meta-val px-3 py-1 bg-gray-900 border border-gray-700 rounded text-xs text-white" placeholder="Valor">
+                </div>`;
+            });
+        } else {
+            // Default empty row
+            metadataRowsHtml = `
+            <div class="grid grid-cols-2 gap-2 mt-2">
+                <input type="text" placeholder="Clave (ej: poblacion)" class="meta-key px-3 py-1 bg-gray-900 border border-gray-700 rounded text-xs text-white">
+                <input type="text" placeholder="Valor (ej: 10000)" class="meta-val px-3 py-1 bg-gray-900 border border-gray-700 rounded text-xs text-white">
+            </div>`;
         }
         
         CaosModal.custom({
@@ -169,10 +201,7 @@
                         <div id="edit-period-metadata-container" class="space-y-2">
                             <!-- Pre-populated or dynamic metadata here -->
                             <p class="text-xs text-gray-500 italic">Puedes proponer cambios técnicos para esta era.</p>
-                            <div class="grid grid-cols-2 gap-2">
-                                <input type="text" placeholder="Clave (ej: poblacion)" class="meta-key px-3 py-1 bg-gray-900 border border-gray-700 rounded text-xs text-white">
-                                <input type="text" placeholder="Valor (ej: 10000)" class="meta-val px-3 py-1 bg-gray-900 border border-gray-700 rounded text-xs text-white">
-                            </div>
+                            ${metadataRowsHtml}
                         </div>
                         <button type="button" onclick="addEditMetadataRow()" class="mt-2 text-[10px] text-indigo-400 hover:text-white font-bold uppercase">+ Añadir Propiedad</button>
                     </div>

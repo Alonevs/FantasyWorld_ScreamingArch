@@ -442,7 +442,10 @@ def archivar_propuesta(request, id):
     
     # If it's a DELETE proposal and coming from Admin ('archivar' is 'Mantener' in UI)
     is_delete = obj.cambios.get('action') == 'DELETE' if obj.cambios else False
-    if is_delete and (request.user.is_staff or request.user.is_superuser):
+    
+    # FIX: Solo aplicar lógica de "Mantener" (Rechazar borrado) si está PENDING.
+    # Si ya fue rechazada, solo la movemos al archivo.
+    if is_delete and (request.user.is_staff or request.user.is_superuser) and obj.status == 'PENDING':
         feedback = request.POST.get('admin_feedback', '') or request.GET.get('admin_feedback', '')
         return execute_use_case_action(request, RejectVersionUseCase, id, "Propuesta de borrado rechazada (Mantenido).", "KEEP_WORLD_REJECT_DELETE", extra_args={'reason': feedback or "El administrador ha decidido mantener este elemento."})
 
@@ -457,7 +460,20 @@ def restaurar_version(request, version_id):
     obj = get_object_or_404(CaosVersionORM, id=version_id)
     from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
     check_ownership(request.user, obj)
-    return execute_use_case_action(request, RestoreVersionUseCase, version_id, "Restaurado.", "RESTORE_VERSION")
+    
+    # HANDLE RETOUCH REDIRECT (Pre-creation)
+    # Si es 'retouch', NO restauramos automáticamente. 
+    # Redirigimos al editor cargando los datos de la versión rechazada como 'source'.
+    if request.POST.get('action') == 'retouch':
+        target_id = obj.world.public_id if obj.world.public_id else obj.world.id
+        # Pasamos src_version para que editar_mundo lo pre-cargue
+        return redirect(f"/editar/{target_id}/?src_version={obj.id}")
+    
+    # EXECUTE RESTORE (Standard)
+    # Crea una copia exacta en PENDING
+    new_version_or_result = execute_use_case_action(request, RestoreVersionUseCase, version_id, "Restaurado.", "RESTORE_VERSION")
+        
+    return new_version_or_result
 
 @login_required
 def borrar_propuesta(request, version_id):
@@ -479,6 +495,42 @@ def borrar_propuesta(request, version_id):
             return redirect('dashboard')
 
     return execute_orm_delete(request, CaosVersionORM, version_id, "Eliminado.", "DELETE_VERSION")
+
+# --- NARRATIVE ACTIONS ---
+# ... (Narrative actions remain similar, can be optimized later if requested) ...
+
+# ... (SKIPPING UNCHANGED NARRATIVE CODE for brevity, ensuring context match) ...
+
+# ...
+
+@login_required
+def restaurar_periodo(request, id):
+    obj = get_object_or_404(TimelinePeriodVersion, id=id)
+    # Check ownership
+    if not (request.user.is_superuser or obj.author == request.user or obj.period.world.author == request.user):
+        messages.error(request, "⛔ No tienes permiso.")
+        return redirect('dashboard')
+
+    # HANDLE RETOUCH REDIRECT (Pre-creation)
+    if request.POST.get('action') == 'retouch':
+        # Redirect to World Page with flag to open Period Edit Modal AND specific proposal ID to pre-fill
+        # Using URL Construction to ensure parameters
+        w = obj.period.world
+        pid = w.public_id if w.public_id else w.id
+        return redirect(f"/mundo/{pid}/?period={obj.period.slug}&edit_period=true&proposal_id={obj.id}")
+
+    # Logic: Create new pending version based on this one
+    new_v = TimelinePeriodService.propose_edit(
+        period=obj.period,
+        title=obj.proposed_title,
+        description=obj.proposed_description,
+        metadata=obj.proposed_metadata,
+        author=request.user,
+        change_log=f"Restaurado desde v{obj.version_number}"
+    )
+    
+    messages.success(request, f"🔄 Periodo restaurado (v{new_v.version_number}).")
+    return redirect('dashboard')
 
 # --- NARRATIVE ACTIONS ---
 
@@ -517,7 +569,7 @@ def archivar_narrativa(request, id):
     from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
     check_ownership(request.user, obj)
 
-    if obj.action == 'DELETE' and (request.user.is_staff or request.user.is_superuser):
+    if obj.action == 'DELETE' and (request.user.is_staff or request.user.is_superuser) and obj.status == 'PENDING':
         feedback = request.POST.get('admin_feedback', '') or request.GET.get('admin_feedback', '')
         return execute_use_case_action(request, RejectNarrativeVersionUseCase, id, "Borrado de narrativa rechazado (Mantener).", "KEEP_NARRATIVE_REJECT_DELETE", extra_args={'reason': feedback or "El administrador ha decidido mantener esta narrativa."})
 
@@ -540,6 +592,11 @@ def restaurar_narrativa(request, id):
         author=request.user
     )
     messages.success(request, f"🔄 Propuesta de restauración creada (v{new_v_num}).")
+    messages.success(request, f"🔄 Propuesta de restauración creada (v{new_v_num}).")
+    
+    if request.POST.get('action') == 'retouch':
+        return redirect('editar_narrativa', nid=obj.narrative.nid)
+        
     return redirect('dashboard')
 
 @login_required
@@ -781,22 +838,87 @@ def rechazar_periodo(request, id):
         messages.error(request, "⛔ Solo el Autor de este mundo puede rechazar este periodo.")
         return redirect('dashboard')
     
-    feedback = request.POST.get('admin_feedback', '') or request.GET.get('admin_feedback', '')
-    TimelinePeriodService.reject_version(obj, request.user, feedback)
-    messages.success(request, "✕ Propuesta de periodo rechazada.")
-    log_event(request.user, "REJECT_PERIOD", f"Rechazado {obj.period.title} v{obj.version_number}")
-    
+    # REJECT LOGIC
+    feedback = request.POST.get('admin_feedback', '')
+    obj.status = 'REJECTED'
+    obj.admin_feedback = feedback
+    obj.save()
+    messages.success(request, "✕ Periodo rechazado.")
     return redirect('dashboard')
 
 @login_required
 def archivar_periodo(request, id):
+    """
+    Mueve una propuesta de periodo al archivo.
+    """
     obj = get_object_or_404(TimelinePeriodVersion, id=id)
-    # Check ownership (author or admin)
+    # Check ownership (Author of proposal or Admin of World)
+    is_owner = obj.author == request.user
+    is_admin = has_authority_over_proposal(request.user, obj)
+    
+    if not (is_owner or is_admin):
+        messages.error(request, "⛔ No tienes permiso para archivar este periodo.")
+        return redirect('dashboard')
+
+    if obj.action == 'DELETE' and is_admin:
+         # Keep Logic
+         feedback = request.POST.get('admin_feedback', '')
+         obj.status = 'REJECTED' # Semantic equivalent of "Denied Delete"
+         obj.admin_feedback = feedback or "Mantenido por admin."
+         obj.save()
+         messages.success(request, "🛡️ Borrado cancelado. Periodo mantenido.")
+    else:
+        obj.status = 'ARCHIVED'
+        obj.save()
+        messages.success(request, "📦 Periodo archivado.")
+    
+    return redirect('dashboard')
+
+@login_required
+def restaurar_periodo(request, id):
+    obj = get_object_or_404(TimelinePeriodVersion, id=id)
+    # Check ownership
     if not (request.user.is_superuser or obj.author == request.user or obj.period.world.author == request.user):
         messages.error(request, "⛔ No tienes permiso.")
         return redirect('dashboard')
-        
-    obj.status = 'ARCHIVED'
-    obj.save()
-    messages.success(request, "📦 Periodo archivado.")
+
+    # HANDLE RETOUCH REDIRECT (Pre-creation)
+    if request.POST.get('action') == 'retouch':
+        # Redirect to World Page with flag to open Period Edit Modal AND specific proposal ID to pre-fill
+        # Reciclamos el ID de la propuesta ORIGINAL (Rechazada) para que el frontend lea sus datos.
+        w = obj.period.world
+        pid = w.public_id if w.public_id else w.id
+        return redirect(f"/mundo/{pid}/?period={obj.period.slug}&edit_period=true&proposal_id={obj.id}")
+
+    # Logic: Create new pending version based on this one (STANDARD RESTORE)
+    new_v = TimelinePeriodService.propose_edit(
+        period=obj.period,
+        title=obj.proposed_title,
+        description=obj.proposed_description,
+        metadata=obj.proposed_metadata,
+        author=request.user,
+        change_log=f"Restaurado desde v{obj.version_number}"
+    )
+    
+    messages.success(request, f"🔄 Periodo restaurado (v{new_v.version_number}).")
     return redirect('dashboard')
+
+@login_required
+def borrar_periodo(request, id):
+    obj = get_object_or_404(TimelinePeriodVersion, id=id)
+    # Check ownership
+    is_owner = obj.author == request.user
+    is_admin = has_authority_over_proposal(request.user, obj)
+    
+    if not (is_owner or is_admin):
+        messages.error(request, "⛔ No tienes permiso para borrar esta propuesta.")
+        return redirect('dashboard')
+
+    # Allow deleting if PENDING or REJECTED or ARCHIVED
+    try:
+        obj.delete()
+        messages.success(request, "🗑️ Propuesta de periodo eliminada.")
+    except Exception as e:
+        messages.error(request, f"Error al eliminar: {e}")
+        
+    return redirect(request.GET.get('next') or 'dashboard')

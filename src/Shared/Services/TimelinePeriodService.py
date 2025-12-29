@@ -190,9 +190,20 @@ class TimelinePeriodService:
         
         period.save()
         
-        # Opcional: Marcar versión como PUBLICADA/ARCHIVADA o mantener APPROVED?
-        # En el modelo World se mantiene APPROVED pero se archivan las anteriores.
-        # Aquí simplificamos manteniendo APPROVED como estado final visible.
+        # 1. Archive previous LIVE versions for this period
+        # Convert any existing 'LIVE' version to 'HISTORY' to preserve the record
+        previous_live = TimelinePeriodVersion.objects.filter(
+            period=period, 
+            status='LIVE'
+        ).exclude(id=version.id)
+        
+        for old_v in previous_live:
+            old_v.status = 'HISTORY'
+            old_v.save()
+
+        # 2. Update New Version Status to LIVE
+        version.status = 'LIVE'
+        version.save()
         
         return period
     

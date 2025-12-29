@@ -95,6 +95,12 @@ class GetWorldNarrativesUseCase:
         for r in otros:
              if getattr(r, 'tipo', '') == 'CAPITULO': historias.append(r)
         
+        # 5. Obtener objeto del período actual para el contexto
+        viewing_period = None
+        if period_slug and period_slug != 'actual':
+             from src.Infrastructure.DjangoFramework.persistence.models import TimelinePeriod
+             viewing_period = TimelinePeriod.objects.filter(world=w, slug=period_slug).first()
+
         return {
             'world': w,
             'lores': lores,
@@ -102,5 +108,6 @@ class GetWorldNarrativesUseCase:
             'eventos': eventos,
             'leyendas': leyendas,
             'reglas': reglas,
-            'bestiario': bestiario
+            'bestiario': bestiario,
+            'viewing_period': viewing_period
         }

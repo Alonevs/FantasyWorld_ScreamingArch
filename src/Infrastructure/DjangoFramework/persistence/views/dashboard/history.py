@@ -4,7 +4,8 @@ from django.core.paginator import Paginator
 from django.db.models import Q, Max
 from django.contrib.auth.models import User
 from src.Infrastructure.DjangoFramework.persistence.models import (
-    CaosEventLog, CaosVersionORM, CaosNarrativeVersionORM, CaosImageProposalORM
+    CaosEventLog, CaosVersionORM, CaosNarrativeVersionORM, CaosImageProposalORM,
+    TimelinePeriodVersion
 )
 from itertools import chain
 from operator import attrgetter
@@ -96,6 +97,7 @@ def version_history_view(request):
     w_qs = CaosVersionORM.objects.filter(status__in=target_statuses).select_related('author', 'world')
     n_qs = CaosNarrativeVersionORM.objects.filter(status__in=target_statuses).select_related('author', 'narrative__world')
     i_qs = CaosImageProposalORM.objects.filter(status__in=target_statuses).select_related('author', 'world')
+    p_qs = TimelinePeriodVersion.objects.filter(status__in=target_statuses).select_related('author', 'period__world')
     
     users = User.objects.all().order_by('username')
     
@@ -108,15 +110,18 @@ def version_history_view(request):
         w_qs = w_qs.filter(author_id=f_user)
         n_qs = n_qs.filter(author_id=f_user)
         i_qs = i_qs.filter(author_id=f_user)
+        p_qs = p_qs.filter(author_id=f_user)
         
     if f_type == 'WORLD':
-        n_qs = n_qs.none(); i_qs = i_qs.none()
+        n_qs = n_qs.none(); i_qs = i_qs.none(); p_qs = p_qs.none()
     elif f_type == 'METADATA':
-        n_qs = n_qs.none(); i_qs = i_qs.none()
+        n_qs = n_qs.none(); i_qs = i_qs.none(); p_qs = p_qs.none()
     elif f_type == 'NARRATIVE':
-        w_qs = w_qs.none(); i_qs = i_qs.none()
+        w_qs = w_qs.none(); i_qs = i_qs.none(); p_qs = p_qs.none()
     elif f_type == 'IMAGE':
-        w_qs = w_qs.none(); n_qs = n_qs.none()
+        w_qs = w_qs.none(); n_qs = n_qs.none(); p_qs = p_qs.none()
+    elif f_type == 'PERIOD':
+        w_qs = w_qs.none(); n_qs = n_qs.none(); i_qs = i_qs.none()
 
     # Apply Action Filter (Pre-filtering)
     # Note: Actions are stored diffently.
@@ -171,7 +176,8 @@ def version_history_view(request):
         'WORLD': 0,
         'NARRATIVE': 1,
         'IMAGE': 2,
-        'METADATA': 3
+        'METADATA': 3,
+        'PERIOD': 4
     }
     
     # Pre-populate with dummy entries if desired? 
@@ -179,7 +185,7 @@ def version_history_view(request):
     # For regroup to work, the items MUST be in the list.
     # So we should add at least one "Empty" marker for each type if not present.
     
-    required_types = ['WORLD', 'NARRATIVE', 'METADATA', 'IMAGE']
+    required_types = ['WORLD', 'NARRATIVE', 'METADATA', 'IMAGE', 'PERIOD']
     if f_type:
         required_types = [f_type]
 
@@ -320,6 +326,45 @@ def version_history_view(request):
             v.action_type = act
             
         grouped_data[key]['versions'].append(v)
+
+    # Process Periods
+    for v in p_qs:
+        key = f"PERIOD_{v.period.id}"
+        if key not in grouped_data:
+            grouped_data[key] = {
+                'id': v.period.id,
+                'public_id': v.period.world.public_id if v.period.world else '???',
+                'name': f"📅 {v.period.title}",
+                'type': 'PERIOD',
+                'type_label': '📅 Periodo',
+                'versions': [],
+                'latest_date': v.created_at
+            }
+        
+        # Enrich Version
+        v.target_name = v.proposed_title
+        v.action_type = v.action if hasattr(v, 'action') else 'EDIT'
+        
+        p_label_map = {
+            'ADD': '✨ Creación',
+            'EDIT': '✏️ Edición',
+            'DELETE': '🗑️ Borrado'
+        }
+        v.action_label = p_label_map.get(v.action_type, '✏️ Edición')
+        
+        if v.status == 'ARCHIVED':
+            v.action_label = f"📂 Archivada: {v.action_label}"
+        elif v.status == 'REJECTED':
+             v.action_label = f"❌ Rechazada: {v.action_label}"
+        elif v.status == 'APPROVED':
+             v.action_label = f"☑️ Aprobada: {v.action_label}"
+        elif v.status == 'HISTORY':
+             v.action_label = f"📜 Histórica: {v.action_label}"
+        
+        grouped_data[key]['versions'].append(v)
+        if v.created_at > grouped_data[key]['latest_date']:
+            grouped_data[key]['latest_date'] = v.created_at
+            grouped_data[key]['latest_action_label'] = v.action_label
 
     # 4.1 ADD EMPTY MARKERS FOR MISSING TYPES
     # This ensures regroup in template works even for empty categories

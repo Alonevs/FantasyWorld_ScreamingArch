@@ -16,7 +16,7 @@ from src.Infrastructure.DjangoFramework.persistence.views.dashboard.workflow imp
     aprobar_contribucion, rechazar_contribucion,
     aprobar_narrativa, rechazar_narrativa, publicar_narrativa, archivar_narrativa,
     restaurar_narrativa, borrar_narrativa_version, 
-    aprobar_periodo, rechazar_periodo, archivar_periodo, publicar_periodo,
+    aprobar_periodo, rechazar_periodo, archivar_periodo, publicar_periodo, restaurar_periodo, borrar_periodo,
     ProposalDetailView, aprobar_propuestas_masivo, archivar_propuestas_masivo, publicar_propuestas_masivo
 )
 from src.Infrastructure.DjangoFramework.persistence.views.dashboard.assets import (
@@ -173,6 +173,8 @@ urlpatterns = [
     path('periodo/propuesta/<int:id>/publicar/', publicar_periodo, name='publicar_periodo'),
     path('periodo/propuesta/<int:id>/rechazar/', rechazar_periodo, name='rechazar_periodo'),
     path('periodo/propuesta/<int:id>/archivar/', archivar_periodo, name='archivar_periodo'),
+    path('periodo/propuesta/<int:id>/restaurar/', restaurar_periodo, name='restaurar_periodo'),
+    path('periodo/propuesta/<int:id>/borrar/', borrar_periodo, name='borrar_periodo'),
 
     # Acciones de Imágenes
     path('imagen/propuesta/<int:id>/', ImageProposalDetailView.as_view(), name='revisar_imagen'),

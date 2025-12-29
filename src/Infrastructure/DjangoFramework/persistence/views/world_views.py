@@ -8,7 +8,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 
-from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosVersionORM, CaosNarrativeORM, CaosEventLog, MetadataTemplate
+from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosVersionORM, CaosNarrativeORM, CaosEventLog, MetadataTemplate, TimelinePeriodVersion
 from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
 # IMPORTE Q
 from django.db.models import Q, Case, When, Value, IntegerField
@@ -276,6 +276,16 @@ def ver_mundo(request, public_id):
             messages.warning(request, f"Período '{period_slug}' no encontrado. Mostrando ACTUAL.")
             return redirect('ver_mundo', public_id=public_id)
 
+    # 1.5. Check for Retouch Proposal (Period)
+    retouch_proposal = None
+    prop_id = request.GET.get('proposal_id')
+    if prop_id:
+        try:
+            retouch_proposal = TimelinePeriodVersion.objects.get(id=prop_id)
+            messages.info(request, f"✏️ Retomando propuesta rechazada v{retouch_proposal.version_number}. Datos cargados.")
+        except TimelinePeriodVersion.DoesNotExist:
+            pass
+
     # 2. Manejar GET (Visualización) mediante Caso de Uso
     # PASAMOS EL PERIOD_SLUG PARA FILTRAR IMÁGENES
     context = GetWorldDetailsUseCase(repo).execute(public_id, request.user, period_slug=period_slug)
@@ -295,10 +305,29 @@ def ver_mundo(request, public_id):
         context['viewing_period'] = viewing_period
         
         # Sobrescribir metadatos para mostrar los del periodo
-        if viewing_period.metadata:
-            from .view_utils import get_metadata_properties_dict
-            context['props'] = get_metadata_properties_dict(viewing_period.metadata)
-            
+        # Sobrescribir metadatos para mostrar los del periodo
+        from .view_utils import get_metadata_properties_dict
+        # Asegurar que siempre se procesen los metadatos (aunque sea dict vacío)
+        props = get_metadata_properties_dict(viewing_period.metadata if viewing_period.metadata else {})
+        context['props'] = props
+        
+        # FIX: Adaptar formato para _metadata_viewer.html (espera 'metadata_obj.properties')
+        context['metadata_obj'] = {
+            'properties': [{'key': k, 'value': v} for k, v in props.items()]
+        }
+        
+        # Override Info Sidebar
+        context['created_at'] = viewing_period.created_at
+        context['version_live'] = viewing_period.current_version_number
+        
+        # Derivar Autor desde la primera versión del período
+        first_v = viewing_period.versions.order_by('version_number').first()
+        if first_v and first_v.author:
+             context['author_live'] = first_v.author.username
+             context['author_live_user'] = first_v.author
+        else:
+             context['author_live'] = "Desconocido"
+
 
     else:
         context['is_period_view'] = False
@@ -307,6 +336,7 @@ def ver_mundo(request, public_id):
     # Pasar períodos al contexto para el selector
     context['timeline_periods'] = all_periods.exclude(is_current=True).order_by('order')
     context['current_period_slug'] = period_slug
+    context['retouch_proposal'] = retouch_proposal # Pass the object or dict
     # ---------------------------------
 
     # --- INYECCIÓN DE ETIQUETA DE JERARQUÍA ---

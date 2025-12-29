@@ -254,18 +254,29 @@
             if (trigger.tagName === 'A') {
                 window.location.href = trigger.href;
             } else if (trigger.tagName === 'BUTTON' && trigger.type === 'submit') {
-                // For submit buttons, we need to manually submit the form
-                // But simply calling form.submit() bypasses the button's name/value
-                // So we inject a hidden input if the button has a name
-                const form = trigger.closest('form');
+                // Modificado: Soporte para form="id" (botones fuera del form) y formaction
+                const form = trigger.form || trigger.closest('form');
+                
                 if (form) {
-                    if (trigger.name) {
-                        const hiddenInput = document.createElement('input');
-                        hiddenInput.type = 'hidden';
-                        hiddenInput.name = trigger.name;
-                        hiddenInput.value = trigger.value;
-                        form.appendChild(hiddenInput);
+                    // 1. Handle formaction override
+                    if (trigger.hasAttribute('formaction')) {
+                        form.action = trigger.getAttribute('formaction');
                     }
+                    
+                    // 2. Handle name/value (Button click data)
+                    if (trigger.name) {
+                        // Check if input already exists (avoid duplicates on multi-click)
+                        let hiddenInput = form.querySelector(`input[name="${trigger.name}"][type="hidden"].caos-temp-submit`);
+                        if (!hiddenInput) {
+                            hiddenInput = document.createElement('input');
+                            hiddenInput.type = 'hidden';
+                            hiddenInput.className = 'caos-temp-submit';
+                            hiddenInput.name = trigger.name;
+                            form.appendChild(hiddenInput);
+                        }
+                        hiddenInput.value = trigger.value;
+                    }
+                    
                     form.submit();
                 }
             } else if (trigger.tagName === 'BUTTON') {

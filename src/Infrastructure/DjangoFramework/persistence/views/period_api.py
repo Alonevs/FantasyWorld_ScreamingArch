@@ -38,8 +38,8 @@ def create_period(request, world_id):
              return JsonResponse({'error': 'Mundo no encontrado'}, status=404)
         data = json.loads(request.body)
         
-        title = data.get('title', '').strip()
-        description = data.get('description', '').strip()
+        title = (data.get('title') or '').strip()
+        description = (data.get('description') or '').strip()
         order = data.get('order')
         
         # Validaciones
@@ -92,9 +92,9 @@ def propose_period_edit(request, period_id):
         period = get_object_or_404(TimelinePeriod, id=period_id)
         data = json.loads(request.body)
         
-        title = data.get('title', '').strip() or None
-        description = data.get('description', '').strip() or None
-        change_log = data.get('change_log', '').strip()
+        title = (data.get('title') or '').strip() or None
+        description = (data.get('description') or '').strip() or None
+        change_log = (data.get('change_log') or '').strip()
         metadata = data.get('metadata')
         
         # Validar que al menos uno de los campos cambie
@@ -235,7 +235,7 @@ def reject_period_version(request, version_id):
         
         version = get_object_or_404(TimelinePeriodVersion, id=version_id)
         data = json.loads(request.body)
-        feedback = data.get('feedback', '').strip()
+        feedback = (data.get('feedback') or '').strip()
         
         # Rechazar
         version = TimelinePeriodService.reject_version(version, request.user, feedback)
