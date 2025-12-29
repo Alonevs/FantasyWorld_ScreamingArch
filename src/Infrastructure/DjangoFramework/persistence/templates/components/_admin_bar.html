@@ -44,7 +44,7 @@
                         <!-- Dropdown for Inbox -->
                         {% if global_buzones %}
                             {% if user.is_superuser or user.profile.rank == 'ADMIN' %}
-                        <div x-show="open" x-transition class="absolute top-full left-0 w-64 pt-2">
+                        <div x-show="open" x-cloak x-transition class="absolute top-full left-0 w-64 pt-2">
                             <div class="bg-dark/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden py-2">
                                 <div class="px-4 py-2 text-[10px] text-gray-500 font-bold uppercase tracking-widest border-b border-white/5 mb-1">Buzones por Autor</div>
                                 <div class="max-h-64 overflow-y-auto custom-scrollbar">
@@ -134,7 +134,7 @@
                     </div>
 
                     <!-- Dropdown Menu (Z-index increased to ensure it's on top) -->
-                    <div x-show="userMenuOpen" 
+                    <div x-show="userMenuOpen" x-cloak 
                          x-transition:enter="transition ease-out duration-200"
                          x-transition:enter-start="opacity-0 scale-95 translate-y-[-10px]"
                          x-transition:enter-end="opacity-100 scale-100 translate-y-0"

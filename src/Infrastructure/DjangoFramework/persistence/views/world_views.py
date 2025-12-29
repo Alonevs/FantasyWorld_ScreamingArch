@@ -299,7 +299,7 @@ def ver_mundo(request, public_id):
             from .view_utils import get_metadata_properties_dict
             context['props'] = get_metadata_properties_dict(viewing_period.metadata)
             
-        messages.info(request, f"📅 Viendo período: {viewing_period.title}")
+
     else:
         context['is_period_view'] = False
         context['viewing_period'] = current_period

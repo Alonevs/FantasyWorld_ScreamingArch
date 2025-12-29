@@ -28,6 +28,17 @@
                                   placeholder="Describe este período histórico..."
                                   class="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-purple-500 focus:outline-none resize-none"></textarea>
                     </div>
+
+                    <!-- Future Option -->
+                    <div class="flex items-center gap-3 p-3 bg-gray-900 border border-gray-800 rounded-lg">
+                        <input type="checkbox" id="period-is-future" class="w-5 h-5 bg-gray-800 border-gray-600 rounded focus:ring-purple-500 text-purple-600">
+                        <div>
+                            <label for="period-is-future" class="block text-sm font-bold text-white cursor-pointer select-none">
+                                🔮 Marcar como FUTURO / OFFLINE
+                            </label>
+                            <p class="text-xs text-gray-500">No aparecerá en la cronología pública hasta que lo actives.</p>
+                        </div>
+                    </div>
                     
                     <div id="period-error" class="hidden p-3 bg-red-900/50 border border-red-700 rounded-lg text-red-300 text-sm"></div>
                 </div>
@@ -37,6 +48,7 @@
             onConfirm: async () => {
                 const title = document.getElementById('period-title').value.trim();
                 const description = document.getElementById('period-description').value.trim();
+                const isFuture = document.getElementById('period-is-future').checked;
                 
                 // Validation
                 if (!title) {
@@ -54,7 +66,8 @@
                         },
                         body: JSON.stringify({
                             title: title,
-                            description: description
+                            description: description,
+                            is_future: isFuture
                         })
                     });
                     
@@ -90,6 +103,7 @@
         const periodTitle = "{{ viewing_period.title|escapejs }}";
         const periodDescription = `{{ viewing_period.description|escapejs }}`;
         const periodId = "{{ viewing_period.id|default:'' }}";
+        const isCurrent = "{{ viewing_period.is_current|yesno:'true,false' }}" === "true";
         
         if (!periodId) {
             CaosModal.alert("❌ Error", "No se puede editar el período ACTUAL desde aquí.");
@@ -103,6 +117,18 @@
                     <div class="p-3 bg-blue-900/30 border border-blue-700/50 rounded-lg text-blue-300 text-sm">
                         💡 Los cambios se enviarán como propuesta para revisión
                     </div>
+
+                    ${!isCurrent ? `
+                    <div class="p-4 bg-green-900/20 border border-green-500/30 rounded-lg flex items-center justify-between gap-4">
+                        <div>
+                            <h4 class="text-green-400 font-bold text-sm uppercase">⚡ Activar como ACTUAL</h4>
+                            <p class="text-xs text-gray-400">Este periodo pasará a ser el LIVE. El actual pasará a la Historia.</p>
+                        </div>
+                        <button onclick="activatePeriod('${periodId}')" class="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white font-bold text-xs rounded shadow-lg transition transform hover:scale-105">
+                            ACTIVAR AHORA
+                        </button>
+                    </div>
+                    ` : ''}
                     
                     <div>
                         <label class="block text-sm font-bold text-gray-300 mb-2">
@@ -148,7 +174,7 @@
                                 <input type="text" placeholder="Valor (ej: 10000)" class="meta-val px-3 py-1 bg-gray-900 border border-gray-700 rounded text-xs text-white">
                             </div>
                         </div>
-                        <button type="button" onclick="addMetadataRow()" class="mt-2 text-[10px] text-indigo-400 hover:text-white font-bold uppercase">+ Añadir Propiedad</button>
+                        <button type="button" onclick="addEditMetadataRow()" class="mt-2 text-[10px] text-indigo-400 hover:text-white font-bold uppercase">+ Añadir Propiedad</button>
                     </div>
                 </div>
             `,
@@ -213,6 +239,32 @@
                 return true;
             }
         });
+    }
+
+    // Function to Activate Period (Swap Live)
+    async function activatePeriod(periodId) {
+        if (!confirm("⚠️ ¿Estás seguro? \n\nEsto convertirá este período en el ACTUAL (LIVE). \nEl período actual actual pasará a ser HISTÓRICO.")) return;
+        
+        try {
+            const response = await fetch(`/api/period/${periodId}/activate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok && data.success) {
+                await CaosModal.alert("✅ Activado", data.message);
+                window.location.href = "{% url 'ver_mundo' public_id %}"; // Redirect to main view
+            } else {
+                CaosModal.alert("❌ Error", data.error || "Falló la activación");
+            }
+        } catch (error) {
+            CaosModal.alert("❌ Error", "Error de conexión");
+        }
     }
 
     // Expose function globally so it can be called from dynamic modal HTML

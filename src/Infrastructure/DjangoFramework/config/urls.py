@@ -58,7 +58,8 @@ from src.Infrastructure.DjangoFramework.persistence.views.timeline_api import (
 # Period API (new system - independent periods)
 from src.Infrastructure.DjangoFramework.persistence.views.period_api import (
     create_period, propose_period_edit, get_period_detail,
-    approve_period_version, reject_period_version, delete_period, list_world_periods
+    approve_period_version, reject_period_version, delete_period, list_world_periods,
+    activate_period_endpoint
 )
 
 urlpatterns = [
@@ -230,6 +231,7 @@ urlpatterns = [
     path('api/world/<str:world_id>/periods', list_world_periods, name='list_world_periods'),
     path('api/period/<int:period_id>/', get_period_detail, name='get_period_detail'),
     path('api/period/<int:period_id>/propose', propose_period_edit, name='propose_period_edit'),
+    path('api/period/<int:period_id>/activate', activate_period_endpoint, name='activate_period'),
     path('api/period/<int:period_id>/delete', delete_period, name='delete_period'),
     path('api/period/version/<int:version_id>/approve', approve_period_version, name='approve_period_version'),
     path('api/period/version/<int:version_id>/reject', reject_period_version, name='reject_period_version'),

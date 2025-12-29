@@ -23,6 +23,14 @@ def main():
         python_exe = venv_python
         print(f"🐍 Usando entorno virtual: {venv_python}")
 
+    # Run migrations
+    try:
+        print("🔄 Verificando migraciones de base de datos...")
+        subprocess.run([python_exe, manage_py_path, "makemigrations"], check=True)
+        subprocess.run([python_exe, manage_py_path, "migrate"], check=True)
+    except Exception as e:
+        print(f"⚠️ Error en migraciones (continuando...): {e}")
+
     # Run the server
     try:
         subprocess.run([python_exe, manage_py_path, "runserver"], check=True)

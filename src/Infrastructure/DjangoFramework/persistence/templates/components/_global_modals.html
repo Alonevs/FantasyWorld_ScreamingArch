@@ -6,9 +6,9 @@
         <div id="caos-modal-glow" class="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-blue-500 via-blue-400 to-blue-600 shadow-[0_0_20px_rgba(59,130,246,0.5)]"></div>
         
         <!-- HEADER -->
-        <div class="px-6 py-5 border-b border-gray-800/50 bg-gray-900/30 flex items-center gap-3">
-            <span id="caos-modal-icon" class="text-2xl">✨</span>
-            <h3 id="caos-modal-title" class="text-lg font-bold text-white tracking-wide">System Message</h3>
+        <div class="px-6 py-5 border-b border-gray-800 bg-[#0a0f0a] flex items-center gap-3">
+            <span id="caos-modal-icon" class="text-xl">✨</span>
+            <h3 id="caos-modal-title" class="text-sm font-bold text-white uppercase tracking-widest">System Message</h3>
         </div>
 
         <!-- BODY -->
@@ -20,17 +20,17 @@
             <!-- INPUT CONTAINER (Hidden by default) -->
             <div id="caos-modal-input-container" class="hidden mt-4">
                 <input type="text" id="caos-modal-input" 
-                    class="w-full bg-[#151520] border border-gray-700 text-white px-4 py-3 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition-all font-mono"
+                    class="w-full bg-[#13151f] border border-gray-800 text-white px-4 py-3 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 focus:outline-none transition-all font-medium text-sm placeholder:text-gray-600"
                     placeholder="Escribe aquí..." autocomplete="off">
             </div>
         </div>
 
         <!-- FOOTER -->
-        <div class="px-6 py-5 bg-gray-900/50 flex justify-end gap-3 border-t border-gray-800/50">
-            <button id="caos-modal-cancel" class="px-4 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all font-bold text-sm">
+        <div class="px-6 py-4 bg-[#05050a] flex justify-end gap-3 border-t border-gray-800">
+            <button id="caos-modal-cancel" class="px-4 py-3 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-all font-bold text-[10px] uppercase tracking-widest border border-transparent hover:border-gray-700">
                 Cancelar
             </button>
-            <button id="caos-modal-confirm" class="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500 hover:shadow-[0_0_15px_rgba(37,99,235,0.4)] transition-all font-bold text-sm flex items-center gap-2">
+            <button id="caos-modal-confirm" class="px-6 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-500 hover:shadow-[0_0_15px_rgba(37,99,235,0.4)] transition-all font-bold text-[10px] uppercase tracking-widest flex items-center gap-2 shadow-lg">
                 <span>Confirmar</span>
             </button>
         </div>

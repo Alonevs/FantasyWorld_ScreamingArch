@@ -1,159 +1,204 @@
     <!-- EDIT MODAL -->
-    <div id="editModal" class="hidden fixed inset-0 bg-black/90 z-50 items-center justify-center backdrop-blur-sm">
-        <div class="bg-card border border-indigo-500/50 rounded-2xl p-6 max-w-lg w-full shadow-2xl">
-            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">✏️ Editar Mundo</h2>
+    <!-- EDIT MODAL (Industrial Style) -->
+    <div id="editModal" class="hidden fixed inset-0 bg-black/95 z-50 items-center justify-center">
+        <div class="caos-card caos-glow-blue w-full max-w-md relative p-0 overflow-hidden shadow-2xl">
             
-            <form method="POST" action="{% url 'editar_mundo' jid %}">
-                {% csrf_token %}
-                <div class="mb-4">
-                    <label class="block text-xs text-gray-500 uppercase font-bold mb-1">Nombre</label>
-                    <input type="text" name="name" value="{{ name }}" class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none">
+            <div class="px-8 pb-8 pt-6">
+                <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                    <span>✏️</span> Editar: <span class="text-blue-400 font-mono">{{ name }}</span>
+                </h2>
+
+                <!-- Info Tip Box -->
+                <div class="bg-blue-900/10 border border-blue-500/20 rounded-lg p-3 mb-5 flex gap-3 items-start">
+                    <span class="text-lg">💡</span>
+                    <p class="text-[10px] text-blue-200/80 leading-relaxed font-medium uppercase tracking-wide">
+                        Los cambios se enviarán como propuesta para revisión.
+                    </p>
                 </div>
-                <div class="mb-4">
-                    <div class="flex justify-between items-center mb-1">
-                        <label class="block text-xs text-gray-500 uppercase font-bold">Descripción</label>
-                        <button type="button" onclick="generateAILore()" id="btn-gen-lore" class="text-[10px] bg-accent/20 hover:bg-accent text-accent hover:text-white px-2 py-0.5 rounded transition flex items-center gap-1 border border-accent/30">
-                            <span id="lore-gen-icon">✨</span> GENERAR CON IA
+
+                <form method="POST" action="{% url 'editar_mundo' jid %}">
+                    {% csrf_token %}
+                    <div class="mb-5">
+                        <label class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1.5 ml-1">Nuevo Título</label>
+                        <input type="text" name="name" value="{{ name }}" class="w-full bg-[#13151f] border border-gray-800 rounded-lg p-3 text-sm text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 outline-none transition-all placeholder:text-gray-700 font-medium">
+                    </div>
+                    <div class="mb-5">
+                        <div class="flex justify-between items-center mb-1.5 ml-1">
+                            <label class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest">Descripción</label>
+                            <button type="button" onclick="generateAILore()" id="btn-gen-lore" class="text-[9px] bg-blue-900/20 hover:bg-blue-600 text-blue-400 hover:text-white px-2 py-1 rounded transition flex items-center gap-1 border border-blue-500/30 uppercase tracking-widest font-bold">
+                                <span id="lore-gen-icon">✨</span> IA Gen
+                            </button>
+                        </div>
+                        <textarea id="edit-description" name="description" rows="5" class="w-full bg-[#13151f] border border-gray-800 rounded-lg p-3 text-sm text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 outline-none transition-all placeholder:text-gray-700 leading-relaxed font-medium">{{ description }}</textarea>
+                    </div>
+                    <div class="mb-5">
+                        <label class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1.5 ml-1">Razón del cambio</label>
+                        <input type="text" name="reason" placeholder="Ej: Corrección de fechas..." class="w-full bg-[#13151f] border border-gray-800 rounded-lg p-3 text-sm text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 outline-none transition-all placeholder:text-gray-700 font-medium">
+                    </div>
+                    
+                    <div class="mb-6">
+                         <label class="flex items-center gap-3 cursor-pointer group p-2 hover:bg-white/5 rounded-lg transition-colors border border-transparent hover:border-white/5">
+                            <input type="checkbox" name="use_ai_edit" class="accent-blue-500 w-4 h-4 rounded border-gray-600 bg-gray-800">
+                            <span class="text-xs text-gray-400 group-hover:text-blue-300 transition-colors uppercase tracking-wider font-bold">✨ Refinar con IA</span>
+                        </label>
+                    </div>
+
+                    <div class="flex gap-3 pt-2">
+                        <button type="button" onclick="closeEditModal()" class="px-6 py-3 rounded-lg text-gray-400 hover:text-white font-bold text-[10px] uppercase tracking-widest transition-colors border border-transparent hover:border-gray-700">Cancelar</button>
+                        <button type="submit" class="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg shadow-lg shadow-blue-900/50 transition-all hover:scale-[1.02] active:scale-95 text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
+                            <span>🚀</span> Guardar
                         </button>
                     </div>
-                    <textarea id="edit-description" name="description" rows="5" class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none">{{ description }}</textarea>
-                </div>
-                <div class="mb-4">
-                    <label class="block text-xs text-gray-500 uppercase font-bold mb-1">Razón del cambio (Obligatorio)</label>
-                    <input type="text" name="reason" placeholder="Ej: Corrección, expansión..." class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none" required>
-                </div>
-                <div class="mb-6 bg-gray-800/50 p-3 rounded border border-gray-700">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="use_ai_edit" class="accent-accent w-4 h-4">
-                        <span class="text-sm text-gray-300">✨ Refinar descripción con IA</span>
-                    </label>
-                </div>
-                <div class="flex gap-3">
-                    <button type="button" onclick="closeEditModal()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700 transition">Cancelar</button>
-                    <button type="submit" class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg shadow-lg transition">💾 GUARDAR CAMBIOS</button>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
     </div>
 
     <!-- CREATE MODAL -->
-    <div id="createModal" class="hidden fixed inset-0 bg-black/90 z-[100] items-center justify-center backdrop-blur-sm">
-        <div class="bg-card border border-accent rounded-2xl p-6 max-w-lg w-full shadow-2xl shadow-purple-900/20">
-            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">✨ Generar Entorno / Entidad</h2>
-            
-            <form method="POST" action="{% url 'ver_mundo' public_id %}">
-                {% csrf_token %}
-                <div class="mb-4">
-                    <label class="block text-xs text-gray-500 uppercase font-bold mb-1">Tipo de Entidad</label>
-                    <select name="target_level" class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none mb-4">
-                        {% for lvl in available_levels %}
-                        <option value="{{ lvl.level }}" {% if lvl.is_next %}selected{% endif %}>
-                            {% if lvl.is_next %}📍 Siguiente: {{ lvl.label }} (Nivel {{ lvl.level }}){% else %}🕳️ Salto a: {{ lvl.label }} (Nivel {{ lvl.level }}){% endif %}
-                        </option>
-                        {% endfor %}
-                    </select>
-                    <input type="text" name="entity_type_desc" placeholder="Tipo (ej: Lugar, Personaje...)" class="w-full bg-black border border-gray-700 rounded p-2 text-white text-xs mb-2">
-                </div>
-                <div class="mb-4">
-                    <label class="block text-xs text-gray-500 uppercase font-bold mb-1">Nombre</label>
-                    <input type="text" name="child_name" placeholder="Nombre de la nueva entidad..." class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none" required>
-                </div>
-                <div class="mb-4">
-                    <label class="block text-xs text-gray-500 uppercase font-bold mb-1">Descripción Inicial</label>
-                    <textarea name="child_desc" rows="3" placeholder="Breve descripción..." class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none"></textarea>
-                </div>
-                <div class="mb-4">
-                    <label class="block text-xs text-gray-500 uppercase font-bold mb-1">Razón de Creación</label>
-                    <input type="text" name="reason" placeholder="Ej: Expansión del mapa, nuevo enemigo..." class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none" required>
-                </div>
-                <div class="mb-6 bg-gray-800/50 p-3 rounded border border-gray-700">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="use_ai_gen" class="accent-accent w-4 h-4">
-                        <span class="text-sm text-gray-300">🤖 Generar detalles con IA (Beta)</span>
-                    </label>
-                </div>
-                <div class="flex gap-3">
-                    <button type="button" onclick="closeCreateModal()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700 transition">Cancelar</button>
-                    <button type="submit" class="flex-1 py-2 bg-accent hover:bg-accent-hover text-white font-bold rounded-lg shadow-lg transition">🚀 GENERAR</button>
-                </div>
-            </form>
+    <!-- CREATE MODAL (Industrial Style) -->
+    <div id="createModal" class="hidden fixed inset-0 bg-black/95 z-100 items-center justify-center">
+        <div class="caos-card caos-glow-purple w-full max-w-md relative p-0 overflow-hidden shadow-2xl">
+
+            <div class="px-8 pb-8 pt-6">
+                <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                    <span>✨</span> Generar Entorno
+                </h2>
+                
+                <form method="POST" action="{% url 'ver_mundo' public_id %}">
+                    {% csrf_token %}
+                    <div class="mb-5">
+                        <label class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1.5 ml-1">Tipo de Entidad</label>
+                        <select name="target_level" class="w-full bg-[#13151f] border border-gray-800 rounded-lg p-3 text-sm text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 outline-none mb-3 font-medium">
+                            {% for lvl in available_levels %}
+                            <option value="{{ lvl.level }}" {% if lvl.is_next %}selected{% endif %}>
+                                {% if lvl.is_next %}📍 Siguiente: {{ lvl.label }} (Nivel {{ lvl.level }}){% else %}🕳️ Salto a: {{ lvl.label }} (Nivel {{ lvl.level }}){% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <input type="text" name="entity_type_desc" placeholder="Especificar Tipo (ej: Ruinas, Personaje...)" class="w-full bg-[#13151f] border border-gray-800 rounded-lg p-3 text-sm text-white placeholder:text-gray-700 font-medium focus:border-purple-500 focus:outline-none">
+                    </div>
+                    <div class="mb-5">
+                        <label class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1.5 ml-1">Nombre</label>
+                        <input type="text" name="child_name" placeholder="Nombre de la nueva entidad..." class="w-full bg-[#13151f] border border-gray-800 rounded-lg p-3 text-sm text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 outline-none transition-all placeholder:text-gray-700 font-medium" required>
+                    </div>
+                    <div class="mb-5">
+                        <label class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1.5 ml-1">Descripción</label>
+                        <textarea name="child_desc" rows="3" placeholder="Contexto inicial..." class="w-full bg-[#13151f] border border-gray-800 rounded-lg p-3 text-sm text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 outline-none transition-all placeholder:text-gray-700 font-medium"></textarea>
+                    </div>
+                    
+                    <div class="flex gap-3 pt-2">
+                        <button type="button" onclick="closeCreateModal()" class="px-6 py-3 rounded-lg text-gray-400 hover:text-white font-bold text-[10px] uppercase tracking-widest transition-colors border border-transparent hover:border-gray-700">Cancelar</button>
+                        <button type="submit" class="flex-1 py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg shadow-lg shadow-purple-900/50 transition-all hover:scale-[1.02] active:scale-95 text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
+                            <span>🚀</span> Generar
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
     <!-- UPLOAD MODAL -->
-    <div id="uploadModal" class="hidden fixed inset-0 bg-black/90 z-50 items-center justify-center backdrop-blur-sm">
-        <div class="bg-card border border-gray-700 rounded-2xl p-6 max-w-lg w-full shadow-2xl text-center">
-            <h2 class="text-xl font-bold text-white mb-4">Confirmar Subida</h2>
-            <div id="file-info" class="text-xs font-mono text-accent mb-2"></div>
-            <div id="upload-previews" class="grid grid-cols-3 gap-2 mb-4 max-h-48 overflow-y-auto"></div>
-            
-            <div class="bg-gray-950 p-4 rounded-lg border border-gray-800 text-left mb-4">
-                <label class="flex items-center gap-2 mb-3 cursor-pointer group">
-                    <input type="checkbox" id="chk-original-name" onchange="toggleCustomName()" class="accent-accent w-4 h-4">
-                    <span class="text-sm text-gray-300 group-hover:text-white transition">Usar nombre original</span>
-                </label>
-                <input type="text" id="inp-custom-name" placeholder="O escribe un nombre..." class="w-full bg-black border border-gray-700 rounded p-2 text-sm text-white focus:border-accent focus:outline-none transition">
-            </div>
+    <!-- UPLOAD MODAL (Industrial Style) -->
+    <div id="uploadModal" class="hidden fixed inset-0 bg-black/95 z-50 items-center justify-center">
+        <div class="caos-card caos-glow-green w-full max-w-md relative p-0 overflow-hidden shadow-2xl">
 
-            <div id="scan-status" class="text-xs font-bold mb-4 tracking-widest h-4"></div>
+            <div class="px-8 pb-8 pt-6">
+                <h2 class="text-xl font-bold text-white mb-2 flex items-center justify-center gap-2">
+                    <span>📁</span> Confirmar Subida
+                </h2>
+                
+                <div id="file-info" class="text-[10px] font-bold uppercase tracking-widest text-green-400 mb-4 bg-green-900/10 py-1 rounded border border-green-500/20 inline-block px-3"></div>
+                
+                <div id="upload-previews" class="grid grid-cols-3 gap-2 mb-4 max-h-48 overflow-y-auto custom-scrollbar p-2 bg-black/20 rounded-lg"></div>
+                
+                <div class="bg-[#13151f] p-4 rounded-lg border border-gray-800 text-left mb-5 shadow-inner">
+                    <label class="flex items-center gap-3 mb-3 cursor-pointer group">
+                        <input type="checkbox" id="chk-original-name" onchange="toggleCustomName()" class="accent-green-500 w-4 h-4 rounded border-gray-600 bg-gray-800">
+                        <span class="text-[10px] text-gray-400 font-bold uppercase tracking-widest group-hover:text-green-300 transition-colors">Usar nombre original</span>
+                    </label>
+                    <input type="text" id="inp-custom-name" placeholder="O escribe un nombre..." class="w-full bg-[#0a0b10] border border-gray-700 rounded-lg p-3 text-sm text-white focus:border-green-500 focus:ring-1 focus:ring-green-500/50 outline-none transition-all placeholder:text-gray-700 font-medium">
+                </div>
 
-            <div class="flex gap-3 justify-center">
-                <button onclick="closeUploadModal()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded text-gray-300">Cancelar</button>
-                <button id="btn-confirm-upload" onclick="confirmUpload()" class="px-6 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded shadow-lg hidden">🚀 SUBIR</button>
+                <div id="scan-status" class="text-[10px] font-bold uppercase tracking-widest mb-4 h-4 text-gray-500"></div>
+
+                <div class="flex gap-3 justify-center pt-2">
+                    <button onclick="closeUploadModal()" class="flex-1 py-3 bg-[#0f111a] hover:bg-gray-800 rounded-lg border border-gray-800 text-gray-400 hover:text-white uppercase tracking-widest text-[10px] font-bold transition-colors">Cancelar</button>
+                    <button id="btn-confirm-upload" onclick="confirmUpload()" class="flex-1 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg shadow-lg shadow-green-900/50 uppercase tracking-widest text-[10px] hidden transition-all hover:scale-[1.02] active:scale-95 items-center justify-center gap-2">
+                        <span>🚀</span> Subir
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- AI MODAL -->
-    <div id="aiModal" class="hidden fixed inset-0 bg-black/90 z-50 items-center justify-center backdrop-blur-sm">
-        <div class="bg-card border border-purple-500/50 rounded-2xl p-6 max-w-lg w-full shadow-2xl">
-            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">🎨 Generador de Imágenes IA</h2>
-            
-            <div id="ai-step-1">
-                <div class="mb-4">
-                    <label class="block text-xs text-gray-500 uppercase font-bold mb-1">Cantidad</label>
-                    <input type="number" id="batch-size" value="1" min="1" max="5" class="w-full bg-black border border-gray-700 rounded p-2 text-white focus:border-accent focus:outline-none">
-                </div>
-                <div class="flex gap-3">
-                    <button type="button" onclick="closeAiModal()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700 transition">Cancelar</button>
-                    <button type="button" onclick="generateBatch()" class="flex-1 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg shadow-lg transition">✨ GENERAR</button>
-                </div>
-            </div>
+    <!-- AI IMAGE MODAL (Industrial Style) -->
+    <div id="aiModal" class="hidden fixed inset-0 bg-black/95 z-50 items-center justify-center">
+        <div class="caos-card caos-glow-purple w-full max-w-md relative p-0 overflow-hidden shadow-2xl">
 
-            <div id="ai-step-loading" class="hidden text-center py-8">
-                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mx-auto mb-4"></div>
-                <p class="text-gray-400 animate-pulse">Imaginando nuevos mundos...</p>
-            </div>
+            <div class="px-8 pb-8 pt-6">
+                <h2 class="text-xl font-bold text-white mb-2 flex items-center justify-center gap-2">
+                    <span>🎨</span> Neural Gen
+                </h2>
+                <div class="text-center mb-6">
+                    <p class="text-[10px] uppercase tracking-widest text-purple-400 font-bold bg-purple-900/10 inline-block px-3 py-1 rounded border border-purple-500/20">Stable Diffusion XL</p>
+                </div>
+                
+                <div id="ai-step-1">
+                    <div class="mb-6 bg-[#13151f] p-4 rounded-lg border border-gray-800">
+                        <label class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-2">Cantidad de Variaciones</label>
+                        <div class="flex items-center gap-4">
+                            <input type="range" id="batch-size" value="1" min="1" max="4" class="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500">
+                            <span class="text-xl font-bold text-purple-400 font-mono" id="batch-size-val">1</span>
+                        </div>
+                        <script>document.getElementById('batch-size').oninput = function() { document.getElementById('batch-size-val').textContent = this.value; }</script>
+                    </div>
+                    
+                    <div class="flex gap-3">
+                        <button type="button" onclick="closeAiModal()" class="flex-1 py-3 rounded-lg text-gray-500 hover:text-white font-bold text-[10px] uppercase tracking-widest transition-colors border border-gray-800 hover:bg-gray-800">Cancelar</button>
+                        <button type="button" onclick="generateBatch()" class="flex-1 py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg shadow-lg shadow-purple-900/50 transition-all hover:scale-[1.02] active:scale-95 text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
+                            <span>✨</span> Generar
+                        </button>
+                    </div>
+                </div>
 
-            <div id="ai-step-result" class="hidden">
-                <div id="staging-area" class="grid grid-cols-2 gap-2 mb-4 max-h-60 overflow-y-auto p-2 bg-black/30 rounded border border-gray-800"></div>
-                <div class="flex gap-3">
-                    <button type="button" onclick="resetAiModal()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700 transition">Descartar Todo</button>
-                    <button type="button" id="btn-submit-batch" onclick="saveBatch()" class="flex-1 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg shadow-lg transition">💾 GUARDAR</button>
+                <div id="ai-step-loading" class="hidden text-center py-8">
+                    <div class="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p class="text-purple-400 animate-pulse text-[10px] uppercase tracking-widest font-bold">Soñando mundos...</p>
+                </div>
+
+                <div id="ai-step-result" class="hidden">
+                    <div id="staging-area" class="grid grid-cols-2 gap-2 mb-4 max-h-60 overflow-y-auto p-2 bg-black/50 rounded border border-gray-800 custom-scrollbar"></div>
+                    <div class="flex gap-3 pt-2">
+                        <button type="button" onclick="resetAiModal()" class="flex-1 py-3 bg-[#0f111a] hover:bg-gray-800 text-gray-400 hover:text-white rounded-lg border border-gray-800 transition uppercase tracking-widest text-[10px] font-bold">Descartar</button>
+                        <button type="button" id="btn-submit-batch" onclick="saveBatch()" class="flex-1 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg shadow-lg shadow-green-900/50 transition-all active:scale-95 uppercase tracking-widest text-[10px] flex items-center justify-center gap-2">
+                            <span>💾</span> Guardar
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- LIGHTBOX -->
-    <div id="lightbox" class="hidden fixed inset-0 bg-black/80 z-[60] flex-col items-center justify-center p-4 backdrop-blur-md" onclick="closeLightbox()">
+    <!-- LIGHTBOX (Industrial Style) -->
+    <div id="lightbox" class="hidden fixed inset-0 bg-black/95 z-60 flex-col items-center justify-center p-4" onclick="closeLightbox()">
         <img id="lb-img" class="max-w-full max-h-[80vh] rounded-lg shadow-2xl border border-gray-800 mb-4 object-contain" onclick="event.stopPropagation()">
         
-        <div class="bg-gray-900/80 p-4 rounded-xl border border-gray-700 text-center min-w-[300px] backdrop-blur" onclick="event.stopPropagation()">
-            <h3 id="lb-title" class="text-xl font-bold text-white mb-1 cursor-pointer hover:text-accent flex items-center justify-center gap-2" onclick="editImageTitle()" title="Clic para editar título">
+        <div class="bg-[#0a0f0a] p-4 rounded-xl border border-gray-800 text-center min-w-[300px] shadow-2xl" onclick="event.stopPropagation()">
+            <h3 id="lb-title" class="text-lg font-bold text-white mb-1 cursor-pointer hover:text-blue-400 flex items-center justify-center gap-2 transition-colors" onclick="editImageTitle()" title="Clic para editar título">
                 Título
-                <span class="text-xs text-gray-500">✏️</span>
+                <span class="text-[10px] text-gray-500">✏️</span>
             </h3>
-            <p id="lb-name" class="text-xs font-mono text-gray-500 mb-4">filename.jpg</p>
+            <p id="lb-name" class="text-[10px] font-mono text-gray-500 mb-4 uppercase tracking-widest">filename.jpg</p>
             
-            <div class="grid grid-cols-2 gap-4 text-xs text-gray-400 mb-4 text-left">
-                <div>Subido por: <span id="lb-uploader" class="text-white">User</span></div>
-                <div>Fecha: <span id="lb-date" class="text-white">Date</span></div>
+            <div class="grid grid-cols-2 gap-4 text-[10px] text-gray-400 mb-4 text-left uppercase tracking-wider font-bold">
+                <div>Subido por: <span id="lb-uploader" class="text-white block mt-1">User</span></div>
+                <div>Fecha: <span id="lb-date" class="text-white block mt-1">Date</span></div>
             </div>
 
             <div class="flex gap-2 justify-center">
-                <button onclick="setAsCover()" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-xs font-bold transition">⭐ Portada</button>
-                <button onclick="closeLightbox()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs transition">Cerrar</button>
+                <button onclick="setAsCover()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold uppercase tracking-widest transition shadow-lg">⭐ Portada</button>
+                <button onclick="closeLightbox()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-[10px] font-bold uppercase tracking-widest transition border border-gray-700">Cerrar</button>
             </div>
         </div>
     </div>

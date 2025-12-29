@@ -6,6 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
+from django.contrib import messages
 import json
 
 from src.Infrastructure.DjangoFramework.persistence.models import (
@@ -288,6 +289,33 @@ def delete_period(request, period_id):
         except Exception as e:
             messages.error(request, str(e))
             return redirect('dashboard')
+
+
+@csrf_exempt
+@login_required
+@require_http_methods(["POST"])
+def activate_period_endpoint(request, period_id):
+    """
+    Convierte un período en el ACTUAL (Live).
+    Solo Admins.
+    POST /api/period/{period_id}/activate
+    """
+    try:
+        if not (request.user.is_superuser or 
+                (hasattr(request.user, 'profile') and request.user.profile.rank in ['ADMIN', 'SUPERADMIN'])):
+            return JsonResponse({'error': 'No tienes permisos para activar períodos'}, status=403)
+            
+        period = get_object_or_404(TimelinePeriod, id=period_id)
+        
+        updated_period = TimelinePeriodService.activate_period(period, request.user)
+        
+        return JsonResponse({
+            'success': True,
+            'message': f"El período '{updated_period.title}' es ahora el ACTUAL.",
+            'period_id': updated_period.id
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 @require_http_methods(["GET"])

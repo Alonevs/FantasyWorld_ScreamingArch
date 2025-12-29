@@ -5,26 +5,27 @@
 
 <div class="mb-8">
     {# Tab Navigation (Horizontal Joined Pill Style - Dark "Negrecido" Glow) #}
+    {# Tab Navigation (Solid Industrial Pills) #}
     <div class="flex flex-row items-center justify-center mb-6">
         <!-- COSMOLOGY (Left) -->
-        <button onclick="switchTab('cosmology')" id="tab-cosmology" class="tab-btn group px-5 py-2 rounded-l-full rounded-r-none bg-black/50 backdrop-blur-md border border-white/10 border-r-0 text-gray-300 text-[11px] font-bold uppercase tracking-widest hover:bg-black/90 hover:text-white hover:shadow-[0_0_15px_rgba(255,b255,255,0.1)] transition-all duration-300 flex items-center gap-2 shadow-lg z-30">
-            <span class="text-sm group-hover:scale-110 transition-transform text-purple-400/80">🌌</span> 
-            <span>Cosmología</span>
-            <span id="count-cosmology" class="ml-1 text-[9px] bg-white/10 px-1.5 py-0.5 rounded-full text-white/50 font-mono">0</span>
+        <button onclick="switchTab('cosmology')" id="tab-cosmology" class="tab-btn group px-6 py-2.5 rounded-l-lg border-y border-l border-r-0 border-gray-800 bg-[#0a0a12] text-gray-500 hover:text-white hover:bg-[#151520] transition-all duration-200 flex items-center gap-2 z-10">
+            <span class="text-sm grayscale group-hover:grayscale-0 transition-all opacity-70 group-hover:opacity-100">🌌</span> 
+            <span class="text-[10px] font-bold uppercase tracking-widest">Cosmología</span>
+            <span id="count-cosmology" class="ml-1 text-[9px] bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded font-mono group-hover:bg-purple-900/30 group-hover:text-purple-400">0</span>
         </button>
         
         <!-- GEOGRAPHY (Middle) -->
-        <button onclick="switchTab('geography')" id="tab-geography" class="tab-btn group px-5 py-2 rounded-none bg-black/50 backdrop-blur-md border border-white/10 text-gray-300 text-[11px] font-bold uppercase tracking-widest hover:bg-black/90 hover:text-white hover:shadow-[0_0_15px_rgba(255,255,255,0.1)] transition-all duration-300 flex items-center gap-2 shadow-lg z-20">
-            <span class="text-sm group-hover:scale-110 transition-transform text-green-400/80">🗺️</span> 
-            <span>Geografía</span>
-            <span id="count-geography" class="ml-1 text-[9px] bg-white/10 px-1.5 py-0.5 rounded-full text-white/50 font-mono">0</span>
+        <button onclick="switchTab('geography')" id="tab-geography" class="tab-btn group px-6 py-2.5 border-y border-l border-r border-gray-800 bg-[#0a0a12] text-gray-500 hover:text-white hover:bg-[#151520] transition-all duration-200 flex items-center gap-2 z-10">
+            <span class="text-sm grayscale group-hover:grayscale-0 transition-all opacity-70 group-hover:opacity-100">🗺️</span> 
+            <span class="text-[10px] font-bold uppercase tracking-widest">Geografía</span>
+            <span id="count-geography" class="ml-1 text-[9px] bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded font-mono group-hover:bg-green-900/30 group-hover:text-green-400">0</span>
         </button>
         
         <!-- POPULATION (Right) -->
-        <button onclick="switchTab('population')" id="tab-population" class="tab-btn group px-5 py-2 rounded-r-full rounded-l-none bg-black/50 backdrop-blur-md border border-white/10 border-l-0 text-gray-300 text-[11px] font-bold uppercase tracking-widest hover:bg-black/90 hover:text-white hover:shadow-[0_0_15px_rgba(255,255,255,0.1)] transition-all duration-300 flex items-center gap-2 shadow-lg z-10">
-            <span class="text-sm group-hover:scale-110 transition-transform text-blue-400/80">👥</span> 
-            <span>Población</span>
-            <span id="count-population" class="ml-1 text-[9px] bg-white/10 px-1.5 py-0.5 rounded-full text-white/50 font-mono">0</span>
+        <button onclick="switchTab('population')" id="tab-population" class="tab-btn group px-6 py-2.5 rounded-r-lg border-y border-r border-l-0 border-gray-800 bg-[#0a0a12] text-gray-500 hover:text-white hover:bg-[#151520] transition-all duration-200 flex items-center gap-2 z-10">
+            <span class="text-sm grayscale group-hover:grayscale-0 transition-all opacity-70 group-hover:opacity-100">👥</span> 
+            <span class="text-[10px] font-bold uppercase tracking-widest">Población</span>
+            <span id="count-population" class="ml-1 text-[9px] bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded font-mono group-hover:bg-blue-900/30 group-hover:text-blue-400">0</span>
         </button>
     </div>
 
@@ -72,13 +73,17 @@ function switchTab(tabName) {
     });
     
     // Reset buttons (keep base styles, remove active highlights)
+    // Reset buttons (Solid Dark Mode)
     document.querySelectorAll('.tab-btn').forEach(btn => {
-        // Base state: text-gray-300, bg-black/80
-        btn.classList.add('text-gray-300', 'bg-black/80', 'border-white/10');
-        btn.classList.remove('text-white', 'bg-black', 'border-white/30', 'shadow-[0_0_20px_rgba(0,0,0,0.8)]', 'z-40');
+        btn.classList.add('text-gray-500', 'bg-[#0a0a12]', 'border-gray-800');
+        btn.classList.remove('text-white', 'bg-[#1a1a2e]', 'border-white/20', 'shadow-lg', 'z-40', 'scale-105');
         
-        // Remove color specific borders if any (cleaned up)
-        btn.classList.remove('shadow-[0_0_15px_rgba(168,85,247,0.4)]', 'shadow-[0_0_15px_rgba(34,197,94,0.4)]', 'shadow-[0_0_15px_rgba(59,130,246,0.4)]');
+        // Reset counters
+        const badge = btn.querySelector('span[id^="count-"]');
+        if(badge) {
+            badge.classList.add('bg-gray-800', 'text-gray-400');
+            badge.classList.remove('bg-purple-600', 'text-white', 'bg-green-600', 'bg-blue-600');
+        }
     });
     
     // Show selected panel
@@ -87,15 +92,19 @@ function switchTab(tabName) {
     void panel.offsetWidth; // Trigger reflow
     panel.classList.add('animate-wave');
     
-    // Activate button (Dark Glow)
+    // Activate button (High Contrast Industrial)
     const activeBtn = document.getElementById('tab-' + tabName);
-    activeBtn.classList.remove('text-gray-300', 'bg-black/80', 'border-white/10');
-    // Active: Blacker, stronger text, subtle dark glow
-    activeBtn.classList.add('text-white', 'bg-black', 'border-white/30', 'shadow-[0_0_20px_rgba(0,0,0,0.8)]', 'z-40');
+    activeBtn.classList.remove('text-gray-500', 'bg-[#0a0a12]', 'border-gray-800');
+    activeBtn.classList.add('text-white', 'bg-[#1a1a2e]', 'border-white/20', 'shadow-lg', 'z-40', 'scale-105');
     
-    // Optional: Very subtle glow (optional, maybe remove if user wants "no marca blanca")
-    // Keep it removed for now to satisfy "no se diferencie... con esa marca tan blanca". 
-    // Just text color change and slight bg lift is enough.
+    // Colorize specific badges
+    const activeBadge = activeBtn.querySelector('span[id^="count-"]');
+    if(activeBadge) {
+        activeBadge.classList.remove('bg-gray-800', 'text-gray-400');
+        if(tabName === 'cosmology') activeBadge.classList.add('bg-purple-600', 'text-white');
+        if(tabName === 'geography') activeBadge.classList.add('bg-green-600', 'text-white');
+        if(tabName === 'population') activeBadge.classList.add('bg-blue-600', 'text-white');
+    }
 
     localStorage.setItem('activeTab', tabName);
 }

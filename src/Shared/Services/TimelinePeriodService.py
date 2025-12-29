@@ -19,7 +19,7 @@ class TimelinePeriodService:
     """
     
     @staticmethod
-    def create_period(world, title, description, author, order=None):
+    def create_period(world, title, description, author, order=None, is_future=False):
         """
         Crea un nuevo período temporal.
         
@@ -56,7 +56,8 @@ class TimelinePeriodService:
             slug=slug,
             description=description,
             order=order,
-            is_current=False  # Solo ACTUAL puede ser is_current=True
+            is_current=False,  # Solo ACTUAL puede ser is_current=True
+            is_future=is_future
         )
         
         # Crear versión inicial (V1)
@@ -259,3 +260,25 @@ class TimelinePeriodService:
             TimelinePeriod instance o None
         """
         return TimelinePeriod.objects.filter(world=world, is_current=True).first()
+
+    @staticmethod
+    def activate_period(period, user):
+        """
+        Convierte un período (Futuro o Histórico) en el ACTUAL (Live).
+        El antiguo ACTUAL pasa a ser Histórico.
+        """
+        world = period.world
+        current = TimelinePeriodService.get_current_period(world)
+        
+        if current:
+            # El antiguo actual pasa a historia
+            current.is_current = False
+            current.is_future = False
+            current.save()
+            
+        # El nuevo pasa a actual/live
+        period.is_current = True
+        period.is_future = False
+        period.save()
+        
+        return period

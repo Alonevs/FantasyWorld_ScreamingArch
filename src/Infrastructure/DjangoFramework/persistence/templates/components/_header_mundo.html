@@ -1,40 +1,54 @@
-<div class="col-span-1 lg:col-span-4 bg-linear-to-r from-indigo-950 to-gray-900 p-6 border-b border-indigo-900 flex justify-between items-start">
-    <div>
-        <div class="flex items-center gap-2 text-xs text-gray-400 mb-2">
-            <a href="{% url 'home' %}" class="hover:text-accent">🏠 Universo</a>
+<div class="col-span-1 lg:col-span-4 caos-card relative p-6 flex justify-between items-start mb-6">
+    <!-- Top Blue Glow -->
+    <div class="absolute top-0 left-0 right-0 h-[2px] bg-linear-to-r from-blue-600 via-blue-400 to-blue-700 shadow-[0_0_15px_rgba(37,99,235,0.3)]"></div>
+
+    <div class="relative z-10">
+        <div class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">
+            <a href="{% url 'home' %}" class="hover:text-blue-400 transition-colors">🏠 Universo</a>
             {% for b in breadcrumbs %}
                 <span>›</span>
-                <a href="{% url 'ver_mundo' b.id %}" class="{% if b.id == jid %}text-accent font-bold{% else %}hover:text-white{% endif %}">{{ b.label }}</a>
+                <a href="{% url 'ver_mundo' b.id %}" class="{% if b.id == jid %}text-blue-400 bg-blue-900/10 px-1 rounded{% else %}hover:text-white transition-colors{% endif %}">{{ b.label }}</a>
             {% endfor %}
         </div>
-        <h1 class="text-3xl lg:text-4xl font-bold text-white mb-2 flex items-center gap-3">
+        
+        <h1 class="text-3xl lg:text-4xl font-black text-white mb-3 flex items-center gap-3 tracking-tight">
             {{ name }}
             {% if is_locked %}
-                <span title="Bloqueado" class="text-xl">🔒</span>
+                <span title="Bloqueado" class="text-lg bg-red-900/20 border border-red-500/30 w-8 h-8 flex items-center justify-center rounded-lg text-red-500">🔒</span>
             {% endif %}
             
             {% if user.is_authenticated %}
-                <a href="{% url 'toggle_visibilidad' jid %}" class="text-xs font-bold px-2 py-1 rounded border transition {% if visible %}bg-green-900/30 text-green-400 border-green-800 hover:bg-green-900/50{% else %}bg-red-900/30 text-red-400 border-red-800 hover:bg-red-900/50{% endif %}">
+                <a href="{% url 'toggle_visibilidad' jid %}" class="text-[10px] font-bold px-2 py-1 rounded border transition uppercase tracking-widest {% if visible %}bg-green-900/20 text-green-400 border-green-500/30 hover:bg-green-500/20{% else %}bg-red-900/20 text-red-400 border-red-500/30 hover:bg-red-500/20{% endif %}">
                     {% if visible %}PÚBLICO{% else %}PRIVADO{% endif %}
                 </a>
             {% else %}
-                <span class="text-xs font-bold px-2 py-1 rounded border {% if visible %}bg-green-900/30 text-green-400 border-green-800{% else %}bg-red-900/30 text-red-400 border-red-800{% endif %}">
+                <span class="text-[10px] font-bold px-2 py-1 rounded border uppercase tracking-widest {% if visible %}bg-green-900/20 text-green-400 border-green-500/30{% else %}bg-red-900/20 text-red-400 border-red-500/30{% endif %}">
                     {% if visible %}PÚBLICO{% else %}PRIVADO{% endif %}
                 </span>
             {% endif %}
         </h1>
-        <div class="text-xs font-mono text-gray-500 bg-black/30 px-2 py-1 rounded inline-block border border-gray-800">
-            J-ID: {{ jid }} <span class="text-gray-600 mx-2">|</span> CODE: <span class="text-accent">{{ public_id }}</span>
+        
+        <div class="flex items-center gap-3">
+            <div class="text-[10px] font-mono text-gray-400 bg-black/40 px-2 py-1 rounded border border-gray-800 flex items-center gap-2">
+                <span class="text-gray-600">J-ID:</span> {{ jid }} 
+                <span class="text-gray-700">|</span> 
+                <span class="text-gray-600">CODE:</span> <span class="text-blue-400 font-bold">{{ public_id }}</span>
+            </div>
         </div>
     </div>
+    
     {% if not is_preview %}
-    <div>
-        <button onclick="openEditModal()" class="p-2 bg-blue-900/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg transition border border-blue-900/50 mr-2" title="Editar">✏️</button>
+    <div class="relative z-10 flex gap-2">
+        <button onclick="openEditModal()" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded shadow-lg shadow-blue-900/20 transition-all hover:-translate-y-0.5" title="Editar Mundo">
+            <span>✏️</span> <span class="hidden sm:inline">EDITAR</span>
+        </button>
+        
         <a href="{% url 'borrar_mundo' jid %}" 
-           data-confirm="¿Estás seguro de solicitar el borrado de este mundo?" 
-           data-title="Solicitar Borrado" 
+           data-confirm="⚠️ ¿Estás seguro de solicitar el borrado de este mundo?" 
            data-destructive="true"
-           class="p-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg transition border border-red-900/50" title="Borrar">🗑️</a>
+           class="flex items-center gap-2 bg-red-900/20 hover:bg-red-600 text-red-500 hover:text-white border border-red-900/50 hover:border-red-500 text-xs font-bold px-3 py-2 rounded transition-all" title="Borrar Mundo">
+            <span>🗑️</span>
+        </a>
     </div>
     {% endif %}
 </div>

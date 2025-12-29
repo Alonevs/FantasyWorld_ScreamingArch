@@ -165,7 +165,7 @@
                     </h3>
                     <span class="text-gray-500 transform group-open:rotate-180 transition duration-300">▼</span>
                 </summary>
-                <div class="p-4 border-l border-r border-b border-gray-800 rounded-b-lg bg-black/20 grid grid-cols-1 md:grid-cols-2 gap-4 animate-wave">
+                <div class="p-4 border-l border-r border-b border-gray-800 rounded-b-lg bg-black/20 grid grid-cols-1 md:grid-cols-2 gap-4">
                     {% for h in hijos %}
                         {% include "components/_entity_card.html" with entity=h variant="horizontal" %}
                     {% endfor %}
@@ -265,20 +265,23 @@
 
             <div class="mt-8 space-y-2">
                 <h3 class="text-gray-500 text-xs font-bold uppercase mb-4">Acciones</h3>
-                <a href="{% url 'ver_narrativa_mundo' public_id %}?period={{ current_period_slug }}" class="w-full px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded flex items-center gap-2 transition border border-gray-700 text-sm">
-                    📖 Narrativa
+                <a href="{% url 'ver_narrativa_mundo' public_id %}?period={{ current_period_slug }}" class="w-full px-4 py-3 bg-[#0f111a] hover:bg-[#151520] border border-gray-800 hover:border-blue-500/30 text-gray-300 hover:text-white rounded-lg flex items-center gap-3 transition-all group mb-3 shadow-lg">
+                    <span class="text-lg opacity-70 group-hover:opacity-100 group-hover:text-blue-400 transition-colors">📖</span>
+                    <span class="font-bold text-xs uppercase tracking-wider">Narrativa</span>
                 </a>
                 
-                <a href="{% url 'mapa_arbol' public_id %}" class="w-full px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded flex items-center gap-2 transition border border-gray-700 text-sm">
-                    🌳 Mapa Árbol
+                <a href="{% url 'mapa_arbol' public_id %}" class="w-full px-4 py-3 bg-[#0f111a] hover:bg-[#151520] border border-gray-800 hover:border-green-500/30 text-gray-300 hover:text-white rounded-lg flex items-center gap-3 transition-all group shadow-lg">
+                    <span class="text-lg opacity-70 group-hover:opacity-100 group-hover:text-green-400 transition-colors">🌳</span>
+                    <span class="font-bold text-xs uppercase tracking-wider">Mapa Árbol</span>
                 </a>
                 
 
                 
                 <div class="mt-8 pt-4 border-t border-gray-800">
                     {% if can_edit %}
-                    <button onclick="openCreateModal()" class="w-full py-3 bg-linear-to-r from-accent to-purple-600 hover:from-accent-hover hover:to-purple-500 text-white font-bold rounded-lg shadow-lg shadow-purple-900/30 transition transform hover:scale-[1.02] flex items-center justify-center gap-2">
-                        ✨ GENERAR ENTORNO
+                    <button onclick="openCreateModal()" class="w-full px-4 py-3 bg-[#0f111a] hover:bg-[#151520] border border-gray-800 hover:border-purple-500/50 text-gray-300 hover:text-white rounded-lg flex items-center justify-center gap-3 transition-all group shadow-lg">
+                        <span class="text-xl opacity-70 group-hover:opacity-100 group-hover:text-purple-400 transition-colors">✨</span> 
+                        <span class="font-bold text-xs uppercase tracking-wider">GENERAR ENTORNO</span>
                     </button>
                     {% endif %}
 

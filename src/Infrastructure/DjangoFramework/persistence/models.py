@@ -428,6 +428,11 @@ class TimelinePeriod(models.Model):
         help_text='True si es el estado ACTUAL/presente'
     )
 
+    is_future = models.BooleanField(
+        default=False,
+        help_text='True si es un borrador futuro (Offline)'
+    )
+
     metadata = models.JSONField(
         default=dict,
         blank=True,

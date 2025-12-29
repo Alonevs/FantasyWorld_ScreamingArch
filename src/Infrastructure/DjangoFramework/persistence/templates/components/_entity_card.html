@@ -9,40 +9,55 @@
 
 {% if variant == 'horizontal' %}
 <!-- HORIZONTAL VARIANT (List/Grid Compact) -->
-<a href="{% url 'ver_mundo' entity.public_id %}" class="block bg-gray-900/50 hover:bg-gray-800 border {% if entity.is_jumped %}border-yellow-600/50 bg-yellow-900/5 border-dashed{% else %}border-gray-700{% endif %} hover:border-accent rounded-lg p-3 transition flex items-center gap-3 group">
-    <div class="w-12 h-12 rounded bg-black border border-gray-800 overflow-hidden shrink-0 relative group-hover:border-accent transition-colors duration-300">
-        {% with image=entity.img_file|default:entity.img %}
-        {% if image %}
-        <img src="{% static 'persistence/img/'|add:image %}" class="w-full h-full object-cover transition-transform duration-10000 ease-linear group-hover:scale-125" onerror="this.parentElement.innerHTML='<div class=\'w-full h-full flex items-center justify-center text-xl text-gray-700\'>🪐</div>'">
-        {% else %}
-        <div class="w-full h-full flex items-center justify-center text-xl text-gray-700 group-hover:text-accent transition">🪐</div>
-        {% endif %}
-        {% endwith %}
-        <!-- Reflection/Shine overlay -->
-        <div class="absolute inset-0 bg-linear-to-tr from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
-    </div>
-    <div>
-        <div class="font-bold text-gray-200 group-hover:text-white transition-colors flex items-center">{{ entity.name }}</div>
-        {% if user.is_superuser %}
-        <div class="text-xs text-gray-500 font-mono">{{ entity.short|default:entity.public_id }}</div>
-        {% endif %}
-        
-        {% if entity.missing_parent_id %}
-        <div class="text-[10px] text-red-400 font-bold bg-red-900/20 px-1.5 py-0.5 rounded border border-red-900/30 flex items-center gap-1 mt-1">
-            ⚠️ Huérfano de {{ entity.missing_parent_id }}
-        </div>
-        {% endif %}
-    </div>
+<a href="{% url 'ver_mundo' entity.public_id %}" class="block caos-card p-3 mb-2 transition-all duration-300 hover:brightness-125 hover:translate-x-1 group">
+    <div class="flex items-center gap-4 relative">
+        <!-- Shine overlay -->
+        <div class="absolute inset-0 bg-linear-to-r from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
 
+        <div class="w-12 h-12 rounded-lg bg-black border border-white/5 overflow-hidden shrink-0 relative group-hover:border-purple-500/50 transition-colors duration-500">
+            {% with image=entity.img_file|default:entity.img %}
+            {% if image %}
+            <img src="{% static 'persistence/img/'|add:image %}" class="w-full h-full object-cover transition-transform duration-10000 ease-linear group-hover:scale-125" onerror="this.parentElement.innerHTML='<div class=\'w-full h-full flex items-center justify-center text-xl text-gray-700\'>🪐</div>'">
+            {% else %}
+            <div class="w-full h-full flex items-center justify-center text-xl text-gray-700 group-hover:text-purple-400 transition">🪐</div>
+            {% endif %}
+            {% endwith %}
+        </div>
+        
+        <div class="flex-1 min-w-0">
+            <div class="font-bold text-gray-200 group-hover:text-white transition-colors flex items-center gap-2 uppercase tracking-tight text-sm">
+                {{ entity.name }}
+                {% if entity.is_jumped %}
+                <span class="text-[9px] bg-amber-500/20 text-amber-500 px-1 rounded border border-amber-500/30">JUMPED</span>
+                {% endif %}
+            </div>
+            {% if user.is_superuser %}
+            <div class="text-[10px] text-gray-600 font-mono">{{ entity.short|default:entity.public_id }}</div>
+            {% endif %}
+            
+            {% if entity.missing_parent_id %}
+            <div class="text-[9px] text-red-400 font-bold bg-red-900/20 px-1.5 py-0.5 rounded border border-red-900/30 flex items-center gap-1 mt-1 w-fit">
+                ⚠️ Huérfano de {{ entity.missing_parent_id }}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="text-[10px] font-bold text-gray-700 group-hover:text-purple-500 transition-colors">
+            DETALLE →
+        </div>
+    </div>
 </a>
 
 {% else %}
 <!-- VERTICAL VARIANT (Standard Card) -->
 <a href="{% url 'ver_mundo' entity.public_id %}" class="block group h-full">
-    <div class="bg-[#161625] border border-[#2a2a40] rounded-xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_10px_20px_rgba(0,0,0,0.5)] hover:border-accent h-full flex flex-col relative">
+    <div class="caos-card h-full flex flex-col relative transition-all duration-300 hover:-translate-y-1 hover:brightness-110">
         
+        <!-- Top Glow (Specific to entity type/status if needed, default purple) -->
+        <div class="absolute top-0 left-0 right-0 h-[2px] bg-linear-to-r {% if entity.status == 'LIVE' %}from-green-500 via-green-400 to-green-600 shadow-[0_0_15px_rgba(34,197,94,0.3)]{% else %}from-purple-600 via-purple-500 to-purple-700 shadow-[0_0_15px_rgba(147,51,234,0.3)]{% endif %} z-20"></div>
+
         <!-- Image Container -->
-        <div class="w-full h-40 bg-black relative border-b border-[#333] group-hover:border-accent/50 transition-colors card-structure overflow-hidden">
+        <div class="w-full h-40 bg-black relative border-b border-white/5 card-structure overflow-hidden">
             <!-- LOGIC: If multiple images -> Slideshow. Else -> Static Image. -->
             {% if entity.images and entity.images|length > 1 %}
                 <!-- Alpine.js Zen Slideshow (Wave Effect) [25s Interval] -->
@@ -64,91 +79,80 @@
                          style="transition: opacity 2000ms ease-in-out, transform 20000ms linear;">  
                     {% endfor %}
                     
-                    <!-- Gradient Overlay -->
-                    <div class="absolute inset-0 bg-linear-to-t from-[#161625] via-transparent to-transparent opacity-60"></div>
+                    <!-- Dark Gradient Overlay -->
+                    <div class="absolute inset-0 bg-linear-to-t from-[#0a0a16] via-transparent to-transparent opacity-80"></div>
                 </div>
             {% else %}
                 <!-- Static Image (Single or Fallback) -->
                 {% if entity.has_img or entity.img %}
                     {% with image=entity.img_file|default:entity.img %}
-                    <img src="{% static 'persistence/img/'|add:image %}" class="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-transform duration-10000 ease-linear group-hover:scale-125">
+                    <img src="{% static 'persistence/img/'|add:image %}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-transform duration-10000 ease-linear group-hover:scale-125">
                     {% endwith %}
                 {% else %}
                     <!-- No Image Fallback -->
-                    <div class="w-full h-full flex items-center justify-center text-4xl text-gray-800 group-hover:text-accent/50 transition">
+                    <div class="w-full h-full flex items-center justify-center text-4xl text-gray-800 group-hover:text-purple-500/30 transition">
                         🪐
                     </div>
                 {% endif %}
+                <div class="absolute inset-0 bg-linear-to-t from-[#0a0a16] via-transparent to-transparent opacity-80"></div>
             {% endif %}
             
             <!-- Floating Status Indicators -->
-            <div class="absolute top-2 right-2 flex items-center gap-2">
+            <div class="absolute top-3 right-3 flex items-center gap-2 z-30">
                 {% if entity.is_locked %}
-                <div class="w-6 h-6 rounded-full bg-black/60 backdrop-blur border border-white/20 flex items-center justify-center text-xs" title="Bloqueado">
+                <div class="w-6 h-6 rounded-lg bg-black/80 border border-white/10 flex items-center justify-center text-xs shadow-lg" title="Bloqueado">
                     🔒
                 </div>
                 {% endif %}
 
-                <!-- Status Toggle -->
-                <div class="z-50 relative pointer-events-auto">
-                    {% if user.is_superuser or user == entity.author %}
-                    <form action="{% url 'toggle_status' entity.public_id %}" method="POST" class="inline-block" onclick="event.stopPropagation();">
-                        {% csrf_token %}
-                        <!-- No need for hidden next since view uses HTTP_REFERER -->
-                        <button type="submit" 
-                            class="group/btn relative px-3 py-1 rounded-full flex items-center gap-1.5 backdrop-blur-md border shadow-lg transition-all duration-300 hover:scale-105
-                            {% if entity.status == 'LIVE' %}
-                                bg-green-500/20 border-green-400/30 text-green-300 hover:bg-green-500/30 hover:border-green-400
-                            {% else %}
-                                bg-red-600/20 border-red-500/30 text-red-300 hover:bg-red-600/30 hover:border-red-500
-                            {% endif %}">
-                            
-                            <!-- Dot Indicator -->
-                            <span class="w-2 h-2 rounded-full relative
-                                {% if entity.status == 'LIVE' %}bg-green-400 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.6)]
-                                {% else %}bg-red-500{% endif %}">
-                            </span>
-                            
-                            <span class="text-[10px] font-bold tracking-wider uppercase">
-                                {% if entity.status == 'LIVE' %}LIVE{% else %}OFFLINE{% endif %}
-                            </span>
-                        </button>
-                    </form>
-                    {% else %}
-                        <!-- Read Only Badge (Compact Aesthetic) -->
-                        <div class="px-2 py-1 rounded-full flex items-center gap-1.5 backdrop-blur-md border shadow-lg
-                            {% if entity.status == 'LIVE' %}
-                                bg-green-900/40 border-green-500/20 text-green-400
-                            {% else %}
-                                bg-red-900/40 border-red-500/20 text-red-400
-                            {% endif %}" title="Status: {{ entity.status }}">
-                            
-                            <span class="w-1.5 h-1.5 rounded-full 
-                                {% if entity.status == 'LIVE' %}bg-green-400 shadow-[0_0_5px_rgba(74,222,128,0.5)]
-                                {% else %}bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.5)]{% endif %}">
-                            </span>
-                            <span class="text-[9px] font-bold tracking-widest uppercase opacity-80">
-                                {% if entity.status == 'LIVE' %}ON{% else %}OFF{% endif %}
-                            </span>
-                        </div>
-                    {% endif %}
-                </div>
+                <!-- Status Badge -->
+                {% if user.is_superuser or user == entity.author %}
+                <form action="{% url 'toggle_status' entity.public_id %}" method="POST" class="inline-block" onclick="event.stopPropagation();">
+                    {% csrf_token %}
+                    <button type="submit" 
+                        class="px-2.5 py-1 rounded-lg flex items-center gap-1.5 bg-black/60 border border-white/5 hover:border-white/20 transition-all active:scale-95 shadow-xl
+                        {% if entity.status == 'LIVE' %} text-green-400 {% else %} text-red-500 {% endif %}">
+                        
+                        <span class="w-2 h-2 rounded-full 
+                            {% if entity.status == 'LIVE' %}bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.6)]
+                            {% else %}bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]{% endif %}">
+                        </span>
+                        
+                        <span class="text-[9px] font-bold tracking-widest uppercase">
+                            {% if entity.status == 'LIVE' %}LIVE{% else %}OFFLINE{% endif %}
+                        </span>
+                    </button>
+                </form>
+                {% else %}
+                    <div class="px-2.5 py-1 rounded-lg flex items-center gap-1.5 bg-black/60 border border-white/5 shadow-xl
+                        {% if entity.status == 'LIVE' %} text-green-400 {% else %} text-red-500 {% endif %}">
+                        <span class="w-1.5 h-1.5 rounded-full 
+                            {% if entity.status == 'LIVE' %}bg-green-400 shadow-[0_0_5px_rgba(74,222,128,0.5)]
+                            {% else %}bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.5)]{% endif %}">
+                        </span>
+                        <span class="text-[9px] font-bold tracking-widest uppercase">
+                            {% if entity.status == 'LIVE' %}LIVE{% else %}OFFLINE{% endif %}
+                        </span>
+                    </div>
+                {% endif %}
             </div>
         </div>
 
         <div class="p-4 flex flex-col grow">
-            <h3 class="text-lg font-bold text-white group-hover:text-accent transition-colors mb-1 truncate">{{ entity.name }}</h3>
+            <h3 class="text-base font-bold text-white group-hover:text-purple-400 transition-colors mb-2 truncate uppercase tracking-tight">{{ entity.name }}</h3>
             
             <!-- Tags/Meta -->
-            <div class="flex items-center justify-between text-xs text-gray-500 mt-auto pt-2 border-t border-gray-800/50 group-hover:border-accent/20 transition-colors">
-               <span class="font-mono">
+            <div class="flex items-center justify-between mt-auto pt-3 border-t border-white/5">
+               <span class="text-[10px] font-mono text-gray-600 bg-white/5 px-1.5 py-0.5 rounded">
                    {% if user.is_superuser %}
                        {{ entity.public_id }}
                    {% else %}
-                       <span class="text-gray-700">●●●</span>
+                       #{{ forloop.counter|default:"--" }}
                    {% endif %}
                </span>
-               <span class="opacity-0 group-hover:opacity-100 transition-opacity text-accent">EXPLORAR →</span>
+               <span class="text-[9px] font-bold uppercase tracking-widest text-purple-500 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
+                   Explorar →
+               </span>
             </div>
         </div>
     </div>
