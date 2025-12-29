@@ -12,7 +12,7 @@ class GetWorldNarrativesUseCase:
     def __init__(self, repository: CaosRepository):
         self.repository = repository
 
-    def execute(self, identifier: str, user=None):
+    def execute(self, identifier: str, user=None, period_slug=None):
         # 1. Resolución de la Entidad (Mundo/Nivel)
         w_domain = resolve_world_id(self.repository, identifier)
         if not w_domain:
@@ -27,6 +27,14 @@ class GetWorldNarrativesUseCase:
         # Obtenemos todas las narrativas vinculadas a este mundo.
         docs = w.narrativas.all()
         
+        # FILTRADO POR PERÍODO
+        if period_slug and period_slug != 'actual':
+            docs = docs.filter(timeline_period__slug=period_slug)
+        else:
+            # Vista ACTUAL o por defecto (nulo o 'actual')
+            from django.db.models import Q
+            docs = docs.filter(Q(timeline_period__isnull=True) | Q(timeline_period__slug='actual'))
+
         # Regla de Negocio: Los borradores (Versión 0) se excluyen de la lista pública.
         # Solo se muestran documentos que tengan al menos una versión aprobada y publicada.
         docs = docs.filter(current_version_number__gt=0)

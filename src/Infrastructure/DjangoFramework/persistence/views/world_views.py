@@ -258,21 +258,68 @@ def ver_mundo(request, public_id):
             except:
                 return redirect('dashboard')
 
+    # --- PERIOD SUPPORT (New Timeline System) ---
+    from src.Infrastructure.DjangoFramework.persistence.models import TimelinePeriod
+    from src.Shared.Services.TimelinePeriodService import TimelinePeriodService
+    
+    # Resolver Entidad ORM para el servicio de períodos
+    w_orm = resolve_jid_orm(public_id)
+    if not w_orm: raise Http404
+
+    # Obtener slug del período solicitado (por defecto: 'actual')
+    period_slug = request.GET.get('period', 'actual')
+    
+    # Obtener todos los períodos de esta entidad
+    all_periods = TimelinePeriodService.get_periods_for_world(w_orm)
+    
+    # Obtener el período actual (ACTUAL)
+    current_period = TimelinePeriodService.get_current_period(w_orm)
+    
+    # Determinar qué período mostrar
+    if period_slug == 'actual' or not period_slug:
+        viewing_period = current_period
+    else:
+        viewing_period = all_periods.filter(slug=period_slug).first()
+        if not viewing_period:
+            # Si el slug no existe, redirigir a ACTUAL
+            messages.warning(request, f"Período '{period_slug}' no encontrado. Mostrando ACTUAL.")
+            return redirect('ver_mundo', public_id=public_id)
+
     # 2. Manejar GET (Visualización) mediante Caso de Uso
-    context = GetWorldDetailsUseCase(repo).execute(public_id, request.user)
+    # PASAMOS EL PERIOD_SLUG PARA FILTRAR IMÁGENES
+    context = GetWorldDetailsUseCase(repo).execute(public_id, request.user, period_slug=period_slug)
     
     if not context:
         return render(request, '404.html', {"jid": public_id})
 
     # --- CANONICALIZACIÓN DE URL (ID Antiguo -> NanoID) ---
-    # Si se accede vía ID antiguo (ej. '01') pero la entidad tiene un public_id (NanoID), redireccionar.
-    # Comprobamos si el 'public_id' solicitado no coincide con el 'context["public_id"]' resuelto.
     if context['public_id'] and context['public_id'] != public_id:
         return redirect('ver_mundo', public_id=context['public_id'])
     # ------------------------------------------------------
 
+    # Si estamos viendo un período que NO es ACTUAL, sobrescribir descripción
+    if viewing_period and not viewing_period.is_current:
+        context['description'] = viewing_period.description
+        context['is_period_view'] = True
+        context['viewing_period'] = viewing_period
+        
+        # Sobrescribir metadatos para mostrar los del periodo
+        if viewing_period.metadata:
+            from .view_utils import get_metadata_properties_dict
+            context['props'] = get_metadata_properties_dict(viewing_period.metadata)
+            
+        messages.info(request, f"📅 Viendo período: {viewing_period.title}")
+    else:
+        context['is_period_view'] = False
+        context['viewing_period'] = current_period
+    
+    # Pasar períodos al contexto para el selector
+    context['timeline_periods'] = all_periods.exclude(is_current=True).order_by('order')
+    context['current_period_slug'] = period_slug
+    # ---------------------------------
+
     # --- INYECCIÓN DE ETIQUETA DE JERARQUÍA ---
-    from src.WorldManagement.Caos.Domain.hierarchy_utils import get_children_label # Importar helper
+    from src.WorldManagement.Caos.Domain.hierarchy_utils import get_readable_hierarchy, get_children_label # Importar helpers
     context['hierarchy_label'] = get_readable_hierarchy(context['jid'])
     context['children_label'] = get_children_label(context['jid']) # NUEVO: Pasar etiqueta para el grid
     context['status_str'] = w_orm.status
@@ -296,12 +343,6 @@ def ver_mundo(request, public_id):
     context['available_levels'] = get_available_levels(context['jid'])
     # -------------------------------------
 
-    # --- ADAPTADOR DE METADATOS UNIFICADO ---
-    from .view_utils import get_metadata_properties_dict
-    props_dict = get_metadata_properties_dict(w_orm.metadata)
-    properties = [{'key': k, 'value': v} for k, v in props_dict.items()]
-    context['metadata_obj'] = {'properties': properties}
-    # ------------------------------------------
 
     return render(request, 'ficha_mundo.html', context)
 

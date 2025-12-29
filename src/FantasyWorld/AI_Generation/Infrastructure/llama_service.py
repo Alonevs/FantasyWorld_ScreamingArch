@@ -144,7 +144,8 @@ Constraints:
             
         return raw_response
 
-    # --- MÉTODO PARA CRIATURAS (JSON ESTRUCTURADO) ---
+    # --- GENERACIÓN DE ESTRUCTURAS JSON ---
+    # Método versátil para generar JSON estructurado (criaturas, metadata, etc.)
     def generate_structure(self, system_prompt: str, context_prompt: str, max_tokens=600, temperature=0.6) -> Dict[str, Any]:
         print(f" 🧬 [Llama] Generando estructura JSON...")
         payload = {
@@ -193,10 +194,3 @@ Constraints:
             print(f"⚠️ Error IA Edit: {e}")
         return ""
 
-    # --- MÉTODO LEGACY (Compatibilidad) ---
-    def generate_entity_json(self, name, tipo, habitat):
-        # Mantenemos este por si algún código viejo lo llama
-        return self.generate_structure(
-            f"Genera JSON para: {tipo}. Keys: descripcion, tamano, peso, peligro (1-5), dieta, rasgos.", 
-            f"Nombre: {name}. Habitat: {habitat}"
-        )

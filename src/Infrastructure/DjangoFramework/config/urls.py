@@ -16,6 +16,7 @@ from src.Infrastructure.DjangoFramework.persistence.views.dashboard.workflow imp
     aprobar_contribucion, rechazar_contribucion,
     aprobar_narrativa, rechazar_narrativa, publicar_narrativa, archivar_narrativa,
     restaurar_narrativa, borrar_narrativa_version, 
+    aprobar_periodo, rechazar_periodo, archivar_periodo,
     ProposalDetailView, aprobar_propuestas_masivo, archivar_propuestas_masivo, publicar_propuestas_masivo
 )
 from src.Infrastructure.DjangoFramework.persistence.views.dashboard.assets import (
@@ -46,6 +47,18 @@ from src.Infrastructure.DjangoFramework.persistence.views.messaging_views import
 )
 
 from src.Infrastructure.DjangoFramework.persistence.views.search_views import global_search
+
+# Timeline API (old system - snapshots)
+from src.Infrastructure.DjangoFramework.persistence.views.timeline_api import (
+    create_timeline_proposal, list_timeline_proposals, get_timeline_proposal_detail,
+    approve_timeline_proposal, reject_timeline_proposal
+)
+
+# Period API (new system - independent periods)
+from src.Infrastructure.DjangoFramework.persistence.views.period_api import (
+    create_period, propose_period_edit, get_period_detail,
+    approve_period_version, reject_period_version, delete_period, list_world_periods
+)
 
 urlpatterns = [
     path('api/ai/generate-lore/', api_generate_lore, name='api_generate_lore'),
@@ -152,6 +165,11 @@ urlpatterns = [
     path('narrativa/version/<int:id>/publicar/', publicar_narrativa, name='publicar_narrativa'),
     path('narrativa/restaurar/<str:nid>/', restaurar_narrativa, name='restaurar_narrativa'),
     path('narrativa/version/<int:id>/borrar/', borrar_narrativa_version, name='borrar_narrativa_version'),
+    
+    # Acciones de Periodos (Timeline)
+    path('periodo/propuesta/<int:id>/aprobar/', aprobar_periodo, name='aprobar_periodo'),
+    path('periodo/propuesta/<int:id>/rechazar/', rechazar_periodo, name='rechazar_periodo'),
+    path('periodo/propuesta/<int:id>/archivar/', archivar_periodo, name='archivar_periodo'),
 
     # Acciones de Imágenes
     path('imagen/propuesta/<int:id>/', ImageProposalDetailView.as_view(), name='revisar_imagen'),
@@ -193,6 +211,26 @@ urlpatterns = [
     path('api/ai/edit-narrative/', edit_narrative_api, name='edit_narrative_api'),
     path('api/ai/generate-title/', api_generate_title, name='api_generate_title'),
     path('api/narrative/import-file/', import_narrative_file, name='import_narrative_file'),
+    
+    # ==========================================
+    # TIMELINE API (Old system - snapshots)
+    # ==========================================
+    path('api/world/<str:world_id>/timeline/propose/', create_timeline_proposal, name='create_timeline_proposal'),
+    path('api/timeline/proposals/', list_timeline_proposals, name='list_timeline_proposals'),
+    path('api/timeline/proposal/<int:proposal_id>/', get_timeline_proposal_detail, name='get_timeline_proposal_detail'),
+    path('api/timeline/proposal/<int:proposal_id>/approve/', approve_timeline_proposal, name='approve_timeline_proposal'),
+    path('api/timeline/proposal/<int:proposal_id>/reject/', reject_timeline_proposal, name='reject_timeline_proposal'),
+    
+    # ==========================================
+    # PERIOD API (New system - independent periods)
+    # ==========================================
+    path('api/world/<str:world_id>/period/create', create_period, name='create_period'),
+    path('api/world/<str:world_id>/periods', list_world_periods, name='list_world_periods'),
+    path('api/period/<int:period_id>/', get_period_detail, name='get_period_detail'),
+    path('api/period/<int:period_id>/propose', propose_period_edit, name='propose_period_edit'),
+    path('api/period/<int:period_id>/delete', delete_period, name='delete_period'),
+    path('api/period/version/<int:version_id>/approve', approve_period_version, name='approve_period_version'),
+    path('api/period/version/<int:version_id>/reject', reject_period_version, name='reject_period_version'),
     
     # 🌟 NEW UNIFIED REVIEW VIEW 🌟
     path('revisar/<str:type>/<int:id>/', review_views.review_proposal, name='review_proposal'),

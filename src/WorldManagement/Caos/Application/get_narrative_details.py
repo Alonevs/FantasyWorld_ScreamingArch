@@ -46,9 +46,8 @@ class GetNarrativeDetailsUseCase:
             return None
 
         # 2. Recopilación de Datos de Contexto
-        # Obtenemos todas las entidades para posibles menciones o enlaces rápidos
-        # TODO: Optimizar si la base de datos de mundos crece demasiado.
-        todas = CaosWorldORM.objects.all().order_by('id')
+        # Obtenemos solo los campos necesarios para menciones/enlaces (optimizado)
+        todas = CaosWorldORM.objects.only('id', 'name', 'public_id').order_by('id')
         
         # 3. Resolución de Capítulos (Hijos Jerárquicos)
         # Buscamos todas las narrativas cuyo NID empiece por el NID actual (Estructura de Carpeta)

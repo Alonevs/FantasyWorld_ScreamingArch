@@ -132,7 +132,8 @@ def publicar_imagen(request, id):
         else:
             # NORMAL PUBLISH (ADD)
             user_name = prop.author.username if prop.author else "Anónimo"
-            repo.save_manual_file(str(prop.world.id), prop.image, username=user_name, title=prop.title)
+            period_slug = prop.timeline_period.slug if prop.timeline_period else None
+            repo.save_manual_file(str(prop.world.id), prop.image, username=user_name, title=prop.title, period_slug=period_slug)
             messages.success(request, "🚀 Imagen Publicada y Archivada.")
             log_event(request.user, "PUBLISH_IMAGE", id)
         

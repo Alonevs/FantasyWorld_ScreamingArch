@@ -48,13 +48,18 @@ def ver_narrativa_mundo(request, jid):
             return render(request, 'private_access.html', status=403)
             
         real_jid = w.id if w else jid
-        context = GetWorldNarrativesUseCase(repo).execute(real_jid, request.user)
+        
+        # PERIOD SUPPORT
+        period_slug = request.GET.get('period', 'actual')
+        
+        context = GetWorldNarrativesUseCase(repo).execute(real_jid, request.user, period_slug=period_slug)
         
         if not context: 
             print(f"❌ Mundo no encontrado para JID: {jid}")
             messages.error(request, f"Mundo no encontrado: {jid}")
             return redirect('home')
         
+        context['current_period_slug'] = period_slug
         return render(request, 'indice_narrativa.html', context)
     except Exception as e: 
         print(f"❌ Error en ver_narrativa_mundo: {e}")
@@ -291,7 +296,8 @@ def pre_crear_root(request, jid, tipo_codigo):
             'published_chapters': [],
             'is_creation_mode': True,
             'target_jid': jid,      # For Form Action
-            'target_type': tipo_codigo # For Form Action
+            'target_type': tipo_codigo, # For Form Action
+            'current_period_slug': request.GET.get('period', 'actual')
         })
     except Exception as e:
         print(f"Error pre-creating root: {e}")
@@ -324,7 +330,8 @@ def pre_crear_child(request, parent_nid, tipo_codigo):
             'is_creation_mode': True,
             'is_child_mode': True,
             'target_parent': parent_nid, # For Form Action
-            'target_type': tipo_codigo
+            'target_type': tipo_codigo,
+            'current_period_slug': request.GET.get('period', 'actual')
         })
     except Exception as e:
         print(f"Error pre-creating child: {e}")
@@ -397,6 +404,7 @@ def crear_nueva_narrativa(request, jid, tipo_codigo):
             user=user,
             title=title,
             content=content,
+            period_slug=request.POST.get('period')
             # publish_immediately=False (Default) -> Crea V0 Pendiente
         )
         
@@ -438,6 +446,7 @@ def crear_sub_narrativa(request, parent_nid, tipo_codigo):
             user=user,
             title=title,
             content=content,
+            period_slug=request.POST.get('period')
             # publish_immediately=False (Default) -> Crea V0 Pendiente
         )
         

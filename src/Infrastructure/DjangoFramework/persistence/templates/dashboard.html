@@ -110,7 +110,7 @@
                                     <!-- CHECKBOX -->
                                     <div class="flex items-center justify-center pt-1 pl-1">
                                         <input type="checkbox" form="bulk-approve-form" 
-                                               name="{% if item.type == 'WORLD' %}selected_ids{% elif item.type == 'NARRATIVE' %}selected_narr_ids{% else %}selected_img_ids{% endif %}" 
+                                               name="{% if item.type == 'WORLD' %}selected_ids{% elif item.type == 'NARRATIVE' %}selected_narr_ids{% elif item.type == 'PERIOD' %}selected_period_ids{% else %}selected_img_ids{% endif %}" 
                                                value="{{ item.id }}" 
                                                class="pending-check w-4 h-4 rounded border-gray-600 bg-gray-700 text-green-500 focus:ring-green-500/50 cursor-pointer transition">
                                     </div>
@@ -123,11 +123,12 @@
                                                 {% if item.type == 'WORLD' and not item.is_image_context %} bg-blue-900/20 text-blue-400 border-blue-900/50
                                                 {% elif item.type == 'NARRATIVE' %} bg-purple-900/20 text-purple-400 border-purple-900/50
                                                 {% elif item.type == 'IMAGE' or item.is_image_context %} bg-pink-900/20 text-pink-400 border-pink-900/50
+                                                {% elif item.type == 'PERIOD' %} bg-teal-900/20 text-teal-400 border-teal-900/50
                                                 {% else %} bg-gray-800 text-gray-400 border-gray-700 {% endif %}">
                                                 {{ item.type_label }}
                                             </span>
                                             
-                                            <a href="{% if item.type == 'IMAGE' %}{% url 'revisar_imagen' item.id %}{% else %}{% url 'review_proposal' item.type item.id %}{% endif %}" class="text-gray-200 font-bold hover:text-blue-400 hover:underline truncate transition-colors text-sm">
+                                         <a href="{% if item.type == 'IMAGE' %}{% url 'revisar_imagen' item.id %}{% else %}{% url 'review_proposal' item.type item.id %}{% endif %}" class="text-gray-200 font-bold hover:text-blue-400 hover:underline truncate transition-colors text-sm" title="{{ item.type_label }}">
                                                 {{ item.target_name|default:"(Sin Nombre)" }}
                                             </a>
                                             <span class="text-[10px] text-gray-600 font-mono">v{{ item.version_number }}</span>
@@ -150,7 +151,7 @@
                                             <!-- DELETE LOGIC: Green=Keep (Reject Proposal), Red=Delete (Approve Proposal) -->
                                             
                                             <!-- Green: MANTENER (Reject deletion) -->
-                                            <form method="post" action="{% if item.type == 'WORLD' or item.type == 'METADATA' %}{% url 'archivar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'archivar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'archivar_imagen' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
+                                            <form method="post" action="{% if item.type == 'WORLD' or item.type == 'METADATA' %}{% url 'archivar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'archivar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'archivar_imagen' item.id %}{% elif item.type == 'PERIOD' %}{% url 'archivar_periodo' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
                                                 {% csrf_token %}
                                                 <input type="hidden" name="admin_feedback" value="">
                                                 <button type="button" 
@@ -161,7 +162,7 @@
                                             </form>
                                             
                                             <!-- RESTORE BUTTON (Active only) -->
-                                        <form method="post" action="{% if item.type == 'WORLD' or item.type == 'METADATA' %}{% url 'borrar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'borrar_narrativa_version' item.id %}{% elif item.type == 'IMAGE' %}{% url 'borrar_imagen_definitivo' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
+                                        <form method="post" action="{% if item.type == 'WORLD' or item.type == 'METADATA' %}{% url 'borrar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'borrar_narrativa_version' item.id %}{% elif item.type == 'IMAGE' %}{% url 'borrar_imagen_definitivo' item.id %}{% elif item.type == 'PERIOD' %}{% url 'archivar_periodo' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
                                             {% csrf_token %}
                                             <button type="submit" class="text-red-500 hover:text-white hover:bg-red-600 px-3 py-1.5 rounded text-xs font-bold transition-all border border-red-900/30 hover:border-red-500 shadow-lg shadow-red-900/10 flex items-center gap-1" title="Confirmar Borrado Definitivo" data-confirm="⚠️ ¿CONFIRMAR BORRADO? Esta acción eliminará el elemento." data-destructive="true">
                                                 <span>💀</span> Borrar
@@ -171,9 +172,9 @@
                                         {% else %}
                                             <!-- STANDARD LOGIC: Green=Approve, Red=Reject -->
                                             
-                                            <!-- Approve (Step 1) -->
+                                            <!-- Standard Approve Button -->
                                             {% if request.user|can_approve:item %}
-                                            <form method="post" action="{% if item.type == 'WORLD' or item.type == 'METADATA' %}{% url 'aprobar_version' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'aprobar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'aprobar_imagen' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
+                                            <form method="post" action="{% if item.type == 'WORLD' or item.type == 'METADATA' %}{% url 'aprobar_version' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'aprobar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'aprobar_imagen' item.id %}{% elif item.type == 'PERIOD' %}{% url 'aprobar_periodo' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
                                                 {% csrf_token %}
                                                 <button type="submit" class="text-green-500 hover:text-white hover:bg-green-600 px-3 py-1.5 rounded text-xs font-bold transition-all border border-green-900/30 hover:border-green-500 shadow-lg shadow-green-900/10" title="Aprobar" data-confirm="¿Aprobar esta propuesta?">
                                                     Aprobar
@@ -188,7 +189,7 @@
 
                                             <!-- Reject (With Reason) -->
                                             {% if request.user|can_approve:item %}
-                                            <form method="post" action="{% if item.type == 'WORLD' or item.type == 'METADATA' %}{% url 'rechazar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'rechazar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'rechazar_imagen' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
+                                            <form method="post" action="{% if item.type == 'WORLD' or item.type == 'METADATA' %}{% url 'rechazar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'rechazar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'rechazar_imagen' item.id %}{% elif item.type == 'PERIOD' %}{% url 'rechazar_periodo' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
                                                 {% csrf_token %}
                                                 <input type="hidden" name="admin_feedback" value="">
                                                 <button type="button" 
@@ -412,7 +413,7 @@
                                     <!-- CHECKBOX -->
                                     <div class="flex items-center justify-center pt-1 pl-1">
                                         <input type="checkbox" form="bulk-archive-approved-form" 
-                                               name="{% if item.type == 'WORLD' %}selected_ids{% elif item.type == 'NARRATIVE' %}selected_narr_ids{% else %}selected_img_ids{% endif %}" 
+                                               name="{% if item.type == 'WORLD' %}selected_ids{% elif item.type == 'NARRATIVE' %}selected_narr_ids{% elif item.type == 'PERIOD' %}selected_period_ids{% else %}selected_img_ids{% endif %}" 
                                                value="{{ item.id }}" 
                                                data-action="{{ item.action|default:'UPDATE' }}"
                                                class="approved-check w-4 h-4 rounded border-gray-600 bg-gray-700 text-yellow-500 focus:ring-yellow-500/50 cursor-pointer transition">
@@ -425,6 +426,7 @@
                                                 {% if item.type == 'WORLD' and not item.is_image_context %} bg-blue-900/20 text-blue-400 border-blue-900/50
                                                 {% elif item.type == 'NARRATIVE' %} bg-purple-900/20 text-purple-400 border-purple-900/50
                                                 {% elif item.type == 'IMAGE' or item.is_image_context %} bg-pink-900/20 text-pink-400 border-pink-900/50
+                                                {% elif item.type == 'PERIOD' %} bg-teal-900/20 text-teal-400 border-teal-900/50
                                                 {% else %} bg-gray-800 text-gray-400 border-gray-700 {% endif %}">
                                                 {{ item.type_label }}
                                             </span>
@@ -448,7 +450,7 @@
                                             <span>👁️</span> <span class="hidden sm:inline">Ver</span>
                                         </a>
 
-                                         <form method="post" action="{% if item.type == 'WORLD' %}{% url 'archivar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'archivar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'archivar_imagen' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
+                                         <form method="post" action="{% if item.type == 'WORLD' %}{% url 'archivar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'archivar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'archivar_imagen' item.id %}{% elif item.type == 'PERIOD' %}{% url 'archivar_periodo' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
                                             {% csrf_token %}
                                             <input type="hidden" name="admin_feedback" value="">
                                             {% if item.action == 'DELETE' %}
@@ -467,7 +469,7 @@
                                          <!-- Publish (Step 2) -->
                                         {% if user|can_publish:item %}
                                         <div class="flex items-center gap-2">
-                                            <form method="post" action="{% if item.type == 'WORLD' or item.type == 'METADATA' %}{% url 'publicar_version' item.id %}{% elif item.type == 'IMAGE' %}{% url 'publicar_imagen' item.id %}{% else %}{% url 'publicar_narrativa' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
+                                            <form method="post" action="{% if item.type == 'WORLD' or item.type == 'METADATA' %}{% url 'publicar_version' item.id %}{% elif item.type == 'IMAGE' %}{% url 'publicar_imagen' item.id %}{% elif item.type == 'PERIOD' %}{% url 'aprobar_periodo' item.id %}{% else %}{% url 'publicar_narrativa' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
                                                 {% csrf_token %}
                                                 {% if item.action == 'DELETE' %}
                                                     <button type="submit" class="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-4 py-2 rounded shadow-[0_0_15px_rgba(220,38,38,0.3)] transition-all hover:-translate-y-0.5" data-confirm="⚠️ ¿EFECTUAR BORRADO DEFINITIVO EN LIVE?" data-destructive="true">
@@ -481,7 +483,7 @@
                                             </form>
                                             
                                             <!-- ARCHIVE APPROVED PROPOSAL -->
-                                            <form method="post" action="{% if item.type == 'WORLD' or item.type == 'METADATA' %}{% url 'archivar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'archivar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'archivar_imagen' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
+                                            <form method="post" action="{% if item.type == 'WORLD' or item.type == 'METADATA' %}{% url 'archivar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'archivar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'archivar_imagen' item.id %}{% elif item.type == 'PERIOD' %}{% url 'archivar_periodo' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
                                                 {% csrf_token %}
                                                 <button type="submit" class="p-2 text-gray-500 hover:text-amber-500 transition-colors" title="Archivar Propuesta Aprobada" data-confirm="📦 ¿Mover al archivo? Podrás recuperarla o borrarla definitivamente desde allí.">
                                                     📦
@@ -573,7 +575,7 @@
                                     <!-- CHECKBOX -->
                                     <div class="flex items-center justify-center pt-1 pl-1">
                                         <input type="checkbox" form="bulk-rejected-form" 
-                                               name="{% if item.type == 'WORLD' or item.type == 'METADATA' %}selected_ids{% elif item.type == 'NARRATIVE' %}selected_narr_ids{% else %}selected_img_ids{% endif %}" 
+                                               name="{% if item.type == 'WORLD' or item.type == 'METADATA' %}selected_ids{% elif item.type == 'NARRATIVE' %}selected_narr_ids{% elif item.type == 'PERIOD' %}selected_period_ids{% else %}selected_img_ids{% endif %}" 
                                                value="{{ item.id }}" 
                                                class="rejected-check w-4 h-4 rounded border-gray-600 bg-gray-700 text-red-500 focus:ring-red-500/50 cursor-pointer transition">
                                     </div>
@@ -585,6 +587,7 @@
                                                 {% if item.type == 'WORLD' and not item.is_image_context %} bg-blue-900/20 text-blue-400 border-blue-900/50
                                                 {% elif item.type == 'NARRATIVE' %} bg-purple-900/20 text-purple-400 border-purple-900/50
                                                 {% elif item.type == 'IMAGE' or item.is_image_context %} bg-pink-900/20 text-pink-400 border-pink-900/50
+                                                {% elif item.type == 'PERIOD' %} bg-teal-900/20 text-teal-400 border-teal-900/50
                                                 {% else %} bg-gray-800 text-gray-400 border-gray-700 {% endif %}">
                                                 {{ item.type_label }}
                                             </span>

@@ -3,6 +3,7 @@
               action="{% if is_creation_mode %}{% if is_child_mode %}{% url 'crear_sub_narrativa' target_parent target_type %}{% else %}{% url 'crear_narrativa' target_jid target_type %}{% endif %}{% else %}{% url 'editar_narrativa' narr.nid %}{% endif %}" 
               class="w-full h-full mx-auto bg-[#1f1f2e] p-[30px] rounded-[10px] border border-[#d633ff] flex flex-col">
             {% csrf_token %}
+            <input type="hidden" name="period" value="{{ current_period_slug }}">
             <h2 class="mt-0 font-['Segoe_UI'] text-white text-2xl mb-4 font-bold">
                 {% if is_creation_mode %}✨ Creando Nuevo Documento{% else %}Modo Edición{% endif %}
             </h2>

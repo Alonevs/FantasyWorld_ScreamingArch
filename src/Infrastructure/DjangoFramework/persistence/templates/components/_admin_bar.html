@@ -124,12 +124,6 @@
                 </a>
             {% endif %}
 
-            {% if request.resolver_match.url_name != 'home' %}
-            <!-- Mobile Only: Quick Back -->
-            <button onclick="history.back()" class="lg:hidden w-10 h-10 flex items-center justify-center text-gray-400 hover:text-white border border-white/5 rounded-full">
-                <span>⬅️</span>
-            </button>
-            {% endif %}
         </div>
     </div>
 

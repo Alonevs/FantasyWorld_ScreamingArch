@@ -10,7 +10,7 @@ class CreateNarrativeUseCase:
     def __init__(self, repository: CaosRepository):
         self.repository = repository
 
-    def execute(self, world_id: str, tipo_codigo: str, parent_nid: str = None, user = None, title: str = None, content: str = None, publish_immediately: bool = False) -> str:
+    def execute(self, world_id: str, tipo_codigo: str, parent_nid: str = None, user = None, title: str = None, content: str = None, publish_immediately: bool = False, period_slug: str = None) -> str:
         """
         Crea una nueva narrativa raíz o una sub-narrativa (Capítulo/Sección).
         
@@ -66,6 +66,10 @@ class CreateNarrativeUseCase:
             prefix = f"{parent_nid}{short_code}"
             new_nid = self.repository.get_next_narrative_id(prefix)
             
+            # PERIOD RESOLUTION
+            from src.Shared.Services.TimelinePeriodService import TimelinePeriodService
+            period = TimelinePeriodService.resolve_period(padre.world, period_slug) if period_slug else None
+
             # Crear el registro maestro de la narrativa
             narr = CaosNarrativeORM.objects.create(
                 nid=new_nid, 
@@ -73,7 +77,8 @@ class CreateNarrativeUseCase:
                 titulo=final_title, 
                 contenido=final_content, 
                 tipo=full_type,
-                current_version_number=initial_version
+                current_version_number=initial_version,
+                timeline_period=period
             )
             
             # Iniciar el historial con la Propuesta V1
@@ -99,6 +104,10 @@ class CreateNarrativeUseCase:
             prefix = f"{world_id}{short_code}"
             new_nid = self.repository.get_next_narrative_id(prefix)
             
+            # PERIOD RESOLUTION
+            from src.Shared.Services.TimelinePeriodService import TimelinePeriodService
+            period = TimelinePeriodService.resolve_period(world, period_slug) if period_slug else None
+
             # Crear el registro maestro
             narr = CaosNarrativeORM.objects.create(
                 nid=new_nid, 
@@ -106,7 +115,8 @@ class CreateNarrativeUseCase:
                 titulo=final_title, 
                 contenido=final_content, 
                 tipo=full_type,
-                current_version_number=initial_version
+                current_version_number=initial_version,
+                timeline_period=period
             )
             
             # Iniciar el historial con la Propuesta V1

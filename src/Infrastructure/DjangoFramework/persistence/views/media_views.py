@@ -64,6 +64,11 @@ def api_save_foto(request, jid):
         file_name = f"{data.get('title')}.webp"
         image_data = ContentFile(output.getvalue(), name=file_name)
 
+        # Determine period
+        from src.Infrastructure.DjangoFramework.persistence.models import TimelinePeriod
+        period_slug = data.get('period')
+        period = TimelinePeriod.objects.filter(world=w, slug=period_slug).first()
+
         # Create Proposal
         CaosImageProposalORM.objects.create(
             world=w,
@@ -71,7 +76,8 @@ def api_save_foto(request, jid):
             title=data.get('title'),
             author=user,
             status='PENDING',
-            action='ADD'
+            action='ADD',
+            timeline_period=period
         )
         
         log_event(request.user, "PROPOSE_AI_PHOTO", real_jid, f"Title: {data.get('title')}")
@@ -109,6 +115,11 @@ def subir_imagen_manual(request, jid):
             
             files = request.FILES.getlist('imagen_manual')[:5] # Max 5
             
+            # PERIOD SUPPORT
+            from src.Infrastructure.DjangoFramework.persistence.models import TimelinePeriod
+            period_slug = request.POST.get('period')
+            period_obj = TimelinePeriod.objects.filter(world=w, slug=period_slug).first()
+            
             for i, f in enumerate(files):
                 final = title_base
                 if len(files) > 1: final = f"{title_base} ({i+1})"
@@ -130,9 +141,9 @@ def subir_imagen_manual(request, jid):
                 repo = DjangoCaosRepository()
                 name_user = request.user.username
                 try:
-                    repo.save_manual_file(w.id, f, username=name_user, title=final)
+                    repo.save_manual_file(w.id, f, username=name_user, title=final, period_slug=period_slug)
                     messages.success(request, f"✨ Imagen '{final}' guardada directamente.")
-                    log_event(request.user, "UPLOAD_PHOTO", real_jid, f"Direct Upload: {final}")
+                    log_event(request.user, "UPLOAD_PHOTO", real_jid, f"Direct Upload: {final} (Period: {period_slug})")
                 except Exception as e:
                      messages.error(request, f"Error directo: {e}")
             
@@ -186,6 +197,11 @@ def borrar_foto(request, jid, filename):
             return redirect('ver_mundo', public_id=w.public_id if w.public_id else w.id)
         # ----------------------
         
+        # PERIOD SUPPORT
+        from src.Infrastructure.DjangoFramework.persistence.models import TimelinePeriod
+        period_slug = request.GET.get('period')
+        period = TimelinePeriod.objects.filter(world=w, slug=period_slug).first()
+
         # Create Deletion Proposal
         CaosImageProposalORM.objects.create(
             world=w,
@@ -194,7 +210,8 @@ def borrar_foto(request, jid, filename):
             target_filename=filename,
             action='DELETE',
             status='PENDING',
-            author=request.user if request.user.is_authenticated else None
+            author=request.user if request.user.is_authenticated else None,
+            timeline_period=period
         )
         
         messages.info(request, "🗑️ Borrado pendiente de aprobación.")
@@ -236,6 +253,11 @@ def borrar_fotos_batch(request, jid):
         try: check_ownership(request.user, w)
         except: return JsonResponse({'status':'error', 'message':'Permiso denegado'})
 
+        # PERIOD SUPPORT
+        from src.Infrastructure.DjangoFramework.persistence.models import TimelinePeriod
+        period_slug = data.get('period')
+        period = TimelinePeriod.objects.filter(world=w, slug=period_slug).first()
+
         count = 0
         for fn in filenames:
              CaosImageProposalORM.objects.create(
@@ -245,7 +267,8 @@ def borrar_fotos_batch(request, jid):
                  target_filename=fn,
                  action='DELETE',
                  status='PENDING',
-                 author=request.user if request.user.is_authenticated else None
+                 author=request.user if request.user.is_authenticated else None,
+                 timeline_period=period
              )
              count += 1
         

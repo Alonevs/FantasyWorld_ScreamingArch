@@ -11,7 +11,7 @@ class CreateChildWorldUseCase:
     def __init__(self, repository: CaosRepository):
         self.repository = repository
 
-    def execute(self, parent_id: str, name: str, description: str, reason: str = "Creación inicial", generate_image: bool = False, target_level: int = None) -> str:
+    def execute(self, parent_id: str, name: str, description: str, reason: str = "Creación inicial", generate_image: bool = False, target_level: int = None, user=None) -> str:
         print(f" 🐣 Iniciando nacimiento de una nueva entidad en {parent_id} (Nivel Objetivo: {target_level})...")
 
         # 1. Calcular el J-ID del nuevo hijo
@@ -64,7 +64,7 @@ class CreateChildWorldUseCase:
                 version_number=1,
                 status='PENDING',
                 change_log=reason,
-                author=None # TODO: Vincular autor real si está disponible en el comando
+                author=user  # Vinculado al usuario que ejecuta el comando
             )
             print(f"    📝 Propuesta v1 (PENDIENTE) creada para {name}")
             
@@ -97,7 +97,7 @@ class CreateChildWorldUseCase:
                             world=w_orm,
                             image=image_data,
                             title=f"Arte Inicial: {name}",
-                            author=None,
+                            author=user,  # Vinculado al usuario que ejecuta el comando
                             status='PENDING'
                         )
                         print(f"    ✅ Propuesta de imagen creada: {nombre_fichero}")

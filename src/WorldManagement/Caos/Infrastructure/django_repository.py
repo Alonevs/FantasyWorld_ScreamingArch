@@ -128,7 +128,7 @@ class DjangoCaosRepository(CaosRepository):
         except:
             return image.getexif()
 
-    def _audit_log(self, jid, filename, uploader, origin, title=None):
+    def _audit_log(self, jid, filename, uploader, origin, title=None, period_slug=None):
         """Registra el historial de subida de una imagen en los metadatos de la entidad."""
         try:
             world = CaosWorldORM.objects.get(id=jid)
@@ -139,13 +139,14 @@ class DjangoCaosRepository(CaosRepository):
                 "uploader": uploader,
                 "date": datetime.now().strftime("%d/%m/%Y"),
                 "origin": origin,
-                "title": title or "Sin Título"
+                "title": title or "Sin Título",
+                "period": period_slug # Nulo = ACTUAL
             }
             world.save()
         except Exception as e:
             print(f"⚠️ Error en auditoría de galería: {e}")
 
-    def save_image(self, jid, base64_data, title=None, username="AI System"):
+    def save_image(self, jid, base64_data, title=None, username="AI System", period_slug=None):
         """Guarda una imagen generada por IA en el sistema de archivos y registra el log."""
         if not base64_data: return None
         base_dir = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img')
@@ -162,13 +163,13 @@ class DjangoCaosRepository(CaosRepository):
             exif = self._inject_metadata(image, artist=username)
             # Guardamos en formato WEBP optimizado
             image.save(file_path, "WEBP", quality=85, exif=exif)
-            self._audit_log(jid, filename, username, "GENERATED", title=title)
+            self._audit_log(jid, filename, username, "GENERATED", title=title, period_slug=period_slug)
             return filename
         except Exception as e:
             print(f"⚠️ Error al guardar imagen de IA: {e}")
             return None
 
-    def save_manual_file(self, jid, uploaded_file, username="Unknown", title=None):
+    def save_manual_file(self, jid, uploaded_file, username="Unknown", title=None, period_slug=None):
         """Gestiona la subida manual de archivos de imagen por parte de un usuario."""
         base_dir = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img')
         target_dir = os.path.join(base_dir, jid)
@@ -192,7 +193,7 @@ class DjangoCaosRepository(CaosRepository):
             if image.mode in ("RGBA", "P"): image = image.convert("RGB")
             exif = self._inject_metadata(image, artist=username)
             image.save(file_path, "WEBP", quality=90, exif=exif)
-            self._audit_log(jid, filename, username, "MANUAL_UPLOAD", title=title)
+            self._audit_log(jid, filename, username, "MANUAL_UPLOAD", title=title, period_slug=period_slug)
             print(f" 📎 [Upload] Archivo '{filename}' subido y procesado.")
             return True
         except Exception as e:

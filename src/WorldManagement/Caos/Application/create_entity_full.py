@@ -38,7 +38,13 @@ class CreateEntityFullUseCase:
         # 3. Generación Estructurada (JSON) por IA
         # Solicitamos a la IA que cree una descripción y rasgos biográficos/técnicos.
         print(f" 🧬 Generando ficha técnica por IA para: {name}...")
-        datos = self.ia_text.generate_entity_json(name, tipo, parent.name)
+        
+        system_prompt = (
+            f"Genera JSON para: {tipo}. "
+            "Keys: descripcion, tamano, peso, peligro (1-5), dieta, rasgos."
+        )
+        context_prompt = f"Nombre: {name}. Habitat: {parent.name}"
+        datos = self.ia_text.generate_structure(system_prompt, context_prompt)
         
         desc = datos.get("descripcion", f"Una entidad de tipo {tipo}.")
         rasgos = datos.get("rasgos", f"Rasgos descriptivos de {name}.")

@@ -23,7 +23,15 @@
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
         <!-- MAIN CONTENT -->
         <div class="col-span-1 lg:col-span-3">
-            <h1 class="text-3xl font-bold text-accent mb-2">{{ world.name }} <span class="text-sm text-gray-600 ml-2">ARCHIVO</span></h1>
+            <h1 class="text-3xl font-bold text-accent mb-2">
+                {{ world.name }} 
+                <span class="text-sm text-gray-600 ml-2">ARCHIVO</span>
+                {% if viewing_period and not viewing_period.is_current %}
+                    <span class="text-sm bg-indigo-900/50 text-indigo-300 px-3 py-1 rounded-full border border-indigo-700 ml-3">
+                        📅 {{ viewing_period.title }}
+                    </span>
+                {% endif %}
+            </h1>
             <div class="h-1 w-full bg-gray-800 mb-8"></div>
             
             {% if lores %}

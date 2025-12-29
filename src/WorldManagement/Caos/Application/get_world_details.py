@@ -11,7 +11,7 @@ class GetWorldDetailsUseCase:
     def __init__(self, repository: CaosRepository):
         self.repository = repository
 
-    def execute(self, identifier: str, user=None):
+    def execute(self, identifier: str, user=None, period_slug=None):
         # 1. Resolver el ID (puede ser J-ID o NanoID)
         w_domain = resolve_world_id(self.repository, identifier)
         if not w_domain:
@@ -175,7 +175,8 @@ class GetWorldDetailsUseCase:
         hijos.sort(key=lambda x: (x['is_jumped'], x['level'], x['id']))
 
         # 4. Obtener Imágenes de la Entidad actual
-        imgs = get_world_images(jid, world_instance=w)
+        # Filtrar por período si se especifica
+        imgs = get_world_images(jid, world_instance=w, period_slug=period_slug)
         # Prioritize cover image in the gallery list
         if imgs:
             imgs.sort(key=lambda x: x.get('is_cover', False), reverse=True)

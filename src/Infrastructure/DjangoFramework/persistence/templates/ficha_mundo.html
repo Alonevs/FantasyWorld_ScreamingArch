@@ -11,8 +11,11 @@
 {% block content %}
     <div class="mt-8"></div>
 
+
+
     <!-- MAIN GRID -->
-    <div class="bg-card border border-gray-800 rounded-2xl max-w-[1600px] mx-4 xl:mx-auto overflow-hidden shadow-2xl grid grid-cols-1 lg:grid-cols-4 mb-10">
+    <!-- MAIN GRID -->
+    <div class="bg-card border {% if is_period_view %}border-indigo-500/70 shadow-[0_0_40px_-10px_rgba(79,70,229,0.3)]{% else %}border-gray-800{% endif %} rounded-2xl max-w-[1600px] mx-4 xl:mx-auto overflow-hidden shadow-2xl grid grid-cols-1 lg:grid-cols-4 mb-10 transition-all duration-500">
         
         <!-- HEADER SECTION -->
         <div class="col-span-1 lg:col-span-4 bg-linear-to-r from-indigo-950 to-gray-900 p-6 border-b border-indigo-900 flex flex-col md:flex-row justify-between items-start gap-4 relative">
@@ -32,7 +35,14 @@
                 </div>
 
                 <div class="flex items-center gap-3 mb-2">
-                    <h1 class="text-3xl lg:text-4xl font-bold text-white">{{ name }}</h1>
+                    <h1 class="text-3xl lg:text-4xl font-bold text-white flex items-center gap-3">
+                        {{ name }}
+                        {% if is_period_view %}
+                        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-500/20 border border-green-500/50 text-green-300 text-xs font-bold uppercase tracking-wider shadow-lg shadow-green-900/40 backdrop-blur-sm animate-pulse">
+                            📅 {{ viewing_period.title }}
+                        </span>
+                        {% endif %}
+                    </h1>
                     
                     {% if user.is_authenticated %}
                         <!-- New Status Toggle (Consistent with Card) -->
@@ -97,18 +107,33 @@
                             🗑️
                         </button>
                     {% else %}
-                        <button onclick="openEditModal()" class="p-2 bg-blue-900/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg transition border border-blue-900/50" title="Editar">
-                            ✏️
-                        </button>
-                        {% if user.is_superuser or is_author or is_admin_role %}
-                        <a href="{% url 'borrar_mundo' jid %}" 
-                           data-confirm="¿Estás seguro de solicitar el borrado de este mundo? Se enviará al Dashboard." 
-                           data-title="Solicitar Borrado" 
-                           data-destructive="true"
-                           class="p-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg transition border border-red-900/50 flex items-center justify-center" 
-                           title="Borrar Mundo de forma Segura">
-                            🗑️
-                        </a>
+                        {% if is_period_view %}
+                            <button onclick="openEditPeriodModal()" class="p-1 px-2 bg-indigo-900/20 hover:bg-indigo-600 text-indigo-400 hover:text-white rounded-lg transition border border-indigo-900/50 text-[10px]" title="Editar Período: {{ viewing_period.title }}">
+                                ✏️ <span class="hidden sm:inline font-bold">EDITAR PERÍODO</span>
+                            </button>
+                            <form action="{% url 'delete_period' viewing_period.id %}" method="POST" class="inline">
+                                {% csrf_token %}
+                                <button type="submit" 
+                                        data-confirm="¿Estás seguro de solicitar el borrado de este período histórico?"
+                                        class="p-1 px-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg transition border border-red-900/50 flex items-center justify-center text-[10px]" 
+                                        title="Borrar Período">
+                                    🗑️
+                                </button>
+                            </form>
+                        {% else %}
+                            <button onclick="openEditModal()" class="p-1 px-2 bg-blue-900/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg transition border border-blue-900/50 text-[10px]" title="Editar Mundo">
+                                ✏️ <span class="hidden sm:inline font-bold">EDITAR ACTUAL</span>
+                            </button>
+                            {% if user.is_superuser or is_author or is_admin_role %}
+                            <a href="{% url 'borrar_mundo' jid %}" 
+                               data-confirm="¿Estás seguro de solicitar el borrado de este mundo? Se enviará al Dashboard." 
+                               data-title="Solicitar Borrado" 
+                               data-destructive="true"
+                               class="p-1 px-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg transition border border-red-900/50 flex items-center justify-center text-[10px]" 
+                               title="Borrar Mundo de forma Segura">
+                                🗑️
+                            </a>
+                            {% endif %}
                         {% endif %}
                     {% endif %}
                 </div>
@@ -118,6 +143,42 @@
                          <span class="font-bold">✏️ MODO RETOQUE</span>
                     </div>
                 {% endif %}
+                {% if timeline_periods %}
+                <!-- PERIOD SELECTOR (Cards Style) -->
+                <div class="flex flex-wrap justify-end gap-2 mt-2 w-full md:w-auto">
+                    <!-- Current/Present Button -->
+                    <a href="{% url 'ver_mundo' public_id %}" 
+                       class="group relative w-16 p-2 rounded-lg border-2 transition-all duration-300 text-center {% if not is_period_view %}bg-green-600 border-green-500 shadow-lg shadow-green-900/50{% else %}bg-gray-800 border-gray-700 hover:border-green-500 hover:bg-gray-700{% endif %}">
+                        <div class="text-lg mb-0.5">⭐</div>
+                        <div class="text-[9px] font-bold uppercase tracking-wider leading-none {% if not is_period_view %}text-white{% else %}text-gray-400 group-hover:text-green-400{% endif %}">
+                            ACTUAL
+                        </div>
+                    </a>
+                    
+                    <!-- Historical Periods -->
+                    {% for period in timeline_periods %}
+                    <a href="?period={{ period.slug }}" 
+                       class="group relative w-16 p-2 rounded-lg border-2 transition-all duration-300 text-center {% if is_period_view and viewing_period.slug == period.slug %}bg-indigo-600 border-indigo-500 shadow-lg shadow-indigo-900/50{% else %}bg-gray-800 border-gray-700 hover:border-indigo-500 hover:bg-gray-700{% endif %}">
+                        <div class="text-lg mb-0.5">📜</div>
+                        <div class="text-[9px] font-bold uppercase tracking-wider leading-none truncate {% if is_period_view and viewing_period.slug == period.slug %}text-white{% else %}text-gray-400 group-hover:text-indigo-400{% endif %}">
+                            {{ period.title }}
+                        </div>
+                    </a>
+                    {% endfor %}
+                    
+                    <!-- New Period Button -->
+                    {% if can_edit %}
+                    <button onclick="openCreatePeriodModal()" 
+                            class="group relative w-16 p-2 rounded-lg border-2 border-dashed border-gray-600 hover:border-purple-500 transition-all duration-300 text-center bg-gray-900/50 hover:bg-purple-900/20">
+                        <div class="text-lg mb-0.5">➕</div>
+                        <div class="text-[9px] font-bold text-gray-400 group-hover:text-purple-400 uppercase tracking-wider leading-none">
+                            NUEVO
+                        </div>
+                    </button>
+                    {% endif %}
+                </div>
+                {% endif %}
+
             </div>
             {% endif %}
             {% endif %}
@@ -170,6 +231,7 @@
                         <input id="file-upload" type="file" name="imagen_manual" accept="image/*" multiple onchange="openUploadModal(this)">
                         <input type="hidden" id="hidden-use-original" name="use_original_name">
                         <input type="hidden" id="hidden-custom-name" name="custom_name">
+                        <input type="hidden" name="period" value="{{ current_period_slug }}">
                     </form>
                 </div>
                 {% endif %}
@@ -218,6 +280,8 @@
                 </div>
                 {% endfor %} 
             </div>
+            
+            <!-- PERIOD SELECTOR (New Timeline System) -->
 
             <!-- DESCRIPTION -->
             <div class="prose prose-invert max-w-none mt-8">
@@ -237,13 +301,19 @@
 
             <div class="mt-8 space-y-2">
                 <h3 class="text-gray-500 text-xs font-bold uppercase mb-4">Acciones</h3>
-                <a href="{% url 'ver_narrativa_mundo' public_id %}" class="w-full px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded flex items-center gap-2 transition border border-gray-700 text-sm">
+                <a href="{% url 'ver_narrativa_mundo' public_id %}?period={{ current_period_slug }}" class="w-full px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded flex items-center gap-2 transition border border-gray-700 text-sm">
                     📖 Narrativa
                 </a>
                 
                 <a href="{% url 'mapa_arbol' public_id %}" class="w-full px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded flex items-center gap-2 transition border border-gray-700 text-sm">
                     🌳 Mapa Árbol
                 </a>
+                
+                {% if user.is_authenticated %}
+                <button onclick="openTimelineModal()" class="w-full px-4 py-2 bg-indigo-900/30 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded flex items-center gap-2 transition border border-indigo-900/50 text-sm font-bold">
+                    📅 Snapshot Temporal
+                </button>
+                {% endif %}
                 
                 <div class="mt-8 pt-4 border-t border-gray-800">
                     {% if user_role >= 20 or user.is_superuser %}
@@ -311,6 +381,7 @@
         <button onclick="toggleSelectionMode()" class="text-gray-500 hover:text-white ml-2">✕</button>
     </div>
 
+
     <script>
         function openBatchDeleteModal() {
             const el = document.getElementById('batchDeleteModal');
@@ -373,7 +444,8 @@
                 }, 
                 body: JSON.stringify({ 
                     filenames: Array.from(selectedImages), 
-                    reason: reason 
+                    reason: reason,
+                    period: '{{ current_period_slug|escapejs }}'
                 }) 
             })
             .then(r => r.json())
@@ -403,6 +475,482 @@
                 .replace('FILE_PLACEHOLDER', filename) + "?reason=" + encodeURIComponent(reason);
                 
             window.location.href = url;
+        }
+    </script>
+    
+    <!-- TIMELINE SNAPSHOT MODAL -->
+    <div id="timelineModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div class="bg-gray-900 border border-indigo-900/50 rounded-xl p-6 w-full max-w-2xl shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4 sticky top-0 bg-gray-900 pb-2 border-b border-gray-800">
+                <h3 class="text-2xl font-bold text-white flex items-center gap-2">
+                    📅 Proponer Snapshot Temporal
+                </h3>
+                <button onclick="closeTimelineModal()" class="text-gray-400 hover:text-white text-2xl">✕</button>
+            </div>
+            
+            <p class="text-sm text-gray-400 mb-6">
+                Crea un snapshot histórico de esta entidad en un año específico. Esto permite documentar cómo era la entidad en diferentes momentos del tiempo.
+            </p>
+            
+            <form id="timelineForm" class="space-y-4">
+                <!-- Año del Snapshot -->
+                <div>
+                    <label class="block text-sm font-bold text-gray-300 mb-2">
+                        📆 Año del Snapshot <span class="text-red-400">*</span>
+                    </label>
+                    <input 
+                        type="number" 
+                        id="timeline-year" 
+                        name="year"
+                        min="0" 
+                        max="9999" 
+                        placeholder="Ej: 1500"
+                        class="w-full bg-black/50 border border-gray-700 rounded-lg p-3 text-white focus:border-indigo-500 outline-none"
+                        required
+                    >
+                    <p class="text-xs text-gray-500 mt-1">Año en el que ocurre este estado de la entidad</p>
+                </div>
+                
+                <!-- Descripción del Snapshot -->
+                <div>
+                    <label class="block text-sm font-bold text-gray-300 mb-2">
+                        📝 Descripción Histórica <span class="text-red-400">*</span>
+                    </label>
+                    <textarea 
+                        id="timeline-description" 
+                        name="description"
+                        rows="6"
+                        placeholder="Describe cómo era la entidad en este año...&#10;&#10;Ejemplo: En el año 1500, Jade era una próspera ciudad comercial con una población de 50,000 habitantes..."
+                        class="w-full bg-black/50 border border-gray-700 rounded-lg p-3 text-white focus:border-indigo-500 outline-none resize-none"
+                        required
+                    ></textarea>
+                    <p class="text-xs text-gray-500 mt-1">Mínimo 50 caracteres</p>
+                </div>
+                
+                <!-- Metadata del Snapshot -->
+                <div>
+                    <label class="block text-sm font-bold text-gray-300 mb-2">
+                        🏛️ Metadata del Período
+                    </label>
+                    <div class="space-y-2" id="metadata-fields">
+                        <!-- Población -->
+                        <div class="flex gap-2">
+                            <input 
+                                type="text" 
+                                value="poblacion"
+                                readonly
+                                class="w-1/3 bg-gray-800 border border-gray-700 rounded-lg p-2 text-gray-400 text-sm"
+                            >
+                            <input 
+                                type="text" 
+                                id="meta-poblacion"
+                                placeholder="Ej: 50000"
+                                class="flex-1 bg-black/50 border border-gray-700 rounded-lg p-2 text-white text-sm focus:border-indigo-500 outline-none"
+                            >
+                        </div>
+                        
+                        <!-- Gobierno -->
+                        <div class="flex gap-2">
+                            <input 
+                                type="text" 
+                                value="gobierno"
+                                readonly
+                                class="w-1/3 bg-gray-800 border border-gray-700 rounded-lg p-2 text-gray-400 text-sm"
+                            >
+                            <input 
+                                type="text" 
+                                id="meta-gobierno"
+                                placeholder="Ej: Monarquía"
+                                class="flex-1 bg-black/50 border border-gray-700 rounded-lg p-2 text-white text-sm focus:border-indigo-500 outline-none"
+                            >
+                        </div>
+                        
+                        <!-- Estado -->
+                        <div class="flex gap-2">
+                            <input 
+                                type="text" 
+                                value="estado"
+                                readonly
+                                class="w-1/3 bg-gray-800 border border-gray-700 rounded-lg p-2 text-gray-400 text-sm"
+                            >
+                            <input 
+                                type="text" 
+                                id="meta-estado"
+                                placeholder="Ej: Próspera"
+                                class="flex-1 bg-black/50 border border-gray-700 rounded-lg p-2 text-white text-sm focus:border-indigo-500 outline-none"
+                            >
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">Propiedades específicas de este período temporal</p>
+                </div>
+                
+                <!-- Razón del Cambio -->
+                <div>
+                    <label class="block text-sm font-bold text-gray-300 mb-2">
+                        💬 Razón de la Propuesta
+                    </label>
+                    <input 
+                        type="text" 
+                        id="timeline-changelog"
+                        name="change_log"
+                        placeholder="Ej: Añadir período de expansión comercial"
+                        class="w-full bg-black/50 border border-gray-700 rounded-lg p-3 text-white focus:border-indigo-500 outline-none"
+                    >
+                </div>
+                
+                <!-- Botones -->
+                <div class="flex justify-end gap-3 pt-4 border-t border-gray-800">
+                    <button 
+                        type="button"
+                        onclick="closeTimelineModal()" 
+                        class="px-6 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition"
+                    >
+                        Cancelar
+                    </button>
+                    <button 
+                        type="submit"
+                        class="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg transition shadow-lg"
+                    >
+                        📤 Enviar Propuesta
+                    </button>
+                </div>
+            </form>
+            
+            <!-- Loading State -->
+            <div id="timeline-loading" class="hidden absolute inset-0 bg-gray-900/90 flex items-center justify-center rounded-xl">
+                <div class="text-center">
+                    <div class="animate-spin text-4xl mb-2">⏳</div>
+                    <p class="text-white font-bold">Enviando propuesta...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function openTimelineModal() {
+            const modal = document.getElementById('timelineModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            // Reset form
+            document.getElementById('timelineForm').reset();
+        }
+        
+        function closeTimelineModal() {
+            const modal = document.getElementById('timelineModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+        
+        // Handle form submission
+        document.getElementById('timelineForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Get form data
+            const year = parseInt(document.getElementById('timeline-year').value);
+            const description = document.getElementById('timeline-description').value;
+            const changeLog = document.getElementById('timeline-changelog').value;
+            
+            // Validate
+            if (!year || year < 0 || year > 9999) {
+                await CaosModal.alert("Error", "El año debe estar entre 0 y 9999");
+                return;
+            }
+            
+            if (!description || description.length < 50) {
+                await CaosModal.alert("Error", "La descripción debe tener al menos 50 caracteres");
+                return;
+            }
+            
+            // Build metadata
+            const metadata = {
+                datos_nucleo: {}
+            };
+            
+            const poblacion = document.getElementById('meta-poblacion').value;
+            const gobierno = document.getElementById('meta-gobierno').value;
+            const estado = document.getElementById('meta-estado').value;
+            
+            if (poblacion) metadata.datos_nucleo.poblacion = poblacion;
+            if (gobierno) metadata.datos_nucleo.gobierno = gobierno;
+            if (estado) metadata.datos_nucleo.estado = estado;
+            
+            // Prepare payload
+            const payload = {
+                year: year,
+                description: description,
+                metadata: metadata,
+                images: [],
+                cover_image: null,
+                change_log: changeLog || `Snapshot del año ${year}`
+            };
+            
+            // Show loading
+            document.getElementById('timeline-loading').classList.remove('hidden');
+            
+            try {
+                const response = await fetch('/api/world/{{ public_id }}/timeline/propose/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                // Hide loading
+                document.getElementById('timeline-loading').classList.add('hidden');
+                
+                if (response.ok && data.success) {
+                    await CaosModal.alert(
+                        "✅ Propuesta Enviada",
+                        `Tu snapshot del año ${year} ha sido enviado para revisión. ID: ${data.proposal_id}`
+                    );
+                    closeTimelineModal();
+                } else {
+                    await CaosModal.alert(
+                        "❌ Error",
+                        data.error || "No se pudo crear la propuesta"
+                    );
+                }
+            } catch (error) {
+                document.getElementById('timeline-loading').classList.add('hidden');
+                await CaosModal.alert(
+                    "❌ Error de Conexión",
+                    "No se pudo conectar con el servidor"
+                );
+            }
+        });
+        
+        // ===================================================================
+        // PERIOD MANAGEMENT (New Timeline System)
+        // ===================================================================
+        
+        // Create Period Modal
+        function openCreatePeriodModal() {
+            CaosModal.custom({
+                title: "➕ Crear Nuevo Período",
+                html: `
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-bold text-gray-300 mb-2">
+                                Título del Período *
+                            </label>
+                            <input type="text" 
+                                   id="period-title" 
+                                   placeholder="Ej: Inicios, Expansión, Guerra Civil..."
+                                   class="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-purple-500 focus:outline-none"
+                                   maxlength="100">
+                            <p class="text-xs text-gray-500 mt-1">Máximo 100 caracteres</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-bold text-gray-300 mb-2">
+                                Descripción / Lore
+                            </label>
+                            <textarea id="period-description" 
+                                      rows="6"
+                                      placeholder="Describe este período histórico..."
+                                      class="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-purple-500 focus:outline-none resize-none"></textarea>
+                        </div>
+                        
+                        <div id="period-error" class="hidden p-3 bg-red-900/50 border border-red-700 rounded-lg text-red-300 text-sm"></div>
+                    </div>
+                `,
+                confirmText: "✅ Crear Período",
+                cancelText: "Cancelar",
+                onConfirm: async () => {
+                    const title = document.getElementById('period-title').value.trim();
+                    const description = document.getElementById('period-description').value.trim();
+                    
+                    // Validation
+                    if (!title) {
+                        document.getElementById('period-error').textContent = 'El título es obligatorio';
+                        document.getElementById('period-error').classList.remove('hidden');
+                        return false; // Prevent modal close
+                    }
+                    
+                    try {
+                        const response = await fetch(`/api/world/{{ world_id }}/period/create`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': '{{ csrf_token }}'
+                            },
+                            body: JSON.stringify({
+                                title: title,
+                                description: description
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (response.ok && data.success) {
+                            await CaosModal.alert(
+                                "✅ Período Creado",
+                                `El período "${data.period.title}" ha sido creado exitosamente.`
+                            );
+                            // Reload page to show new period
+                            window.location.reload();
+                        } else {
+                            await CaosModal.alert(
+                                "❌ Error",
+                                data.error || "No se pudo crear el período"
+                            );
+                        }
+                    } catch (error) {
+                        await CaosModal.alert(
+                            "❌ Error",
+                            "No se pudo conectar con el servidor"
+                        );
+                    }
+                    
+                    return true; // Allow modal close
+                }
+            });
+        }
+        
+        // Edit Period Modal (contextual - edits current viewing period)
+        function openEditPeriodModal() {
+            const periodTitle = "{{ viewing_period.title|escapejs }}";
+            const periodDescription = `{{ viewing_period.description|escapejs }}`;
+            const periodId = "{{ viewing_period.id|default:'' }}";
+            
+            if (!periodId) {
+                CaosModal.alert("❌ Error", "No se puede editar el período ACTUAL desde aquí.");
+                return;
+            }
+            
+            CaosModal.custom({
+                title: `✏️ Editar: ${periodTitle}`,
+                html: `
+                    <div class="space-y-4">
+                        <div class="p-3 bg-blue-900/30 border border-blue-700/50 rounded-lg text-blue-300 text-sm">
+                            💡 Los cambios se enviarán como propuesta para revisión
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-bold text-gray-300 mb-2">
+                                Nuevo Título (opcional)
+                            </label>
+                            <input type="text" 
+                                   id="edit-period-title" 
+                                   value="${periodTitle}"
+                                   placeholder="Dejar vacío para mantener actual"
+                                   class="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-indigo-500 focus:outline-none"
+                                   maxlength="100">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-bold text-gray-300 mb-2">
+                                Nueva Descripción (opcional)
+                            </label>
+                            <textarea id="edit-period-description" 
+                                      rows="8"
+                                      placeholder="Dejar vacío para mantener actual"
+                                      class="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-indigo-500 focus:outline-none resize-none">${periodDescription}</textarea>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-bold text-gray-300 mb-2">
+                                Razón del Cambio
+                            </label>
+                            <input type="text" 
+                                   id="edit-change-log" 
+                                   placeholder="Ej: Corrección de fechas, Ampliación de lore..."
+                                   class="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-indigo-500 focus:outline-none">
+                        </div>
+
+                        <div class="pt-4 border-t border-gray-700">
+                            <label class="block text-sm font-bold text-indigo-400 mb-2 uppercase tracking-tighter">
+                                🏛️ Metadatos del Período
+                            </label>
+                            <div id="edit-period-metadata-container" class="space-y-2">
+                                <!-- Pre-populated or dynamic metadata here -->
+                                <p class="text-xs text-gray-500 italic">Puedes proponer cambios técnicos para esta era.</p>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <input type="text" placeholder="Clave (ej: poblacion)" class="meta-key px-3 py-1 bg-gray-900 border border-gray-700 rounded text-xs text-white">
+                                    <input type="text" placeholder="Valor (ej: 10000)" class="meta-val px-3 py-1 bg-gray-900 border border-gray-700 rounded text-xs text-white">
+                                </div>
+                            </div>
+                            <button type="button" onclick="addMetadataRow()" class="mt-2 text-[10px] text-indigo-400 hover:text-white font-bold uppercase">+ Añadir Propiedad</button>
+                        </div>
+                    </div>
+                `,
+                confirmText: "📤 Enviar Propuesta",
+                cancelText: "Cancelar",
+                onConfirm: async () => {
+                    const newTitle = document.getElementById('edit-period-title').value.trim();
+                    const newDescription = document.getElementById('edit-period-description').value.trim();
+                    const changeLog = document.getElementById('edit-change-log').value.trim();
+                    
+                    // Check if anything changed
+                    if (newTitle === periodTitle && newDescription === periodDescription) {
+                        await CaosModal.alert("⚠️ Sin Cambios", "No has realizado ningún cambio.");
+                        return true;
+                    }
+                    
+                    try {
+                        // Collect metadata
+                        const metaKeys = document.querySelectorAll('.meta-key');
+                        const metaVals = document.querySelectorAll('.meta-val');
+                        let metadata = {};
+                        metaKeys.forEach((k, i) => {
+                            if (k.value.trim()) {
+                                metadata[k.value.trim()] = metaVals[i].value.trim();
+                            }
+                        });
+
+                        const response = await fetch(`/api/period/${periodId}/propose`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': '{{ csrf_token }}'
+                            },
+                            body: JSON.stringify({
+                                title: newTitle !== periodTitle ? newTitle : null,
+                                description: newDescription !== periodDescription ? newDescription : null,
+                                metadata: metadata,
+                                change_log: changeLog
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (response.ok && data.success) {
+                            await CaosModal.alert(
+                                "✅ Propuesta Enviada",
+                                `Tu propuesta (v${data.version.version_number}) ha sido enviada para revisión.`
+                            );
+                        } else {
+                            await CaosModal.alert(
+                                "❌ Error",
+                                data.error || "No se pudo enviar la propuesta"
+                            );
+                        }
+                    } catch (error) {
+                        await CaosModal.alert(
+                            "❌ Error",
+                            "No se pudo conectar con el servidor"
+                        );
+                    }
+                    
+                    return true;
+                }
+            });
+        }
+
+        function addMetadataRow() {
+            const container = document.getElementById('edit-period-metadata-container');
+            const div = document.createElement('div');
+            div.className = 'grid grid-cols-2 gap-2 mt-2';
+            div.innerHTML = `
+                <input type="text" placeholder="Clave" class="meta-key px-3 py-1 bg-gray-900 border border-gray-700 rounded text-xs text-white">
+                <input type="text" placeholder="Valor" class="meta-val px-3 py-1 bg-gray-900 border border-gray-700 rounded text-xs text-white">
+            `;
+            container.appendChild(div);
         }
     </script>
 {% endblock %}

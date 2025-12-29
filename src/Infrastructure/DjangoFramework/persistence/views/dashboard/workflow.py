@@ -9,7 +9,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from src.Infrastructure.DjangoFramework.persistence.models import (
     CaosVersionORM, CaosEventLog, CaosNarrativeVersionORM, 
     CaosImageProposalORM, CaosWorldORM, CaosNarrativeORM,
-    ContributionProposal
+    ContributionProposal, TimelinePeriodVersion, TimelinePeriod
 )
 from django.contrib.auth.models import User
 from src.Shared.Services.DiffService import DiffService
@@ -59,6 +59,7 @@ def dashboard(request):
         w_qs = CaosVersionORM.objects.all().select_related('world', 'author')
         n_qs = CaosNarrativeVersionORM.objects.all().select_related('narrative__world', 'author')
         i_qs = CaosImageProposalORM.objects.all().select_related('world', 'author')
+        p_qs = TimelinePeriodVersion.objects.all().select_related('period__world', 'author')
         allowed_authors = User.objects.filter(is_active=True).order_by('username')
     else:
         # TERRITORIAL SILO LOGIC:
@@ -111,6 +112,19 @@ def dashboard(request):
             
         n_qs = CaosNarrativeVersionORM.objects.filter(n_territorial).select_related('narrative__world', 'author')
         
+        # Period status filtering (Territorial)
+        if minion_ids:
+            my_p = Q(author_id=request.user.id)
+            minion_p = Q(author_id__in=minion_ids) & (
+                Q(period__world__author=request.user) |
+                Q(period__world__author_id__in=minion_ids)
+            )
+            p_territorial = my_p | minion_p
+        else:
+            p_territorial = Q(author_id=request.user.id)
+        
+        p_qs = TimelinePeriodVersion.objects.filter(p_territorial).select_related('period__world', 'author')
+        
         # Restrict Filter Dropdown to only visible people
         allowed_authors = User.objects.filter(id__in=visible_ids).order_by('username')
 
@@ -123,12 +137,14 @@ def dashboard(request):
             w_qs = w_qs.filter(author_id=current_target_author)
             n_qs = n_qs.filter(author_id=current_target_author)
             i_qs = i_qs.filter(author_id=current_target_author)
+            p_qs = p_qs.filter(author_id=current_target_author)
         except ValueError: pass
 
     if search_query:
         w_qs = w_qs.filter(Q(proposed_name__icontains=search_query) | Q(change_log__icontains=search_query))
         n_qs = n_qs.filter(Q(proposed_title__icontains=search_query) | Q(proposed_content__icontains=search_query))
         i_qs = i_qs.filter(title__icontains=search_query)
+        p_qs = p_qs.filter(Q(proposed_title__icontains=search_query) | Q(proposed_description__icontains=search_query))
 
     if filter_type == 'WORLD':
         # Exclude SET_COVER from main world list as it's image-related
@@ -140,45 +156,56 @@ def dashboard(request):
         # Include normal image proposals PLUS SET_COVER actions from worlds
         w_qs = w_qs.filter(cambios__action='SET_COVER')
         n_qs = n_qs.none()
+    elif filter_type == 'PERIOD':
+        w_qs = w_qs.none(); n_qs = n_qs.none(); i_qs = i_qs.none()
     elif filter_type == 'METADATA':
         w_qs = w_qs.filter(cambios__action='METADATA_UPDATE')
-        n_qs = n_qs.none(); i_qs = i_qs.none()
+        n_qs = n_qs.none(); i_qs = i_qs.none(); p_qs = p_qs.none()
 
     # =========================================================================
     # SEGMENTATION
     # =========================================================================
     # PENDIENTES: Propuestas nuevas esperando validación
-    w_pending = list(w_qs.filter(status='PENDING').order_by('-created_at'))
+    w_pending = list(w_qs.filter(status='PENDING', change_type='LIVE').order_by('-created_at'))
     n_pending = list(n_qs.filter(status='PENDING').order_by('-created_at'))
     i_pending = list(i_qs.filter(status='PENDING').order_by('-created_at'))
+    p_pending = list(p_qs.filter(status='PENDING').order_by('-created_at'))
 
     # APROBADAS: Validadas por admin, listas para publicar a LIVE
-    w_approved = list(w_qs.filter(status='APPROVED').order_by('-created_at'))
+    w_approved = list(w_qs.filter(status='APPROVED', change_type='LIVE').order_by('-created_at'))
     n_approved = list(n_qs.filter(status='APPROVED').order_by('-created_at'))
     i_approved = list(i_qs.filter(status='APPROVED').order_by('-created_at'))
+    p_approved = list(p_qs.filter(status='APPROVED').order_by('-created_at'))
 
     # RECHAZADAS: Propuestas descartadas (Historial de negatividad)
-    w_rejected = list(w_qs.filter(status='REJECTED').order_by('-created_at')[:20])
+    w_rejected = list(w_qs.filter(status='REJECTED', change_type='LIVE').order_by('-created_at')[:20])
     n_rejected = list(n_qs.filter(status='REJECTED').order_by('-created_at')[:20])
     i_rejected = list(i_qs.filter(status='REJECTED').order_by('-created_at')[:20])
+    p_rejected = list(p_qs.filter(status='REJECTED').order_by('-created_at')[:20])
+    
+    # TIMELINE: Propuestas de snapshots temporales
+    timeline_pending = list(w_qs.filter(status='PENDING', change_type='TIMELINE').order_by('-created_at'))
+    timeline_approved = list(w_qs.filter(status='APPROVED', change_type='TIMELINE').order_by('-created_at'))
+    timeline_rejected = list(w_qs.filter(status='REJECTED', change_type='TIMELINE').order_by('-created_at')[:20])
 
     # TAG Items
     for x in w_pending + w_approved + w_rejected:
+        context_str = " (Actual)" if x.change_type == 'LIVE' else f" (Año {x.timeline_year})"
         x.type = 'WORLD'
-        x.type_label = '🌍 MUNDO'
+        x.type_label = f'🌍 MUNDO{context_str}'
         x.target_name = x.proposed_name
         x.target_desc = x.proposed_description
         x.parent_context = "Universo"
-        x.feedback = getattr(x, 'admin_feedback', '') # Ensure mapped
+        x.feedback = getattr(x, 'admin_feedback', '') 
         if x.cambios.get('action') == 'SET_COVER':
-            x.type_label = '🖼️ PORTADA'
+            x.type_label = f'🖼️ PORTADA{context_str}'
             x.is_image_context = True
             x.target_desc = f"📸 Nueva Portada: {x.cambios.get('cover_image')}"
         elif x.cambios.get('action') == 'TOGGLE_VISIBILITY':
             x.target_desc = f"👁️ Visibilidad"
         elif x.cambios.get('action') == 'METADATA_UPDATE' or 'metadata' in x.cambios.keys():
             x.type = 'METADATA'
-            x.type_label = '🧬 METADATOS'
+            x.type_label = f'🧬 METADATOS{context_str}'
             count = len(x.cambios.get('metadata', {}).get('properties', []))
             x.target_desc = f"🧬 Cambio en {count} variables"
         
@@ -190,35 +217,66 @@ def dashboard(request):
         x.target_link = x.world.public_id if x.world.public_id else x.world.id
 
     for x in n_pending + n_approved + n_rejected:
+        context_str = f" ({x.narrative.timeline_period.title})" if x.narrative.timeline_period else " (Actual)"
         x.type = 'NARRATIVE'
-        x.type_label = '📖 NARRATIVA'
+        x.type_label = f'📖 NARRATIVA{context_str}'
         x.target_name = x.proposed_title
         x.target_desc = x.proposed_content
         x.target_link = x.narrative.public_id if hasattr(x.narrative, 'public_id') and x.narrative.public_id else x.narrative.nid
-        x.parent_context = x.narrative.world.name
-        x.feedback = getattr(x, 'admin_feedback', '') # Ensure mapped
+        x.parent_context = f"{x.narrative.world.name}{context_str}"
+        x.feedback = getattr(x, 'admin_feedback', '') 
         
         if (x.change_log and ("Eliminación" in x.change_log or "Borrar" in x.change_log)) or \
            (hasattr(x, 'cambios') and x.cambios and x.cambios.get('action') == 'DELETE'):
              x.action = 'DELETE'
 
     for x in i_pending + i_approved + i_rejected:
+        context_str = f" ({x.timeline_period.title})" if x.timeline_period else " (Actual)"
         x.type = 'IMAGE'
-        x.type_label = '🖼️ IMAGEN'
+        x.type_label = f'🖼️ IMAGEN{context_str}'
         x.target_name = x.title or "(Sin Título)"
-        x.feedback = getattr(x, 'admin_feedback', '') # Ensure mapped
+        x.feedback = getattr(x, 'admin_feedback', '') 
         desc = f"🗑️ Borrar: {x.target_filename}" if x.action == 'DELETE' else "📸 Nueva"
         if hasattr(x, 'reason') and x.reason:
             desc = f"{desc} | Motivo: {x.reason}"
         x.target_desc = desc
         if not hasattr(x, 'version_number'): x.version_number = 1 
-        x.parent_context = x.world.name if x.world else "Global"
+        x.parent_context = f"{x.world.name}{context_str}" if x.world else f"Global{context_str}"
         x.change_log = x.target_desc
         if "Borrar" in x.change_log: x.action = 'DELETE'
 
-    pending = sorted(w_pending + n_pending + i_pending, key=lambda x: x.created_at, reverse=True)
-    approved = sorted(w_approved + n_approved + i_approved, key=lambda x: x.created_at, reverse=True)
-    rejected = sorted(w_rejected + n_rejected + i_rejected, key=lambda x: x.created_at, reverse=True)
+    for x in p_pending + p_approved + p_rejected:
+        x.type = 'PERIOD'
+        x.type_label = f'📅 PERIODO ({x.period.title})'
+        x.target_name = x.proposed_title
+        x.target_desc = x.proposed_description[:100] + '...' if x.proposed_description else "Sin descripción"
+        x.target_link = f"{x.period.world.public_id}?period={x.period.slug}"
+        x.parent_context = x.period.world.name
+        x.feedback = getattr(x, 'admin_feedback', '')
+        
+        # Map actions correctly for UI
+        if x.action == 'DELETE':
+            x.target_desc = f"🗑️ Borrar Periodo: {x.period.title}"
+        elif x.action == 'ADD':
+            x.type_label = f'✨ NUEVO PERIODO ({x.period.title})'
+    
+    # TAG Timeline Items
+    for x in timeline_pending + timeline_approved + timeline_rejected:
+        x.type = 'TIMELINE'
+        x.type_label = '📅 TIMELINE'
+        x.target_name = x.world.name if x.world else "(Sin Mundo)"
+        # Extract description from proposed_snapshot
+        if x.proposed_snapshot and 'description' in x.proposed_snapshot:
+            x.target_desc = x.proposed_snapshot['description'][:100] + '...'
+        else:
+            x.target_desc = "Snapshot temporal"
+        x.parent_context = f"Año {x.timeline_year}" if x.timeline_year else "Sin año"
+        x.feedback = getattr(x, 'admin_feedback', '')
+        x.target_link = x.world.public_id if x.world and x.world.public_id else (x.world.id if x.world else None)
+
+    pending = sorted(w_pending + n_pending + i_pending + p_pending, key=lambda x: x.created_at, reverse=True)
+    approved = sorted(w_approved + n_approved + i_approved + p_approved, key=lambda x: x.created_at, reverse=True)
+    rejected = sorted(w_rejected + n_rejected + i_rejected + p_rejected, key=lambda x: x.created_at, reverse=True)
 
     logs_base = CaosEventLog.objects.all().order_by('-timestamp')[:50]
     logs_world = [l for l in logs_base if 'WORLD' in l.action.upper()]
@@ -229,6 +287,11 @@ def dashboard(request):
     grouped_inbox = group_items_by_author(pending)
     grouped_approved = group_items_by_author(approved)
     grouped_rejected = group_items_by_author(rejected)
+    
+    # Group Timeline proposals
+    grouped_timeline_pending = group_items_by_author(timeline_pending)
+    grouped_timeline_approved = group_items_by_author(timeline_approved)
+    grouped_timeline_rejected = group_items_by_author(timeline_rejected)
     
     # --- ENHANCE AVAILABLE AUTHORS WITH COUNTS ---
     # We do this for the dropdown to show who has pending stuff.
@@ -308,6 +371,14 @@ def dashboard(request):
         'total_pending_count': kpis['total_pending_count'], 'total_activity_count': kpis['total_activity_count'],
         'available_authors': allowed_authors, 'current_author': int(filter_author_id) if filter_author_id else None,
         'current_type': filter_type, 'search_query': search_query,
+        # Timeline data
+        'timeline_pending': timeline_pending,
+        'timeline_approved': timeline_approved,
+        'timeline_rejected': timeline_rejected,
+        'grouped_timeline_pending': grouped_timeline_pending,
+        'grouped_timeline_approved': grouped_timeline_approved,
+        'grouped_timeline_rejected': grouped_timeline_rejected,
+        'timeline_pending_count': len(timeline_pending),
     }
     return render(request, 'dashboard.html', context)
 
@@ -495,8 +566,9 @@ def borrar_propuestas_masivo(request):
         w_ids = request.POST.getlist('selected_ids')
         n_ids = request.POST.getlist('selected_narr_ids')
         i_ids = request.POST.getlist('selected_img_ids')
+        p_ids = request.POST.getlist('selected_period_ids')
         
-        count = len(w_ids) + len(n_ids) + len(i_ids)
+        count = len(w_ids) + len(n_ids) + len(i_ids) + len(p_ids)
         
         if action_type == 'restore':
             for id in w_ids: execute_use_case_action(request, RestoreVersionUseCase, id, "", "")
@@ -506,17 +578,18 @@ def borrar_propuestas_masivo(request):
             
         elif action_type == 'archive':
             # Bulk Archive
-            CaosVersionORM.objects.filter(id__in=w_ids).update(status='ARCHIVED')
             CaosNarrativeVersionORM.objects.filter(id__in=n_ids).update(status='ARCHIVED')
             CaosImageProposalORM.objects.filter(id__in=i_ids).update(status='ARCHIVED')
+            TimelinePeriodVersion.objects.filter(id__in=p_ids).update(status='ARCHIVED')
             messages.success(request, f"📦 {count} Elementos movidos al Archivo.")
 
         elif action_type == 'hard_delete':
             # Hard Delete (Superuser + Admin)
-            if request.user.is_superuser or request.user.profile.rank == 'ADMIN':
+            if request.user.is_staff or request.user.is_superuser:
                 CaosVersionORM.objects.filter(id__in=w_ids).delete()
                 CaosNarrativeVersionORM.objects.filter(id__in=n_ids).delete()
                 CaosImageProposalORM.objects.filter(id__in=i_ids).delete()
+                TimelinePeriodVersion.objects.filter(id__in=p_ids).delete()
                 messages.success(request, f"💀 {count} Elementos eliminados definitivamente.")
             else:
                 messages.error(request, "⛔ Solo Superusuarios o Admins pueden borrar definitivamente.")
@@ -536,15 +609,22 @@ def aprobar_propuestas_masivo(request):
         w_ids = request.POST.getlist('selected_ids')
         n_ids = request.POST.getlist('selected_narr_ids')
         i_ids = request.POST.getlist('selected_img_ids')
+        p_ids = request.POST.getlist('selected_period_ids')
         
         for id in w_ids: execute_use_case_action(request, ApproveVersionUseCase, id, "", "")
         for id in n_ids: execute_use_case_action(request, ApproveNarrativeVersionUseCase, id, "", "")
         
+        for id in p_ids:
+            try:
+                obj = TimelinePeriodVersion.objects.get(id=id)
+                TimelinePeriodService.approve_version(obj, request.user)
+            except: pass
+            
         if i_ids:
             from .assets import aprobar_imagen
             for iid in i_ids: aprobar_imagen(request, iid)
         
-        total = len(w_ids) + len(n_ids) + len(i_ids)
+        total = len(w_ids) + len(n_ids) + len(i_ids) + len(p_ids)
         messages.success(request, f"✅ {total} Propuestas aprobadas.")
     next_url = request.GET.get('next') or request.POST.get('next')
     return redirect(next_url) if next_url else redirect('dashboard')
@@ -555,6 +635,7 @@ def archivar_propuestas_masivo(request):
         w_ids = request.POST.getlist('selected_ids')
         n_ids = request.POST.getlist('selected_narr_ids')
         i_ids = request.POST.getlist('selected_img_ids')
+        p_ids = request.POST.getlist('selected_period_ids')
         
         count = 0
         for vid in w_ids:
@@ -565,6 +646,9 @@ def archivar_propuestas_masivo(request):
             count += 1
         for iid in i_ids:
             execute_orm_status_change(request, CaosImageProposalORM, iid, 'ARCHIVED', "", "")
+            count += 1
+        for pid in p_ids:
+            execute_orm_status_change(request, TimelinePeriodVersion, pid, 'ARCHIVED', "", "")
             count += 1
             
         if count > 0:
@@ -640,4 +724,50 @@ def rechazar_contribucion(request, id):
         prop.reviewer = request.user
         prop.save()
     except Exception as e: messages.error(request, str(e))
+    return redirect('dashboard')
+
+# --- PERIOD ACTIONS ---
+from src.Shared.Services.TimelinePeriodService import TimelinePeriodService
+
+@login_required
+def aprobar_periodo(request, id):
+    obj = get_object_or_404(TimelinePeriodVersion, id=id)
+    if not (request.user.is_superuser or obj.period.world.author == request.user):
+        messages.error(request, "⛔ Solo el Autor de este mundo puede aprobar este periodo.")
+        return redirect('dashboard')
+    
+    try:
+        TimelinePeriodService.approve_version(obj, request.user)
+        messages.success(request, "✅ Periodo actualizado/eliminado correctamente.")
+        log_event(request.user, "APPROVE_PERIOD", f"Aprobado {obj.period.title} v{obj.version_number}")
+    except Exception as e:
+        messages.error(request, f"Error: {e}")
+    
+    return redirect('dashboard')
+
+@login_required
+def rechazar_periodo(request, id):
+    obj = get_object_or_404(TimelinePeriodVersion, id=id)
+    if not (request.user.is_superuser or obj.period.world.author == request.user):
+        messages.error(request, "⛔ Solo el Autor de este mundo puede rechazar este periodo.")
+        return redirect('dashboard')
+    
+    feedback = request.POST.get('admin_feedback', '') or request.GET.get('admin_feedback', '')
+    TimelinePeriodService.reject_version(obj, request.user, feedback)
+    messages.success(request, "✕ Propuesta de periodo rechazada.")
+    log_event(request.user, "REJECT_PERIOD", f"Rechazado {obj.period.title} v{obj.version_number}")
+    
+    return redirect('dashboard')
+
+@login_required
+def archivar_periodo(request, id):
+    obj = get_object_or_404(TimelinePeriodVersion, id=id)
+    # Check ownership (author or admin)
+    if not (request.user.is_superuser or obj.author == request.user or obj.period.world.author == request.user):
+        messages.error(request, "⛔ No tienes permiso.")
+        return redirect('dashboard')
+        
+    obj.status = 'ARCHIVED'
+    obj.save()
+    messages.success(request, "📦 Periodo archivado.")
     return redirect('dashboard')
