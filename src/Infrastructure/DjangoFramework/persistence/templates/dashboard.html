@@ -350,6 +350,7 @@
                                 :class="hasDeletions ? 'bg-red-900/30 hover:bg-red-600 text-red-500 hover:text-white border-red-900/50' : 'bg-blue-900/30 hover:bg-blue-600 text-blue-400 hover:text-white border-blue-900/50'"
                                 :disabled="selectionCount === 0"
                                 title="Publicar/Ejecutar seleccionados"
+                                onclick="return validateBulkPublish(event)"
                                 data-confirm="¿PROCEDER con las propuestas seleccionadas? (Publicar o Ejecutar Borrado)">
                             <span x-text="hasDeletions ? '💀' : '🚀'">🚀</span> 
                             <span x-text="hasDeletions ? 'Borrar' : 'Publicar'">Publicar</span> 
@@ -697,6 +698,17 @@ async function submitWithFeedback(form, title, promptText) {
         form.admin_feedback.value = result;
         form.submit();
     }
+}
+
+function validateBulkPublish(e) {
+    const checked = document.querySelectorAll('.approved-check:checked').length;
+    if (checked > 5) {
+        e.preventDefault();
+        e.stopPropagation();
+        CaosModal.alert("⚠️ Límite Excedido", `Por seguridad, solo puedes publicar un máximo de 5 elementos a la vez.\n\nHas seleccionado: ${checked}`);
+        return false;
+    }
+    return true;
 }
 </script>
 {% endblock %}
