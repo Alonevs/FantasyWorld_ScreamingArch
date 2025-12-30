@@ -105,3 +105,25 @@ El centro de mando en `/control/`.
     *   Imágenes para revisar.
 *   **Gestión de Equipo** (Solo Admins): Reclutar exploradores y ver su actividad.
 *   **Historial y Papelera**: Herramientas para recuperar contenido borrado o versiones antiguas.
+
+---
+
+## 6. Sistema de Permisos y Privacidad (Silos)
+
+El sistema utiliza una lógica de "Silos" para garantizar que cada equipo vea solo lo que le corresponde.
+
+### Jerarquía de Roles
+1.  **SUPERADMIN (Global)**:
+    *   **Visibilidad**: Ve TODO (todos los mundos, todos los logs, todas las papeleras).
+    *   **Acción**: Puede aprobar/rechazar/editar cualquier cosa.
+    *   **Dashboard**: Ve la actividad de todos los usuarios.
+
+2.  **ADMIN (Jefe de Equipo)**:
+    *   **Visibilidad**: Ve sus propios mundos + los mundos de sus colaboradores asignados.
+    *   **Acción**: Aprueba las propuestas de sus colaboradores.
+    *   **Restricción**: NO puede ver ni tocar lo que hacen otros Admins ajenos a su equipo.
+
+3.  **SUBADMIN (Colaborador)**:
+    *   **Visibilidad**: Ve sus propios mundos.
+    *   **Edición**: Solo puede ver el botón "EDITAR" en mundos donde ha sido asignado explícitamente como colaborador (aunque sea SubAdmin, no tiene permiso global).
+    *   **Privacidad**: No ve borradores ni datos privados de otros usuarios.

@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views import View
 from django.urls import reverse
-from .utils import log_event, is_superuser, is_admin_or_staff
+from .utils import log_event, is_superuser, is_admin_or_staff, get_visible_user_ids
 from src.Infrastructure.DjangoFramework.persistence.rbac import admin_only, restrict_explorer
 import os
 import urllib.parse
@@ -252,17 +252,28 @@ def ver_papelera(request):
     Permite filtrar por usuario y prepara los datos agrupados para visualización por tipo.
     """
     # 0. Common Data
-    users = User.objects.all().order_by('username')
+    is_global, visible_ids = get_visible_user_ids(request.user)
+    
+    if is_global:
+        users = User.objects.all().order_by('username')
+    else:
+        users = User.objects.filter(id__in=visible_ids).order_by('username')
+        
     f_user = request.GET.get('user')
     
     # 1. Fetch Items
     deleted_worlds = CaosWorldORM.objects.filter(is_active=False).select_related('author')
     deleted_narratives = CaosNarrativeORM.objects.filter(is_active=False).select_related('created_by')
     deleted_images = CaosImageProposalORM.objects.filter(status__in=['TRASHED', 'ARCHIVED']).select_related('author')
-
-    # Propuestas (Versions): Mundos + Metadatos
     deleted_versions = CaosVersionORM.objects.filter(status='ARCHIVED').select_related('world', 'author')
     deleted_narr_versions = CaosNarrativeVersionORM.objects.filter(status='ARCHIVED').select_related('narrative__world', 'author')
+
+    if not is_global:
+         deleted_worlds = deleted_worlds.filter(author_id__in=visible_ids)
+         deleted_narratives = deleted_narratives.filter(created_by_id__in=visible_ids)
+         deleted_images = deleted_images.filter(author_id__in=visible_ids)
+         deleted_versions = deleted_versions.filter(author_id__in=visible_ids)
+         deleted_narr_versions = deleted_narr_versions.filter(author_id__in=visible_ids)
 
     # FILTER BY USER
     if f_user:

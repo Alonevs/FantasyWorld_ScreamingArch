@@ -1,9 +1,15 @@
+    {% load static %}
     {{ imagenes|json_script:"imagenes-data" }}
     <script>
         const galleryLog = {};
         const imgsData = JSON.parse(document.getElementById('imagenes-data').textContent);
         
         imgsData.forEach(img => {
+            // FIX: Prepend static path to url for JS usage
+            if(img.url && !img.url.startsWith('/static/')) {
+                 img.url = "{% static 'persistence/img/' %}" + img.url;
+            }
+
             galleryLog[img.filename] = {
                 uploader: img.author || '-',
                 date: img.date || '-',
@@ -227,11 +233,22 @@
         }
 
         // LIGHTBOX LOGIC
+        let currentImageIndex = 0;
+
         function openLightbox(url, fn) {
             document.body.style.overflow = 'hidden';
             const lb = document.getElementById('lightbox');
             lb.classList.remove('hidden');
             lb.classList.add('flex');
+            
+            // Find index
+            const idx = imgsData.findIndex(img => img.filename === fn);
+            if(idx !== -1) currentImageIndex = idx;
+            
+            updateLightboxContent(url, fn);
+        }
+        
+        function updateLightboxContent(url, fn) {
             document.getElementById('lb-img').src = url;
             document.getElementById('lb-name').innerText = fn;
             const d = galleryLog[fn] || {};
@@ -240,6 +257,30 @@
             document.getElementById('lb-date').innerText = d.date || "-";
             document.getElementById('lb-title').dataset.filename = fn;
         }
+
+        function nextImage() {
+            if (imgsData.length === 0) return;
+            currentImageIndex = (currentImageIndex + 1) % imgsData.length;
+            const img = imgsData[currentImageIndex];
+            updateLightboxContent(img.url, img.filename);
+        }
+
+        function prevImage() {
+            if (imgsData.length === 0) return;
+            currentImageIndex = (currentImageIndex - 1 + imgsData.length) % imgsData.length;
+            const img = imgsData[currentImageIndex];
+            updateLightboxContent(img.url, img.filename);
+        }
+        
+        // Keyboard Nav
+        document.addEventListener('keydown', function(event) {
+            const lb = document.getElementById('lightbox');
+            if (!lb.classList.contains('hidden')) {
+                if (event.key === "ArrowRight") nextImage();
+                if (event.key === "ArrowLeft") prevImage();
+                if (event.key === "Escape") closeLightbox();
+            }
+        });
         
         function closeLightbox() { 
             document.body.style.overflow = '';

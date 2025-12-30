@@ -9,6 +9,7 @@ from src.Infrastructure.DjangoFramework.persistence.models import (
 )
 from itertools import chain
 from operator import attrgetter
+from .utils import get_visible_user_ids
 
 @login_required
 def audit_log_view(request):
@@ -17,8 +18,17 @@ def audit_log_view(request):
     Muestra todas las acciones registradas en el sistema (Global para Admins).
     Permite filtrar por Usuario, Tipo de Acción y Búsqueda de texto libre.
     """
+    is_global, visible_ids = get_visible_user_ids(request.user)
+    
     logs = CaosEventLog.objects.all().order_by('-timestamp')
-    users = User.objects.all().order_by('username')
+    if not is_global:
+        logs = logs.filter(user_id__in=visible_ids)
+
+    # Allow filtering only by visible users for non-globals
+    if is_global:
+        users = User.objects.all().order_by('username')
+    else:
+        users = User.objects.filter(id__in=visible_ids).order_by('username')
 
     # FILTERS
     f_user = request.GET.get('user')
@@ -99,7 +109,16 @@ def version_history_view(request):
     i_qs = CaosImageProposalORM.objects.filter(status__in=target_statuses).select_related('author', 'world')
     p_qs = TimelinePeriodVersion.objects.filter(status__in=target_statuses).select_related('author', 'period__world')
     
-    users = User.objects.all().order_by('username')
+    is_global, visible_ids = get_visible_user_ids(request.user)
+    
+    if not is_global:
+        w_qs = w_qs.filter(author_id__in=visible_ids)
+        n_qs = n_qs.filter(author_id__in=visible_ids)
+        i_qs = i_qs.filter(author_id__in=visible_ids)
+        p_qs = p_qs.filter(author_id__in=visible_ids)
+        users = User.objects.filter(id__in=visible_ids).order_by('username')
+    else:
+        users = User.objects.all().order_by('username')
     
     # 2. FILTERS
     f_user = request.GET.get('user')

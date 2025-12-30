@@ -418,14 +418,23 @@ def editar_mundo(request, jid):
     # Como estamos en 'editar_mundo', debemos comprobar si realmente tiene derechos.
     # Nota: 'editar_mundo' aún no llama a check_world_access. Debería.
     
-    can_access, is_author_or_team = check_world_access(request, w_orm)
-    if not is_author_or_team:
+    # CHEQUEO DE BLOQUEO Y PERMISOS DE EDICIÓN
+    from src.Infrastructure.DjangoFramework.persistence.policies import can_user_propose_on
+    
+    can_access, _ = check_world_access(request, w_orm)
+    can_propose = can_user_propose_on(request.user, w_orm)
+    
+    if not can_propose:
          messages.error(request, "⛔ No tienes permisos para editar este mundo.")
          return redirect('ver_mundo', public_id=w_orm.public_id if w_orm.public_id else w_orm.id)
 
-    is_admin_bypass = is_author_or_team # Contains Superuser, Admin, Boss-Collab logic
+    # is_admin_bypass logic (Superuser/Admin can edit Locked?)
+    # Usually only World Owner or Superuser can edit LOCKED.
+    # can_user_propose_on grants access to Collaborators too, but locked status overrides that.
     
-    if w_orm.status == 'LOCKED' and not is_admin_bypass:
+    can_override_lock = request.user.is_superuser or w_orm.author == request.user
+    
+    if w_orm.status == 'LOCKED' and not can_override_lock:
         messages.error(request, "⛔ Este mundo está BLOQUEADO por el Autor. No se permiten propuestas.")
         return redirect('ver_mundo', public_id=w_orm.public_id if w_orm.public_id else w_orm.id)
 

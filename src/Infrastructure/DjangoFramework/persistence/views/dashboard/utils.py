@@ -4,6 +4,25 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from src.Infrastructure.DjangoFramework.persistence.models import CaosEventLog, CaosVersionORM, CaosNarrativeVersionORM, CaosImageProposalORM, TimelinePeriodVersion
 from src.Infrastructure.DjangoFramework.persistence.policies import get_user_access_level
 
+def get_visible_user_ids(user):
+    """
+    Returns a tuple (is_global, user_ids) determining what data a user can see.
+    - is_global: True if user is Superuser/Superadmin (can see everything).
+    - user_ids: List of IDs (Self + Minions) if restricted. Ignore if is_global is True.
+    """
+    # 1. Global Admins
+    if user.is_superuser or (hasattr(user, 'profile') and user.profile.rank == 'SUPERADMIN'):
+        return True, []
+
+    # 2. Territorial Logic (Admins/Bosses see themselves + Minions)
+    visible_ids = [user.id]
+    if hasattr(user, 'profile'):
+        # Collaborators (Minions)
+        minion_ids = list(user.profile.collaborators.values_list('user__id', flat=True))
+        visible_ids.extend(minion_ids)
+
+    return False, visible_ids
+
 def log_event(user, action, target_id, details=""):
     try:
         u = user if user.is_authenticated else None

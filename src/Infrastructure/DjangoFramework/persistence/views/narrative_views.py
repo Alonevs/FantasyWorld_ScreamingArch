@@ -11,7 +11,9 @@ from src.WorldManagement.Caos.Application.common import resolve_world_id
 from src.WorldManagement.Caos.Application.get_narrative_details import GetNarrativeDetailsUseCase
 from src.WorldManagement.Caos.Application.get_world_narratives import GetWorldNarrativesUseCase
 from src.FantasyWorld.Domain.Services.NarrativeService import NarrativeService
+from src.FantasyWorld.Domain.Services.NarrativeService import NarrativeService
 from .view_utils import resolve_jid_orm, check_world_access, get_admin_status
+from src.Infrastructure.DjangoFramework.persistence.policies import can_user_propose_on
 
 @csrf_exempt
 @require_POST
@@ -87,8 +89,9 @@ def leer_narrativa(request, nid):
         if context:
            is_admin, is_team_member = get_admin_status(request.user)
            # is_author_or_team from check_world_access is more robust for editing
-           context['is_author'] = is_author_or_team or is_team_member
-           context['allow_proposals'] = is_team_member
+           context['is_author'] = is_author_or_team
+           # FIX: allow_proposals must be granular, not global for all SubAdmins
+           context['allow_proposals'] = can_user_propose_on(request.user, n_orm.world)
            context['is_admin_role'] = is_admin
            
            # CHECK FOR DRAFTS (Phase 3)
