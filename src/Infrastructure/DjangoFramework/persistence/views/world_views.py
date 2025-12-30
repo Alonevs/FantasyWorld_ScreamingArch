@@ -7,11 +7,203 @@ from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
+from django.utils.timezone import localtime
 
-from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosVersionORM, CaosNarrativeORM, CaosEventLog, MetadataTemplate, TimelinePeriodVersion
+from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosVersionORM, CaosNarrativeORM, CaosEventLog, MetadataTemplate, TimelinePeriodVersion, CaosLike, UserProfile, CaosComment, Message
 from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
 # IMPORTE Q
-from django.db.models import Q, Case, When, Value, IntegerField
+from django.db.models import Q, Case, When, Value, IntegerField, Count
+import json
+from django.http import JsonResponse
+
+# --- LIKES SYSTEM (Simple) ---
+@login_required
+@require_POST
+def toggle_like(request):
+    try:
+        data = json.loads(request.body)
+        entity_key = data.get('entity_key')
+        
+        print(f"DEBUG_LIKE: Toggle request from {request.user} for {entity_key}")
+
+        if not entity_key:
+            return JsonResponse({'error': 'Missing entity_key'}, status=400)
+
+        # Toggle Like
+        like_obj, created = CaosLike.objects.get_or_create(user=request.user, entity_key=entity_key)
+        
+        if not created:
+            # If exists, delete it (Unlike)
+            like_obj.delete()
+            is_liked = False
+            print(f"DEBUG_LIKE: Like REMOVED")
+        else:
+            is_liked = True
+            print(f"DEBUG_LIKE: Like CREATED")
+
+        # Get total count
+        count = CaosLike.objects.filter(entity_key=entity_key).count()
+        
+        return JsonResponse({'liked': is_liked, 'count': count})
+    except Exception as e:
+        print(f"DEBUG_LIKE_ERROR: {e}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+def get_like_status(request):
+    try:
+        entity_key = request.GET.get('entity_key')
+        print(f"DEBUG_LIKE: Get status for {entity_key} (User: {request.user})")
+
+        if not entity_key:
+            return JsonResponse({'count': 0, 'liked': False})
+            
+        count = CaosLike.objects.filter(entity_key=entity_key).count()
+        is_liked = False
+        if request.user.is_authenticated:
+            is_liked = CaosLike.objects.filter(user=request.user, entity_key=entity_key).exists()
+            
+        print(f"DEBUG_LIKE: Count: {count}, Liked: {is_liked}")
+        return JsonResponse({'count': count, 'liked': is_liked})
+    except Exception as e:
+        print(f"DEBUG_LIKE_ERROR: {e}")
+        return JsonResponse({'count': 0, 'liked': False})
+
+# --- COMMENTS SYSTEM (Simple) ---
+def get_comments(request):
+    entity_key = request.GET.get('entity_key')
+    if not entity_key:
+        return JsonResponse({'comments': []})
+    
+    # Use iexact to handle case mismatch (frontend vs backend storage)
+    comments = CaosComment.objects.filter(entity_key__iexact=entity_key).select_related('user').order_by('created_at')
+    data = []
+    for c in comments:
+        profile_pic_url = ""
+        if hasattr(c.user, 'profile') and c.user.profile.avatar:
+            profile_pic_url = c.user.profile.avatar.url
+            
+        # Permission check
+        is_admin = False
+        if request.user.is_authenticated:
+             if request.user.is_superuser: is_admin = True
+             elif hasattr(request.user, 'profile') and request.user.profile.rank in ['ADMIN', 'SUBADMIN']: is_admin = True
+
+        data.append({
+            'id': c.id,
+            'user': c.user.username,
+            'content': c.content,
+            'date': localtime(c.created_at).strftime("%d/%m/%Y %H:%M"),
+            'is_me': request.user == c.user,
+            'can_delete': (request.user == c.user) or is_admin,
+            'pic': profile_pic_url
+        })
+    return JsonResponse({'comments': data})
+
+@login_required
+@require_POST
+def post_comment(request):
+    try:
+        data = json.loads(request.body)
+        entity_key = data.get('entity_key')
+        content = data.get('content')
+        
+        if not entity_key or not content:
+            return JsonResponse({'error': 'Missing fields'}, status=400)
+            
+        CaosComment.objects.create(user=request.user, entity_key=entity_key, content=content)
+        
+        # --- NOTIFICATION LOGIC ---
+        try:
+            # 1. Extract filename from entity_key (IMG_filename)
+            if entity_key.startswith("IMG_"):
+                filename = entity_key[4:] # Remove "IMG_"
+                
+                # 2. Find original uploader
+                # We look for Upload or AI Proposal events for this specific filename
+                # Order by ID desc to get the latest valid logical uploader
+                upload_event = CaosEventLog.objects.filter(
+                    action__in=['UPLOAD_PHOTO', 'PROPOSE_AI_PHOTO'],
+                    details__icontains=filename
+                ).order_by('-id').first()
+                
+                if upload_event and upload_event.user != request.user:
+                    # 3. Send Notification
+                    target_user = upload_event.user
+                    
+                    # Construct Deep Link
+                    # /mundo/<public_id>?open_image=<filename>
+                    # We need the world public_id. The event has 'world_id' (which is the public_id usually in event logs or we can derive it)
+                    # Actually CaosEventLog stores world_id as the ID, not public_id necessarily. 
+                    # Let's check how CaosEventLog stores world_id. usually it is the public_id string if we follow log_event usage.
+                    # But if not, we can try to resolve it. OR the frontend might already know it.
+                    # For safety, let's assume world_id in details or we assume the current world context. 
+                    # WAIT: The comment doesn't know the world ID. 
+                    # However, the filename is unique per world folder... usually.
+                    # Let's try to get the world from the event log if possible.
+                    
+                    world_id = upload_event.world_id
+                    
+                    msg_content = f"💬 **{request.user.username}** comentó en tu imagen `{filename}`.\n\n[Ver Comentario](/mundo/{world_id}?open_image={filename})"
+                    
+                    Message.objects.create(
+                        sender=request.user,
+                        recipient=target_user,
+                        subject=f"Nuevo comentario en {filename}",
+                        content=msg_content,
+                        is_system_notification=True
+                    )
+        except Exception as notify_error:
+            print(f"NOTIFICATION ERROR: {notify_error}")
+
+        return JsonResponse({'status': 'ok'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+@require_POST
+def delete_comment(request):
+    try:
+        data = json.loads(request.body)
+        comment_id = data.get('comment_id')
+        
+        comment = get_object_or_404(CaosComment, id=comment_id)
+        
+        # Check Permissions
+        can_delete = False
+        if request.user == comment.user: can_delete = True
+        elif request.user.is_superuser: can_delete = True
+        elif hasattr(request.user, 'profile') and request.user.profile.rank in ['ADMIN', 'SUBADMIN']: can_delete = True
+        
+        if not can_delete:
+             return JsonResponse({'error': 'Unauthorized'}, status=403)
+             
+        comment.delete()
+        return JsonResponse({'status': 'ok'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+@require_POST
+def update_avatar(request):
+    try:
+        if 'avatar' not in request.FILES:
+            return JsonResponse({'error': 'No image provided'}, status=400)
+            
+        file = request.FILES['avatar']
+        
+        # Ensure Profile
+        profile, created = UserProfile.objects.get_or_create(user=request.user)
+        
+        # Save
+        profile.avatar = file
+        profile.save()
+        
+        return JsonResponse({'status': 'ok', 'url': profile.avatar.url})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+# -----------------------------
 from django.http import Http404
 from src.WorldManagement.Caos.Application.create_world import CreateWorldUseCase
 from src.WorldManagement.Caos.Application.create_child import CreateChildWorldUseCase

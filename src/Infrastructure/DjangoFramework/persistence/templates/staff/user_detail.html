@@ -30,11 +30,34 @@
         <div class="relative z-10 p-8 lg:p-12 flex flex-col lg:flex-row items-center lg:items-end gap-8 lg:gap-12">
             <!-- Avatar Section -->
             <div class="relative group">
-                <div class="w-32 h-32 lg:w-40 lg:h-40 rounded-[2.5rem] bg-linear-to-br from-indigo-500 via-purple-600 to-accent p-1 shadow-2xl shadow-purple-500/40 group-hover:rotate-3 transition-transform duration-500">
-                    <div class="w-full h-full rounded-[2.3rem] bg-[#0a0a0a] flex items-center justify-center text-5xl lg:text-6xl font-black text-white">
-                        {{ target_user.username|slice:":1"|upper }}
+                <!-- Editable Trigger -->
+                {% if target_user.id == user.id %}
+                <label for="inp-avatar-profile" class="cursor-pointer">
+                    <input type="file" id="inp-avatar-profile" class="hidden" accept="image/*" onchange="uploadAvatar(this)">
+                {% endif %}
+
+                <div class="w-32 h-32 lg:w-40 lg:h-40 rounded-[2.5rem] bg-linear-to-br from-indigo-500 via-purple-600 to-accent p-1 shadow-2xl shadow-purple-500/40 group-hover:rotate-3 transition-transform duration-500 relative overflow-hidden">
+                    
+                    {% if target_user.profile.avatar %}
+                        <img src="{{ target_user.profile.avatar.url }}" class="w-full h-full rounded-[2.3rem] object-cover bg-[#0a0a0a]">
+                    {% else %}
+                        <div class="w-full h-full rounded-[2.3rem] bg-[#0a0a0a] flex items-center justify-center text-5xl lg:text-6xl font-black text-white">
+                            {{ target_user.username|slice:":1"|upper }}
+                        </div>
+                    {% endif %}
+
+                    <!-- Edit Overlay (Only Owner) -->
+                    {% if target_user.id == user.id %}
+                    <div class="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-300 rounded-[2.3rem]">
+                        <span class="text-white font-bold text-xs uppercase tracking-widest border border-white/30 px-3 py-1 rounded-lg bg-black/50 backdrop-blur-sm">Cambiar</span>
                     </div>
+                    {% endif %}
                 </div>
+
+                {% if target_user.id == user.id %}
+                </label>
+                {% endif %}
+
                 <!-- Status Badge -->
                 <div class="absolute -bottom-2 -right-2 px-4 py-1.5 rounded-full bg-green-500 text-[#0a0a0a] text-[10px] font-black uppercase tracking-widest shadow-xl border-4 border-[#0a0a0a]">
                     Online

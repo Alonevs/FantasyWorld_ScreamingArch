@@ -7,7 +7,8 @@ from src.Infrastructure.DjangoFramework.persistence.views.world_views import (
     home, ver_mundo, editar_mundo, borrar_mundo, 
     toggle_lock, toggle_visibilidad, init_hemisferios, escanear_planeta,
     mapa_arbol, comparar_version, ver_metadatos,
-    toggle_entity_status
+    toggle_entity_status, toggle_like, get_like_status,
+    get_comments, post_comment, update_avatar, delete_comment
 )
 from src.Infrastructure.DjangoFramework.persistence.views.ai_views import analyze_metadata_api, edit_narrative_api, api_generate_title, api_generate_lore
 from src.Infrastructure.DjangoFramework.persistence.views.dashboard.workflow import (
@@ -80,6 +81,14 @@ urlpatterns = [
     path('mensajes/enviar/<int:user_id>/', send_message, name='send_message_to'),
     path('mensajes/marcar-leido/<int:message_id>/', mark_as_read, name='mark_as_read'),
     path('api/mensajes/no-leidos/', unread_count, name='unread_count'),
+    
+    # Likes & Comments
+    path('api/likes/toggle/', toggle_like, name='toggle_like'),
+    path('api/likes/status/', get_like_status, name='get_like_status'),
+    path('api/comments/get/', get_comments, name='get_comments'),
+    path('api/comments/post/', post_comment, name='post_comment'),
+    path('api/comments/delete/', delete_comment, name='delete_comment'), # Endpoint para borrar comentarios
+    path('api/user/update_avatar/', update_avatar, name='update_avatar'),
 
     # Tailwind (Recarga automática en desarrollo)
     path("__reload__/", include("django_browser_reload.urls")),

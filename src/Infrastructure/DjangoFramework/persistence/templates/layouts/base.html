@@ -366,5 +366,38 @@
     {% endif %}
 
 
+    <script>
+        async function uploadAvatar(input) {
+            if (!input.files || !input.files[0]) return;
+            
+            const formData = new FormData();
+            formData.append('avatar', input.files[0]);
+            
+            try {
+                // Initial optimistic feedback
+                const notification = document.createElement('div');
+                notification.className = 'fixed bottom-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-xl z-[200] flex items-center gap-2 animate-bounce';
+                notification.innerHTML = '<span>🔄</span> Subiendo avatar...';
+                document.body.appendChild(notification);
+
+                const res = await fetch("{% url 'update_avatar' %}", {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+                    body: formData
+                });
+                
+                if(res.ok) {
+                    location.reload(); 
+                } else {
+                    alert("Error al subir imagen");
+                    notification.remove();
+                }
+            } catch(e) {
+                console.error(e);
+                alert("Error de conexión");
+                if(typeof notification !== 'undefined') notification.remove();
+            }
+        }
+    </script>
 </body>
 </html>

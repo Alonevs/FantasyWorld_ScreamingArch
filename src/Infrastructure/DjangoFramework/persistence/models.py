@@ -341,6 +341,7 @@ class UserProfile(models.Model):
     ]
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     rank = models.CharField(max_length=20, choices=RANK_CHOICES, default='EXPLORER')
+    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     # M2M Relationship: A user can have multiple collaborators (minions/partners)
     collaborators = models.ManyToManyField('self', symmetrical=False, related_name='bosses', blank=True)
 
@@ -359,6 +360,39 @@ def create_user_profile(sender, instance, created, **kwargs):
 def save_user_profile(sender, instance, **kwargs):
     if hasattr(instance, 'profile'):
         instance.profile.save()
+
+class CaosLike(models.Model):
+    """
+    Sistema de 'Likes' simple para cualquier entidad (identificada por string).
+    Usado para dar like a imágenes, versiones, etc.
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='likes')
+    entity_key = models.CharField(max_length=255, db_index=True, help_text="ID único de la entidad (ej: 'IMG_filename.jpg')")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'entity_key') # Un like por usuario por entidad
+        indexes = [
+            models.Index(fields=['entity_key']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} likes {self.entity_key}"
+
+class CaosComment(models.Model):
+    """
+    Sistema de comentarios simple para cualquier entidad (identificada por string).
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments')
+    entity_key = models.CharField(max_length=255, db_index=True)
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at'] # Cronológico
+
+    def __str__(self):
+        return f"{self.user.username}: {self.content[:20]}..."
 
 class Message(models.Model):
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')

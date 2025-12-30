@@ -20,8 +20,27 @@
         </div>
 
         {% if user.is_authenticated %}
-            <div class="flex items-center gap-3 bg-gray-900/50 rounded-full pl-4 pr-1 py-1 border border-gray-800">
-                <div class="flex flex-col items-end leading-none">
+            <div class="flex items-center gap-3 bg-gray-900/50 rounded-full pl-1 pr-1 py-1 border border-gray-800 relative group">
+                <!-- Hidden Upload Form -->
+                <form id="form-avatar-upload" class="hidden">
+                    <input type="file" id="inp-avatar" name="avatar" accept="image/*" onchange="uploadAvatar(this)">
+                </form>
+
+                <!-- Avatar with Overlay Action -->
+                <label for="inp-avatar" class="relative cursor-pointer group-hover:opacity-80 transition">
+                    {% if user.profile.avatar %}
+                        <img src="{{ user.profile.avatar.url }}" class="w-8 h-8 rounded-full object-cover border border-gray-700 bg-gray-800">
+                    {% else %}
+                        <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=random&color=fff" class="w-8 h-8 rounded-full object-cover border border-gray-700 bg-gray-800">
+                    {% endif %}
+                    
+                    <!-- Edit Overlay -->
+                    <div class="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                        <span class="text-[8px]">📷</span>
+                    </div>
+                </label>
+
+                <div class="flex flex-col items-start leading-none pr-3">
                     <span class="text-[9px] text-gray-500 font-bold uppercase tracking-wider">On Air</span>
                     <span class="text-xs font-bold text-accent">{{ user.username }}</span>
                 </div>
@@ -40,4 +59,35 @@
             </a>
         {% endif %}
     </div>
+    </div>
 </nav>
+
+<script>
+    async function uploadAvatar(input) {
+        if (!input.files || !input.files[0]) return;
+        
+        const formData = new FormData();
+        formData.append('avatar', input.files[0]);
+        
+        try {
+            // Optimistic UI update (optional, but nice)
+            // const img = input.parentElement.nextElementSibling.querySelector('img');
+            // img.src = URL.createObjectURL(input.files[0]);
+
+            const res = await fetch("{% url 'update_avatar' %}", {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+                body: formData
+            });
+            
+            if(res.ok) {
+                location.reload(); // Reload to update everywhere
+            } else {
+                alert("Error al subir imagen");
+            }
+        } catch(e) {
+            console.error(e);
+            alert("Error de conexión");
+        }
+    }
+</script>
