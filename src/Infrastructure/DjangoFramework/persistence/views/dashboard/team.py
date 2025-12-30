@@ -312,7 +312,7 @@ class UserDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
         comments_received = 0
         image_stats = []  # List of dicts with image statistics
         
-        for world in CaosWorldORM.objects.filter(author=target_user, is_active=True):
+        for world in CaosWorldORM.objects.filter(is_active=True):
             if world.metadata and 'gallery_log' in world.metadata:
                 gallery_log = world.metadata['gallery_log']
                 for filename, meta in gallery_log.items():
@@ -345,7 +345,7 @@ class UserDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
         received_comments = []
         
         # Comments on user's images
-        for world in CaosWorldORM.objects.filter(author=target_user, is_active=True):
+        for world in CaosWorldORM.objects.filter(is_active=True):
             if world.metadata and 'gallery_log' in world.metadata:
                 gallery_log = world.metadata['gallery_log']
                 for filename, meta in gallery_log.items():
