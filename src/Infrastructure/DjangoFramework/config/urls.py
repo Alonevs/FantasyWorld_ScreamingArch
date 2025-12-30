@@ -8,7 +8,7 @@ from src.Infrastructure.DjangoFramework.persistence.views.world_views import (
     toggle_lock, toggle_visibilidad, init_hemisferios, escanear_planeta,
     mapa_arbol, comparar_version, ver_metadatos,
     toggle_entity_status, toggle_like, get_like_status,
-    get_comments, post_comment, update_avatar, delete_comment
+    get_comments, post_comment, update_avatar, delete_comment, toggle_comment_like
 )
 from src.Infrastructure.DjangoFramework.persistence.views.ai_views import analyze_metadata_api, edit_narrative_api, api_generate_title, api_generate_lore
 from src.Infrastructure.DjangoFramework.persistence.views.dashboard.workflow import (
@@ -29,6 +29,7 @@ from src.Infrastructure.DjangoFramework.persistence.views.dashboard.assets impor
 from src.Infrastructure.DjangoFramework.persistence.views.dashboard.team import (
     UserManagementView, toggle_admin_role, MyTeamView, CollaboratorWorkView, UserDetailView
 )
+from src.Infrastructure.DjangoFramework.persistence.views.dashboard.analytics import ContentAnalyticsView
 from src.Infrastructure.DjangoFramework.persistence.views.dashboard.history import (
     audit_log_view, version_history_view, version_history_cleanup_view, delete_history_bulk_view
 )
@@ -88,7 +89,11 @@ urlpatterns = [
     path('api/comments/get/', get_comments, name='get_comments'),
     path('api/comments/post/', post_comment, name='post_comment'),
     path('api/comments/delete/', delete_comment, name='delete_comment'), # Endpoint para borrar comentarios
+    path('api/comments/like/', toggle_comment_like, name='toggle_comment_like'), # Endpoint para dar like a comentarios
     path('api/user/update_avatar/', update_avatar, name='update_avatar'),
+    
+    # Admin Analytics
+    path('admin/analytics/', ContentAnalyticsView.as_view(), name='content_analytics'),
 
     # Tailwind (Recarga automática en desarrollo)
     path("__reload__/", include("django_browser_reload.urls")),

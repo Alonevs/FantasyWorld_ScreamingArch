@@ -1,0 +1,216 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}ECLAI | Estadísticas de Contenido{% endblock %}
+
+{% block content %}
+<div class="max-w-[1800px] mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h1 class="text-3xl font-bold text-white flex items-center gap-3">
+                    📊 Estadísticas de Contenido
+                </h1>
+                <p class="text-gray-400 text-sm mt-2">Panel de administración para monitorear interacciones</p>
+            </div>
+            <a href="{% url 'dashboard' %}" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition border border-gray-700">
+                ← Volver al Dashboard
+            </a>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-black/40 border border-white/5 rounded-xl p-4">
+                <div class="text-gray-500 text-xs uppercase font-bold mb-1">Total Contenido</div>
+                <div class="text-2xl font-bold text-white">{{ total_content }}</div>
+            </div>
+            <div class="bg-black/40 border border-white/5 rounded-xl p-4">
+                <div class="text-gray-500 text-xs uppercase font-bold mb-1">Total Likes</div>
+                <div class="text-2xl font-bold text-yellow-400">⭐ {{ total_likes }}</div>
+            </div>
+            <div class="bg-black/40 border border-white/5 rounded-xl p-4">
+                <div class="text-gray-500 text-xs uppercase font-bold mb-1">Total Comentarios</div>
+                <div class="text-2xl font-bold text-blue-400">💬 {{ total_comments }}</div>
+            </div>
+            <div class="bg-black/40 border border-white/5 rounded-xl p-4">
+                <div class="text-gray-500 text-xs uppercase font-bold mb-1">Engagement Total</div>
+                <div class="text-2xl font-bold text-green-400">🔥 {{ total_engagement }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="mb-6 bg-black/40 border border-white/5 rounded-xl p-4">
+        <div class="flex flex-wrap gap-4">
+            <input type="text" id="searchInput" placeholder="🔍 Buscar por título..." class="flex-1 min-w-[200px] px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-accent focus:outline-none">
+            
+            <select id="typeFilter" class="px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:border-accent focus:outline-none">
+                <option value="all">Todos los tipos</option>
+                <option value="image">🖼️ Imágenes</option>
+                <option value="narrative">📖 Narrativas</option>
+                <option value="world">🌍 Mundos</option>
+            </select>
+
+            <select id="sortBy" class="px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:border-accent focus:outline-none">
+                <option value="engagement">Ordenar por: Engagement</option>
+                <option value="likes">Ordenar por: Likes</option>
+                <option value="comments">Ordenar por: Comentarios</option>
+                <option value="date">Ordenar por: Fecha</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Content Table -->
+    <div class="bg-black/40 border border-white/5 rounded-xl overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-900/50 border-b border-gray-800">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Contenido</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Tipo</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Autor</th>
+                        <th class="px-4 py-3 text-center text-xs font-bold text-gray-400 uppercase tracking-wider">⭐ Likes</th>
+                        <th class="px-4 py-3 text-center text-xs font-bold text-gray-400 uppercase tracking-wider">💬 Comentarios</th>
+                        <th class="px-4 py-3 text-center text-xs font-bold text-gray-400 uppercase tracking-wider">🔥 Engagement</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Fecha</th>
+                        <th class="px-4 py-3 text-center text-xs font-bold text-gray-400 uppercase tracking-wider">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="contentTableBody" class="divide-y divide-gray-800">
+                    {% for item in content_stats %}
+                    <tr class="hover:bg-gray-900/30 transition content-row" 
+                        data-type="{{ item.type }}" 
+                        data-title="{{ item.title|lower }}"
+                        data-engagement="{{ item.engagement }}"
+                        data-likes="{{ item.likes }}"
+                        data-comments="{{ item.comments }}"
+                        data-date="{{ item.date }}">
+                        
+                        <!-- Content -->
+                        <td class="px-4 py-3">
+                            <div class="flex items-center gap-3">
+                                {% if item.thumbnail %}
+                                <img src="{{ item.thumbnail }}" alt="{{ item.title }}" class="w-12 h-12 rounded-lg object-cover bg-gray-900">
+                                {% else %}
+                                <div class="w-12 h-12 rounded-lg bg-gray-900 flex items-center justify-center text-2xl">
+                                    {% if item.type == 'narrative' %}📖{% else %}🌍{% endif %}
+                                </div>
+                                {% endif %}
+                                <div class="min-w-0">
+                                    <div class="text-sm font-bold text-white truncate">{{ item.title }}</div>
+                                    <div class="text-xs text-gray-500 truncate">{{ item.world }}</div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Type -->
+                        <td class="px-4 py-3">
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold
+                                {% if item.type == 'image' %}bg-blue-900/30 text-blue-400
+                                {% elif item.type == 'narrative' %}bg-purple-900/30 text-purple-400
+                                {% else %}bg-green-900/30 text-green-400{% endif %}">
+                                {% if item.type == 'image' %}🖼️ Imagen
+                                {% elif item.type == 'narrative' %}📖 Narrativa
+                                {% else %}🌍 Mundo{% endif %}
+                            </span>
+                        </td>
+
+                        <!-- Author -->
+                        <td class="px-4 py-3 text-sm text-gray-300">{{ item.author }}</td>
+
+                        <!-- Likes -->
+                        <td class="px-4 py-3 text-center">
+                            <span class="text-sm font-bold text-yellow-400">{{ item.likes }}</span>
+                        </td>
+
+                        <!-- Comments -->
+                        <td class="px-4 py-3 text-center">
+                            <span class="text-sm font-bold text-blue-400">{{ item.comments }}</span>
+                        </td>
+
+                        <!-- Engagement -->
+                        <td class="px-4 py-3 text-center">
+                            <span class="text-sm font-bold text-green-400">{{ item.engagement }}</span>
+                        </td>
+
+                        <!-- Date -->
+                        <td class="px-4 py-3 text-sm text-gray-400">{{ item.date }}</td>
+
+                        <!-- Actions -->
+                        <td class="px-4 py-3 text-center">
+                            <a href="{{ item.url }}" target="_blank" class="inline-flex items-center px-3 py-1 bg-gray-800 hover:bg-gray-700 text-white text-xs rounded-lg transition border border-gray-700">
+                                Ver →
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="px-4 py-8 text-center text-gray-500">
+                            No hay contenido disponible
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="noResults" class="hidden mt-4 p-4 bg-yellow-900/20 border border-yellow-700/50 rounded-lg text-yellow-400 text-center">
+        No se encontraron resultados con los filtros aplicados
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('searchInput');
+    const typeFilter = document.getElementById('typeFilter');
+    const sortBy = document.getElementById('sortBy');
+    const tableBody = document.getElementById('contentTableBody');
+    const noResults = document.getElementById('noResults');
+
+    function filterAndSort() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const typeValue = typeFilter.value;
+        const sortValue = sortBy.value;
+
+        let rows = Array.from(tableBody.querySelectorAll('.content-row'));
+        let visibleCount = 0;
+
+        // Filter
+        rows.forEach(row => {
+            const title = row.dataset.title;
+            const type = row.dataset.type;
+            
+            const matchesSearch = title.includes(searchTerm);
+            const matchesType = typeValue === 'all' || type === typeValue;
+
+            if (matchesSearch && matchesType) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        // Sort visible rows
+        const visibleRows = rows.filter(row => row.style.display !== 'none');
+        visibleRows.sort((a, b) => {
+            const aVal = parseInt(a.dataset[sortValue]) || 0;
+            const bVal = parseInt(b.dataset[sortValue]) || 0;
+            return bVal - aVal; // Descending
+        });
+
+        // Reorder
+        visibleRows.forEach(row => tableBody.appendChild(row));
+
+        // Show/hide no results message
+        noResults.classList.toggle('hidden', visibleCount > 0);
+    }
+
+    searchInput.addEventListener('input', filterAndSort);
+    typeFilter.addEventListener('change', filterAndSort);
+    sortBy.addEventListener('change', filterAndSort);
+});
+</script>
+{% endblock %}

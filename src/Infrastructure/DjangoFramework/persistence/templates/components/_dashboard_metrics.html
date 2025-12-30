@@ -1,4 +1,4 @@
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
     <!-- PENDING CHECK -->
     <a href="?type=PENDING" class="caos-card caos-glow-blue p-6 flex flex-col justify-between hover:brightness-125 transition-all group cursor-pointer">
         <div class="flex justify-between items-start mb-4">
@@ -34,4 +34,18 @@
             <div class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Colaboradores</div>
         </div>
     </a>
+
+    <!-- ANALYTICS (New) -->
+    {% if request.user.is_superuser or request.user.is_staff %}
+    <a href="{% url 'content_analytics' %}" class="caos-card caos-glow-yellow p-6 flex flex-col justify-between hover:brightness-125 transition-all group cursor-pointer">
+        <div class="flex justify-between items-start mb-4">
+            <span class="text-xs font-bold text-yellow-400/60 uppercase tracking-widest group-hover:text-yellow-300">Analytics</span>
+            <span class="text-xl group-hover:scale-110 transition-transform">📊</span>
+        </div>
+        <div>
+            <div class="text-4xl font-extrabold text-white">📈</div>
+            <div class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Estadísticas</div>
+        </div>
+    </a>
+    {% endif %}
 </div>

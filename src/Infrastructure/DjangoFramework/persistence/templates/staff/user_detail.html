@@ -206,17 +206,77 @@
                     <div class="flex-1 p-6 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-center text-gray-600">
                         <div class="text-center">
                             <span class="block text-2xl mb-1">💬</span>
-                            <span class="text-[10px] uppercase font-black tracking-widest">0 Comentarios Recibidos</span>
+                            <span class="text-[10px] uppercase font-black tracking-widest">{{ comments_received|default:0 }} Comentarios Recibidos</span>
                         </div>
                     </div>
                     <div class="flex-1 p-6 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-center text-gray-600">
                         <div class="text-center">
                             <span class="block text-2xl mb-1">⭐</span>
-                            <span class="text-[10px] uppercase font-black tracking-widest">0 Reseñas Favoritas</span>
+                            <span class="text-[10px] uppercase font-black tracking-widest">{{ favorite_reviews|default:0 }} Reseñas Favoritas</span>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <!-- Received Comments Section (Only for owner) -->
+            {% if target_user.id == user.id and received_comments %}
+            <div class="mt-8">
+                <details class="group" open>
+                    <summary class="flex justify-between items-center bg-black/40 border border-white/5 p-4 rounded-xl cursor-pointer hover:border-white/10 transition list-none">
+                        <h3 class="text-sm font-black text-gray-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                            <span>💬</span> Comentarios Recibidos ({{ received_comments|length }})
+                        </h3>
+                        <span class="text-gray-500 transform group-open:rotate-180 transition duration-300">▼</span>
+                    </summary>
+                    
+                    <div class="mt-4 space-y-3">
+                        {% for comment in received_comments %}
+                        <div class="bg-black/40 border border-white/5 rounded-xl p-4 hover:border-white/10 transition">
+                            <div class="flex gap-4">
+                                <!-- Content Thumbnail/Icon -->
+                                <div class="w-16 h-16 rounded-lg overflow-hidden bg-gray-900 shrink-0 flex items-center justify-center">
+                                    {% if comment.thumbnail %}
+                                        <img src="{{ comment.thumbnail }}" alt="{{ comment.content_title }}" class="w-full h-full object-cover">
+                                    {% else %}
+                                        <span class="text-2xl">📖</span>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Comment Info -->
+                                <div class="flex-1 min-w-0">
+                                    <!-- Content Title with Link -->
+                                    <a href="{{ comment.content_url }}" class="text-sm font-bold text-white hover:text-blue-400 transition truncate block">
+                                        {{ comment.content_title }}
+                                    </a>
+                                    <p class="text-xs text-gray-600 mb-2">
+                                        {% if comment.type == 'image' %}🖼️ Imagen{% else %}📖 Narrativa{% endif %}
+                                    </p>
+                                    
+                                    <!-- Commenter Info -->
+                                    <div class="flex items-center gap-2 mb-2">
+                                        {% if comment.commenter_avatar %}
+                                            <img src="{{ comment.commenter_avatar }}" alt="{{ comment.commenter }}" class="w-6 h-6 rounded-full">
+                                        {% else %}
+                                            <div class="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-xs">
+                                                {{ comment.commenter|slice:":1"|upper }}
+                                            </div>
+                                        {% endif %}
+                                        <span class="text-xs font-bold text-gray-400">{{ comment.commenter }}</span>
+                                        <span class="text-xs text-gray-600">• {{ comment.comment_date|timesince }} ago</span>
+                                    </div>
+                                    
+                                    <!-- Comment Text -->
+                                    <p class="text-sm text-gray-300 bg-gray-900/50 rounded-lg p-3 border border-gray-800">
+                                        "{{ comment.comment_text }}"
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </details>
+            </div>
+            {% endif %}
 
             <!-- Danger Zone / Account Settings (Only for Owner) -->
             {% if target_user.id == user.id or user.is_superuser %}

@@ -305,4 +305,117 @@ class UserDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
             context['worlds_count'] = CaosWorldORM.objects.filter(author=target_user, is_active=True).count()
             context['narratives_count'] = CaosNarrativeORM.objects.filter(created_by=target_user, is_active=True).count()
         
+        # Social Stats - Comments & Likes
+        from src.Infrastructure.DjangoFramework.persistence.models import CaosComment, CaosLike
+        
+        # Count comments received on user's uploaded images
+        comments_received = 0
+        image_stats = []  # List of dicts with image statistics
+        
+        for world in CaosWorldORM.objects.filter(author=target_user, is_active=True):
+            if world.metadata and 'gallery_log' in world.metadata:
+                gallery_log = world.metadata['gallery_log']
+                for filename, meta in gallery_log.items():
+                    if meta.get('uploader') == target_user.username:
+                        entity_key = f"IMG_{filename}"
+                        comment_count = CaosComment.objects.filter(entity_key__iexact=entity_key).count()
+                        like_count = CaosLike.objects.filter(entity_key__iexact=entity_key).count()
+                        
+                        comments_received += comment_count
+                        
+                        # Add to image stats if has any interaction
+                        if comment_count > 0 or like_count > 0:
+                            image_stats.append({
+                                'filename': filename,
+                                'title': meta.get('title', filename),
+                                'world': world.name,
+                                'likes': like_count,
+                                'comments': comment_count,
+                                'date': meta.get('date', '-'),
+                                'url': f"/static/persistence/img/{world.public_id}/{filename}"
+                            })
+        
+        # Sort by total engagement (likes + comments)
+        image_stats.sort(key=lambda x: x['likes'] + x['comments'], reverse=True)
+        
+        context['comments_received'] = comments_received
+        context['image_stats'] = image_stats[:10]  # Top 10 most engaged images
+        
+        # Get detailed list of received comments for display
+        received_comments = []
+        
+        # Comments on user's images
+        for world in CaosWorldORM.objects.filter(author=target_user, is_active=True):
+            if world.metadata and 'gallery_log' in world.metadata:
+                gallery_log = world.metadata['gallery_log']
+                for filename, meta in gallery_log.items():
+                    if meta.get('uploader') == target_user.username:
+                        entity_key = f"IMG_{filename}"
+                        comments = CaosComment.objects.filter(
+                            entity_key__iexact=entity_key,
+                            parent_comment__isnull=True  # Only top-level comments
+                        ).select_related('user').order_by('-created_at')[:5]
+                        
+                        for comment in comments:
+                            received_comments.append({
+                                'type': 'image',
+                                'content_title': meta.get('title', filename),
+                                'content_url': f"/mundo/{world.public_id}",  # Link to world
+                                'thumbnail': f"/static/persistence/img/{world.public_id}/{filename}",
+                                'commenter': comment.user.username,
+                                'commenter_avatar': comment.user.profile.avatar.url if hasattr(comment.user, 'profile') and comment.user.profile.avatar else None,
+                                'comment_text': comment.content,
+                                'comment_date': comment.created_at,
+                                'is_author': comment.user == target_user
+                            })
+        
+        # Comments on user's narratives
+        user_narratives = CaosNarrativeORM.objects.filter(created_by=target_user, is_active=True)
+        for narrative in user_narratives:
+            entity_key = f"NARR_{narrative.public_id}"
+            comments = CaosComment.objects.filter(
+                entity_key__iexact=entity_key,
+                parent_comment__isnull=True
+            ).select_related('user').order_by('-created_at')[:5]
+            
+            for comment in comments:
+                received_comments.append({
+                    'type': 'narrative',
+                    'content_title': narrative.titulo,
+                    'content_url': f"/narrativa/{narrative.public_id}",
+                    'thumbnail': None,  # Narratives don't have thumbnails
+                    'commenter': comment.user.username,
+                    'commenter_avatar': comment.user.profile.avatar.url if hasattr(comment.user, 'profile') and comment.user.profile.avatar else None,
+                    'comment_text': comment.content,
+                    'comment_date': comment.created_at,
+                    'is_author': comment.user == target_user
+                })
+        
+        # Sort by date and limit to recent 20
+        received_comments.sort(key=lambda x: x['comment_date'], reverse=True)
+        context['received_comments'] = received_comments[:20]
+        
+        # Count likes received on user's CONTENT (images, narratives, worlds)
+        favorite_reviews = 0
+        
+        # 1. Likes on user's images (already counted above)
+        for stat in image_stats:
+            favorite_reviews += stat['likes']
+        
+        # 2. Likes on user's narratives
+        user_narratives = CaosNarrativeORM.objects.filter(created_by=target_user, is_active=True)
+        for narrative in user_narratives:
+            entity_key = f"NARR_{narrative.public_id}"
+            count = CaosLike.objects.filter(entity_key__iexact=entity_key).count()
+            favorite_reviews += count
+        
+        # 3. Likes on user's worlds
+        user_worlds = CaosWorldORM.objects.filter(author=target_user, is_active=True)
+        for world in user_worlds:
+            entity_key = f"WORLD_{world.public_id}"
+            count = CaosLike.objects.filter(entity_key__iexact=entity_key).count()
+            favorite_reviews += count
+        
+        context['favorite_reviews'] = favorite_reviews
+        
         return context

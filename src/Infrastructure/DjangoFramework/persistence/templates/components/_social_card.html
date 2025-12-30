@@ -1,0 +1,65 @@
+{% load static %}
+{# 
+    Componente Social Universal - Reutilizable
+    
+    Parámetros requeridos:
+    - entity_key: ID único del contenido (ej: "IMG_photo.jpg", "NARR_123", "WORLD_0102")
+    - author: Usuario que creó el contenido
+    - created_at: Fecha de creación
+    
+    Parámetros opcionales:
+    - show_comments: Boolean (default: True)
+    - show_likes: Boolean (default: True)
+    - show_share: Boolean (default: True)
+    - compact: Boolean (default: False) - Modo compacto para tarjetas pequeñas
+#}
+
+<div class="social-card {% if compact %}social-card-compact{% endif %}" data-entity-key="{{ entity_key }}">
+    <!-- Header: Autor + Fecha -->
+    <div class="social-header flex items-center gap-3 mb-4">
+        <!-- Avatar -->
+        <div class="avatar-wrapper">
+            {% if author.profile.avatar %}
+                <img src="{{ author.profile.avatar.url }}" 
+                     alt="{{ author.username }}" 
+                     class="w-10 h-10 rounded-full border border-gray-700 bg-gray-800 object-cover shadow-sm">
+            {% else %}
+                <img src="https://ui-avatars.com/api/?name={{ author.username|urlencode }}&background=random&color=fff&size=64&bold=true" 
+                     alt="{{ author.username }}"
+                     class="w-10 h-10 rounded-full border border-gray-700 bg-gray-800 object-cover shadow-sm">
+            {% endif %}
+        </div>
+        
+        <!-- Autor + Fecha -->
+        <div class="flex-1">
+            <div class="text-sm font-bold text-gray-200">{{ author.username }}</div>
+            <div class="text-xs text-gray-500">{{ created_at|date:"d/m/Y" }}</div>
+        </div>
+    </div>
+
+    <!-- Actions: Like, Comment, Share -->
+    <div class="social-actions flex items-center gap-4">
+        {% if show_likes|default:True %}
+        <button onclick="socialModule.toggleLike('{{ entity_key }}')" 
+                class="action-btn like-btn flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-900/50 border border-gray-800 hover:border-yellow-500/30 hover:bg-yellow-900/10 transition-all">
+            <span class="icon text-lg" id="like-icon-{{ entity_key|slugify }}">🤍</span>
+            <span class="count text-sm font-bold text-yellow-500" id="like-count-{{ entity_key|slugify }}">0</span>
+        </button>
+        {% endif %}
+
+        {% if show_comments|default:True %}
+        <button onclick="socialModule.toggleComments('{{ entity_key }}')" 
+                class="action-btn comment-btn flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-900/50 border border-gray-800 hover:border-green-500/30 hover:bg-green-900/10 transition-all">
+            <span class="icon text-lg">💬</span>
+            <span class="count text-sm font-bold text-green-500" id="comment-count-{{ entity_key|slugify }}">0</span>
+        </button>
+        {% endif %}
+
+        {% if show_share|default:True %}
+        <button onclick="socialModule.shareContent('{{ entity_key }}')" 
+                class="action-btn share-btn flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-900/50 border border-gray-800 hover:border-blue-500/30 hover:bg-blue-900/10 transition-all">
+            <span class="icon text-lg">🔗</span>
+        </button>
+        {% endif %}
+    </div>
+</div>

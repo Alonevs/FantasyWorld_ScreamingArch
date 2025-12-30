@@ -30,6 +30,11 @@ def toggle_like(request):
         if not entity_key:
             return JsonResponse({'error': 'Missing entity_key'}, status=400)
 
+        # Normalize entity_key by finding existing one (case-insensitive)
+        existing_like = CaosLike.objects.filter(entity_key__iexact=entity_key).first()
+        if existing_like:
+            entity_key = existing_like.entity_key  # Use the existing case
+
         # Toggle Like
         like_obj, created = CaosLike.objects.get_or_create(user=request.user, entity_key=entity_key)
         
@@ -42,10 +47,10 @@ def toggle_like(request):
             is_liked = True
             print(f"DEBUG_LIKE: Like CREATED")
 
-        # Get total count
-        count = CaosLike.objects.filter(entity_key=entity_key).count()
+        # Get total count (case-insensitive)
+        count = CaosLike.objects.filter(entity_key__iexact=entity_key).count()
         
-        return JsonResponse({'liked': is_liked, 'count': count})
+        return JsonResponse({'liked': is_liked, 'count': count, 'user_has_liked': is_liked})
     except Exception as e:
         print(f"DEBUG_LIKE_ERROR: {e}")
         return JsonResponse({'error': str(e)}, status=500)
@@ -56,18 +61,19 @@ def get_like_status(request):
         print(f"DEBUG_LIKE: Get status for {entity_key} (User: {request.user})")
 
         if not entity_key:
-            return JsonResponse({'count': 0, 'liked': False})
+            return JsonResponse({'count': 0, 'liked': False, 'user_has_liked': False})
             
-        count = CaosLike.objects.filter(entity_key=entity_key).count()
+        # Use iexact for case-insensitive matching
+        count = CaosLike.objects.filter(entity_key__iexact=entity_key).count()
         is_liked = False
         if request.user.is_authenticated:
-            is_liked = CaosLike.objects.filter(user=request.user, entity_key=entity_key).exists()
+            is_liked = CaosLike.objects.filter(user=request.user, entity_key__iexact=entity_key).exists()
             
         print(f"DEBUG_LIKE: Count: {count}, Liked: {is_liked}")
-        return JsonResponse({'count': count, 'liked': is_liked})
+        return JsonResponse({'count': count, 'liked': is_liked, 'user_has_liked': is_liked})
     except Exception as e:
         print(f"DEBUG_LIKE_ERROR: {e}")
-        return JsonResponse({'count': 0, 'liked': False})
+        return JsonResponse({'count': 0, 'liked': False, 'user_has_liked': False})
 
 # --- COMMENTS SYSTEM (Simple) ---
 def get_comments(request):
@@ -76,7 +82,12 @@ def get_comments(request):
         return JsonResponse({'comments': []})
     
     # Use iexact to handle case mismatch (frontend vs backend storage)
-    comments = CaosComment.objects.filter(entity_key__iexact=entity_key).select_related('user').order_by('created_at')
+    # Only get top-level comments (no parent)
+    comments = CaosComment.objects.filter(
+        entity_key__iexact=entity_key,
+        parent_comment__isnull=True
+    ).select_related('user').prefetch_related('replies__user').order_by('created_at')
+    
     data = []
     for c in comments:
         profile_pic_url = ""
@@ -89,14 +100,37 @@ def get_comments(request):
              if request.user.is_superuser: is_admin = True
              elif hasattr(request.user, 'profile') and request.user.profile.rank in ['ADMIN', 'SUBADMIN']: is_admin = True
 
+        # Build replies list
+        replies = []
+        for reply in c.replies.all():
+            reply_pic_url = ""
+            if hasattr(reply.user, 'profile') and reply.user.profile.avatar:
+                reply_pic_url = reply.user.profile.avatar.url
+            
+            replies.append({
+                'id': reply.id,
+                'username': reply.user.username,
+                'user': reply.user.username,  # Backward compatibility
+                'content': reply.content,
+                'date': localtime(reply.created_at).strftime("%d/%m/%Y %H:%M"),
+                'is_me': request.user == reply.user,
+                'can_delete': (request.user == reply.user) or is_admin,
+                'avatar_url': reply_pic_url,
+                'pic': reply_pic_url  # Backward compatibility
+            })
+
         data.append({
             'id': c.id,
-            'user': c.user.username,
+            'username': c.user.username,
+            'user': c.user.username,  # Backward compatibility
             'content': c.content,
             'date': localtime(c.created_at).strftime("%d/%m/%Y %H:%M"),
             'is_me': request.user == c.user,
             'can_delete': (request.user == c.user) or is_admin,
-            'pic': profile_pic_url
+            'avatar_url': profile_pic_url,
+            'pic': profile_pic_url,  # Backward compatibility
+            'reply_count': c.reply_count,
+            'replies': replies
         })
     return JsonResponse({'comments': data})
 
@@ -104,57 +138,91 @@ def get_comments(request):
 @require_POST
 def post_comment(request):
     try:
-        data = json.loads(request.body)
-        entity_key = data.get('entity_key')
-        content = data.get('content')
+        # Support both JSON and form data
+        if request.content_type == 'application/json':
+            data = json.loads(request.body)
+            entity_key = data.get('entity_key')
+            content = data.get('content')
+            parent_comment_id = data.get('parent_comment_id')
+        else:
+            entity_key = request.POST.get('entity_key')
+            content = request.POST.get('content')
+            parent_comment_id = request.POST.get('parent_comment_id')
         
         if not entity_key or not content:
             return JsonResponse({'error': 'Missing fields'}, status=400)
-            
-        CaosComment.objects.create(user=request.user, entity_key=entity_key, content=content)
         
-        # --- NOTIFICATION LOGIC ---
-        try:
-            # 1. Extract filename from entity_key (IMG_filename)
-            if entity_key.startswith("IMG_"):
-                filename = entity_key[4:] # Remove "IMG_"
+        # Create comment
+        comment = CaosComment(user=request.user, entity_key=entity_key, content=content)
+        
+        # Handle threading (replies)
+        if parent_comment_id:
+            try:
+                parent = CaosComment.objects.get(id=parent_comment_id)
+                # Security: Verify parent belongs to same entity
+                if parent.entity_key != entity_key:
+                    return JsonResponse({'error': 'Invalid parent comment'}, status=400)
                 
-                # 2. Find original uploader
-                # We look for Upload or AI Proposal events for this specific filename
-                # Order by ID desc to get the latest valid logical uploader
-                upload_event = CaosEventLog.objects.filter(
-                    action__in=['UPLOAD_PHOTO', 'PROPOSE_AI_PHOTO'],
-                    details__icontains=filename
-                ).order_by('-id').first()
+                comment.parent_comment = parent
+                comment.save()
                 
-                if upload_event and upload_event.user != request.user:
-                    # 3. Send Notification
-                    target_user = upload_event.user
-                    
-                    # Construct Deep Link
-                    # /mundo/<public_id>?open_image=<filename>
-                    # We need the world public_id. The event has 'world_id' (which is the public_id usually in event logs or we can derive it)
-                    # Actually CaosEventLog stores world_id as the ID, not public_id necessarily. 
-                    # Let's check how CaosEventLog stores world_id. usually it is the public_id string if we follow log_event usage.
-                    # But if not, we can try to resolve it. OR the frontend might already know it.
-                    # For safety, let's assume world_id in details or we assume the current world context. 
-                    # WAIT: The comment doesn't know the world ID. 
-                    # However, the filename is unique per world folder... usually.
-                    # Let's try to get the world from the event log if possible.
-                    
-                    world_id = upload_event.world_id
-                    
-                    msg_content = f"💬 **{request.user.username}** comentó en tu imagen `{filename}`.\n\n[Ver Comentario](/mundo/{world_id}?open_image={filename})"
-                    
+                # Update parent reply count
+                parent.reply_count += 1
+                parent.save()
+                
+                # Notify parent comment author
+                if parent.user != request.user:
                     Message.objects.create(
                         sender=request.user,
-                        recipient=target_user,
-                        subject=f"Nuevo comentario en {filename}",
-                        content=msg_content,
-                        is_system_notification=True
+                        recipient=parent.user,
+                        subject=f"💬 {request.user.username} respondió a tu comentario",
+                        body=f'"{content[:100]}..."'
                     )
-        except Exception as notify_error:
-            print(f"NOTIFICATION ERROR: {notify_error}")
+            except CaosComment.DoesNotExist:
+                return JsonResponse({'error': 'Parent comment not found'}, status=404)
+        else:
+            comment.save()
+            
+            # --- NOTIFICATION LOGIC FOR CONTENT OWNER ---
+            try:
+                # 1. Extract filename from entity_key (IMG_filename)
+                if entity_key.startswith("IMG_"):
+                    filename = entity_key[4:] # Remove "IMG_"
+                    
+                    # 2. Find original uploader
+                    upload_event = CaosEventLog.objects.filter(
+                        action__in=['UPLOAD_PHOTO', 'PROPOSE_AI_PHOTO'],
+                        details__icontains=filename
+                    ).order_by('-id').first()
+                    
+                    if upload_event and upload_event.user != request.user:
+                        # 3. Send Notification
+                        target_user = upload_event.user
+                        
+                        # Construct Deep Link
+                        # /mundo/<public_id>?open_image=<filename>
+                        # We need the world public_id. The event has 'world_id' (which is the public_id usually in event logs or we can derive it)
+                        # Actually CaosEventLog stores world_id as the ID, not public_id necessarily. 
+                        # Let's check how CaosEventLog stores world_id. usually it is the public_id string if we follow log_event usage.
+                        # But if not, we can try to resolve it. OR the frontend might already know it.
+                        # For safety, let's assume world_id in details or we assume the current world context. 
+                        # WAIT: The comment doesn't know the world ID. 
+                        # However, the filename is unique per world folder... usually.
+                        # Let's try to get the world from the event log if possible.
+                        
+                        world_id = upload_event.world_id
+                        
+                        msg_content = f"💬 **{request.user.username}** comentó en tu imagen `{filename}`.\n\n[Ver Comentario](/mundo/{world_id}?open_image={filename})"
+                        
+                        Message.objects.create(
+                            sender=request.user,
+                            recipient=target_user,
+                            subject=f"Nuevo comentario en {filename}",
+                            content=msg_content,
+                            is_system_notification=True
+                        )
+            except Exception as notify_error:
+                print(f"NOTIFICATION ERROR: {notify_error}")
 
         return JsonResponse({'status': 'ok'})
     except Exception as e:
@@ -180,6 +248,60 @@ def delete_comment(request):
              
         comment.delete()
         return JsonResponse({'status': 'ok'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+@require_POST
+def toggle_comment_like(request):
+    """
+    Toggle like on a specific comment.
+    Uses entity_key format: COMMENT_{comment_id}
+    """
+    try:
+        data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+        comment_id = data.get('comment_id')
+        
+        if not comment_id:
+            return JsonResponse({'error': 'Missing comment_id'}, status=400)
+        
+        # Verify comment exists
+        comment = get_object_or_404(CaosComment, id=comment_id)
+        
+        # Create entity_key for this comment
+        entity_key = f"COMMENT_{comment_id}"
+        
+        # Toggle like
+        like, created = CaosLike.objects.get_or_create(
+            user=request.user,
+            entity_key=entity_key
+        )
+        
+        if not created:
+            # Unlike
+            like.delete()
+            count = CaosLike.objects.filter(entity_key=entity_key).count()
+            return JsonResponse({
+                'status': 'unliked',
+                'count': count,
+                'user_has_liked': False
+            })
+        else:
+            # Liked - create notification
+            if comment.user != request.user:
+                Message.objects.create(
+                    sender=request.user,
+                    recipient=comment.user,
+                    subject=f"⭐ A {request.user.username} le gustó tu comentario",
+                    body=f'"{comment.content[:100]}..."'
+                )
+            
+            count = CaosLike.objects.filter(entity_key=entity_key).count()
+            return JsonResponse({
+                'status': 'liked',
+                'count': count,
+                'user_has_liked': True
+            })
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
