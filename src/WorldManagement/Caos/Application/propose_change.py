@@ -16,8 +16,9 @@ class ProposeChangeUseCase:
             raise Exception("No se puede proponer cambios: La entidad no existe.")
 
         # 2. Determinar el siguiente número de versión secuencial
-        last_ver = live_world.versiones.first()
-        next_num = (last_ver.version_number + 1) if last_ver else 1
+        from django.db import models
+        last_ver_num = live_world.versiones.aggregate(models.Max('version_number'))['version_number__max']
+        next_num = (last_ver_num + 1) if last_ver_num is not None else 1
 
         # 3. Preparar la Copia de Datos (Snapshot)
         # Si no se proporciona un nuevo valor, se mantiene el actual para que la versión sea completa.

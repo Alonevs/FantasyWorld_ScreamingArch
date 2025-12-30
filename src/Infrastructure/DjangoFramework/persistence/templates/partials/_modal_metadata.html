@@ -6,9 +6,9 @@
         <!-- Header -->
         <div class="flex justify-between items-center p-5 border-b border-gray-800 bg-black/40">
             <div>
-                <h2 class="flex items-center gap-3 flex-wrap">
+                <h2 class="flex items-center gap-3">
                     <span class="text-2xl shrink-0">🔮</span>
-                    <span class="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 uppercase tracking-tighter">
+                    <span class="text-xl font-black text-transparent bg-clip-text bg-linear-to-r from-purple-400 to-pink-500 uppercase tracking-tighter">
                         ECLAI | AUTO-NOOS | METADATA
                     </span>
                     <span class="text-[10px] text-gray-400 font-mono border border-gray-800 px-2 py-0.5 rounded uppercase bg-black/40 whitespace-nowrap">
@@ -26,10 +26,10 @@
                 <p class="text-purple-400 font-mono text-xs animate-pulse">EXTRAYENDO VARIABLES...</p>
             </div>
 
-            <form id="metadataForm" method="POST" action="{% url 'editar_mundo' jid %}">
+            <form id="metadataForm" onsubmit="event.preventDefault(); submitMetadataProposal();">
                 {% csrf_token %}
-                <input type="hidden" name="action_type" value="METADATA_PROPOSAL">
-                <input type="hidden" name="reason" value="Actualización Manual de Metadatos">
+                <input type="hidden" id="metadata-target-type" value="WORLD">
+                <input type="hidden" id="metadata-target-id" value="{{ public_id }}">
                 
                 <!-- DYNAMIC EDITOR CONTAINER -->
                 <div class="bg-black/20 rounded-lg border border-gray-800 p-4 min-h-[300px]">
@@ -52,10 +52,16 @@
                     </div>
                 </div>
 
+                <!-- Reason Field -->
+                <div class="mt-4">
+                    <label class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1.5 ml-1">Razón del cambio</label>
+                    <input type="text" id="metadata-change-log" placeholder="Ej: Actualización de población..." class="w-full bg-[#13151f] border border-gray-800 rounded-lg p-3 text-sm text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 outline-none transition-all placeholder:text-gray-700 font-medium">
+                </div>
+
                 <!-- Footer -->
                 <div class="mt-6 flex justify-end gap-3 pt-4 border-t border-gray-800">
                     <button type="button" onclick="closeMetadataModal()" class="px-4 py-2 text-gray-400 hover:text-white text-sm transition">Cancelar</button>
-                    <button type="submit" class="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded shadow-lg hover:shadow-purple-500/20 transition text-sm">
+                    <button type="submit" id="btn-save-metadata" class="px-6 py-2 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded shadow-lg hover:shadow-purple-500/20 transition text-sm">
                         GUARDAR PROPUESTA
                     </button>
                 </div>
@@ -67,7 +73,7 @@
 {{ jid|json_script:"world-jid" }}
 {{ metadata_obj.properties|json_script:"metadata-props-data" }}
 
-<script src="{% static 'js/metadata_manager.js' %}?v={{ now|date:'U' }}"></script>
+<script src="{% static 'js/metadata_manager.js' %}?v={% now 'U' %}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         try {

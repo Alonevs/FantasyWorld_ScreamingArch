@@ -1,12 +1,12 @@
-# FantasyWorld (Arquitectura Screaming + Django) - v5.0 (Base)
+# FantasyWorld (Arquitectura Screaming + Django) - v0.1 (Base)
 
 ## 📖 Introducción
 **FantasyWorld** es una aplicación web integral para la creación, gestión y simulación de mundos de fantasía. Utiliza **Django** como infraestructura robusta y sigue el patrón de **Screaming Architecture** (Arquitectura Limpia) para mantener la lógica de dominio pura y desacoplada.
 
-**Versión Actual:** v5.0 (Base)
-**Estado:** Desarrollo Activo v5.2 / UI Premium / PostgreSQL
+**Versión Actual:** v0.1 (Base)
+**Estado:** Desarrollo Activo v0.1 / UI Premium / PostgreSQL
 
-## 🚀 Fase Actual (v5.2)
+## 🚀 Fase Actual (v0.1)
 -   **UI Premium & Responsive**: Header con efecto Glassmorphism, animaciones avanzadas y **Panel Lateral optimizado para móviles**.
 -   **Jerarquía de Roles (Eclai-Core)**:
     -   **👑 Superadmin**: Control global total.

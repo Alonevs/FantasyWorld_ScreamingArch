@@ -465,9 +465,10 @@ class TimelinePeriod(models.Model):
     
     @property
     def current_version_number(self):
-        """Número de la última versión aprobada"""
-        last_approved = self.versions.filter(status='APPROVED').order_by('-version_number').first()
-        return last_approved.version_number if last_approved else 0
+        """Número de la última versión publicada o aprobada"""
+        last = self.versions.filter(status__in=['LIVE', 'APPROVED', 'HISTORY']).order_by('-version_number').first()
+        if not last or last.version_number < 0: return 0
+        return last.version_number
 
 
 class TimelinePeriodVersion(models.Model):

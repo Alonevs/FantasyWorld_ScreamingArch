@@ -2,7 +2,7 @@
 {% load static %}
 {% load metadata_tags %}
 
-{% block title %}ECLAI v5.0 | {{ name }}{% endblock %}
+{% block title %}ECLAI v0.1 | {{ name }}{% endblock %}
 
 {% block extra_head %}
     <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
@@ -231,7 +231,7 @@
                             <div class="text-gray-400 text-[10px]">{{ img.date|default:"-" }}</div>
                         </div>
                     </div>
-                    {% if user_role >= 20 or is_author or allow_proposals %}
+                    {% if can_edit %}
                     <button data-jid="{{ jid }}" data-filename="{{ img.filename|escapejs }}"
                             onclick="event.stopPropagation(); solicitarBorradoIndividual(this.dataset.jid, this.dataset.filename);" 
                             class="absolute top-1 right-1 bg-red-600/80 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition hover:bg-red-500 shadow-lg backdrop-blur z-20 batch-hide">✕</button>
@@ -303,6 +303,11 @@
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('edit_period') === 'true') {
                  setTimeout(() => { if(typeof openEditPeriodModal === 'function') openEditPeriodModal(); }, 500);
+            }
+
+            // Auto Open Metadata Modal (URL param check)
+            if (urlParams.get('edit_metadata') === 'true') {
+                 setTimeout(() => { if(typeof openMetadataModal === 'function') openMetadataModal(); }, 600);
             }
 
             // If Retouch Mode (World), lock navigation

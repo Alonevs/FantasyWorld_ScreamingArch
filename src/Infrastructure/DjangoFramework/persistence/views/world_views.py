@@ -277,15 +277,21 @@ def ver_mundo(request, public_id):
             messages.warning(request, f"Período '{period_slug}' no encontrado. Mostrando ACTUAL.")
             return redirect('ver_mundo', public_id=public_id)
 
-    # 1.5. Check for Retouch Proposal (Period)
+    # 1.5. Check for Retouch Proposal (Period or Metadata)
     retouch_proposal = None
     prop_id = request.GET.get('proposal_id')
     if prop_id:
+        # Try Period Version first
         try:
             retouch_proposal = TimelinePeriodVersion.objects.get(id=prop_id)
-            messages.info(request, f"✏️ Retomando propuesta rechazada v{retouch_proposal.version_number}. Datos cargados.")
+            messages.info(request, f"✏️ Retomando propuesta rechazada de Periodo v{retouch_proposal.version_number}. Datos cargados.")
         except TimelinePeriodVersion.DoesNotExist:
-            pass
+            # Try World Version
+            try:
+                retouch_proposal = CaosVersionORM.objects.get(id=prop_id)
+                messages.info(request, f"✏️ Retomando propuesta rechazada de Mundo v{retouch_proposal.version_number}. Datos cargados.")
+            except CaosVersionORM.DoesNotExist:
+                pass
 
     # 2. Manejar GET (Visualización) mediante Caso de Uso
     # PASAMOS EL PERIOD_SLUG PARA FILTRAR IMÁGENES
@@ -365,6 +371,30 @@ def ver_mundo(request, public_id):
     context['available_levels'] = get_available_levels(context['jid'])
     # -------------------------------------
 
+
+    # --- RETOUCH DATA PRE-FILL ---
+    if retouch_proposal:
+        context['is_retouch_mode'] = True
+        context['retouch_proposal'] = retouch_proposal
+        
+        # Extract properties for metadata manager
+        retouch_props = []
+        if isinstance(retouch_proposal, TimelinePeriodVersion):
+            meta = retouch_proposal.proposed_metadata
+            if isinstance(meta, dict):
+                retouch_props = [{'key': k, 'value': v} for k, v in meta.items()]
+            elif isinstance(meta, list):
+                retouch_props = meta
+        else:
+            # CaosVersionORM
+            raw_props = retouch_proposal.cambios.get('metadata', {}).get('properties') or retouch_proposal.cambios.get('properties')
+            if raw_props:
+                retouch_props = raw_props
+        
+        if retouch_props:
+            context['metadata_obj'] = {'properties': retouch_props}
+            # Also update 'props' if it exists in context for visual consistency in viewer
+            context['props'] = {p['key']: p['value'] for p in retouch_props}
 
     return render(request, 'ficha_mundo.html', context)
 

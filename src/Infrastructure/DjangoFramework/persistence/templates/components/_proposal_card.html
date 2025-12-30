@@ -125,11 +125,11 @@
         <!-- CONTEXTUAL BUTTONS (Requires Authority) -->
         {% if variant == 'pending' %}
             {% if item.has_authority %}
-                {% if item.type == 'WORLD' %}
-                    <a href="{% url 'aprobar_propuesta' item.id %}" class="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white rounded-lg border border-green-400/30 transition-all duration-300 font-bold shadow-lg shadow-green-900/50 hover:shadow-green-500/30" data-confirm="¿Aprobar esta propuesta?">✅ Aprobar</a>
+                {% if item.type == 'WORLD' or item.type == 'METADATA' %}
+                    <a href="{% url 'aprobar_propuesta' item.id %}" class="px-4 py-2 bg-linear-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white rounded-lg border border-green-400/30 transition-all duration-300 font-bold shadow-lg shadow-green-900/50 hover:shadow-green-500/30" data-confirm="¿Aprobar esta propuesta?">✅ Aprobar</a>
                     <a href="{% url 'rechazar_propuesta' item.id %}" class="px-4 py-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg border border-red-900/50 transition font-bold" data-confirm="¿Rechazar esta propuesta?" data-destructive="true">✕ Rechazar</a>
                 {% else %}
-                    <a href="{% url 'aprobar_narrativa' item.id %}" class="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white rounded-lg border border-green-400/30 transition-all duration-300 font-bold shadow-lg shadow-green-900/50 hover:shadow-green-500/30" data-confirm="¿Aprobar esta narrativa?">✅ Aprobar</a>
+                    <a href="{% url 'aprobar_narrativa' item.id %}" class="px-4 py-2 bg-linear-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white rounded-lg border border-green-400/30 transition-all duration-300 font-bold shadow-lg shadow-green-900/50 hover:shadow-green-500/30" data-confirm="¿Aprobar esta narrativa?">✅ Aprobar</a>
                     <a href="{% url 'rechazar_narrativa' item.id %}" class="px-4 py-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg border border-red-900/50 transition font-bold" data-confirm="¿Rechazar esta narrativa?" data-destructive="true">✕ Rechazar</a>
                 {% endif %}
             {% endif %}
@@ -146,6 +146,30 @@
                     </a>
                 {% endif %}
              {% endif %}
+
+        {% elif variant == 'rejected' %}
+            {% if item.type == 'WORLD' or item.type == 'METADATA' %}
+                <form method="post" action="{% url 'restaurar_version' item.id %}" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" name="action" value="retouch" class="px-3 py-1 bg-purple-900/20 hover:bg-purple-600 text-purple-400 hover:text-white rounded border border-purple-900/50 text-xs font-bold transition flex items-center gap-1" data-confirm="¿Retomar esta propuesta rechazada para editarla?">
+                        ✏️ Retocar
+                    </button>
+                </form>
+            {% elif item.type == 'PERIOD' %}
+                <form method="post" action="{% url 'restaurar_periodo' item.id %}" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" name="action" value="retouch" class="px-3 py-1 bg-purple-900/20 hover:bg-purple-600 text-purple-400 hover:text-white rounded border border-purple-900/50 text-xs font-bold transition flex items-center gap-1" data-confirm="¿Retomar esta propuesta de periodo rechazada?">
+                        ✏️ Retocar
+                    </button>
+                </form>
+            {% elif item.type == 'NARRATIVE' %}
+                <form method="post" action="{% url 'restaurar_narrativa' item.id %}" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" name="action" value="retouch" class="px-3 py-1 bg-purple-900/20 hover:bg-purple-600 text-purple-400 hover:text-white rounded border border-purple-900/50 text-xs font-bold transition flex items-center gap-1" data-confirm="¿Retomar esta narrativa rechazada?">
+                        ✏️ Retocar
+                    </button>
+                </form>
+            {% endif %}
 
         {% elif variant == 'archived' %}
             {% if item.type == 'WORLD' %}

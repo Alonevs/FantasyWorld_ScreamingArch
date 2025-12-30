@@ -48,6 +48,7 @@ from src.Infrastructure.DjangoFramework.persistence.views.messaging_views import
 
 from src.Infrastructure.DjangoFramework.persistence.views.search_views import global_search
 from src.Infrastructure.DjangoFramework.persistence.views import period_api
+from src.Infrastructure.DjangoFramework.persistence.views.metadata_views import propose_metadata_update
 
 # Timeline API (old system - snapshots)
 from src.Infrastructure.DjangoFramework.persistence.views.timeline_api import (
@@ -240,6 +241,12 @@ urlpatterns = [
     
     # 🌟 NEW UNIFIED REVIEW VIEW 🌟
     path('revisar/<str:type>/<int:id>/', review_views.review_proposal, name='review_proposal'),
+
+    # ==========================================
+    # METADATA API (Independent Proposals)
+    # ==========================================
+    path('api/metadata/propose/<str:target_type>/<str:target_id>/', 
+         propose_metadata_update, name='propose_metadata_update'),
 ]
 
 

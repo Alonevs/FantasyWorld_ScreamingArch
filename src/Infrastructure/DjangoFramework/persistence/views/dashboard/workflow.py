@@ -466,7 +466,21 @@ def restaurar_version(request, version_id):
     # Redirigimos al editor cargando los datos de la versión rechazada como 'source'.
     if request.POST.get('action') == 'retouch':
         target_id = obj.world.public_id if obj.world.public_id else obj.world.id
-        # Pasamos src_version para que editar_mundo lo pre-cargue
+        
+        # Detect if it's a metadata-only retouch (Auto-Noos wheel)
+        is_meta = obj.cambios.get('action') == 'METADATA_UPDATE'
+        if not is_meta:
+             # Fallback check: if name and description didn't change but metadata did
+             name_match = (obj.proposed_name == obj.world.name)
+             desc_match = (obj.proposed_description == obj.world.description)
+             has_meta = 'metadata' in obj.cambios or 'properties' in obj.cambios
+             if name_match and desc_match and has_meta:
+                 is_meta = True
+
+        if is_meta:
+            return redirect(f"/mundo/{target_id}/?edit_metadata=true&proposal_id={obj.id}")
+
+        # Standard world retouch (text editor)
         return redirect(f"/editar/{target_id}/?src_version={obj.id}")
     
     # EXECUTE RESTORE (Standard)
@@ -595,7 +609,8 @@ def restaurar_narrativa(request, id):
     messages.success(request, f"🔄 Propuesta de restauración creada (v{new_v_num}).")
     
     if request.POST.get('action') == 'retouch':
-        return redirect('editar_narrativa', nid=obj.narrative.nid)
+        # Redirect to the viewer which handles src_version and opens the editor
+        return redirect(f"/narrativa/{obj.narrative.public_id or obj.narrative.nid}/?src_version={obj.id}")
         
     return redirect('dashboard')
 

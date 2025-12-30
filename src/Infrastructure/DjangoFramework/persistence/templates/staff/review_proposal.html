@@ -4,10 +4,10 @@
 {% load custom_filters %}
 
 {% block content %}
-<div class="min-h-screen bg-[#050510]">
+<div class="bg-[#050510]">
     
     <!-- HEADER (Sticky) -->
-    <div class="sticky top-16 z-[100] bg-[#0a0a1a]/80 backdrop-blur-2xl border-b border-white/5 px-12 py-8 shadow-2xl transition-all -mt-4">
+    <div class="sticky top-16 z-150 bg-[#0a0a1a]/95 backdrop-blur-3xl border-b border-purple-500/20 px-12 py-8 shadow-2xl transition-all">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
             <div class="flex items-center gap-7">
                 <!-- REDESIGNED BACK BUTTON -->
@@ -23,10 +23,14 @@
                 <div>
                     <h1 class="text-3xl font-black text-white flex items-center gap-4 leading-tight tracking-tight">
                         <span class="text-2xl">🕵️</span> 
-                        {% if proposal_type == 'WORLD' or proposal_type == 'METADATA' %}
-                            {{ proposal.world.name|default:"Entidad Desconocida" }}
+                        {% if is_metadata_only %}
+                            Metadatos de {{ proposal.world.name|default:proposal.period.world.name|default:"Entidad" }}
+                        {% elif proposal_type == 'WORLD' %}
+                            {{ proposal.world.name|default:"Mundo" }}
+                        {% elif proposal_type == 'PERIOD' %}
+                            {{ proposal.period.world.name }} ({{ proposal.period.title }})
                         {% elif proposal_type == 'NARRATIVE' %}
-                            {{ proposal.narrative.titulo|default:"Narrativa Desconocida" }}
+                            {{ proposal.narrative.titulo|default:"Narrativa" }}
                         {% else %}
                             Revisión de {{ proposal_type }}
                         {% endif %}
@@ -76,8 +80,10 @@
                             <button name="action" value="archive" class="px-5 py-2 rounded-lg bg-gray-800 text-yellow-500 border border-gray-700 hover:bg-gray-700 text-sm font-bold transition-all" data-confirm="¿Archivar esta propuesta?">
                                 Archivar
                             </button>
+                            
+                            <input type="hidden" name="is_metadata_only" value="{{ is_metadata_only|yesno:'1,0' }}">
 
-                            <button name="action" value="approve" class="px-5 py-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white text-sm font-bold shadow-lg shadow-green-900/50 hover:shadow-green-500/30 transition-all duration-300 border border-green-400/30">
+                            <button name="action" value="approve" class="px-5 py-2 rounded-lg bg-linear-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white text-sm font-bold shadow-lg shadow-green-900/50 hover:shadow-green-500/30 transition-all duration-300 border border-green-400/30">
                                 Aprobar
                             </button>
 
@@ -188,19 +194,22 @@
                 
                 {% if proposal_type != 'IMAGE' and not is_image %}
                     <!-- TEXT CONTENT (WORLD/NARRATIVE ONLY) -->
-                    {% if proposal_type == 'WORLD' or proposal_type == 'NARRATIVE' or proposal_type == 'METADATA' or proposal_type == 'PERIOD' %}
-                        {% if live_title %}
-                            <h3 class="text-xl text-gray-300 font-bold mb-4 border-b border-gray-800 pb-2">{{ live_title }}</h3>
-                        {% endif %}
-                        
-                        {% if live_content %}
-                            <div class="whitespace-pre-wrap font-mono text-sm leading-relaxed mb-6">{{ live_content|safe }}</div>
-                        {% elif not live_title %}
-                            <p class="text-gray-600 italic mb-6">[Contenido vacío o inexistente]</p>
+                    {% if proposal_type == 'WORLD' or proposal_type == 'NARRATIVE' or proposal_type == 'PERIOD' %}
+                        {% if not is_metadata_only %}
+                            {% if live_title %}
+                                <h3 class="text-xl text-gray-300 font-bold mb-4 border-b border-gray-800 pb-2">{{ live_title }}</h3>
+                            {% endif %}
+                            
+                            {% if live_content %}
+                                <div class="whitespace-pre-wrap font-mono text-sm leading-relaxed mb-6">{{ live_content|safe }}</div>
+                            {% elif not live_title %}
+                                <p class="text-gray-600 italic mb-6">[Contenido vacío o inexistente]</p>
+                            {% endif %}
                         {% endif %}
                     {% endif %}
 
-                    {% if proposal_type == 'METADATA' and live_metadata_list %}
+                    {% if proposal_type == 'METADATA' or proposal_type == 'PERIOD' %}
+                        {% if live_metadata_list %}
                         <!-- LIVE METADATA ECLAI STYLE -->
                         <div class="mt-6 space-y-2">
                             <h4 class="text-xs font-black text-purple-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
@@ -223,6 +232,7 @@
                             </div>
                             {% endfor %}
                         </div>
+                        {% endif %}
                     {% endif %}
                 {% endif %}
             </div>
@@ -249,19 +259,22 @@
 
                 {% if proposal_type != 'IMAGE' and not is_image %}
                     <!-- TEXT DIFF (WORLD/NARRATIVE ONLY) -->
-                    {% if proposal_type == 'WORLD' or proposal_type == 'NARRATIVE' or proposal_type == 'METADATA' or proposal_type == 'PERIOD' %}
-                        {% if diff_title %}
-                            <h3 class="text-xl text-white font-bold mb-4 border-b border-blue-900/50 pb-2">
-                                {{ diff_title|safe }}
-                            </h3>
-                        {% endif %}
-
-                        {% if diff_content %}
-                            <div class="whitespace-pre-wrap font-mono text-sm leading-relaxed text-gray-400 mb-6">{{ diff_content|safe }}</div>
+                    {% if proposal_type == 'WORLD' or proposal_type == 'NARRATIVE' or proposal_type == 'PERIOD' %}
+                        {% if not is_metadata_only %}
+                            {% if diff_title %}
+                                <h3 class="text-xl text-white font-bold mb-4 border-b border-blue-900/50 pb-2">
+                                    {{ diff_title|safe }}
+                                </h3>
+                            {% endif %}
+    
+                            {% if diff_content %}
+                                <div class="whitespace-pre-wrap font-mono text-sm leading-relaxed text-gray-400 mb-6">{{ diff_content|safe }}</div>
+                            {% endif %}
                         {% endif %}
                     {% endif %}
 
-                    {% if proposal_type == 'METADATA' and proposed_metadata_list_decorated %}
+                    {% if proposal_type == 'METADATA' or proposal_type == 'PERIOD' %}
+                        {% if proposed_metadata_list_decorated %}
                         <!-- PROPOSED METADATA ECLAI STYLE (ALL PROPERTIES + DIFFS) -->
                         <div class="mt-6 space-y-3">
                             <h4 class="text-xs font-black text-blue-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
@@ -314,6 +327,7 @@
                             </div>
                             {% endfor %}
                         </div>
+                        {% endif %}
                     {% endif %}
                 {% endif %}
             </div>

@@ -60,10 +60,10 @@ class TimelinePeriodService:
             is_future=is_future
         )
         
-        # Crear versión inicial (V1)
+        # Crear versión inicial (V-1) para no interferir con el conteo de propuestas (V0, V1...)
         TimelinePeriodVersion.objects.create(
             period=period,
-            version_number=1,
+            version_number=-1,
             proposed_title=title,
             proposed_description=description,
             proposed_metadata=period.metadata,
@@ -92,8 +92,9 @@ class TimelinePeriodService:
         Returns:
             TimelinePeriodVersion instance
         """
-        # Calcular siguiente número de versión
-        next_version = period.versions.count() + 1
+        # Calcular siguiente número de versión (v0 para la primera propuesta real si no hay previas)
+        last_version = period.versions.aggregate(models.Max('version_number'))['version_number__max']
+        next_version = (last_version + 1) if last_version is not None else 0
         
         # Crear versión propuesta
         version = TimelinePeriodVersion.objects.create(
@@ -119,7 +120,8 @@ class TimelinePeriodService:
         if period.is_current:
             raise ValueError("No se puede proponer eliminar el período ACTUAL")
 
-        next_version = period.versions.count() + 1
+        last_version = period.versions.aggregate(models.Max('version_number'))['version_number__max']
+        next_version = (last_version + 1) if last_version is not None else 0
         
         version = TimelinePeriodVersion.objects.create(
             period=period,
@@ -188,6 +190,8 @@ class TimelinePeriodService:
         if version.proposed_metadata is not None:
             period.metadata = version.proposed_metadata
         
+        # Actualizar número de versión actual
+        period.current_version_number = version.version_number
         period.save()
         
         # 1. Archive previous LIVE versions for this period

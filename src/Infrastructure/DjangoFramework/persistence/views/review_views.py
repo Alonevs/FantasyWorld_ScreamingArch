@@ -93,11 +93,9 @@ def review_proposal(request, type, id):
                 ctx['live_title'] = live_obj.name
                 ctx['live_content'] = live_obj.description
                 ctx['live_version_number'] = live_obj.current_version_number
+            ctx['proposed_title'] = proposal.proposed_name or ""
+            ctx['proposed_content'] = proposal.proposed_description or ""
             ctx['change_log'] = proposal.change_log
-            if live_obj:
-                ctx['live_version_number'] = live_obj.current_version_number
-            
-            # Calculate Diffs
             ctx['diff_title'] = get_diff_html(ctx['live_title'], ctx['proposed_title'])
             ctx['diff_content'] = get_diff_html(ctx['live_content'], ctx['proposed_content'])
             
@@ -136,8 +134,8 @@ def review_proposal(request, type, id):
             ctx['proposed_metadata_list_decorated'] = decorated_list
             
             # If only metadata changed, label it correctly
-            if not ctx['diff_title'] and not ctx['diff_content'] and ctx['metadata_diff']:
-                ctx['proposal_type'] = 'METADATA'
+            if ctx['live_title'] == ctx['proposed_title'] and ctx['live_content'] == ctx['proposed_content'] and ctx.get('metadata_diff'):
+                ctx['is_metadata_only'] = True
             
             # 🖼️ IF SET_COVER: Force image preview mode even if technical type is WORLD
             if proposal.cambios and proposal.cambios.get('action') == 'SET_COVER':
@@ -226,6 +224,10 @@ def review_proposal(request, type, id):
             # Extra context
             ctx['parent_name'] = period.world.name
             ctx['context_label'] = f"PERIODO ({period.title})"
+            
+            # If only metadata changed, label it correctly (to trigger metadata-only view in template)
+            if ctx['live_title'] == ctx['proposed_title'] and ctx['live_content'] == ctx['proposed_content'] and ctx['metadata_diff']:
+                ctx['is_metadata_only'] = True
 
     except Http404:
         messages.warning(request, "La propuesta solicitada no existe o ya ha sido procesada.")
