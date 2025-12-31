@@ -110,3 +110,38 @@ def can_user_delete_request(user, world):
     Mismas reglas que proponer (ya que borrar ES una propuesta).
     """
     return can_user_propose_on(user, world)
+
+# --- MODERACIÓN DE COMENTARIOS ---
+
+def get_rank_weight(u):
+    """Retorna un valor numérico para comparar rangos de usuario."""
+    if not u or not u.is_authenticated: return 0
+    if u.is_superuser: return 4
+    if not hasattr(u, 'profile'): return 1
+    r = u.profile.rank
+    if r == 'ADMIN': return 3
+    if r == 'SUBADMIN': return 2
+    return 1 # EXPLORER
+
+def can_user_moderate_comment(user, comment):
+    """
+    Define si un usuario puede moderar (borrar) un comentario.
+    Reglas:
+    1. El autor siempre puede borrar su propio comentario.
+    2. Los moderadores (Subadmin+) pueden borrar comentarios de rango igual o inferior.
+    """
+    if not user.is_authenticated: return False
+    
+    # 1. Autoría propia
+    if user == comment.user:
+        return True
+        
+    u_rank = get_rank_weight(user)
+    a_rank = get_rank_weight(comment.user)
+    
+    # Solo moderadores (Subadmin+) pueden moderar a otros
+    if u_rank < 2:
+        return False
+        
+    # No puede moderar a un superior (u_rank debe ser >= a_rank)
+    return u_rank >= a_rank

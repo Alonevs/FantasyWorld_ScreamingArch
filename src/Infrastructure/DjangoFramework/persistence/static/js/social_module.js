@@ -35,6 +35,15 @@ class SocialModule {
                 body: `entity_key=${encodeURIComponent(entityKey)}`
             });
 
+            if (response.status === 401 || response.status === 403 || response.redirected) {
+                if (window.CaosModal) {
+                    CaosModal.alert('Acceso Restringido', 'Debes iniciar sesión para dar "Me gusta".');
+                } else {
+                    alert('Debes iniciar sesión para dar "Me gusta".');
+                }
+                return;
+            }
+
             const data = await response.json();
             this.updateLikeUI(entityKey, data);
         } catch (error) {
@@ -145,9 +154,12 @@ class SocialModule {
             const response = await fetch(`/api/comments/get/?entity_key=${encodeURIComponent(entityKey)}`);
             const data = await response.json();
 
+            // Handle UI for anonymous users
+            this.updateCommentInputVisibility(entityKey, data.authenticated);
+
             if (data.comments && data.comments.length > 0) {
                 const validComments = data.comments.filter(c => c !== null);
-                listEl.innerHTML = validComments.map(c => this.renderComment(c, entityKey, customContainerId)).join('');
+                listEl.innerHTML = validComments.map(c => this.renderComment(c, entityKey, customContainerId, data.authenticated)).join('');
             } else {
                 listEl.innerHTML = '<p class="text-gray-500 text-center py-4">No hay comentarios aún. ¡Sé el primero!</p>';
             }
@@ -156,21 +168,45 @@ class SocialModule {
             this.updateCommentCount(entityKey, data.comments.length);
         } catch (error) {
             console.error('Error loading comments:', error);
-            listEl.innerHTML = '<p class="text-red-500 text-center py-4">Error al cargar comentarios</p>';
+            const errorText = error.message.includes('Unexpected token') ? 'Error de servidor (Respuesta no válida)' : error.message;
+            listEl.innerHTML = `<p class="text-red-500 text-center py-4">Error al cargar comentarios: ${errorText}. Por favor, recarga la página.</p>`;
         }
+    }
+
+    /**
+     * Actualiza la visibilidad de la caja de comentarios según si el usuario está logueado
+     */
+    updateCommentInputVisibility(entityKey, isAuthenticated) {
+        const slug = entityKey.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+        const inputWrappers = document.querySelectorAll(`[id^="comment-input-wrapper-${slug}"], #comments-panel-${slug} .comment-input-wrapper`);
+        
+        inputWrappers.forEach(wrapper => {
+            if (!isAuthenticated) {
+                wrapper.innerHTML = `
+                    <div class="w-full p-4 bg-gray-800/30 border border-dashed border-gray-700 rounded-xl text-center">
+                        <p class="text-xs text-gray-500 italic">
+                            Inicia sesión para participar en la conversación.
+                        </p>
+                    </div>
+                `;
+            }
+        });
     }
 
     /**
      * Renderiza un comentario individual
      */
-    renderComment(comment, entityKey, customContainerId = null) {
+    renderComment(comment, entityKey, customContainerId = null, isAuthenticated = true) {
         const avatarUrl = comment.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.username)}&size=48`;
         const userIsOwner = comment.can_delete;
+        
+        const replyCount = comment.replies ? comment.replies.length : 0;
+        const hasReplies = replyCount > 0;
         
         return `
             <div class="comment-item bg-gray-800/50 rounded-lg p-4">
                 <div class="flex gap-3">
-                    <img src="${avatarUrl}" alt="${comment.username}" class="w-10 h-10 rounded-full">
+                    <img src="${avatarUrl}" alt="${comment.username}" class="w-8 h-8 rounded-full shrink-0">
                     <div class="flex-1">
                         <div class="flex items-center gap-2 mb-1">
                             <span class="font-bold text-white text-sm">${comment.username}</span>
@@ -185,42 +221,75 @@ class SocialModule {
                                 <span id="comment-like-icon-${comment.id}">🤍</span>
                                 <span id="comment-like-count-${comment.id}">0</span>
                             </button>
+                            
+                            ${isAuthenticated ? `
                             <button onclick="socialModule.replyToComment(${comment.id}, '${comment.username}')" 
-                                    class="text-gray-500 hover:text-blue-400 transition">
-                                ↩️ Responder
+                                    class="text-gray-500 hover:text-blue-400 transition font-medium">
+                                Responder
                             </button>
+                            ` : ''}
+
                             ${userIsOwner ? `
                             <button onclick="socialModule.deleteComment(${comment.id}, '${entityKey}', '${customContainerId || ''}')" 
                                     class="text-gray-500 hover:text-red-400 transition">
-                                🗑️ Eliminar
+                                🗑️
                             </button>
                             ` : ''}
                         </div>
                         
-                        <!-- Reply Form Container -->
+                        <!-- Reply Form Container (Modern Pill Style) -->
                         <div id="reply-form-${comment.id}" class="mt-3 hidden">
-                            <div class="flex gap-2">
+                            <div class="flex items-center gap-2 bg-gray-900/50 rounded-full px-3 py-2 border border-gray-700 focus-within:border-blue-500 transition">
                                 <input type="text" 
                                        id="reply-input-${comment.id}" 
                                        placeholder="Responde a ${comment.username}..." 
-                                       class="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-none"
+                                       class="flex-1 bg-transparent text-sm text-white focus:outline-none placeholder-gray-500"
                                        onkeypress="if(event.key === 'Enter') socialModule.postComment('${entityKey}', ${comment.id}, null, '${customContainerId || ''}')">
                                 <button onclick="socialModule.postComment('${entityKey}', ${comment.id}, null, '${customContainerId || ''}')" 
-                                        class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition">
-                                    Responder
+                                        class="text-blue-500 hover:text-blue-400 transition">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
                                 </button>
                             </div>
                         </div>
                         
-                        ${comment.replies && comment.replies.length > 0 ? `
-                            <div class="ml-8 mt-3 space-y-3 border-l-2 border-gray-700/50 pl-4">
-                                ${comment.replies ? comment.replies.map(r => this.renderComment(r, entityKey, customContainerId)).join('') : ''}
+                        ${hasReplies ? `
+                            <!-- Collapsible Replies Toggle -->
+                            <button onclick="socialModule.toggleReplies(${comment.id})" 
+                                    id="toggle-replies-${comment.id}"
+                                    class="mt-3 flex items-center gap-2 text-xs font-bold text-blue-500 hover:text-blue-400 transition">
+                                <span id="toggle-icon-${comment.id}">▼</span>
+                                <span>${replyCount} ${replyCount === 1 ? 'respuesta' : 'respuestas'}</span>
+                            </button>
+                            
+                            <!-- Replies Container (Collapsible) -->
+                            <div id="replies-${comment.id}" class="ml-8 mt-3 space-y-3 border-l-2 border-gray-700/50 pl-4 hidden">
+                                ${comment.replies.map(r => this.renderComment(r, entityKey, customContainerId, isAuthenticated)).join('')}
                             </div>
                         ` : ''}
-                    </div>
                 </div>
             </div>
+        </div>
         `;
+    }
+
+    /**
+     * Toggle visibility of replies
+     */
+    toggleReplies(commentId) {
+        const repliesContainer = document.getElementById(`replies-${commentId}`);
+        const toggleIcon = document.getElementById(`toggle-icon-${commentId}`);
+        
+        if (repliesContainer && toggleIcon) {
+            const isHidden = repliesContainer.classList.contains('hidden');
+            
+            if (isHidden) {
+                repliesContainer.classList.remove('hidden');
+                toggleIcon.textContent = '▲';
+            } else {
+                repliesContainer.classList.add('hidden');
+                toggleIcon.textContent = '▼';
+            }
+        }
     }
 
     /**
@@ -253,6 +322,7 @@ class SocialModule {
             console.error('Error toggling comment like:', error);
         }
     }
+
 
     /**
      * Responder a un comentario
@@ -375,7 +445,11 @@ class SocialModule {
             // Fallback: copiar al portapapeles
             try {
                 await navigator.clipboard.writeText(url);
-                alert('¡Link copiado al portapapeles!');
+                if (window.CaosModal) {
+                    CaosModal.alert('Enlace Copiado', '¡El link se ha copiado al portapapeles!');
+                } else {
+                    alert('¡Link copiado al portapapeles!');
+                }
             } catch (error) {
                 console.error('Error copying to clipboard:', error);
             }
@@ -386,7 +460,14 @@ class SocialModule {
      * Borrar un comentario
      */
     async deleteComment(commentId, entityKey, customContainerId = null) {
-        if (!confirm('¿Estás seguro de que quieres borrar este comentario?')) return;
+        let confirmed = false;
+        if (window.CaosModal) {
+            confirmed = await CaosModal.confirm('Borrar Comentario', '¿Estás seguro de que quieres borrar este comentario? Esta acción eliminará también todas sus respuestas.', true);
+        } else {
+            confirmed = confirm('¿Estás seguro de que quieres borrar este comentario?');
+        }
+
+        if (!confirmed) return;
 
         try {
             const response = await fetch('/api/comments/delete/', {
@@ -398,13 +479,23 @@ class SocialModule {
                 body: JSON.stringify({ comment_id: commentId })
             });
 
-            if (response.ok) {
+            const data = await response.json().catch(() => ({}));
+
+            if (response.ok && data.status === 'ok') {
                 this.loadComments(entityKey, customContainerId);
             } else {
-                alert('No se pudo borrar el comentario');
+                const errorMsg = data.error || 'No se pudo borrar el comentario';
+                if (window.CaosModal) {
+                    CaosModal.alert('Error de Moderación', errorMsg);
+                } else {
+                    alert(errorMsg);
+                }
             }
         } catch (error) {
             console.error('Error deleting comment:', error);
+            if (window.CaosModal) {
+                CaosModal.alert('Error', 'Hubo un problema de conexión al intentar borrar el comentario.');
+            }
         }
     }
 

@@ -49,3 +49,9 @@ class SubadminCreationForm(UserCreationForm):
             # OR we hide them. Removing is safer validation-wise if we handle save manually.
             if 'rank' in self.fields: del self.fields['rank']
             if 'boss' in self.fields: del self.fields['boss']
+
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        if username and User.objects.filter(username__iexact=username).exists():
+            raise forms.ValidationError("Este nombre de usuario ya está en uso (ignorando mayúsculas/minúsculas).")
+        return username

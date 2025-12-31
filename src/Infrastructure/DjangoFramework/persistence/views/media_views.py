@@ -151,15 +151,22 @@ def subir_imagen_manual(request, jid):
                     return redirect('ver_mundo', public_id=redirect_target)
                 # ----------------------
 
-                # DIRECT SAVE
-                repo = DjangoCaosRepository()
-                name_user = request.user.username
+                # --- PROPOSAL SAVE ---
                 try:
-                    repo.save_manual_file(w.id, f, username=name_user, title=final, period_slug=period_slug)
-                    messages.success(request, f"✨ Imagen '{final}' guardada directamente.")
-                    log_event(request.user, "UPLOAD_PHOTO", real_jid, f"Direct Upload: {final} (Period: {period_slug})")
+                    from src.Infrastructure.DjangoFramework.persistence.models import CaosImageProposalORM
+                    CaosImageProposalORM.objects.create(
+                        world=w,
+                        image=f,
+                        title=final,
+                        author=request.user if request.user.is_authenticated else None,
+                        status='PENDING',
+                        action='ADD',
+                        timeline_period=period_obj
+                    )
+                    messages.success(request, f"📩 Propuesta para '{final}' enviada a revisión.")
+                    log_event(request.user, "PROPOSE_MANUAL_PHOTO", real_jid, f"Manual Proposal: {final} (Period: {period_slug})")
                 except Exception as e:
-                     messages.error(request, f"Error directo: {e}")
+                     messages.error(request, f"Error al proponer imagen: {e}")
             
         except Exception as e: messages.error(request, f"Error: {e}")
     return redirect('ver_mundo', public_id=redirect_target)

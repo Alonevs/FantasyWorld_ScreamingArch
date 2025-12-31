@@ -10,7 +10,8 @@
                  img.url = "{% static 'persistence/img/' %}" + img.url;
             }
 
-            galleryLog[img.filename] = {
+            const key = (img.filename || "").trim();
+            galleryLog[key] = {
                 uploader: img.author || '-',
                 avatar_url: img.avatar_url || '',
                 date: img.date || '-',
@@ -243,7 +244,8 @@
             lb.classList.add('flex');
             
             // Find index
-            const idx = imgsData.findIndex(img => img.filename === fn);
+            const lookupFn = (fn || "").trim();
+            const idx = imgsData.findIndex(img => (img.filename || "").trim() === lookupFn);
             if(idx !== -1) currentImageIndex = idx;
             
             updateLightboxContent(url, fn);
@@ -266,7 +268,8 @@
         function updateLightboxContent(url, fn) {
             document.getElementById('lb-img').src = url;
             document.getElementById('lb-name').innerText = fn;
-            const d = galleryLog[fn] || {};
+            const lookupKey = (fn || "").trim();
+            const d = galleryLog[lookupKey] || {};
             document.getElementById('lb-title').innerText = d.title || fn;
             
             const uploader = d.uploader || "Anónimo";

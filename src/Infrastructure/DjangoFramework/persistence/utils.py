@@ -205,7 +205,7 @@ def get_world_images(jid, world_instance=None, period_slug=None):
 
                     imgs.append({
                         'url': f'{dname}/{f}', 
-                        'filename': f,
+                        'filename': f.strip(),
                         'author': author_str,
                         'avatar_url': avatar_url,
                         'date': date_str,
@@ -216,3 +216,53 @@ def get_world_images(jid, world_instance=None, period_slug=None):
             print(f"Error procesando galería de {jid}: {e}")
             
     return imgs
+
+
+def get_user_avatar(user, jid=None):
+    """
+    Obtiene la URL del avatar de un usuario de forma centralizada.
+    
+    Args:
+        user: Objeto User de Django (puede ser None)
+        jid: J-ID del mundo para fallback de imagen aleatoria (opcional, no usado actualmente)
+    
+    Returns:
+        str: URL del avatar (foto de perfil, imagen aleatoria, o cadena vacía)
+    """
+    if not user:
+        return ""
+    
+    # Intentar obtener avatar del perfil
+    try:
+        if hasattr(user, 'profile') and user.profile and user.profile.avatar:
+            return user.profile.avatar.url
+    except:
+        pass
+    
+    # Fallback: Usar imagen aleatoria de la carpeta static/persistence/img
+    try:
+        import random
+        from pathlib import Path
+        from django.templatetags.static import static
+        
+        # Ruta a la carpeta de imágenes generadas/subidas
+        # BASE_DIR es src/Infrastructure/DjangoFramework/
+        img_dir = Path(settings.BASE_DIR) / 'persistence' / 'static' / 'persistence' / 'img'
+        
+        if img_dir.exists():
+            # Buscar archivos de imagen recursivamente en todas las subcarpetas
+            image_files = []
+            for ext in ['.jpg', '.jpeg', '.png', '.webp', '.gif']:
+                image_files.extend(img_dir.rglob(f'*{ext}'))  # rglob busca recursivamente
+                image_files.extend(img_dir.rglob(f'*{ext.upper()}'))
+            
+            if image_files:
+                random_image = random.choice(image_files)
+                # Obtener ruta relativa desde img_dir
+                relative_path = random_image.relative_to(img_dir)
+                # Retornar URL estática
+                return static(f'persistence/img/{relative_path.as_posix()}')
+    except Exception as e:
+        print(f"Error getting fallback avatar: {e}")
+    
+    return ""

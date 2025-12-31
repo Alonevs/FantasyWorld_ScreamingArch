@@ -65,57 +65,68 @@ def get_like_status(request):
 
 # --- COMMENTS SYSTEM (Simple) ---
 def get_comments(request):
-    entity_key = request.GET.get('entity_key')
-    if not entity_key:
-        return JsonResponse({'comments': []})
-    
-    comments = SocialService.get_comments(entity_key)
-    
-    data = []
-    for c in comments:
-        profile_pic_url = ""
-        if hasattr(c.user, 'profile') and c.user.profile.avatar:
-            profile_pic_url = c.user.profile.avatar.url
-            
-        # Permission check
-        is_admin = False
-        if request.user.is_authenticated:
-             if request.user.is_superuser: is_admin = True
-             elif hasattr(request.user, 'profile') and request.user.profile.rank in ['ADMIN', 'SUBADMIN']: is_admin = True
+    try:
+        entity_key = request.GET.get('entity_key')
+        if not entity_key:
+            return JsonResponse({'comments': [], 'authenticated': request.user.is_authenticated})
+        
+        comments = SocialService.get_comments(entity_key)
+        
+        from src.Infrastructure.DjangoFramework.persistence.utils import get_user_avatar
+        from src.Infrastructure.DjangoFramework.persistence.policies import can_user_moderate_comment
+        
+        data = []
+        for c in comments:
+            # Use centralized avatar logic
+            profile_pic_url = get_user_avatar(c.user)
+            username = c.user.username if c.user else "Usuario eliminado"
+                
+            # Build replies list
+            replies = []
+            for reply in c.replies.all():
+                # Use centralized avatar logic for replies too
+                reply_pic_url = get_user_avatar(reply.user)
+                reply_username = reply.user.username if reply.user else "Usuario eliminado"
+                
+                replies.append({
+                    'id': reply.id,
+                    'username': reply_username,
+                    'user': reply_username,  # Backward compatibility
+                    'content': reply.content,
+                    'date': localtime(reply.created_at).strftime("%d/%m/%Y %H:%M") if reply.created_at else "---",
+                    'is_me': request.user.is_authenticated and reply.user and (request.user == reply.user),
+                    'can_delete': can_user_moderate_comment(request.user, reply),
+                    'avatar_url': reply_pic_url,
+                    'profile_url': f"/staff/user/{reply_username}/" if reply.user else "#"
+                })
 
-        # Build replies list
-        replies = []
-        for reply in c.replies.all():
-            reply_pic_url = ""
-            if hasattr(reply.user, 'profile') and reply.user.profile.avatar:
-                reply_pic_url = reply.user.profile.avatar.url
-            
-            replies.append({
-                'id': reply.id,
-                'username': reply.user.username,
-                'user': reply.user.username,  # Backward compatibility
-                'content': reply.content,
-                'date': localtime(reply.created_at).strftime("%d/%m/%Y %H:%M"),
-                'is_me': request.user == reply.user,
-                'can_delete': (request.user == reply.user) or is_admin,
-                'avatar_url': reply_pic_url,
-                'pic': reply_pic_url  # Backward compatibility
+            data.append({
+                'id': c.id,
+                'username': username,
+                'user': username,  # Backward compatibility
+                'content': c.content,
+                'date': localtime(c.created_at).strftime("%d/%m/%Y %H:%M") if c.created_at else "---",
+                'is_me': request.user.is_authenticated and c.user and (request.user == c.user),
+                'can_delete': can_user_moderate_comment(request.user, c),
+                'avatar_url': profile_pic_url,
+                'pic': profile_pic_url,  # Backward compatibility
+                'reply_count': c.reply_count,
+                'replies': replies
             })
-
-        data.append({
-            'id': c.id,
-            'username': c.user.username,
-            'user': c.user.username,  # Backward compatibility
-            'content': c.content,
-            'date': localtime(c.created_at).strftime("%d/%m/%Y %H:%M"),
-            'is_me': request.user == c.user,
-            'can_delete': (request.user == c.user) or is_admin,
-            'avatar_url': profile_pic_url,
-            'pic': profile_pic_url,  # Backward compatibility
-            'reply_count': c.reply_count,
-            'replies': replies
+        return JsonResponse({
+            'comments': data, 
+            'authenticated': request.user.is_authenticated
         })
-    return JsonResponse({'comments': data})
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Error in get_comments for key {request.GET.get('entity_key', 'NONE')}: {e}\n{error_details}")
+        return JsonResponse({
+            'error': str(e), 
+            'comments': [], 
+            'authenticated': request.user.is_authenticated,
+            'debug_msg': 'Error en el servidor al procesar comentarios'
+        }, status=500)
 
 @login_required
 @require_POST
@@ -170,8 +181,8 @@ def post_comment(request):
             # --- NOTIFICATION LOGIC FOR CONTENT OWNER ---
             try:
                 # 1. Extract filename from entity_key (IMG_filename)
-                if entity_key.startswith("IMG_"):
-                    filename = entity_key[4:] # Remove "IMG_"
+                if entity_key.startswith("img_"):
+                    filename = entity_key[4:] # Remove "img_"
                     
                     # 2. Find original uploader
                     upload_event = CaosEventLog.objects.filter(
@@ -220,14 +231,11 @@ def delete_comment(request):
         
         comment = get_object_or_404(CaosComment, id=comment_id)
         
-        # Check Permissions
-        can_delete = False
-        if request.user == comment.user: can_delete = True
-        elif request.user.is_superuser: can_delete = True
-        elif hasattr(request.user, 'profile') and request.user.profile.rank in ['ADMIN', 'SUBADMIN']: can_delete = True
+        # Check Permissions using centralized policy
+        from src.Infrastructure.DjangoFramework.persistence.policies import can_user_moderate_comment
         
-        if not can_delete:
-             return JsonResponse({'error': 'Unauthorized'}, status=403)
+        if not can_user_moderate_comment(request.user, comment):
+             return JsonResponse({'error': 'Unauthorized: No tienes rango suficiente para borrar este comentario.'}, status=403)
              
         comment.delete()
         return JsonResponse({'status': 'ok'})
@@ -620,22 +628,32 @@ def ver_mundo(request, public_id):
             'properties': [{'key': k, 'value': v} for k, v in props.items()]
         }
         
-        # Override Info Sidebar
+    # Override Info Sidebar
         context['created_at'] = viewing_period.created_at
         context['version_live'] = viewing_period.current_version_number
+        
+        # Entity key for period-specific social interactions
+        context['period_entity_key'] = f"period_{period_slug}_{public_id}"
         
         # Derivar Autor desde la primera versión del período
         first_v = viewing_period.versions.order_by('version_number').first()
         if first_v and first_v.author:
              context['author_live'] = first_v.author.username
              context['author_live_user'] = first_v.author
+             context['author_name'] = first_v.author.username
+             # Get avatar using centralized utility
+             from src.Infrastructure.DjangoFramework.persistence.utils import get_user_avatar
+             context['author_avatar_url'] = get_user_avatar(first_v.author, context['jid'])
         else:
              context['author_live'] = "Desconocido"
-
+             context['author_name'] = "Desconocido"
+             context['author_avatar_url'] = ""
 
     else:
         context['is_period_view'] = False
         context['viewing_period'] = current_period
+        # Entity key for current period (uses world_ format)
+        context['period_entity_key'] = f"world_{public_id}"
     
     # Pasar períodos al contexto para el selector
     context['timeline_periods'] = all_periods.exclude(is_current=True).order_by('order')
@@ -649,6 +667,14 @@ def ver_mundo(request, public_id):
     context['children_label'] = get_children_label(context['jid']) # NUEVO: Pasar etiqueta para el grid
     context['status_str'] = w_orm.status
     context['author_live_user'] = w_orm.author
+    
+    # Prepare author avatar URL (same pattern as image avatars)
+    from src.Infrastructure.DjangoFramework.persistence.utils import get_user_avatar
+    context['author_name'] = "Alone"
+    context['author_avatar_url'] = ""
+    if w_orm.author:
+        context['author_name'] = w_orm.author.username
+        context['author_avatar_url'] = get_user_avatar(w_orm.author, context['jid'])
     
     # CHEQUEO DE PERMISOS
     # NOTA: Los permisos (can_edit, is_admin_role, etc.) ya vienen calculados 
