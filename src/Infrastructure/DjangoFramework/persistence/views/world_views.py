@@ -12,10 +12,10 @@ from django.utils.timezone import localtime
 
 from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosVersionORM, CaosNarrativeORM, CaosEventLog, MetadataTemplate, TimelinePeriodVersion, CaosLike, UserProfile, CaosComment, Message
 from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
-# IMPORTE Q
 from django.db.models import Q, Case, When, Value, IntegerField, Count
 import json
 from django.http import JsonResponse
+from src.Shared.Services.SocialService import SocialService
 
 # --- LIKES SYSTEM (Simple) ---
 @login_required
@@ -23,57 +23,45 @@ from django.http import JsonResponse
 def toggle_like(request):
     try:
         data = json.loads(request.body)
-        entity_key = data.get('entity_key')
+        entity_key = SocialService.normalize_key(data.get('entity_key'))
         
         print(f"DEBUG_LIKE: Toggle request from {request.user} for {entity_key}")
 
         if not entity_key:
             return JsonResponse({'error': 'Missing entity_key'}, status=400)
 
-        # Normalize entity_key by finding existing one (case-insensitive)
-        existing_like = CaosLike.objects.filter(entity_key__iexact=entity_key).first()
-        if existing_like:
-            entity_key = existing_like.entity_key  # Use the existing case
-
         # Toggle Like
-        like_obj, created = CaosLike.objects.get_or_create(user=request.user, entity_key=entity_key)
+        like_obj, created = CaosLike.objects.get_or_create(
+            user=request.user, 
+            entity_key=entity_key # We use the key as provided, the service will match robustly for queries
+        )
         
         if not created:
-            # If exists, delete it (Unlike)
             like_obj.delete()
             is_liked = False
-            print(f"DEBUG_LIKE: Like REMOVED")
         else:
             is_liked = True
-            print(f"DEBUG_LIKE: Like CREATED")
 
-        # Get total count (case-insensitive)
-        count = CaosLike.objects.filter(entity_key__iexact=entity_key).count()
+        # Get total count using robust service
+        stats = SocialService.get_interactions_count(entity_key)
         
-        return JsonResponse({'liked': is_liked, 'count': count, 'user_has_liked': is_liked})
+        return JsonResponse({'liked': is_liked, 'count': stats['likes'], 'user_has_liked': is_liked})
     except Exception as e:
         print(f"DEBUG_LIKE_ERROR: {e}")
         return JsonResponse({'error': str(e)}, status=500)
 
 def get_like_status(request):
-    try:
-        entity_key = request.GET.get('entity_key')
-        print(f"DEBUG_LIKE: Get status for {entity_key} (User: {request.user})")
-
-        if not entity_key:
-            return JsonResponse({'count': 0, 'liked': False, 'user_has_liked': False})
-            
-        # Use iexact for case-insensitive matching
-        count = CaosLike.objects.filter(entity_key__iexact=entity_key).count()
-        is_liked = False
-        if request.user.is_authenticated:
-            is_liked = CaosLike.objects.filter(user=request.user, entity_key__iexact=entity_key).exists()
-            
-        print(f"DEBUG_LIKE: Count: {count}, Liked: {is_liked}")
-        return JsonResponse({'count': count, 'liked': is_liked, 'user_has_liked': is_liked})
-    except Exception as e:
-        print(f"DEBUG_LIKE_ERROR: {e}")
+    entity_key = request.GET.get('entity_key')
+    if not entity_key:
         return JsonResponse({'count': 0, 'liked': False, 'user_has_liked': False})
+        
+    stats = SocialService.get_interactions_count(entity_key)
+    is_liked = False
+    if request.user.is_authenticated:
+        query = SocialService.get_robust_query(entity_key)
+        is_liked = CaosLike.objects.filter(query, user=request.user).exists()
+        
+    return JsonResponse({'count': stats['likes'], 'liked': is_liked, 'user_has_liked': is_liked})
 
 # --- COMMENTS SYSTEM (Simple) ---
 def get_comments(request):
@@ -81,12 +69,7 @@ def get_comments(request):
     if not entity_key:
         return JsonResponse({'comments': []})
     
-    # Use iexact to handle case mismatch (frontend vs backend storage)
-    # Only get top-level comments (no parent)
-    comments = CaosComment.objects.filter(
-        entity_key__iexact=entity_key,
-        parent_comment__isnull=True
-    ).select_related('user').prefetch_related('replies__user').order_by('created_at')
+    comments = SocialService.get_comments(entity_key)
     
     data = []
     for c in comments:
@@ -149,6 +132,7 @@ def post_comment(request):
             content = request.POST.get('content')
             parent_comment_id = request.POST.get('parent_comment_id')
         
+        entity_key = SocialService.normalize_key(entity_key)
         if not entity_key or not content:
             return JsonResponse({'error': 'Missing fields'}, status=400)
         
@@ -160,8 +144,8 @@ def post_comment(request):
             try:
                 parent = CaosComment.objects.get(id=parent_comment_id)
                 # Security: Verify parent belongs to same entity
-                if parent.entity_key != entity_key:
-                    return JsonResponse({'error': 'Invalid parent comment'}, status=400)
+                if not SocialService.compare_keys(parent.entity_key, entity_key):
+                    return JsonResponse({'error': f'Invalid parent comment ({parent.entity_key} vs {entity_key})'}, status=400)
                 
                 comment.parent_comment = parent
                 comment.save()
@@ -218,8 +202,7 @@ def post_comment(request):
                             sender=request.user,
                             recipient=target_user,
                             subject=f"Nuevo comentario en {filename}",
-                            content=msg_content,
-                            is_system_notification=True
+                            body=msg_content
                         )
             except Exception as notify_error:
                 print(f"NOTIFICATION ERROR: {notify_error}")

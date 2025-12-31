@@ -110,6 +110,11 @@
         <h1 class="text-3xl font-bold" style="overflow-wrap: break-word;">{{ narr.titulo }}</h1>
         
         <div class="paper-content" style="overflow-wrap: break-word;">{{ narr.contenido|default:"(Escribe aquí tu historia...)" }}</div>
+        
+        <!-- Social Interactions Component -->
+        <div class="mt-12 pt-8 border-t border-gray-800">
+            {% include 'components/_social_card.html' with entity_key='NARR_'|add:narr.public_id author=narr.created_by created_at=narr.updated_at show_comments=True show_likes=True show_share=True %}
+        </div>
     </div>
 
     <!-- SECCIÓN DE HIJOS -->

@@ -203,10 +203,11 @@
                 <div class="h-1 bg-white/5 rounded-full mb-8"></div>
                 
                 <div class="flex flex-col sm:flex-row gap-4">
-                    <div class="flex-1 p-6 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-center text-gray-600">
+                    <div class="flex-1 p-6 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-center text-gray-600 hover:border-white/20 transition cursor-pointer" 
+                         onclick="scrollToSection('received-comments-section')">
                         <div class="text-center">
-                            <span class="block text-2xl mb-1">💬</span>
-                            <span class="text-[10px] uppercase font-black tracking-widest">{{ comments_received|default:0 }} Comentarios Recibidos</span>
+                            <span class="block text-2xl mb-1">🌍</span>
+                            <span class="text-[10px] uppercase font-black tracking-widest">{{ received_comments|length|default:0 }} Interacciones Sociales</span>
                         </div>
                     </div>
                     <div class="flex-1 p-6 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-center text-gray-600">
@@ -218,20 +219,20 @@
                 </div>
             </div>
 
-            <!-- Received Comments Section (Only for owner) -->
-            {% if target_user.id == user.id and received_comments %}
-            <div class="mt-8">
-                <details class="group" open>
+            <!-- Received Comments Section -->
+            {% if received_comments %}
+            <div class="mt-8" id="received-comments-section">
+                <details class="group" open id="received-comments-details">
                     <summary class="flex justify-between items-center bg-black/40 border border-white/5 p-4 rounded-xl cursor-pointer hover:border-white/10 transition list-none">
                         <h3 class="text-sm font-black text-gray-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                            <span>💬</span> Comentarios Recibidos ({{ received_comments|length }})
+                            <span>🌍</span> Actividad Social e Interacciones ({{ received_comments|length }})
                         </h3>
                         <span class="text-gray-500 transform group-open:rotate-180 transition duration-300">▼</span>
                     </summary>
                     
                     <div class="mt-4 space-y-3">
                         {% for comment in received_comments %}
-                        <div class="bg-black/40 border border-white/5 rounded-xl p-4 hover:border-white/10 transition">
+                        <div class="bg-black/40 border border-white/5 rounded-xl p-4 hover:border-white/10 transition {% if comment.is_reply %}ml-12 border-l-2 border-l-blue-500/30{% endif %}">
                             <div class="flex gap-4">
                                 <!-- Content Thumbnail/Icon -->
                                 <div class="w-16 h-16 rounded-lg overflow-hidden bg-gray-900 shrink-0 flex items-center justify-center">
@@ -249,7 +250,7 @@
                                         {{ comment.content_title }}
                                     </a>
                                     <p class="text-xs text-gray-600 mb-2">
-                                        {% if comment.type == 'image' %}🖼️ Imagen{% else %}📖 Narrativa{% endif %}
+                                        {% if comment.type == 'image' %}🖼️ Imagen{% elif comment.type == 'narrative' %}📖 Narrativa{% elif comment.type == 'world' %}🌍 Descripción{% elif comment.type == 'proposal' %}📜 Propuesta{% else %}✨ Interacción{% endif %}
                                     </p>
                                     
                                     <!-- Commenter Info -->
@@ -266,9 +267,31 @@
                                     </div>
                                     
                                     <!-- Comment Text -->
-                                    <p class="text-sm text-gray-300 bg-gray-900/50 rounded-lg p-3 border border-gray-800">
+                                    <p class="text-sm text-gray-300 bg-gray-900/50 rounded-lg p-3 border border-gray-800 mb-3">
                                         "{{ comment.comment_text }}"
                                     </p>
+
+                                    <!-- Reply Action -->
+                                    {% if user.is_authenticated and not comment.is_reply %}
+                                    <div class="flex items-center gap-4">
+                                        <button onclick="toggleProfileReply('{{ comment.id }}')" class="text-[10px] font-black tracking-widest uppercase text-blue-400 hover:text-blue-300 transition flex items-center gap-1">
+                                            <span>↩️</span> Responder
+                                        </button>
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- Hidden Reply Form -->
+                                    <div id="profile-reply-{{ comment.id }}" class="mt-4 hidden p-4 bg-white/5 rounded-xl border border-white/10">
+                                        <textarea id="reply-text-{{ comment.id }}" 
+                                                  placeholder="Escribe tu respuesta..." 
+                                                  class="w-full bg-gray-900 border border-gray-800 rounded-lg p-3 text-sm text-white focus:border-blue-500 focus:outline-none mb-3"
+                                                  rows="2"
+                                                  onkeypress="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendProfileReply('{{ comment.id }}', '{{ comment.entity_key|escapejs }}'); }"></textarea>
+                                        <div class="flex justify-end gap-2">
+                                            <button onclick="toggleProfileReply('{{ comment.id }}')" class="px-4 py-2 text-[10px] font-black uppercase text-gray-500 hover:text-white transition">Cancelar</button>
+                                            <button onclick="sendProfileReply('{{ comment.id }}', '{{ comment.entity_key }}')" class="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-black uppercase rounded-lg transition shadow-lg shadow-blue-900/40">Enviar</button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -304,5 +327,74 @@
             {% endif %}
         </div>
     </div>
-</div>
+<script>
+function scrollToSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (section) {
+        // Toggle details if it's closed
+        const details = section.querySelector('details');
+        if (details) details.open = true;
+        
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        
+        // Add a subtle highlight effect
+        section.classList.add('ring-2', 'ring-blue-500/50', 'ring-offset-4', 'ring-offset-[#0a0a0a]');
+        setTimeout(() => {
+            section.classList.remove('ring-2', 'ring-blue-500/50', 'ring-offset-4', 'ring-offset-[#0a0a0a]');
+        }, 2000);
+    }
+}
+
+function toggleProfileReply(commentId) {
+    const el = document.getElementById(`profile-reply-${commentId}`);
+    if (el) {
+        el.classList.toggle('hidden');
+        if (!el.classList.contains('hidden')) {
+            document.getElementById(`reply-text-${commentId}`).focus();
+        }
+    }
+}
+
+async function sendProfileReply(parentId, entityKey) {
+    const textEl = document.getElementById(`reply-text-${parentId}`);
+    const content = textEl.value.trim();
+    if (!content) return;
+
+    try {
+        const response = await fetch('/api/comments/post/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: `entity_key=${encodeURIComponent(entityKey)}&content=${encodeURIComponent(content)}&parent_comment_id=${parentId}`
+        });
+
+        const data = await response.json();
+        if (data.status === 'ok') {
+            textEl.value = '';
+            toggleProfileReply(parentId);
+            
+            // Actualizar contador global si existe
+            if (window.socialModule) {
+                socialModule.loadCommentCount(entityKey);
+            }
+            
+            // Show success message (using the global toast if available or simple alert)
+            if (window.showToast) {
+                showToast("Respuesta enviada con éxito", "success");
+            } else {
+                alert("Respuesta enviada con éxito");
+            }
+            // Optionally reload or remove the notification?
+            // For now, let's keep it simple.
+        } else {
+            alert("Error: " + (data.error || "No se pudo enviar la respuesta"));
+        }
+    } catch (error) {
+        console.error("Error sending reply:", error);
+        alert("Error de conexión");
+    }
+}
+</script>
 {% endblock %}

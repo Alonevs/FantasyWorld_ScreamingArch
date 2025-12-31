@@ -192,11 +192,22 @@ def get_world_images(jid, world_instance=None, period_slug=None):
                          if world_instance and world_instance.author:
                              author_str = world_instance.author.username
                          else: author_str = "Alone"
+                    
+                    # Obtener avatar del usuario
+                    avatar_url = ""
+                    try:
+                        from django.contrib.auth.models import User
+                        user_obj = User.objects.filter(username=author_str).first()
+                        if user_obj and hasattr(user_obj, 'profile') and user_obj.profile.avatar:
+                            avatar_url = user_obj.profile.avatar.url
+                    except Exception:
+                        pass
 
                     imgs.append({
                         'url': f'{dname}/{f}', 
                         'filename': f,
                         'author': author_str,
+                        'avatar_url': avatar_url,
                         'date': date_str,
                         'title': meta.get('title', ''),
                         'is_cover': (f == cover_image) # Identifica si es la portada actual

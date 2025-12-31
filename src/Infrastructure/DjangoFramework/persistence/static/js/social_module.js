@@ -132,16 +132,22 @@ class SocialModule {
     /**
      * Carga comentarios de un contenido
      */
-    async loadComments(entityKey) {
+    async loadComments(entityKey, customContainerId = null) {
         const slug = entityKey.replace(/[^a-z0-9]/gi, '-').toLowerCase();
-        const listEl = document.getElementById(`comments-list-${slug}`);
+        const listEl = customContainerId ? document.getElementById(customContainerId) : document.getElementById(`comments-list-${slug}`);
+        
+        if (!listEl) {
+            console.warn(`Comments container not found: ${customContainerId || 'comments-list-' + slug}`);
+            return;
+        }
 
         try {
             const response = await fetch(`/api/comments/get/?entity_key=${encodeURIComponent(entityKey)}`);
             const data = await response.json();
 
             if (data.comments && data.comments.length > 0) {
-                listEl.innerHTML = data.comments.map(comment => this.renderComment(comment, entityKey)).join('');
+                const validComments = data.comments.filter(c => c !== null);
+                listEl.innerHTML = validComments.map(c => this.renderComment(c, entityKey, customContainerId)).join('');
             } else {
                 listEl.innerHTML = '<p class="text-gray-500 text-center py-4">No hay comentarios aún. ¡Sé el primero!</p>';
             }
@@ -157,8 +163,9 @@ class SocialModule {
     /**
      * Renderiza un comentario individual
      */
-    renderComment(comment, entityKey) {
+    renderComment(comment, entityKey, customContainerId = null) {
         const avatarUrl = comment.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.username)}&size=48`;
+        const userIsOwner = comment.can_delete;
         
         return `
             <div class="comment-item bg-gray-800/50 rounded-lg p-4">
@@ -182,11 +189,32 @@ class SocialModule {
                                     class="text-gray-500 hover:text-blue-400 transition">
                                 ↩️ Responder
                             </button>
+                            ${userIsOwner ? `
+                            <button onclick="socialModule.deleteComment(${comment.id}, '${entityKey}', '${customContainerId || ''}')" 
+                                    class="text-gray-500 hover:text-red-400 transition">
+                                🗑️ Eliminar
+                            </button>
+                            ` : ''}
+                        </div>
+                        
+                        <!-- Reply Form Container -->
+                        <div id="reply-form-${comment.id}" class="mt-3 hidden">
+                            <div class="flex gap-2">
+                                <input type="text" 
+                                       id="reply-input-${comment.id}" 
+                                       placeholder="Responde a ${comment.username}..." 
+                                       class="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-none"
+                                       onkeypress="if(event.key === 'Enter') socialModule.postComment('${entityKey}', ${comment.id}, null, '${customContainerId || ''}')">
+                                <button onclick="socialModule.postComment('${entityKey}', ${comment.id}, null, '${customContainerId || ''}')" 
+                                        class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition">
+                                    Responder
+                                </button>
+                            </div>
                         </div>
                         
                         ${comment.replies && comment.replies.length > 0 ? `
-                            <div class="ml-8 mt-2 space-y-2 border-l-2 border-gray-700 pl-4">
-                                ${comment.replies.map(reply => this.renderComment(reply, entityKey)).join('')}
+                            <div class="ml-8 mt-3 space-y-3 border-l-2 border-gray-700/50 pl-4">
+                                ${comment.replies ? comment.replies.map(r => this.renderComment(r, entityKey, customContainerId)).join('') : ''}
                             </div>
                         ` : ''}
                     </div>
@@ -230,16 +258,30 @@ class SocialModule {
      * Responder a un comentario
      */
     replyToComment(commentId, username) {
-        // TODO: Implementar respuestas a comentarios
-        console.log(`Reply to comment ${commentId} by ${username}`);
+        const formEl = document.getElementById(`reply-form-${commentId}`);
+        const inputEl = document.getElementById(`reply-input-${commentId}`);
+        
+        if (formEl) {
+            formEl.classList.toggle('hidden');
+            if (!formEl.classList.contains('hidden')) {
+                inputEl.focus();
+            }
+        }
     }
 
     /**
      * Publica un nuevo comentario
      */
-    async postComment(entityKey, parentId = null) {
+    async postComment(entityKey, parentId = null, customInputId = null, customContainerId = null) {
         const slug = entityKey.replace(/[^a-z0-9]/gi, '-').toLowerCase();
-        const inputEl = document.getElementById(`comment-input-${slug}`);
+        const inputEl = parentId ? document.getElementById(`reply-input-${parentId}`) : 
+                       (customInputId ? document.getElementById(customInputId) : document.getElementById(`comment-input-${slug}`));
+        
+        if (!inputEl) {
+            console.warn(`Comment input not found: ${customInputId || (parentId ? 'reply-input-' + parentId : 'comment-input-' + slug)}`);
+            return;
+        }
+        
         const content = inputEl.value.trim();
 
         if (!content) return;
@@ -254,13 +296,29 @@ class SocialModule {
                 body: `entity_key=${encodeURIComponent(entityKey)}&content=${encodeURIComponent(content)}&parent_comment_id=${parentId || ''}`
             });
 
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.error || `Error ${response.status}`);
+            }
+
             const data = await response.json();
             if (data.status === 'ok') {
                 inputEl.value = '';
-                await this.loadComments(entityKey);
+                if (parentId) {
+                    const form = document.getElementById(`reply-form-${parentId}`);
+                    if (form) form.classList.add('hidden');
+                }
+                await this.loadComments(entityKey, customContainerId);
+            } else {
+                throw new Error(data.message || 'Error desconocido');
             }
         } catch (error) {
             console.error('Error posting comment:', error);
+            if (window.CaosModal) {
+                CaosModal.alert("Error", "No se pudo enviar el comentario: " + error.message);
+            } else {
+                alert("Error: " + error.message);
+            }
         }
     }
 
@@ -285,6 +343,16 @@ class SocialModule {
         const countEl = document.getElementById(`comment-count-${slug}`);
         if (countEl) {
             countEl.textContent = count;
+        }
+        
+        // Sincronizar también el contador del lightbox si está abierto
+        const lbCountEl = document.getElementById('lb-overlay-count');
+        if (lbCountEl && entityKey.startsWith('IMG_')) {
+            lbCountEl.textContent = count;
+        }
+        const lbBadge = document.getElementById('lb-comment-count-badge');
+        if (lbBadge && entityKey.startsWith('IMG_')) {
+            lbBadge.textContent = count;
         }
     }
 
@@ -311,6 +379,32 @@ class SocialModule {
             } catch (error) {
                 console.error('Error copying to clipboard:', error);
             }
+        }
+    }
+
+    /**
+     * Borrar un comentario
+     */
+    async deleteComment(commentId, entityKey, customContainerId = null) {
+        if (!confirm('¿Estás seguro de que quieres borrar este comentario?')) return;
+
+        try {
+            const response = await fetch('/api/comments/delete/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCookie('csrftoken')
+                },
+                body: JSON.stringify({ comment_id: commentId })
+            });
+
+            if (response.ok) {
+                this.loadComments(entityKey, customContainerId);
+            } else {
+                alert('No se pudo borrar el comentario');
+            }
+        } catch (error) {
+            console.error('Error deleting comment:', error);
         }
     }
 
