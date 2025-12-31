@@ -101,6 +101,14 @@ class GetWorldNarrativesUseCase:
              from src.Infrastructure.DjangoFramework.persistence.models import TimelinePeriod
              viewing_period = TimelinePeriod.objects.filter(world=w, slug=period_slug).first()
 
+        # 6. Calcular permisos para mostrar botones de creación
+        is_author = (user and w.author == user)
+        is_admin_role = user and (user.is_superuser or (hasattr(user, 'profile') and user.profile.rank in ['ADMIN', 'SUBADMIN']))
+        
+        # Check if user can propose on this world
+        from src.Infrastructure.DjangoFramework.persistence.policies import can_user_propose_on
+        allow_proposals = can_user_propose_on(user, w) if user else False
+
         return {
             'world': w,
             'lores': lores,
@@ -109,5 +117,8 @@ class GetWorldNarrativesUseCase:
             'leyendas': leyendas,
             'reglas': reglas,
             'bestiario': bestiario,
-            'viewing_period': viewing_period
+            'viewing_period': viewing_period,
+            'is_author': is_author,
+            'is_admin_role': is_admin_role,
+            'allow_proposals': allow_proposals
         }

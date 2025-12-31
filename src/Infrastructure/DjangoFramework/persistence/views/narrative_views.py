@@ -259,6 +259,7 @@ def borrar_narrativa(request, nid):
 class NarrativeProxy:
     def __init__(self, nid, title, content, world, tipo, author, narrador="..."):
         self.nid = nid
+        self.public_id = nid  # For template compatibility
         self.titulo = title
         self.contenido = content
         self.world = world
@@ -268,6 +269,8 @@ class NarrativeProxy:
         self.current_version_number = 0
         self.is_draft = True
         self.version_id = 0 # Dummy
+        from django.utils import timezone
+        self.updated_at = timezone.now()  # For template compatibility
 
 def get_full_type(code):
     m = {'L':'LORE', 'H':'HISTORIA', 'C':'CAPITULO', 'E':'EVENTO', 'M':'LEYENDA', 'R':'REGLA', 'B':'BESTIARIO'}
@@ -278,6 +281,11 @@ def pre_crear_root(request, jid, tipo_codigo):
     try:
         repo = DjangoCaosRepository()
         w_domain = resolve_world_id(repo, jid)
+        
+        if not w_domain:
+            messages.error(request, f"No se encontró el mundo con ID: {jid}")
+            return redirect('home')
+        
         w = CaosWorldORM.objects.get(id=w_domain.id.value)
         
         full_type = get_full_type(tipo_codigo)
@@ -302,8 +310,14 @@ def pre_crear_root(request, jid, tipo_codigo):
             'target_type': tipo_codigo, # For Form Action
             'current_period_slug': request.GET.get('period', 'actual')
         })
+    except CaosWorldORM.DoesNotExist:
+        messages.error(request, f"El mundo {jid} no existe en la base de datos.")
+        return redirect('home')
     except Exception as e:
-        print(f"Error pre-creating root: {e}")
+        import traceback
+        print(f"❌ Error pre-creating root narrative: {e}")
+        print(traceback.format_exc())
+        messages.error(request, f"Error al preparar el editor: {str(e)}")
         return redirect('home')
 
 @login_required
