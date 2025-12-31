@@ -12,6 +12,7 @@
 
             galleryLog[img.filename] = {
                 uploader: img.author || '-',
+                avatar_url: img.avatar_url || '',
                 date: img.date || '-',
                 title: img.title || img.filename
             };
@@ -248,12 +249,33 @@
             updateLightboxContent(url, fn);
         }
         
+        function syncInfoWidth() {
+            const img = document.getElementById('lb-img');
+            const card = document.getElementById('lb-info-card');
+            if(img && card && img.src) {
+                 // Wait for image to have dimensions if not ready
+                 if(img.naturalWidth === 0) return; // onload will trigger it
+                 
+                 const width = Math.max(img.offsetWidth, 320); // Min 320px
+                 card.style.width = width + "px";
+            }
+        }
+        
+        window.addEventListener('resize', syncInfoWidth);
+        
         function updateLightboxContent(url, fn) {
             document.getElementById('lb-img').src = url;
             document.getElementById('lb-name').innerText = fn;
             const d = galleryLog[fn] || {};
             document.getElementById('lb-title').innerText = d.title || fn;
-            document.getElementById('lb-uploader').innerText = d.uploader || "-";
+            
+            const uploader = d.uploader || "Anónimo";
+            document.getElementById('lb-uploader').innerText = uploader;
+            
+            // Use real avatar if available, otherwise fallback to ui-avatars
+            const avatarUrl = d.avatar_url || `https://ui-avatars.com/api/?name=${uploader}&background=random&color=fff&size=64&bold=true`;
+            document.getElementById('lb-avatar').src = avatarUrl;
+            
             document.getElementById('lb-date').innerText = d.date || "-";
             document.getElementById('lb-title').dataset.filename = fn;
             
@@ -505,97 +527,24 @@
         async function loadComments(filename) {
             if(!filename) return;
             const uniqueId = `IMG_${filename.trim()}`;
-            const container = document.getElementById('lb-comments-list');
-            const countSpan = document.getElementById('lb-overlay-count');
+            await socialModule.loadComments(uniqueId, 'lb-comments-list');
             
-            container.innerHTML = '<div class="flex justify-center py-10"><div class="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div></div>';
-            
-            try {
-                const res = await fetch(`{% url 'get_comments' %}?entity_key=${encodeURIComponent(uniqueId)}`);
-                const data = await res.json();
-                
-                container.innerHTML = '';
-                countSpan.innerText = data.comments.length;
-                
-                // Sync the main badge too
-                const mainBadge = document.getElementById('lb-comment-count-badge');
-                if(mainBadge) mainBadge.innerText = data.comments.length;
-
-                if(data.comments.length === 0) {
-                     container.innerHTML = `
-                        <div class="flex flex-col items-center justify-center h-full text-center py-10 opacity-50">
-                            <div class="text-4xl mb-2">💬</div>
-                            <p class="text-sm font-bold text-white">Aún no hay comentarios</p>
-                            <p class="text-xs text-gray-400">Sé el primero en comenzar la conversación.</p>
-                        </div>
-                     `;
-                     return;
-                }
-
-                data.comments.forEach(c => {
-                    // Random System Avatar Fallback
-                    const systemAvatars = [
-                        '/static/persistence/img/01/Caos_prime_v1.webp',
-                        '/static/persistence/img/0101/Abismos_Prime_v1.webp',
-                        '/static/persistence/img/010101/Realidades_v1.webp',
-                        '/static/persistence/img/01010101/Galaxia_prime_v2.webp',
-                        '/static/persistence/img/0101010101/sistema_prime_v1.png'
-                    ];
-                    // Hash username to pick consistent random avatar
-                    let hash = 0;
-                    for (let i = 0; i < c.user.length; i++) hash = c.user.charCodeAt(i) + ((hash << 5) - hash);
-                    const avatarIdx = Math.abs(hash) % systemAvatars.length;
-                    
-                    const fallback = systemAvatars[avatarIdx];
-                    
-                    const html = `
-                        <div class="flex gap-3 items-start animate-fade-in group/item">
-                            <img src="${c.pic}" onerror="this.src='${fallback}'" class="w-8 h-8 rounded-full bg-gray-800 object-cover shrink-0 select-none border border-gray-700">
-                            <div class="flex flex-col gap-0.5 max-w-[85%]">
-                                <div class="flex items-baseline gap-2">
-                                    <span class="text-xs font-bold text-gray-300 hover:text-white cursor-pointer transition">${c.user}</span>
-                                    <span class="text-[10px] text-gray-500">${c.date}</span>
-                                    ${c.can_delete ? `
-                                    <button onclick="deleteComment(${c.id})" class="text-gray-600 hover:text-red-500 opacity-0 group-hover/item:opacity-100 transition px-1" title="Borrar comentario">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                    </button>
-                                    ` : ''}
-                                </div>
-                                <p class="text-sm text-gray-200 leading-snug break-words whitespace-pre-wrap">${c.content}</p>
-                            </div>
-                        </div>
-                    `;
-                    container.innerHTML += html;
-                });
-                
-                // Scroll to bottom
-                container.scrollTop = container.scrollHeight;
-                
-            } catch(e) {
-                console.error(e);
-                container.innerHTML = '<div class="text-red-500 text-xs text-center py-4">Error al cargar comentarios.</div>';
-            }
+            // Sync counts
+            const count = document.getElementById('lb-comments-list').querySelectorAll('.comment-item').length;
+            document.getElementById('lb-overlay-count').innerText = count;
+            const mainBadge = document.getElementById('lb-comment-count-badge');
+            if(mainBadge) mainBadge.innerText = count;
         }
 
         async function deleteComment(id) {
-            if(!confirm("¿Borrar comentario?")) return;
-            
-            try {
-                const res = await fetch("{% url 'delete_comment' %}", {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
-                    body: JSON.stringify({ comment_id: id })
-                });
-                
-                if(res.ok) {
-                    const filename = document.getElementById('lb-title').dataset.filename;
-                    loadComments(filename);
-                } else {
-                    alert("Error al borrar");
-                }
-            } catch(e) {
-                console.error(e);
-            }
+            const filename = document.getElementById('lb-title').dataset.filename;
+            const uniqueId = `IMG_${filename}`;
+            await socialModule.deleteComment(id, uniqueId, 'lb-comments-list');
+            // Re-sync counts after deletion
+            setTimeout(() => {
+                const count = document.getElementById('lb-comments-list').querySelectorAll('.comment-item').length;
+                document.getElementById('lb-overlay-count').innerText = count;
+            }, 500);
         }
         
         // Check for deep link to image
@@ -603,18 +552,22 @@
             const params = new URLSearchParams(window.location.search);
             const imgToOpen = params.get('open_image');
             if(imgToOpen) {
-                // Wait for imgsData to be populated (usually immediate in template)
-                // We retry a few times just in case
                 let attempts = 0;
                 const interval = setInterval(() => {
                     attempts++;
-                    if(typeof imgsData !== 'undefined' && imgsData.length > 0) {
+                    if(typeof imgsData !== 'undefined') {
                         clearInterval(interval);
-                        // Find the image URL from the filename
+                        // Find the image URL from the current gallery
                         const img = imgsData.find(i => i.filename === imgToOpen);
                         if(img) {
                              openLightbox(img.url, img.filename);
-                             // Optional: Open comments immediately
+                             toggleComments();
+                        } else {
+                             // FALLBACK: If it's a historical image not in current metadata
+                             // We try to open it from the standard gallery path
+                             const fallbackUrl = `/media/gallery/${imgToOpen}`;
+                             console.log("Image not in current gallery, trying historical fallback:", fallbackUrl);
+                             openLightbox(fallbackUrl, imgToOpen);
                              toggleComments();
                         }
                     } else if (attempts > 10) {
@@ -628,35 +581,14 @@
         document.addEventListener('DOMContentLoaded', checkUrlParams);
 
         async function postComment() {
-            const input = document.getElementById('lb-comment-input');
-            const content = input.value.trim();
-            if(!content) return;
-            
             const filename = document.getElementById('lb-name').innerText.trim();
             const uniqueId = `IMG_${filename}`;
+            await socialModule.postComment(uniqueId, null, 'lb-comment-input', 'lb-comments-list');
             
-            input.disabled = true;
-            input.parentElement.classList.add('opacity-50');
-            
-            try {
-                const res = await fetch("{% url 'post_comment' %}", {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
-                    body: JSON.stringify({ entity_key: uniqueId, content: content })
-                });
-                
-                if(res.ok) {
-                    input.value = '';
-                    loadComments(filename); // Reload
-                } else {
-                    CaosModal.alert("Error", "No se pudo enviar el comentario.");
-                }
-            } catch(e) {
-                console.error(e);
-            } finally {
-                input.disabled = false;
-                input.parentElement.classList.remove('opacity-50');
-                input.focus();
-            }
+            // Sync counts
+            setTimeout(() => {
+                const count = document.getElementById('lb-comments-list').querySelectorAll('.comment-item').length;
+                document.getElementById('lb-overlay-count').innerText = count;
+            }, 500);
         }
     </script>

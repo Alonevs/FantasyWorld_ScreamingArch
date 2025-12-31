@@ -382,11 +382,23 @@ class CaosLike(models.Model):
 class CaosComment(models.Model):
     """
     Sistema de comentarios simple para cualquier entidad (identificada por string).
+    Soporta respuestas anidadas mediante parent_comment.
     """
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments')
     entity_key = models.CharField(max_length=255, db_index=True)
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+    
+    # Threading support
+    parent_comment = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='replies',
+        help_text='Comentario padre si es una respuesta'
+    )
+    reply_count = models.IntegerField(default=0, help_text='Número de respuestas')
 
     class Meta:
         ordering = ['created_at'] # Cronológico
