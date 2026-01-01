@@ -57,7 +57,29 @@ Usamos **Identificadores Jerárquicos (J-ID)** para modelar la relación padre-h
 
 ---
 
-## 4. Instalación y Desarrollo
+## 4. Sistema Social y APIs
+
+El sistema social (Likes, Comentarios, Compartir) está centralizado para evitar duplicidad de código entre Mundos y Narrativas.
+
+### Estructura
+*   **`social_views.py`**: Contiene toda la lógica de endpoints (`/api/likes/...`, `/api/comments/...`).
+*   **`SocialService.py`**: Capa de servicio que abstrae la gestión de contadores y consultas robustas.
+*   **`social_module.js`**: Cliente JavaScript unificado que gestiona la UI y el estado.
+
+### Endpoints Principales
+*   **`/api/likes/toggle/`**: Alterna el like. Acepta JSON y Form Data.
+*   **`/api/likes/status/`**: Devuelve estado y conteo. *Cache-busted* con timestamp.
+*   **`/api/comments/get/`**: Obtiene lista anidada de comentarios.
+*   **`/api/comments/post/`**: Publica nuevos comentarios (soporta hilos).
+
+### Lightbox Integration
+La galería de imágenes (Lightbox) integra navegación inteligente:
+*   Al pasar de foto (Next/Prev), **los comentarios se sincronizan automáticamente**.
+*   Si el panel de comentarios está abierto, carga al instante los datos de la nueva imagen.
+
+---
+
+## 5. Instalación y Desarrollo
 
 1. **Entorno**: Python 3.10+ y PostgreSQL.
 2. **Setup**:

@@ -7,8 +7,11 @@ from src.Infrastructure.DjangoFramework.persistence.views.world_views import (
     home, ver_mundo, editar_mundo, borrar_mundo, 
     toggle_lock, toggle_visibilidad, init_hemisferios, escanear_planeta,
     mapa_arbol, comparar_version, ver_metadatos,
-    toggle_entity_status, toggle_like, get_like_status,
-    get_comments, post_comment, update_avatar, delete_comment, toggle_comment_like
+    toggle_entity_status, update_avatar
+)
+from src.Infrastructure.DjangoFramework.persistence.views.social_views import (
+    toggle_like, get_like_status, get_comments, post_comment, 
+    delete_comment, toggle_comment_like
 )
 from src.Infrastructure.DjangoFramework.persistence.views.ai_views import analyze_metadata_api, edit_narrative_api, api_generate_title, api_generate_lore
 from src.Infrastructure.DjangoFramework.persistence.views.dashboard.workflow import (

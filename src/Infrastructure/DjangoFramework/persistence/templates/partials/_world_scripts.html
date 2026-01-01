@@ -286,6 +286,13 @@
             updateLikeStatus(fn.trim());
             // Update Comments Count
             updateCommentStatus(fn.trim());
+
+            // 🌟 SYNC OPEN COMMENTS 🌟
+            // If the comments overlay is open, reload comments for the new image immediately
+            const commentsOverlay = document.getElementById('lb-comments-overlay');
+            if (commentsOverlay && !commentsOverlay.classList.contains('hidden')) {
+                loadComments(fn.trim());
+            }
         }
 
         async function updateCommentStatus(filename) {
