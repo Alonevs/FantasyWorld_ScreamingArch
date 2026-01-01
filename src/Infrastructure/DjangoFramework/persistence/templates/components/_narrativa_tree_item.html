@@ -47,11 +47,15 @@
                 <div class="flex gap-3">
                     <span title="Autor/Modificador">✍️ {{ node.created_by.username|default:"Alone" }}</span>
                     <span title="Última Actualización">🕒 {{ node.updated_at|date:"d M Y" }}</span>
+                    <span style="font-family:monospace; opacity:0.5;" title="Referencia Externa">🆔 {{ node.public_id }}</span>
+                
+                    <!-- SOCIAL: Circular Buttons (Same Line) -->
+                    <div class="ml-4 flex items-center" onclick="event.stopPropagation();">
+                        {% include 'components/_social_card.html' with entity_key='NARR_'|add:node.public_id author=node.created_by created_at=node.created_at compact=True show_likes=True show_comments=True show_share=True %}
+                    </div>
                 </div>
-                <span style="font-family:monospace; opacity:0.5;" title="Referencia Externa">🆔 {{ node.public_id }}</span>
             </div>
         </div>
-
     </div>
 
     <!-- Children Container (Hidden by default if has children) -->

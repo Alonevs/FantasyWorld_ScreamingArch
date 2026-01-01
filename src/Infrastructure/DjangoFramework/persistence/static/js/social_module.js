@@ -24,7 +24,92 @@ class SocialModule {
     /**
      * Toggle like en un contenido
      */
+    /**
+     * Toggle like en un contenido (Optimistic UI + Rich Animations)
+     */
+    /**
+     * Helper para encontrar TODOS los elementos visuales asociados a una entidad
+     * (Cards, Lightbox abiertos, etc.) sin depender de IDs generados por regex frágiles.
+     */
+    /**
+     * Helper para encontrar TODOS los elementos visuales asociados a una entidad
+     */
+    getUIElements(entityKey) {
+        const elements = {
+            icons: [],
+            counts: []
+        };
+
+        // 1. Buscar por atributos data explicitos (Cards y vistas generales)
+        // Usamos CSS.escape para asegurar que keys con caracteres raros funcionen en el selector
+        const safeKey = CSS.escape(entityKey); // e.g. "IMG_foo.jpg" -> "IMG_foo\.jpg"
+        
+        // Query Selector debe ser robusto
+        const cardIcons = document.querySelectorAll(`[data-like-icon="${safeKey}"]`);
+        const cardCounts = document.querySelectorAll(`[data-like-count="${safeKey}"]`);
+        
+        cardIcons.forEach(el => elements.icons.push(el));
+        cardCounts.forEach(el => elements.counts.push(el));
+
+        // 2. Buscar Lightbox (Caso especial con IDs estáticos)
+        const lbTitle = document.getElementById('lb-title');
+        if (lbTitle && lbTitle.dataset.filename) {
+            const lbKey = `IMG_${lbTitle.dataset.filename.trim()}`;
+            if (lbKey === entityKey) {
+                const lbIcon = document.getElementById('lb-star-icon');
+                const lbCount = document.getElementById('lb-like-count');
+                if(lbIcon) elements.icons.push(lbIcon);
+                if(lbCount) elements.counts.push(lbCount);
+            }
+        }
+        
+        return elements;
+    }
+
+    /**
+     * Toggle like en un contenido (Optimistic UI + Rich Animations)
+     */
     async toggleLike(entityKey) {
+        // Prevent spam/race conditions
+        if (this._pendingLikes && this._pendingLikes.has(entityKey)) return;
+        if (!this._pendingLikes) this._pendingLikes = new Set();
+        this._pendingLikes.add(entityKey);
+
+        // 1. Obtener todos los elementos UI afectados
+        const ui = this.getUIElements(entityKey);
+        
+        // Detect current state (Check dataset first, fallback to class check)
+        const firstIcon = ui.icons[0];
+        const firstCount = ui.counts[0];
+        
+        let isLiked = false;
+        let currentCount = 0;
+
+        if (firstIcon) {
+            // Priority: data-liked attribute > class analysis
+            if (firstIcon.dataset.liked !== undefined) {
+                isLiked = firstIcon.dataset.liked === 'true';
+            } else {
+                isLiked = firstIcon.classList.contains('text-yellow-400');
+            }
+        }
+        
+        if (firstCount) {
+             const txt = firstCount.innerText.trim();
+             currentCount = parseInt(txt) || 0;
+        }
+
+        const nextStateIsLiked = !isLiked;
+        const optimisticCount = nextStateIsLiked ? currentCount + 1 : Math.max(0, currentCount - 1);
+
+        // 2. Apply Optimistic UI to ALL elements
+        ui.icons.forEach(icon => {
+            nextStateIsLiked ? this.setLikedState(icon) : this.setUnlikedState(icon);
+        });
+        ui.counts.forEach(count => {
+            count.innerText = optimisticCount;
+        });
+
         try {
             const response = await fetch('/api/likes/toggle/', {
                 method: 'POST',
@@ -36,113 +121,152 @@ class SocialModule {
             });
 
             if (response.status === 401 || response.status === 403 || response.redirected) {
-                if (window.CaosModal) {
-                    CaosModal.alert('Acceso Restringido', 'Debes iniciar sesión para dar "Me gusta".');
-                } else {
-                    alert('Debes iniciar sesión para dar "Me gusta".');
-                }
+                // Auth Error: Revert
+                this.updateLikeUI(entityKey, { user_has_liked: isLiked, count: currentCount });
+                if (window.CaosModal) CaosModal.alert('Acceso Restringido', 'Debes iniciar sesión.');
+                else alert('Debes iniciar sesión.');
                 return;
             }
 
             const data = await response.json();
+            // 3. Confirm with Server Data (Correction)
             this.updateLikeUI(entityKey, data);
+
         } catch (error) {
             console.error('Error toggling like:', error);
+            // Network Error: Revert
+            this.updateLikeUI(entityKey, { user_has_liked: isLiked, count: currentCount });
+        } finally {
+            this._pendingLikes.delete(entityKey);
         }
+    }
+    
+    // Helpers para clases (Preservando clases base si es necesario, 
+    // pero asegurando el cambio de estilo visual completo)
+    setLikedState(iconEl) {
+        iconEl.dataset.liked = 'true';
+        iconEl.textContent = '★';
+        // Base classes that handle layout should ideally be separate, but here we enforce the visual style
+        // We use a comprehensive string to guarantee consistency
+        const likedClasses = "text-2xl text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.6)] transition-all scale-110 group-hover:scale-125 group-hover:drop-shadow-[0_0_12px_rgba(250,204,21,0.8)] duration-300";
+        iconEl.className = likedClasses;
+    }
+
+    setUnlikedState(iconEl) {
+        iconEl.dataset.liked = 'false';
+        iconEl.textContent = '★';
+        const unlikedClasses = "text-2xl text-gray-600 group-hover:text-yellow-400 transition-all scale-90 group-hover:scale-110 duration-300";
+        iconEl.className = unlikedClasses;
     }
 
     /**
      * Carga el estado de like actual
      */
+    /**
+     * Carga el estado de like actual
+     */
     async loadLikeStatus(entityKey) {
         try {
-            const response = await fetch(`/api/likes/status/?entity_key=${encodeURIComponent(entityKey)}`);
+            // Add timestamp to prevent browser caching
+            const response = await fetch(`/api/likes/status/?entity_key=${encodeURIComponent(entityKey)}&t=${Date.now()}`);
             const data = await response.json();
             this.updateLikeUI(entityKey, data);
         } catch (error) {
             console.error('Error loading like status:', error);
         }
     }
+    
+    // ... (intermediate code not shown, but I need to target specific chunks) ...
+    // I will target specific blocks to replace.
+    // Wait, replace_file_content replaces a CONTIGUOUS block.
+    // I need to use multi_replace. Or I can do it in one Replace if they are close.
+    // loadLikeStatus is far from init.
+    // I'll use multi_replace_file_content.
+
 
     /**
-     * Actualiza la UI de likes
+     * Actualiza la UI de likes con datos autoridad del servidor
      */
     updateLikeUI(entityKey, data) {
-        const slug = entityKey.replace(/[^a-z0-9]/gi, '-').toLowerCase();
-        const iconEl = document.getElementById(`like-icon-${slug}`);
-        const countEl = document.getElementById(`like-count-${slug}`);
+        const ui = this.getUIElements(entityKey);
 
-        if (iconEl) {
-            iconEl.textContent = data.user_has_liked ? '❤️' : '🤍';
-        }
-        if (countEl) {
-            countEl.textContent = data.count || 0;
-        }
+        ui.icons.forEach(icon => {
+            if (data.user_has_liked) {
+                this.setLikedState(icon);
+            } else {
+                this.setUnlikedState(icon);
+            }
+        });
+        
+        ui.counts.forEach(count => {
+            count.textContent = typeof data.count === 'number' ? data.count : 0;
+        });
     }
 
     /**
      * Toggle panel de comentarios
      */
+    /**
+     * Toggle panel de comentarios (MODAL GLOBAL)
+     */
     async toggleComments(entityKey) {
-        const panelId = `comments-panel-${entityKey.replace(/[^a-z0-9]/gi, '-').toLowerCase()}`;
-        let panel = document.getElementById(panelId);
+        const modal = document.getElementById('world-comments-overlay');
+        const listContainer = document.getElementById('world-comments-list');
+        const countBadge = document.getElementById('world-overlay-count');
+        const inputField = document.getElementById('world-comment-input');
+        const sendBtn = document.getElementById('world-btn-send');
+        
+        if (!modal) {
+            console.error('Modal de comentarios global no encontrado (#world-comments-overlay)');
+            return;
+        }
 
-        if (panel) {
-            // Si ya existe, toggle visibility
-            panel.classList.toggle('hidden');
-            if (!panel.classList.contains('hidden')) {
-                await this.loadComments(entityKey);
-            }
-        } else {
-            // Crear panel
-            await this.createCommentsPanel(entityKey);
+        // Si ya está abierto con la misma entityKey, cerrar
+        if (!modal.classList.contains('hidden') && modal.dataset.currentEntity === entityKey) {
+            this.closeCommentsModal();
+            return;
+        }
+
+        // Abrir y Cargar
+        modal.classList.remove('hidden');
+        modal.dataset.currentEntity = entityKey;
+        
+        // Reset UI
+        listContainer.innerHTML = '<div class="flex justify-center py-8"><div class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>';
+        if (countBadge) countBadge.textContent = '...';
+        if (inputField) {
+            inputField.value = '';
+            inputField.dataset.entityKey = entityKey; // Vincular input actual
+        }
+        if (sendBtn) sendBtn.disabled = true;
+
+        // Cargar Comentarios
+        await this.loadComments(entityKey, 'world-comments-list');
+    }
+
+    /**
+     * Cerrar modal global
+     */
+    closeCommentsModal() {
+        const modal = document.getElementById('world-comments-overlay');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.dataset.currentEntity = '';
         }
     }
 
     /**
-     * Crea el panel de comentarios
+     * Helper para toggle global desde HTML
      */
-    async createCommentsPanel(entityKey) {
-        const slug = entityKey.replace(/[^a-z0-9]/gi, '-').toLowerCase();
-        const panelId = `comments-panel-${slug}`;
-
-        // Buscar el contenedor (puede variar según el contexto)
-        const container = document.querySelector(`[data-entity-key="${entityKey}"]`)?.parentElement || document.body;
-
-        const panel = document.createElement('div');
-        panel.id = panelId;
-        panel.className = 'comments-panel bg-gray-900/95 border border-gray-800 rounded-2xl p-6 mt-4';
-        panel.innerHTML = `
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-white">Comentarios</h3>
-                <button onclick="socialModule.toggleComments('${entityKey}')" class="text-gray-500 hover:text-white">✕</button>
-            </div>
-            
-            <div id="comments-list-${slug}" class="space-y-4 mb-4 max-h-96 overflow-y-auto">
-                <p class="text-gray-500 text-center py-4">Cargando comentarios...</p>
-            </div>
-            
-            <div class="comment-input-wrapper flex gap-2">
-                <input type="text" 
-                       id="comment-input-${slug}" 
-                       placeholder="Escribe un comentario..." 
-                       class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-blue-500 focus:outline-none">
-                <button onclick="socialModule.postComment('${entityKey}')" 
-                        class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg font-bold transition">
-                    Enviar
-                </button>
-            </div>
-        `;
-
-        container.appendChild(panel);
-        await this.loadComments(entityKey);
-    }
+     toggleWorldComments() {
+         this.closeCommentsModal();
+     }
 
     /**
      * Carga comentarios de un contenido
      */
     async loadComments(entityKey, customContainerId = null) {
-        const slug = entityKey.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+        const slug = entityKey.replace(/[^a-z0-9_]/gi, '-').toLowerCase();
         const listEl = customContainerId ? document.getElementById(customContainerId) : document.getElementById(`comments-list-${slug}`);
         
         if (!listEl) {
@@ -177,7 +301,7 @@ class SocialModule {
      * Actualiza la visibilidad de la caja de comentarios según si el usuario está logueado
      */
     updateCommentInputVisibility(entityKey, isAuthenticated) {
-        const slug = entityKey.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+        const slug = entityKey.replace(/[^a-z0-9_]/gi, '-').toLowerCase();
         const inputWrappers = document.querySelectorAll(`[id^="comment-input-wrapper-${slug}"], #comments-panel-${slug} .comment-input-wrapper`);
         
         inputWrappers.forEach(wrapper => {
@@ -343,7 +467,7 @@ class SocialModule {
      * Publica un nuevo comentario
      */
     async postComment(entityKey, parentId = null, customInputId = null, customContainerId = null) {
-        const slug = entityKey.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+        const slug = entityKey.replace(/[^a-z0-9_]/gi, '-').toLowerCase();
         const inputEl = parentId ? document.getElementById(`reply-input-${parentId}`) : 
                        (customInputId ? document.getElementById(customInputId) : document.getElementById(`comment-input-${slug}`));
         
@@ -409,7 +533,7 @@ class SocialModule {
      * Actualiza el contador de comentarios en la UI
      */
     updateCommentCount(entityKey, count) {
-        const slug = entityKey.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+        const slug = entityKey.replace(/[^a-z0-9_]/gi, '-').toLowerCase();
         const countEl = document.getElementById(`comment-count-${slug}`);
         if (countEl) {
             countEl.textContent = count;
@@ -522,6 +646,13 @@ class SocialModule {
 const socialModule = new SocialModule();
 
 // Inicializar al cargar la página
+// Inicializar al cargar la página
 document.addEventListener('DOMContentLoaded', () => {
+    socialModule.init();
+});
+
+// Forzar refresco al volver atrás (BFCache fix)
+// Eliminamos check de 'event.persisted' para forzar recarga en todo tipo de navegación "Back"
+window.addEventListener('pageshow', (event) => {
     socialModule.init();
 });

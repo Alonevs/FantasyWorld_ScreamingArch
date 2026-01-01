@@ -110,6 +110,11 @@
         <h1 class="text-3xl font-bold" style="overflow-wrap: break-word;">{{ narr.titulo }}</h1>
         
         <div class="paper-content" style="overflow-wrap: break-word;">{{ narr.contenido|default:"(Escribe aquí tu historia...)" }}</div>
+
+        <!-- SOCIAL: Circular Buttons (Lightbox Style) -->
+        <div class="mt-8 pt-6 border-t border-gray-800">
+            {% include 'components/_social_card.html' with entity_key='NARR_'|add:narr.public_id author=narr.created_by created_at=narr.created_at|default:narr.updated_at compact=False show_likes=True show_comments=True show_share=True %}
+        </div>
     </div>
 
     <!-- SECCIÓN DE HIJOS -->
@@ -135,6 +140,7 @@
 {% endblock %}
 
 {% block modals %}
+    {% include "partials/_world_comments_modal.html" %}
     {% include "partials/_narrative_editor_modal.html" %}
 
     <!-- Load Static Logic -->

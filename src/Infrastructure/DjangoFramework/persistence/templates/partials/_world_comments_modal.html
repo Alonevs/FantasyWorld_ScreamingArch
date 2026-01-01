@@ -38,3 +38,24 @@
         </div>
     </div>
 </div>
+
+<script>
+    // Wrapper functions to bridge HTML onclick attributes with the usage of socialModule instance
+    function toggleWorldComments() {
+        if (typeof socialModule !== 'undefined') {
+            socialModule.toggleWorldComments();
+        } else {
+            console.error('socialModule not loaded');
+        }
+    }
+
+    function postWorldComment() {
+        if (typeof socialModule !== 'undefined') {
+            const modal = document.getElementById('world-comments-overlay');
+            if (modal && modal.dataset.currentEntity) {
+                // entityKey, parentId, customInputId, customContainerId
+                socialModule.postComment(modal.dataset.currentEntity, null, 'world-comment-input', 'world-comments-list');
+            }
+        }
+    }
+</script>

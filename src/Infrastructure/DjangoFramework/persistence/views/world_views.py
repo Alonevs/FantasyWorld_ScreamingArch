@@ -22,8 +22,19 @@ from src.Shared.Services.SocialService import SocialService
 @require_POST
 def toggle_like(request):
     try:
-        data = json.loads(request.body)
-        entity_key = SocialService.normalize_key(data.get('entity_key'))
+        # Support both JSON and Form Data
+        entity_key = None
+        if request.content_type == 'application/json':
+            try:
+                data = json.loads(request.body)
+                entity_key = data.get('entity_key')
+            except json.JSONDecodeError:
+                pass
+        
+        if not entity_key:
+             entity_key = request.POST.get('entity_key')
+
+        entity_key = SocialService.normalize_key(entity_key)
         
         print(f"DEBUG_LIKE: Toggle request from {request.user} for {entity_key}")
 
@@ -33,7 +44,7 @@ def toggle_like(request):
         # Toggle Like
         like_obj, created = CaosLike.objects.get_or_create(
             user=request.user, 
-            entity_key=entity_key # We use the key as provided, the service will match robustly for queries
+            entity_key=entity_key 
         )
         
         if not created:

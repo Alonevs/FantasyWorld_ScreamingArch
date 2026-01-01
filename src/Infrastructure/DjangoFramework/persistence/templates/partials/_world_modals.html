@@ -16,7 +16,7 @@
                     </p>
                 </div>
 
-                <form method="POST" action="{% url 'editar_mundo' jid %}">
+                <form method="POST" action="{% if jid %}{% url 'editar_mundo' jid %}{% else %}#{% endif %}">
                     {% csrf_token %}
                     <div class="mb-5">
                         <label class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1.5 ml-1">Nuevo Título</label>
@@ -64,7 +64,7 @@
                     <span>✨</span> Generar Entorno
                 </h2>
                 
-                <form method="POST" action="{% url 'ver_mundo' public_id %}">
+                <form method="POST" action="{% if public_id %}{% url 'ver_mundo' public_id %}{% else %}#{% endif %}">
                     {% csrf_token %}
                     <div class="mb-5">
                         <label class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1.5 ml-1">Tipo de Entidad</label>

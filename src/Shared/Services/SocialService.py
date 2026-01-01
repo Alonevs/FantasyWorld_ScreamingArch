@@ -40,7 +40,10 @@ class SocialService:
         """
         if not entity_key:
             return ""
-        return entity_key.lower().replace('\\u002d', '-').replace('\\u002D', '-')
+        # Ensure string
+        key = str(entity_key).lower().strip()
+        # Normalze dashes
+        return key.replace('\\u002d', '-').replace('\\u002D', '-')
 
     @staticmethod
     def compare_keys(key1: str, key2: str) -> bool:

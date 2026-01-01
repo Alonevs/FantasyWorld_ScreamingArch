@@ -332,46 +332,11 @@
         async function toggleImageLike() {
             const filename = document.getElementById('lb-name').textContent.trim();
             const uniqueId = `IMG_${filename}`;
-            console.log("Toggling Like for:", uniqueId);
-            const star = document.getElementById('lb-star-icon');
-            const counter = document.getElementById('lb-like-count');
-
-            // Optimistic Update
-            let currentCount = parseInt(counter.innerText) || 0;
-            const isLiked = star.classList.contains('text-yellow-400');
+            console.log("Unified Like Toggle for:", uniqueId);
             
-            if(isLiked) {
-                // Revert to Unliked
-                star.className = "text-2xl text-gray-600 group-hover:text-yellow-400 transition-all scale-90 group-hover:scale-110 duration-300";
-                counter.innerText = Math.max(0, currentCount - 1);
-            } else {
-                // Set to Liked
-                star.className = "text-2xl text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.6)] transition-all scale-110 group-hover:scale-125 group-hover:drop-shadow-[0_0_12px_rgba(250,204,21,0.8)] duration-300";
-                counter.innerText = currentCount + 1;
-            }
-
-            try {
-                const res = await fetch("{% url 'toggle_like' %}", {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': '{{ csrf_token }}',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ entity_key: uniqueId })
-                });
-                const data = await res.json();
-                
-                // Re-sync with server truth
-                counter.innerText = data.count;
-                if(data.liked) {
-                    star.className = "text-2xl text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.6)] transition-all scale-110 group-hover:scale-125 group-hover:drop-shadow-[0_0_12px_rgba(250,204,21,0.8)] duration-300";
-                } else {
-                    star.className = "text-2xl text-gray-600 group-hover:text-yellow-400 transition-all scale-90 group-hover:scale-110 duration-300";
-                }
-
-            } catch(e) {
-                console.error("Like Toggle Error:", e);
-            }
+            // Delegate to the unified Social Module
+            // This ensures logic is identical for both Narratives and Photos
+            await socialModule.toggleLike(uniqueId);
         }
 
         function nextImage() {
