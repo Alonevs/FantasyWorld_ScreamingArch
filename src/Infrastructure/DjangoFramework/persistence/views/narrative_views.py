@@ -257,7 +257,7 @@ def borrar_narrativa(request, nid):
         return redirect('home')
 
 class NarrativeProxy:
-    def __init__(self, nid, title, content, world, tipo, author, narrador="..."):
+    def __init__(self, nid, title, content, world, tipo, author, narrador="...", timeline_period=None):
         self.nid = nid
         self.public_id = nid  # For template compatibility
         self.titulo = title
@@ -270,7 +270,8 @@ class NarrativeProxy:
         self.is_draft = True
         self.version_id = 0 # Dummy
         from django.utils import timezone
-        self.updated_at = timezone.now()  # For template compatibility
+        self.updated_at = timezone.now()
+        self.timeline_period = timeline_period
 
 def get_full_type(code):
     m = {'L':'LORE', 'H':'HISTORIA', 'C':'CAPITULO', 'E':'EVENTO', 'M':'LEYENDA', 'R':'REGLA', 'B':'BESTIARIO'}
@@ -290,13 +291,19 @@ def pre_crear_root(request, jid, tipo_codigo):
         
         full_type = get_full_type(tipo_codigo)
         
+        # Period resolution for context
+        from src.Shared.Services.TimelinePeriodService import TimelinePeriodService
+        period_slug = request.GET.get('period', 'actual')
+        period = TimelinePeriodService.resolve_period(w, period_slug)
+
         mock = NarrativeProxy(
             nid="NEW",
             title="Nuevo Documento",
             content="",
             world=w,
             tipo=full_type,
-            author=request.user if request.user.is_authenticated else None
+            author=request.user if request.user.is_authenticated else None,
+            timeline_period=period
         )
         
         todas = CaosWorldORM.objects.all().order_by('id')
@@ -308,7 +315,7 @@ def pre_crear_root(request, jid, tipo_codigo):
             'is_creation_mode': True,
             'target_jid': jid,      # For Form Action
             'target_type': tipo_codigo, # For Form Action
-            'current_period_slug': request.GET.get('period', 'actual')
+            'current_period_slug': period_slug
         })
     except CaosWorldORM.DoesNotExist:
         messages.error(request, f"El mundo {jid} no existe en la base de datos.")
@@ -328,6 +335,9 @@ def pre_crear_child(request, parent_nid, tipo_codigo):
         
         full_type = get_full_type(tipo_codigo)
         
+        # Period inheritance
+        period_slug = request.GET.get('period', 'actual')
+        
         mock = NarrativeProxy(
             nid="NEW_CHILD",
             title="Nuevo Capítulo",
@@ -335,7 +345,8 @@ def pre_crear_child(request, parent_nid, tipo_codigo):
             world=p.world,
             tipo=full_type,
             author=request.user if request.user.is_authenticated else None,
-            narrador=p.narrador
+            narrador=p.narrador,
+            timeline_period=p.timeline_period # Inherit parent period
         )
         
         todas = CaosWorldORM.objects.all().order_by('id')
@@ -348,7 +359,7 @@ def pre_crear_child(request, parent_nid, tipo_codigo):
             'is_child_mode': True,
             'target_parent': parent_nid, # For Form Action
             'target_type': tipo_codigo,
-            'current_period_slug': request.GET.get('period', 'actual')
+            'current_period_slug': period_slug
         })
     except Exception as e:
         print(f"Error pre-creating child: {e}")
@@ -367,7 +378,8 @@ def revisar_narrativa_version(request, version_id):
             world=v.narrative.world,
             tipo=v.narrative.tipo,
             author=v.author,
-            narrador=v.narrative.narrador
+            narrador=v.narrative.narrador,
+            timeline_period=v.narrative.timeline_period
         )
         narr_proxy.version_id = v.id
         narr_proxy.is_proposal = True
@@ -429,6 +441,7 @@ def crear_nueva_narrativa(request, jid, tipo_codigo):
         return redirect('dashboard')
     except Exception as e: 
         print(f"Error creating narrative: {e}")
+        messages.error(request, f"Error al crear narrativa: {str(e)}")
         return redirect('ver_mundo', public_id=jid)
 
 @login_required

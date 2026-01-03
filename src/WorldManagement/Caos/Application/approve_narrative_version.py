@@ -1,4 +1,4 @@
-from src.Infrastructure.DjangoFramework.persistence.models import CaosNarrativeVersionORM
+from src.Infrastructure.DjangoFramework.persistence.models import CaosNarrativeVersionORM, CaosNotification
 
 class ApproveNarrativeVersionUseCase:
     """
@@ -16,6 +16,15 @@ class ApproveNarrativeVersionUseCase:
             if reviewer:
                 version.reviewer = reviewer
             version.save()
+            
+            # Create Notification for the author
+            if version.author:
+                CaosNotification.objects.create(
+                    user=version.author,
+                    title="📖 Lore Aprobado",
+                    message=f"Tu propuesta de lore para '{version.narrative.titulo}' ha sido aprobada.",
+                    url=f"/dashboard/?type=NARRATIVE"
+                )
             
             print(f" ✅ Propuesta de lore v{version.version_number} APROBADA para '{version.narrative.titulo}'.")
             

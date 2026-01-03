@@ -1,4 +1,4 @@
-from src.Infrastructure.DjangoFramework.persistence.models import CaosNarrativeVersionORM
+from src.Infrastructure.DjangoFramework.persistence.models import CaosNarrativeVersionORM, CaosNotification
 
 class RejectNarrativeVersionUseCase:
     """
@@ -24,6 +24,16 @@ class RejectNarrativeVersionUseCase:
             if reviewer:
                 version.reviewer = reviewer
             version.save()
+
+            # Create Notification for the author
+            if version.author:
+                feedback_msg = f" Motivo: {reason}" if reason else ""
+                CaosNotification.objects.create(
+                    user=version.author,
+                    title="❌ Lore Rechazado",
+                    message=f"Tu propuesta de lore para '{version.narrative.titulo}' ha sido rechazada.{feedback_msg}",
+                    url=f"/dashboard/?type=NARRATIVE"
+                )
             
             # REGLA ESPECIAL: Si lo que se rechaza es la propuesta de nacimiento (ADD) de la narrativa,
             # procedemos a borrar el registro maestro ya que nunca llegó a ser oficial.

@@ -136,8 +136,20 @@
 
     <!-- Toast Notifications -->
     <!-- Toast Notifications -->
-    {% if messages %}
-    <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-[110] w-full max-w-md px-4 pointer-events-none">
+        {% with url_name=request.resolver_match.url_name %}
+        {% if pending_proposals_count > 0 and url_name != 'dashboard' and url_name != 'review_proposal' and url_name != 'revisar_narrativa_version' and url_name != 'revisar_imagen' and url_name != 'proposal_detail' and url_name != 'comparar_version' %}
+            <a href="{% url 'dashboard' %}" 
+               target="_self"
+               class="fixed top-24 right-8 z-40 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-full shadow-lg border border-blue-400 flex items-center gap-2 transition-all hover:scale-105 cursor-pointer animate-pulse"
+               style="text-decoration:none;">
+                <span class="text-xl">📫</span>
+                <span class="font-bold">{{ pending_proposals_count }} Propuestas</span>
+            </a>
+        {% endif %}
+        {% endwith %}
+
+        {% if messages %}
+    <div id="toast-container" class="fixed top-24 left-1/2 -translate-x-1/2 z-[110] w-full max-w-md px-4 pointer-events-none" style="z-index: 110;">
         {% for message in messages %}
         <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)" 
              x-transition:enter="transition ease-out duration-300"
@@ -199,7 +211,7 @@
         <div id="search-modal" 
              x-show="open" 
              style="display: none;"
-         class="fixed inset-0 z-[200] flex items-start justify-center pt-16 px-4 bg-black/95">
+             class="fixed inset-0 z-200 flex items-start justify-center pt-16 px-4 bg-black/95">
             
             <div class="relative w-full max-w-2xl transform transition-all pt-4 caos-card shadow-2xl p-0 overflow-hidden">
                  <!-- Top Glow (Blue for Search) -->
@@ -378,7 +390,7 @@
             try {
                 // Initial optimistic feedback
                 const notification = document.createElement('div');
-                notification.className = 'fixed bottom-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-xl z-[200] flex items-center gap-2 animate-bounce';
+                notification.className = 'fixed bottom-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-xl z-200 flex items-center gap-2 animate-bounce';
                 notification.innerHTML = '<span>🔄</span> Subiendo avatar...';
                 document.body.appendChild(notification);
 
@@ -404,5 +416,8 @@
     
     <!-- Social Module - Universal Social Interactions -->
     <script src="{% static 'js/social_module.js' %}"></script>
+
+    <!-- Global Notifications Popup -->
+    {% include 'components/_notification_popup.html' %}
 </body>
 </html>

@@ -1,0 +1,110 @@
+{% if request.user.is_authenticated %}
+<!-- Notification Popup Container -->
+<div id="caos-notifications-container" class="fixed top-20 right-6 z-[9999] flex flex-col gap-3 pointer-events-none">
+    {% for notification in unread_notifications %}
+    <div id="notification-{{ notification.id }}" 
+         class="notification-toast pointer-events-auto bg-[#0a0a0a]/90 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl p-4 w-80 transform transition-all duration-300 translate-x-10 opacity-0"
+         data-delay="{{ forloop.counter0|add:1 }}00ms">
+        
+        <div class="flex items-start gap-3">
+            <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-xl">
+                {% if "Aprobada" in notification.title or "Publicada" in notification.title or "Éxito" in notification.title or "✅" in notification.title or "🚀" in notification.title %}
+                    ✅
+                {% elif "Rechazada" in notification.title or "Error" in notification.title or "❌" in notification.title %}
+                    ❌
+                {% else %}
+                    🔔
+                {% endif %}
+            </div>
+            
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-white truncate">{{ notification.title }}</p>
+                <p class="text-xs text-white/60 mt-0.5 line-clamp-2">{{ notification.message }}</p>
+                
+                <div class="flex items-center gap-3 mt-3">
+                    {% if notification.url %}
+                    <a href="{{ notification.url }}" class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 hover:text-emerald-300 transition-colors">
+                        Ver Detalles
+                    </a>
+                    {% endif %}
+                    
+                    <button onclick="markAsRead('{{ notification.id }}')" 
+                            class="text-[10px] font-bold uppercase tracking-wider text-white/40 hover:text-white transition-colors">
+                        Visto
+                    </button>
+                </div>
+            </div>
+            
+            <button onclick="markAsRead('{{ notification.id }}')" class="text-white/20 hover:text-white/60 transition-colors" title="Marcar como visto y cerrar">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const toasts = document.querySelectorAll('.notification-toast');
+        toasts.forEach(toast => {
+            const delay = toast.getAttribute('data-delay') || '100ms';
+            toast.style.transitionDelay = delay;
+            setTimeout(() => {
+                toast.classList.remove('translate-x-10', 'opacity-0');
+            }, 100);
+        });
+    });
+
+    async function markAsRead(id) {
+        try {
+            const response = await fetch(`/api/notifications/mark-read/${id}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                }
+            });
+            if (response.ok) {
+                dismissNotification(id);
+            }
+        } catch (error) {
+            console.error('Error marking notification as read:', error);
+            // Fallback: just dismiss if API fails but we want clean UI
+            dismissNotification(id);
+        }
+    }
+
+    function dismissNotification(id) {
+        const toast = document.getElementById(`notification-${id}`);
+        if (toast) {
+            toast.classList.add('translate-x-10', 'opacity-0');
+            setTimeout(() => {
+                toast.remove();
+            }, 300);
+        }
+    }
+
+    // Utility to get CSRF
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+
+<style>
+    .notification-toast {
+        box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+    }
+</style>
+{% endif %}

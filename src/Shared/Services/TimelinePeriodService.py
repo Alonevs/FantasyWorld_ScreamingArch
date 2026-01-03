@@ -8,7 +8,8 @@ from django.db import models
 from src.Infrastructure.DjangoFramework.persistence.models import (
     TimelinePeriod, 
     TimelinePeriodVersion,
-    CaosWorldORM
+    CaosWorldORM,
+    CaosNotification
 )
 
 
@@ -151,6 +152,16 @@ class TimelinePeriodService:
         version.reviewer = reviewer
         version.reviewed_at = timezone.now()
         version.save()
+
+        # Create Notification
+        if version.author:
+            CaosNotification.objects.create(
+                user=version.author,
+                title="📅 Periodo Aprobado",
+                message=f"Tu propuesta para el periodo '{version.period.title}' de '{version.period.world.name}' ha sido aprobada.",
+                url=f"/dashboard/?type=PERIOD"
+            )
+
         return version
 
     @staticmethod
@@ -209,6 +220,15 @@ class TimelinePeriodService:
         version.status = 'LIVE'
         version.save()
         
+        # Create Notification
+        if version.author:
+            CaosNotification.objects.create(
+                user=version.author,
+                title="🚀 ¡Periodo Publicado!",
+                message=f"Tu propuesta para el periodo '{period.title}' de '{period.world.name}' ya está en vivo.",
+                url=f"/mundo/{period.world.public_id}/?period={period.slug}"
+            )
+
         return period
     
     @staticmethod
@@ -230,6 +250,16 @@ class TimelinePeriodService:
         version.admin_feedback = feedback
         version.save()
         
+        # Create Notification
+        if version.author:
+            feedback_msg = f" Motivo: {feedback}" if feedback else ""
+            CaosNotification.objects.create(
+                user=version.author,
+                title="❌ Periodo Rechazado",
+                message=f"Tu propuesta para el periodo '{version.period.title}' en '{version.period.world.name}' ha sido rechazada.{feedback_msg}",
+                url=f"/dashboard/?type=PERIOD"
+            )
+
         return version
     
     @staticmethod
@@ -297,3 +327,17 @@ class TimelinePeriodService:
         period.save()
         
         return period
+
+    @staticmethod
+    def resolve_period(world, slug):
+        """
+        Resuelve un slug de periodo a una instancia de TimelinePeriod.
+        Soporta 'actual' para obtener el periodo activo.
+        """
+        if not slug or slug == 'actual':
+            return TimelinePeriodService.get_current_period(world)
+        
+        try:
+            return TimelinePeriod.objects.get(world=world, slug=slug)
+        except TimelinePeriod.DoesNotExist:
+            return None

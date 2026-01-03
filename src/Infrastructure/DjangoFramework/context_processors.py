@@ -82,3 +82,49 @@ def admin_bar_context(request):
         context['unread_messages_count'] = 0
             
     return context
+
+def notifications_context(request):
+    """
+    Inyecta notificaciones no leídas en el contexto global.
+    """
+    if not request.user.is_authenticated:
+        return {}
+    
+    from src.Infrastructure.DjangoFramework.persistence.models import CaosNotification
+    
+    # Solo las 5 más recientes no leídas
+    unread = CaosNotification.objects.filter(user=request.user, read_at__isnull=True).order_by('-created_at')
+    
+    return {
+        'unread_notifications': unread[:5],
+        'unread_notifications': unread[:5],
+        'unread_notifications_count': unread.count(),
+        # Add Pending Proposals Count for Persistent Badge
+        'pending_proposals_count': get_pending_proposals_count(request.user)
+    }
+
+def get_pending_proposals_count(user):
+    """Calculates total pending items for the user's dashboard."""
+    from django.db.models import Q
+    from src.Infrastructure.DjangoFramework.persistence.models import CaosVersionORM, CaosNarrativeVersionORM, CaosImageProposalORM, TimelinePeriodVersion
+    
+    if not user.is_authenticated: return 0
+    
+    # Logic similar to Workflow.py
+    # 1. World Versions
+    w_filter = Q(status='PENDING') & (Q(world__author=user) | Q(author=user))
+    w_count = CaosVersionORM.objects.filter(w_filter).count()
+    
+    # 2. Narrative Versions
+    n_filter = Q(status='PENDING') & (Q(narrative__world__author=user) | Q(author=user))
+    n_count = CaosNarrativeVersionORM.objects.filter(n_filter).count()
+    
+    # 3. Image Proposals
+    i_filter = Q(status='PENDING') & (Q(world__author=user) | Q(author=user))
+    i_count = CaosImageProposalORM.objects.filter(i_filter).count()
+    
+    # 4. Period Versions
+    p_filter = Q(status='PENDING') & (Q(period__world__author=user) | Q(author=user))
+    p_count = TimelinePeriodVersion.objects.filter(p_filter).count()
+    
+    return w_count + n_count + i_count + p_count

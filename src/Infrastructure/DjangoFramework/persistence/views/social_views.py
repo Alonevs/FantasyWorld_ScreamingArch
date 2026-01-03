@@ -145,8 +145,45 @@ def post_comment(request):
         if not entity_key or not content:
             return JsonResponse({'error': 'Missing fields'}, status=400)
         
-        # Create comment
-        comment = CaosComment(user=request.user, entity_key=entity_key, content=content)
+        # Create comment (Populate Context)
+        entity_name = ""
+        entity_type = ""
+        
+        # 1. Try to resolve entity name/type
+        try:
+            from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosNarrativeORM
+            if entity_key.startswith("img_"):
+                entity_name = f"Imagen: {entity_key[4:]}"
+                entity_type = "IMAGE"
+            elif entity_key.startswith("NID_"):
+                # Usually logic handles NID
+                pass 
+            else:
+                # Assume World ID or NID
+                # Try World
+                w = CaosWorldORM.objects.filter(id=entity_key).first()
+                if w:
+                    entity_name = f"Mundo: {w.name}"
+                    entity_type = "WORLD"
+                else:
+                    # Try Narrative
+                    n = CaosNarrativeORM.objects.filter(public_id=entity_key).first()
+                    if not n: n = CaosNarrativeORM.objects.filter(nid=entity_key).first()
+                    
+                    if n:
+                        entity_name = f"Narrativa: {n.titulo}"
+                        entity_type = "NARRATIVE"
+                        
+        except Exception as e:
+            print(f"Error resolving entity context: {e}")
+
+        comment = CaosComment(
+            user=request.user, 
+            entity_key=entity_key, 
+            content=content,
+            entity_name=entity_name,
+            entity_type=entity_type
+        )
         
         # Handle threading (replies)
         if parent_comment_id:
@@ -159,8 +196,10 @@ def post_comment(request):
                 comment.parent_comment = parent
                 comment.save()
                 
-                # Update parent reply count
+                # Update parent reply count & Status
                 parent.reply_count += 1
+                if parent.status != 'REPLIED':
+                    parent.status = 'REPLIED'
                 parent.save()
                 
                 # Notify parent comment author

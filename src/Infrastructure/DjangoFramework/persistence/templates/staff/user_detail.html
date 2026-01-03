@@ -22,7 +22,7 @@
     </div>
 
     <!-- PROFILE HERO CARD -->
-    <div class="bg-card border border-white/10 rounded-[2rem] overflow-hidden shadow-2xl relative mb-12">
+    <div class="bg-card border border-white/10 rounded-4xl overflow-hidden shadow-2xl relative mb-12">
         <!-- Animated Background Decor -->
         <div class="absolute top-0 right-0 w-1/2 h-full bg-linear-to-bl from-indigo-500/10 via-purple-500/5 to-transparent skew-x-12 transform origin-top-right"></div>
         <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-accent/10 rounded-full blur-[100px] animate-pulse"></div>
@@ -177,7 +177,7 @@
         <!-- RIGHT: Professional Bio & Social Activity -->
         <div class="lg:col-span-2 space-y-8">
             <!-- Lore & Biography (Placeholder) -->
-            <div class="bg-card border border-white/10 rounded-[2.5rem] p-8 lg:p-10">
+            <div class="bg-card border border-white/10 rounded-4xl p-8 lg:p-10">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-xl font-black text-white tracking-widest uppercase italic">Manuscrito del Viajero</h3>
                     <span class="text-[9px] font-bold text-gray-500 bg-white/5 px-3 py-1 rounded-full uppercase">Fragmento de Memoria</span>
@@ -203,13 +203,12 @@
                 <div class="h-1 bg-white/5 rounded-full mb-8"></div>
                 
                 <div class="flex flex-col sm:flex-row gap-4">
-                    <div class="flex-1 p-6 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-center text-gray-600 hover:border-white/20 transition cursor-pointer" 
-                         onclick="scrollToSection('received-comments-section')">
-                        <div class="text-center">
-                            <span class="block text-2xl mb-1">🌍</span>
-                            <span class="text-[10px] uppercase font-black tracking-widest">{{ received_comments|length|default:0 }} Interacciones Sociales</span>
+                    <a href="{% url 'social_hub' %}" class="flex-1 p-6 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-center text-gray-600 hover:border-white/20 transition cursor-pointer hover:bg-white/5 group">
+                        <div class="text-center group-hover:scale-105 transition-transform">
+                            <span class="block text-2xl mb-1 group-hover:text-blue-400 transition-colors">🌍</span>
+                            <span class="text-[10px] uppercase font-black tracking-widest group-hover:text-white transition-colors">{{ received_comments|length|default:0 }} Interacciones Sociales</span>
                         </div>
-                    </div>
+                    </a>
                     <div class="flex-1 p-6 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-center text-gray-600">
                         <div class="text-center">
                             <span class="block text-2xl mb-1">⭐</span>
@@ -220,86 +219,7 @@
             </div>
 
             <!-- Received Comments Section -->
-            {% if received_comments %}
-            <div class="mt-8" id="received-comments-section">
-                <details class="group" open id="received-comments-details">
-                    <summary class="flex justify-between items-center bg-black/40 border border-white/5 p-4 rounded-xl cursor-pointer hover:border-white/10 transition list-none">
-                        <h3 class="text-sm font-black text-gray-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                            <span>🌍</span> Actividad Social e Interacciones ({{ received_comments|length }})
-                        </h3>
-                        <span class="text-gray-500 transform group-open:rotate-180 transition duration-300">▼</span>
-                    </summary>
-                    
-                    <div class="mt-4 space-y-3">
-                        {% for comment in received_comments %}
-                        <div class="bg-black/40 border border-white/5 rounded-xl p-4 hover:border-white/10 transition {% if comment.is_reply %}ml-12 border-l-2 border-l-blue-500/30{% endif %}">
-                            <div class="flex gap-4">
-                                <!-- Content Thumbnail/Icon -->
-                                <div class="w-16 h-16 rounded-lg overflow-hidden bg-gray-900 shrink-0 flex items-center justify-center">
-                                    {% if comment.thumbnail %}
-                                        <img src="{{ comment.thumbnail }}" alt="{{ comment.content_title }}" class="w-full h-full object-cover">
-                                    {% else %}
-                                        <span class="text-2xl">📖</span>
-                                    {% endif %}
-                                </div>
-                                
-                                <!-- Comment Info -->
-                                <div class="flex-1 min-w-0">
-                                    <!-- Content Title with Link -->
-                                    <a href="{{ comment.content_url }}" class="text-sm font-bold text-white hover:text-blue-400 transition truncate block">
-                                        {{ comment.content_title }}
-                                    </a>
-                                    <p class="text-xs text-gray-600 mb-2">
-                                        {% if comment.type == 'image' %}🖼️ Imagen{% elif comment.type == 'narrative' %}📖 Narrativa{% elif comment.type == 'world' %}🌍 Descripción{% elif comment.type == 'proposal' %}📜 Propuesta{% else %}✨ Interacción{% endif %}
-                                    </p>
-                                    
-                                    <!-- Commenter Info -->
-                                    <div class="flex items-center gap-2 mb-2">
-                                        {% if comment.commenter_avatar %}
-                                            <img src="{{ comment.commenter_avatar }}" alt="{{ comment.commenter }}" class="w-6 h-6 rounded-full">
-                                        {% else %}
-                                            <div class="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-xs">
-                                                {{ comment.commenter|slice:":1"|upper }}
-                                            </div>
-                                        {% endif %}
-                                        <span class="text-xs font-bold text-gray-400">{{ comment.commenter }}</span>
-                                        <span class="text-xs text-gray-600">• {{ comment.comment_date|timesince }} ago</span>
-                                    </div>
-                                    
-                                    <!-- Comment Text -->
-                                    <p class="text-sm text-gray-300 bg-gray-900/50 rounded-lg p-3 border border-gray-800 mb-3">
-                                        "{{ comment.comment_text }}"
-                                    </p>
 
-                                    <!-- Reply Action -->
-                                    {% if user.is_authenticated and not comment.is_reply %}
-                                    <div class="flex items-center gap-4">
-                                        <button onclick="toggleProfileReply('{{ comment.id }}')" class="text-[10px] font-black tracking-widest uppercase text-blue-400 hover:text-blue-300 transition flex items-center gap-1">
-                                            <span>↩️</span> Responder
-                                        </button>
-                                    </div>
-                                    {% endif %}
-
-                                    <!-- Hidden Reply Form -->
-                                    <div id="profile-reply-{{ comment.id }}" class="mt-4 hidden p-4 bg-white/5 rounded-xl border border-white/10">
-                                        <textarea id="reply-text-{{ comment.id }}" 
-                                                  placeholder="Escribe tu respuesta..." 
-                                                  class="w-full bg-gray-900 border border-gray-800 rounded-lg p-3 text-sm text-white focus:border-blue-500 focus:outline-none mb-3"
-                                                  rows="2"
-                                                  onkeypress="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendProfileReply('{{ comment.id }}', '{{ comment.entity_key|escapejs }}'); }"></textarea>
-                                        <div class="flex justify-end gap-2">
-                                            <button onclick="toggleProfileReply('{{ comment.id }}')" class="px-4 py-2 text-[10px] font-black uppercase text-gray-500 hover:text-white transition">Cancelar</button>
-                                            <button onclick="sendProfileReply('{{ comment.id }}', '{{ comment.entity_key }}')" class="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-black uppercase rounded-lg transition shadow-lg shadow-blue-900/40">Enviar</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </details>
-            </div>
-            {% endif %}
 
             <!-- Danger Zone / Account Settings (Only for Owner) -->
             {% if target_user.id == user.id or user.is_superuser %}

@@ -400,6 +400,16 @@ class CaosComment(models.Model):
     )
     reply_count = models.IntegerField(default=0, help_text='Número de respuestas')
 
+    STATUS_CHOICES = [
+        ('NEW', 'Nuevo'),
+        ('REPLIED', 'Respondido'),
+        ('ARCHIVED', 'Archivado'),
+        ('DELETED', 'Eliminado'),
+    ]
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='NEW')
+    entity_name = models.CharField(max_length=255, blank=True, help_text="Nombre legible de la entidad (ej: 'Mundo: Caos Prime')")
+    entity_type = models.CharField(max_length=50, blank=True, help_text="Tipo de entidad (NARRATIVE, IMAGE, WORLD)")
+
     class Meta:
         ordering = ['created_at'] # Cronológico
 
@@ -420,6 +430,26 @@ class Message(models.Model):
     def __str__(self):
         return f"{self.sender.username} → {self.recipient.username}: {self.subject}"
     
+    @property
+    def is_read(self):
+        return self.read_at is not None
+
+
+class CaosNotification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    url = models.CharField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'caos_notifications'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Notification for {self.user.username}: {self.title}"
+
     @property
     def is_read(self):
         return self.read_at is not None

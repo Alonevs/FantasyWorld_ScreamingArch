@@ -18,105 +18,150 @@
         </a>
     </div>
 
-    <!-- Tabs -->
-    <div x-data="{ activeTab: 'received' }" class="space-y-8 animate-fade-in-up" style="animation-delay: 0.1s">
-        <div class="flex items-center gap-2 p-1.5 bg-white/5 border border-white/10 rounded-2xl w-fit">
-            <button @click="activeTab = 'received'" 
-                :class="activeTab === 'received' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'"
-                class="px-6 py-2.5 rounded-xl text-xs font-black tracking-widest transition-all duration-300">
-                RECIBIDOS
-            </button>
-            <button @click="activeTab = 'sent'" 
-                :class="activeTab === 'sent' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'"
-                class="px-6 py-2.5 rounded-xl text-xs font-black tracking-widest transition-all duration-300">
-                ENVIADOS
-            </button>
+    <!-- Layout Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Left Column: Messages List (2/3 width) -->
+        <div class="lg:col-span-2 space-y-8 animate-fade-in-up" style="animation-delay: 0.1s">
+            
+            <!-- Tabs -->
+            <div x-data="{ activeTab: 'received' }">
+                <div class="flex items-center gap-2 p-1.5 bg-white/5 border border-white/10 rounded-2xl w-fit mb-6">
+                    <button @click="activeTab = 'received'" 
+                        :class="activeTab === 'received' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-gray-400 hover:text-white'"
+                        class="px-6 py-2.5 rounded-xl text-xs font-black tracking-widest transition-all duration-300">
+                        RECIBIDOS
+                    </button>
+                    <button @click="activeTab = 'sent'" 
+                        :class="activeTab === 'sent' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-gray-400 hover:text-white'"
+                        class="px-6 py-2.5 rounded-xl text-xs font-black tracking-widest transition-all duration-300">
+                        ENVIADOS
+                    </button>
+                </div>
+
+                <!-- Received Messages -->
+                <div x-show="activeTab === 'received'" class="grid gap-4">
+                    {% for msg in received_messages %}
+                    <div x-data="{ open: false, isRead: {{ msg.is_read|yesno:'true,false' }} }" 
+                        class="group bg-dark/40 backdrop-blur-xl border rounded-3xl overflow-hidden transition-all duration-300"
+                        :class="isRead ? 'border-white/5 opacity-80' : 'border-blue-500/30 bg-blue-500/5'">
+                        
+                        <div @click="open = !open; if(!isRead) { isRead = true; fetch('{% url 'mark_as_read' msg.id %}'); }" 
+                            class="flex items-center gap-4 p-6 cursor-pointer hover:bg-white/5 transition-colors">
+                            
+                            <!-- Avatar/Icon -->
+                            <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-xl shadow-inner transition-transform group-hover:scale-110
+                                {% if not msg.is_read %}bg-blue-500/20 text-blue-400{% else %}bg-white/5 text-gray-400{% endif %}">
+                                {% if not msg.is_read %}✉️{% else %}📖{% endif %}
+                            </div>
+
+                            <!-- Info -->
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="font-black text-xs uppercase tracking-widest {% if not msg.is_read %}text-blue-400{% else %}text-gray-500{% endif %}">
+                                        DE: {{ msg.sender.username }}
+                                    </span>
+                                    <span class="text-[10px] text-gray-600 font-bold">• {{ msg.created_at|timesince }}</span>
+                                </div>
+                                <h3 class="font-bold text-lg truncate" :class="isRead ? 'text-gray-400' : 'text-white'">
+                                    {{ msg.subject }}
+                                </h3>
+                            </div>
+
+                            <!-- Unread Badge -->
+                            <template x-if="!isRead">
+                                <span class="bg-blue-500 text-[10px] font-black px-2 py-0.5 rounded-full text-white animate-pulse">NUEVO</span>
+                            </template>
+                        </div>
+
+                        <!-- Body (Accordion style) -->
+                        <div x-show="open" x-transition class="p-6 pt-0 border-t border-white/5 bg-black/20">
+                            <div class="prose prose-invert max-w-none text-gray-300 leading-relaxed whitespace-pre-wrap py-4">
+                                {{ msg.body }}
+                            </div>
+                            <div class="flex justify-end pt-4">
+                                <a href="{% url 'send_message_to' msg.sender.id %}" class="text-xs font-black text-blue-400 hover:text-blue-300 uppercase tracking-widest flex items-center gap-2">
+                                    <span>RECONTESTAR</span> ➜
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="flex flex-col items-center justify-center py-20 text-center bg-white/5 border border-dashed border-white/10 rounded-3xl">
+                        <span class="text-6xl mb-4 opacity-20">📭</span>
+                        <p class="text-gray-500 font-bold">No tienes más mensajes recibidos por ahora.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Sent Messages -->
+                <div x-show="activeTab === 'sent'" class="grid gap-4" style="display: none;">
+                    {% for msg in sent_messages %}
+                    <div x-data="{ open: false }" class="bg-dark/40 backdrop-blur-xl border border-white/5 rounded-3xl overflow-hidden transition-all duration-300 opacity-80 hover:opacity-100">
+                        <div @click="open = !open" class="flex items-center gap-4 p-6 cursor-pointer hover:bg-white/5 transition-colors">
+                            <div class="w-12 h-12 rounded-2xl bg-white/5 text-gray-400 flex items-center justify-center text-xl">
+                                📤
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="font-black text-xs uppercase tracking-widest text-gray-500">PARA: {{ msg.recipient.username }}</span>
+                                    <span class="text-[10px] text-gray-600 font-bold">• {{ msg.created_at|timesince }}</span>
+                                </div>
+                                <h3 class="font-bold text-lg text-gray-400 truncate">{{ msg.subject }}</h3>
+                            </div>
+                        </div>
+                        <!-- Body -->
+                        <div x-show="open" x-transition class="p-6 pt-0 border-t border-white/5 bg-black/20">
+                            <div class="prose prose-invert max-w-none text-gray-400 leading-relaxed whitespace-pre-wrap py-4">
+                                {{ msg.body }}
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="flex flex-col items-center justify-center py-20 text-center bg-white/5 border border-dashed border-white/10 rounded-3xl">
+                        <span class="text-6xl mb-4 opacity-20">☁️</span>
+                        <p class="text-gray-500 font-bold">Aún no has enviado ningún mensaje.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
         </div>
 
-        <!-- Received Messages -->
-        <div x-show="activeTab === 'received'" class="grid gap-4">
-            {% for msg in received_messages %}
-            <div x-data="{ open: false, isRead: {{ msg.is_read|yesno:'true,false' }} }" 
-                 class="group bg-dark/40 backdrop-blur-xl border rounded-3xl overflow-hidden transition-all duration-300"
-                 :class="isRead ? 'border-white/5 opacity-80' : 'border-blue-500/30 bg-blue-500/5'">
+        <!-- Right Column: Sidebar (1/3 width) -->
+        <div class="space-y-6 animate-fade-in-up" style="animation-delay: 0.2s">
+            
+            <!-- Social Hub Widget -->
+            <div class="bg-linear-to-br from-[#1a1a2e] to-[#16213e] border border-white/10 rounded-3xl p-6 relative overflow-hidden group">
+                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <span class="text-9xl">💬</span>
+                </div>
                 
-                <div @click="open = !open; if(!isRead) { isRead = true; fetch('{% url 'mark_as_read' msg.id %}'); }" 
-                     class="flex items-center gap-4 p-6 cursor-pointer hover:bg-white/5 transition-colors">
-                    
-                    <!-- Avatar/Icon -->
-                    <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-xl shadow-inner transition-transform group-hover:scale-110
-                        {% if not msg.is_read %}bg-blue-500/20 text-blue-400{% else %}bg-white/5 text-gray-400{% endif %}">
-                        {% if not msg.is_read %}✉️{% else %}📖{% endif %}
-                    </div>
-
-                    <!-- Info -->
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2 mb-1">
-                            <span class="font-black text-xs uppercase tracking-widest {% if not msg.is_read %}text-blue-400{% else %}text-gray-500{% endif %}">
-                                DE: {{ msg.sender.username }}
-                            </span>
-                            <span class="text-[10px] text-gray-600 font-bold">• {{ msg.created_at|timesince }}</span>
-                        </div>
-                        <h3 class="font-bold text-lg truncate" :class="isRead ? 'text-gray-400' : 'text-white'">
-                            {{ msg.subject }}
-                        </h3>
-                    </div>
-
-                    <!-- Unread Badge -->
-                    <template x-if="!isRead">
-                        <span class="bg-blue-500 text-[10px] font-black px-2 py-0.5 rounded-full text-white animate-pulse">NUEVO</span>
-                    </template>
+                <h3 class="text-sm font-black text-blue-400 uppercase tracking-widest mb-4">Interacciones Públicas</h3>
+                
+                <div class="flex items-baseline gap-2 mb-6">
+                    <span class="text-5xl font-black text-white">{{ social_new_count }}</span>
+                    <span class="text-sm text-gray-400 font-bold">Nuevos Comentarios</span>
                 </div>
+                
+                <p class="text-xs text-gray-400 mb-6 leading-relaxed">
+                    Gestiona los comentarios en tus Mundos, Narrativas e Imágenes desde el Hub centralizado.
+                </p>
+                
+                <a href="{% url 'social_hub' %}" class="block w-full text-center py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20 hover:scale-105 uppercase text-xs tracking-widest">
+                    Ir al Buzón Social
+                </a>
+            </div>
 
-                <!-- Body (Accordion style) -->
-                <div x-show="open" x-transition class="p-6 pt-0 border-t border-white/5 bg-black/20">
-                    <div class="prose prose-invert max-w-none text-gray-300 leading-relaxed whitespace-pre-wrap py-4">
-                        {{ msg.body }}
-                    </div>
-                    <div class="flex justify-end pt-4">
-                        <a href="{% url 'send_message_to' msg.sender.id %}" class="text-xs font-black text-blue-400 hover:text-blue-300 uppercase tracking-widest flex items-center gap-2">
-                            <span>RECONTESTAR</span> ➜
-                        </a>
-                    </div>
-                </div>
+            <!-- Quick Links / Support -->
+            <div class="bg-dark/40 border border-white/5 rounded-3xl p-6">
+                <h3 class="text-xs font-black text-gray-500 uppercase tracking-widest mb-4">Atajos</h3>
+                <nav class="space-y-2">
+                    <a href="{% url 'home' %}" class="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors">
+                        <span>🏠</span> <span class="text-sm font-bold">Volver al Inicio</span>
+                    </a>
+                </nav>
             </div>
-            {% empty %}
-            <div class="flex flex-col items-center justify-center py-20 text-center bg-white/5 border border-dashed border-white/10 rounded-3xl">
-                <span class="text-6xl mb-4 opacity-20">📭</span>
-                <p class="text-gray-500 font-bold">No tienes más mensajes recibidos por ahora.</p>
-            </div>
-            {% endfor %}
-        </div>
 
-        <!-- Sent Messages -->
-        <div x-show="activeTab === 'sent'" class="grid gap-4">
-            {% for msg in sent_messages %}
-            <div x-data="{ open: false }" class="bg-dark/40 backdrop-blur-xl border border-white/5 rounded-3xl overflow-hidden transition-all duration-300 opacity-80 hover:opacity-100">
-                <div @click="open = !open" class="flex items-center gap-4 p-6 cursor-pointer hover:bg-white/5 transition-colors">
-                    <div class="w-12 h-12 rounded-2xl bg-white/5 text-gray-400 flex items-center justify-center text-xl">
-                        📤
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2 mb-1">
-                            <span class="font-black text-xs uppercase tracking-widest text-gray-500">PARA: {{ msg.recipient.username }}</span>
-                            <span class="text-[10px] text-gray-600 font-bold">• {{ msg.created_at|timesince }}</span>
-                        </div>
-                        <h3 class="font-bold text-lg text-gray-400 truncate">{{ msg.subject }}</h3>
-                    </div>
-                </div>
-                <!-- Body -->
-                <div x-show="open" x-transition class="p-6 pt-0 border-t border-white/5 bg-black/20">
-                    <div class="prose prose-invert max-w-none text-gray-400 leading-relaxed whitespace-pre-wrap py-4">
-                        {{ msg.body }}
-                    </div>
-                </div>
-            </div>
-            {% empty %}
-            <div class="flex flex-col items-center justify-center py-20 text-center bg-white/5 border border-dashed border-white/10 rounded-3xl">
-                <span class="text-6xl mb-4 opacity-20">☁️</span>
-                <p class="text-gray-500 font-bold">Aún no has enviado ningún mensaje.</p>
-            </div>
-            {% endfor %}
         </div>
     </div>
 </div>

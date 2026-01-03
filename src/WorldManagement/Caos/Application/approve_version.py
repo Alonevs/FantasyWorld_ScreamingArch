@@ -1,4 +1,4 @@
-from src.Infrastructure.DjangoFramework.persistence.models import CaosVersionORM
+from src.Infrastructure.DjangoFramework.persistence.models import CaosVersionORM, CaosNotification
 
 class ApproveVersionUseCase:
     """
@@ -23,5 +23,14 @@ class ApproveVersionUseCase:
         if reviewer:
             version.reviewer = reviewer
         version.save()
+
+        # Create Notification for the author
+        if version.author:
+            CaosNotification.objects.create(
+                user=version.author,
+                title="✅ Propuesta Aprobada",
+                message=f"Tu propuesta para '{version.world.name}' ha sido aprobada.",
+                url=f"/dashboard/?type=WORLD"
+            )
         
         print(f" ✅ Propuesta v{version.version_number} APROBADA. Pendiente de paso a producción (Live).")

@@ -257,6 +257,10 @@ def get_user_avatar(user, jid=None):
                 image_files.extend(img_dir.rglob(f'*{ext.upper()}'))
             
             if image_files:
+                # Deterministic Randomness based on User ID to ensure stability
+                if user and hasattr(user, 'id'):
+                    random.seed(user.id)
+                    
                 random_image = random.choice(image_files)
                 # Obtener ruta relativa desde img_dir
                 relative_path = random_image.relative_to(img_dir)

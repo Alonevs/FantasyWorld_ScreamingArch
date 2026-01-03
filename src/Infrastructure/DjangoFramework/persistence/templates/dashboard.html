@@ -7,8 +7,7 @@
 {% block content %}
     <div class="max-w-7xl mx-auto pb-24 px-4 pt-6">
         
-        <form id="bulk-delete-form" method="POST" action="{% url 'borrar_propuestas_masivo' %}">
-            {% csrf_token %}
+
             
 
 
@@ -73,7 +72,7 @@
 
                     <div class="space-y-6">
                         {% for group in grouped_inbox %}
-                        <div x-data="{ expanded: true }" class="caos-card transition-all duration-300">
+                        <div x-data="{ expanded: false }" class="caos-card transition-all duration-300">
                             <!-- Superior Glow based on context (Defaulting to blue for Inbox) -->
                             <div class="absolute top-0 left-0 right-0 h-[2px] bg-linear-to-r from-blue-500 via-blue-400 to-blue-600 shadow-[0_0_15px_rgba(59,130,246,0.3)]"></div>
                             
@@ -99,7 +98,7 @@
                                 </div>
                                 
                                 <!-- Toggle Icon -->
-                                <button class="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 border border-white/5 text-gray-500 transition-all duration-300" :class="{'rotate-180 bg-blue-600 text-white border-blue-500 shadow-[0_0_10px_rgba(37,99,235,0.4)]': expanded}">
+                                <button type="button" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 border border-white/5 text-gray-500 transition-all duration-300" :class="{'rotate-180 bg-blue-600 text-white border-blue-500 shadow-[0_0_10px_rgba(37,99,235,0.4)]': expanded}">
                                     ▼
                                 </button>
                             </div>
@@ -388,7 +387,7 @@
                                 </div>
                                 
                                 <!-- Toggle Icon -->
-                                <button class="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 border border-white/5 text-gray-400 transition-all duration-300" :class="{'rotate-180 bg-green-600 text-white border-green-500 shadow-[0_0_10px_rgba(34,197,94,0.4)]': expanded}">
+                                <button type="button" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 border border-white/5 text-gray-400 transition-all duration-300" :class="{'rotate-180 bg-green-600 text-white border-green-500 shadow-[0_0_10px_rgba(34,197,94,0.4)]': expanded}">
                                     ▼
                                 </button>
                             </div>
@@ -548,7 +547,7 @@
                                     </div>
                                 </div>
                                 
-                                <button class="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 border border-white/5 text-gray-400 transition-all duration-300" :class="{'rotate-180 bg-red-600 text-white border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.4)]': expanded}">
+                                <button type="button" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 border border-white/5 text-gray-400 transition-all duration-300" :class="{'rotate-180 bg-red-600 text-white border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.4)]': expanded}">
                                     ▼
                                 </button>
                             </div>

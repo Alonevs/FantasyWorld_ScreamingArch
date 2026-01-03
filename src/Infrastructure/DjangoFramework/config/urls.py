@@ -11,7 +11,10 @@ from src.Infrastructure.DjangoFramework.persistence.views.world_views import (
 )
 from src.Infrastructure.DjangoFramework.persistence.views.social_views import (
     toggle_like, get_like_status, get_comments, post_comment, 
-    delete_comment, toggle_comment_like
+    toggle_comment_like, delete_comment as api_delete_comment
+)
+from src.Infrastructure.DjangoFramework.persistence.views.social.social_hub import (
+    social_hub_view, archive_comment, delete_comment as hub_delete_comment
 )
 from src.Infrastructure.DjangoFramework.persistence.views.ai_views import analyze_metadata_api, edit_narrative_api, api_generate_title, api_generate_lore
 from src.Infrastructure.DjangoFramework.persistence.views.dashboard.workflow import (
@@ -54,6 +57,7 @@ from src.Infrastructure.DjangoFramework.persistence.views.messaging_views import
 from src.Infrastructure.DjangoFramework.persistence.views.search_views import global_search
 from src.Infrastructure.DjangoFramework.persistence.views import period_api
 from src.Infrastructure.DjangoFramework.persistence.views.metadata_views import propose_metadata_update
+from src.Infrastructure.DjangoFramework.persistence.views.api_notifications import mark_notification_read, mark_all_notifications_read
 
 # Timeline API (old system - snapshots)
 from src.Infrastructure.DjangoFramework.persistence.views.timeline_api import (
@@ -91,9 +95,14 @@ urlpatterns = [
     path('api/likes/status/', get_like_status, name='get_like_status'),
     path('api/comments/get/', get_comments, name='get_comments'),
     path('api/comments/post/', post_comment, name='post_comment'),
-    path('api/comments/delete/', delete_comment, name='delete_comment'), # Endpoint para borrar comentarios
+    path('api/comments/delete/', api_delete_comment, name='api_delete_comment'), # Endpoint para borrar comentarios
     path('api/comments/like/', toggle_comment_like, name='toggle_comment_like'), # Endpoint para dar like a comentarios
     path('api/user/update_avatar/', update_avatar, name='update_avatar'),
+
+    # SOCIAL HUB
+    path('social/hub/', social_hub_view, name='social_hub'),
+    path('social/comment/<int:comment_id>/archive/', archive_comment, name='archive_comment'),
+    path('social/comment/<int:comment_id>/delete/', hub_delete_comment, name='hub_delete_comment'),
     
     # Admin Analytics
     path('admin/analytics/', ContentAnalyticsView.as_view(), name='content_analytics'),
@@ -137,7 +146,7 @@ urlpatterns = [
     # ==========================================
     # DASHBOARD Y CONTROL DE VERSIONES
     # ==========================================
-    path('control/', dashboard, name='dashboard'), 
+    path('dashboard/', dashboard, name='dashboard'), 
     path('control/auditoria/', audit_log_view, name='audit_log'),
     path('control/historial/', version_history_view, name='version_history'),
     path('control/historial/limpiar/', version_history_cleanup_view, name='version_history_cleanup'),
@@ -264,6 +273,10 @@ urlpatterns = [
     # ==========================================
     path('api/metadata/propose/<str:target_type>/<str:target_id>/', 
          propose_metadata_update, name='propose_metadata_update'),
+
+    # NOTIFICATIONS API
+    path('api/notifications/mark-read/<int:notification_id>/', mark_notification_read, name='mark_notification_read'),
+    path('api/notifications/mark-all-read/', mark_all_notifications_read, name='mark_all_notifications_read'),
 ]
 
 

@@ -72,6 +72,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'src.Infrastructure.DjangoFramework.context_processors.admin_bar_context',
+                'src.Infrastructure.DjangoFramework.context_processors.notifications_context',
                 'src.Infrastructure.DjangoFramework.persistence.context_processors.rbac_context',
             ],
         },

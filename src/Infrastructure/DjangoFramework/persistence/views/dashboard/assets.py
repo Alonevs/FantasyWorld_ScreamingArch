@@ -12,7 +12,8 @@ import urllib.parse
 
 from src.Infrastructure.DjangoFramework.persistence.models import (
     CaosImageProposalORM, CaosWorldORM, CaosNarrativeORM,
-    CaosEventLog, CaosVersionORM, CaosNarrativeVersionORM
+    CaosEventLog, CaosVersionORM, CaosNarrativeVersionORM,
+    CaosNotification
 )
 from django.contrib.auth.models import User
 from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
@@ -34,6 +35,16 @@ def aprobar_imagen(request, id):
         prop.status = 'APPROVED'
         prop.reviewer = request.user
         prop.save()
+
+        # Create Notification
+        if prop.author:
+            CaosNotification.objects.create(
+                user=prop.author,
+                title="🖼️ Imagen Aprobada",
+                message=f"Tu propuesta de imagen para '{prop.world.name if prop.world else 'Global'}' ha sido aprobada.",
+                url=f"/dashboard/?type=IMAGE"
+            )
+
         messages.success(request, "Imagen Aprobada.")
         log_event(request.user, "APPROVE_IMAGE_PROPOSAL", id)
     except Exception as e: messages.error(request, str(e))
@@ -58,6 +69,17 @@ def rechazar_imagen(request, id):
         prop.admin_feedback = feedback
         prop.reviewer = request.user
         prop.save()
+
+        # Create Notification
+        if prop.author:
+            feedback_msg = f" Motivo: {feedback}" if feedback else ""
+            CaosNotification.objects.create(
+                user=prop.author,
+                title="❌ Imagen Rechazada",
+                message=f"Tu propuesta de imagen para '{prop.world.name if prop.world else 'Global'}' ha sido rechazada.{feedback_msg}",
+                url=f"/dashboard/?type=IMAGE"
+            )
+
         messages.success(request, f"Imagen Rechazada. Feedback: {feedback[:30]}...")
         log_event(request.user, "REJECT_IMAGE", id, details=f"Feedback: {feedback}")
     except Exception as e: messages.error(request, str(e))
@@ -140,6 +162,15 @@ def publicar_imagen(request, id):
         prop.status = 'ARCHIVED'
         prop.reviewer = request.user
         prop.save()
+
+        # Create Notification
+        if prop.author:
+            CaosNotification.objects.create(
+                user=prop.author,
+                title="🚀 ¡Imagen Publicada!",
+                message=f"Tu propuesta de imagen para '{prop.world.name if prop.world else 'Global'}' ya está en vivo.",
+                url=f"/mundo/{prop.world.public_id}/" if prop.world else "/mundo/caos"
+            )
     except Exception as e:
         messages.error(request, f"❌ Error: {e}")
         print(f"Error publicar_imagen: {e}")

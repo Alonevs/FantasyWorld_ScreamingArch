@@ -36,8 +36,20 @@ class GetWorldNarrativesUseCase:
             docs = docs.filter(Q(timeline_period__isnull=True) | Q(timeline_period__slug='actual'))
 
         # Regla de Negocio: Los borradores (Versión 0) se excluyen de la lista pública.
-        # Solo se muestran documentos que tengan al menos una versión aprobada y publicada.
+        # Solo se muestran documentos que tengan al menos una versión aprobada y publicada,
+        # a menos que el usuario sea el autor del mundo o un administrador.
+        # FILTERING:
+        # Show ONLY Published/Live narratives (version > 0).
+        # Pending proposals (version 0) are now exclusive to the Dashboard.
         docs = docs.filter(current_version_number__gt=0)
+        
+        # Calculate 'is_new' attribute for UI Badge (Last 3 days)
+        from django.utils import timezone
+        from datetime import timedelta
+        threshold = timezone.now() - timedelta(days=3)
+        
+        for d in docs:
+            d.is_new = d.updated_at >= threshold
 
         # Convertimos a lista y ordenamos por NID (Identificador Jerárquico)
         # El orden natural del NID asegura que los padres aparezcan antes que sus hijos.

@@ -1,4 +1,4 @@
-from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosVersionORM, CaosEventLog
+from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosVersionORM, CaosEventLog, CaosNotification
 
 class PublishToLiveVersionUseCase:
     """
@@ -88,6 +88,15 @@ class PublishToLiveVersionUseCase:
         # Marcamos la versión actual como la ACTIVA
         version.status = "LIVE"
         version.save()
+        
+        # Create Notification for the author
+        if version.author:
+            CaosNotification.objects.create(
+                user=version.author,
+                title="🚀 ¡Mundo Publicado!",
+                message=f"Tu propuesta para '{version.world.name}' ya está en vivo.",
+                url=f"/mundo/{version.world.public_id}/"
+            )
         
         # 3. LIMPIEZA DE PROPUESTAS OBSOLETAS
         obsoletas = CaosVersionORM.objects.filter(

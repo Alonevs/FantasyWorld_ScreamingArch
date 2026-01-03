@@ -1,4 +1,4 @@
-from src.Infrastructure.DjangoFramework.persistence.models import CaosVersionORM
+from src.Infrastructure.DjangoFramework.persistence.models import CaosVersionORM, CaosNotification
 
 class RejectVersionUseCase:
     """
@@ -29,6 +29,16 @@ class RejectVersionUseCase:
             version.reviewer = reviewer
             
         version.save()
+
+        # Create Notification for the author
+        if version.author:
+            feedback_msg = f" Motivo: {reason}" if reason else ""
+            CaosNotification.objects.create(
+                user=version.author,
+                title="❌ Propuesta Rechazada",
+                message=f"Tu propuesta para '{version.world.name}' ha sido rechazada.{feedback_msg}",
+                url=f"/dashboard/?type=WORLD"
+            )
         
         print(f" ❌ Descartada propuesta v{version.version_number} para '{version.world.name}'.")
         if reason:

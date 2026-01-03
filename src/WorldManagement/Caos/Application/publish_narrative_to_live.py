@@ -1,4 +1,4 @@
-from src.Infrastructure.DjangoFramework.persistence.models import CaosNarrativeORM, CaosNarrativeVersionORM
+from src.Infrastructure.DjangoFramework.persistence.models import CaosNarrativeORM, CaosNarrativeVersionORM, CaosNotification
 
 class PublishNarrativeToLiveUseCase:
     """
@@ -36,6 +36,15 @@ class PublishNarrativeToLiveUseCase:
         # 3. MARCAR LA PROPUESTA COMO ACTIVA
         version.status = "LIVE"
         version.save()
+
+        # Create Notification for the author
+        if version.author:
+            CaosNotification.objects.create(
+                user=version.author,
+                title="🚀 ¡Lore Publicado!",
+                message=f"Tu propuesta de lore para '{narrative.titulo}' ya está en vivo.",
+                url=f"/mundo/{narrative.world.public_id}/" # Lore links to world currently
+            )
         
         # 4. LIMPIEZA DE PROPUESTAS OBSOLETAS
         # Si había propuestas pendientes de números anteriores, quedan invalidadas.

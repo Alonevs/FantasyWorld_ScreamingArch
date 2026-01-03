@@ -106,7 +106,18 @@ def execute_use_case_action(request, use_case_cls, id, success_msg, log_code, ex
 
         use_case.execute(id, **args)
              
-        messages.success(request, success_msg)
+        # SMART TOAST: If user is the author AND it's an Approval/Rejection (which generates Notification),
+        # suppress the generic Toast to avoid double noise.
+        is_self_review = hasattr(obj, 'author') and obj.author == request.user
+        is_review_action = "APPROVE" in log_code or "REJECT" in log_code or "PUBLISH" in log_code
+        
+        should_show_toast = True
+        if is_self_review and is_review_action:
+            should_show_toast = False
+            
+        if should_show_toast and success_msg:
+            messages.success(request, success_msg)
+            
         log_event(request.user, log_code, id)
     except Exception as e:
         messages.error(request, f"Error: {e}")

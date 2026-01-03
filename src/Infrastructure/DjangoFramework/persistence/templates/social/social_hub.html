@@ -1,0 +1,178 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+{% load custom_filters %}
+
+{% block content %}
+<div class="min-h-screen bg-[#050510] relative overflow-hidden">
+    <!-- Background Elements -->
+    <div class="absolute inset-0 bg-[url('/static/persistence/img/pattern_grid.png')] opacity-5 pointer-events-none mix-blend-overlay"></div>
+
+    <div class="max-w-4xl mx-auto px-6 py-12 relative z-10">
+        
+        <!-- HEADER COMPACTO -->
+        <div class="flex items-center justify-between mb-8 border-b border-white/10 pb-6 flex-wrap gap-4">
+            <div>
+                <h1 class="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+                    <span class="text-gray-600">///</span>
+                    <span class="text-gray-100">Buzón de Interacciones</span>
+                </h1>
+                <p class="text-xs text-gray-500 font-mono mt-1">
+                    Central de Comentarios y Notificaciones
+                </p>
+            </div>
+            
+            <!-- Tabs Minimalistas -->
+            <div class="flex gap-1 bg-white/5 p-1 rounded-lg">
+                <a href="?tab=new" class="px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-2 {% if current_tab == 'NEW' %}bg-blue-600/20 text-blue-400 border border-blue-500/30 shadow-[0_0_10px_rgba(37,99,235,0.2)]{% else %}text-gray-500 hover:text-gray-300 hover:bg-white/5{% endif %}">
+                    <span>📨 Nuevos</span> 
+                    {% if new_count > 0 %}<span class="text-[10px] opacity-80">({{ new_count }})</span>{% endif %}
+                </a>
+                <a href="?tab=replied" class="px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-2 {% if current_tab == 'REPLIED' %}bg-purple-600/20 text-purple-400 border border-purple-500/30 shadow-[0_0_10px_rgba(147,51,234,0.2)]{% else %}text-gray-500 hover:text-gray-300 hover:bg-white/5{% endif %}">
+                    <span>↩️ Respondidos</span>
+                </a>
+                <a href="?tab=archived" class="px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-2 {% if current_tab == 'ARCHIVED' %}bg-amber-600/20 text-amber-500 border border-amber-500/30{% else %}text-gray-500 hover:text-gray-300 hover:bg-white/5{% endif %}">
+                    <span>📦 Archivo</span>
+                </a>
+                <a href="?tab=deleted" class="px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-2 {% if current_tab == 'DELETED' %}bg-red-600/20 text-red-500 border border-red-500/30{% else %}text-gray-500 hover:text-gray-300 hover:bg-white/5{% endif %}">
+                    <span>🗑️ Papelera</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- LISTA DISCRETA -->
+        <div class="space-y-1">
+            {% for item in comments %}
+            <div class="group relative py-3 px-4 -mx-4 rounded-lg hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
+                <div class="flex justify-between items-start gap-4">
+                    <div class="flex-1 min-w-0">
+                         <!-- Header: User + Date + Context (Inline) -->
+                         <div class="flex flex-wrap items-baseline gap-2 mb-1">
+                             <span class="text-blue-400 font-bold text-sm">{{ item.obj.user.username }}</span>
+                             
+                             <!-- Context Link -->
+                             <span class="text-gray-600 text-[10px]">•</span>
+                             <a href="{{ item.link }}" class="text-[10px] text-gray-500 hover:text-gray-300 transition truncate max-w-[200px] hover:underline decoration-gray-500/50">
+                                en {{ item.entity_display }}
+                             </a>
+                             
+                             <span class="text-gray-600 text-[10px] ml-auto sm:ml-0">• {{ item.obj.created_at|date:"d/m/Y H:i" }}</span>
+                         </div>
+
+                         <!-- Comment Text -->
+                         <p class="text-gray-300 text-sm leading-snug break-words">
+                             {{ item.obj.content }}
+                         </p>
+                         
+                         <!-- Replies Preview (Compact) -->
+                         {% if item.obj.replies.exists %}
+                         <div class="mt-2 pl-3 border-l border-gray-700 space-y-1">
+                             {% for r in item.obj.replies.all %}
+                             <div class="text-xs text-gray-500">
+                                 <span class="text-purple-400 font-bold">{{ r.user.username }}:</span> {{ r.content }}
+                             </div>
+                             {% endfor %}
+                         </div>
+                         {% endif %}
+                    </div>
+
+                    <!-- Actions (Visible on Hover for Desktop, Always for Touch?) -->
+                    <!-- We'll keep them subtle but visible enough -->
+                    <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity self-start pt-1">
+                        {% if current_tab != 'DELETED' %}
+                            <button onclick="openReplyModal('{{ item.obj.id }}', '{{ item.obj.username }}', '{{ item.obj.entity_key }}')" class="w-8 h-8 flex items-center justify-center rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 transition" title="Responder">
+                                ↩️
+                            </button>
+                            <a href="{{ item.link }}" target="_blank" class="w-8 h-8 flex items-center justify-center rounded bg-gray-700/30 hover:bg-gray-700/50 text-gray-400 hover:text-white transition" title="Ir al contexto">
+                                🔗
+                            </a>
+                            
+                            {% if current_tab != 'ARCHIVED' %}
+                            <a href="{% url 'archive_comment' item.obj.id %}" class="w-8 h-8 flex items-center justify-center rounded bg-amber-900/10 hover:bg-amber-900/30 text-amber-500 hover:text-amber-400 transition" title="Archivar">
+                                📦
+                            </a>
+                            {% endif %}
+                            
+                            <!-- DELETE Button (Soft Delete) -->
+                            <a href="{% url 'hub_delete_comment' item.obj.id %}" onclick="return confirm('¿Mover a la papelera?')" class="w-8 h-8 flex items-center justify-center rounded bg-red-900/10 hover:bg-red-900/30 text-red-500/50 hover:text-red-400 transition" title="Mover a Papelera">
+                                🗑️
+                            </a>
+                        {% else %}
+                            <!-- IN TRASH -->
+                            <span class="text-[10px] text-red-500 font-bold uppercase tracking-widest px-2 py-1 bg-red-500/10 rounded border border-red-500/20">Eliminado</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="py-20 flex flex-col items-center justify-center text-center opacity-30">
+                <span class="text-4xl mb-4 grayscale">📭</span>
+                <p class="text-sm text-gray-500">Nada por aquí.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- REPLY MODAL (Reusing or Simple JS) -->
+<div id="hub-reply-modal" class="fixed inset-0 z-200 hidden">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeReplyModal()"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-[#0a0a0f] rounded-xl border border-white/10 shadow-2xl p-6">
+        <h3 class="text-sm font-bold text-gray-400 mb-4 uppercase tracking-widest">Responder a <span id="reply-username" class="text-white"></span></h3>
+        <textarea id="reply-content" class="w-full bg-black/40 border border-gray-800 rounded-lg p-3 text-white focus:outline-hidden focus:border-blue-500 h-32 resize-none text-sm" placeholder="Escribe tu respuesta..."></textarea>
+        <div class="flex justify-end gap-3 mt-4">
+            <button onclick="closeReplyModal()" class="px-4 py-2 text-xs font-bold text-gray-500 hover:text-white transition uppercase">Cancelar</button>
+            <button onclick="submitHubReply()" class="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold uppercase tracking-widest rounded-lg transition shadow-lg shadow-blue-900/20">Enviar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentReplyId = null;
+let currentEntityKey = null;
+
+function openReplyModal(commentId, username, entityKey) {
+    currentReplyId = commentId;
+    currentEntityKey = entityKey;
+    document.getElementById('reply-username').innerText = username;
+    document.getElementById('hub-reply-modal').classList.remove('hidden');
+    document.getElementById('reply-content').focus();
+}
+
+function closeReplyModal() {
+    document.getElementById('hub-reply-modal').classList.add('hidden');
+    currentReplyId = null;
+    currentEntityKey = null;
+    document.getElementById('reply-content').value = '';
+}
+
+async function submitHubReply() {
+    const content = document.getElementById('reply-content').value;
+    if(!content || !currentReplyId || !currentEntityKey) return;
+    
+    try {
+        const response = await fetch("{% url 'post_comment' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                entity_key: currentEntityKey,
+                content: content,
+                parent_comment_id: currentReplyId
+            })
+        });
+        
+        if(response.ok) {
+            // Reload page to reflect changes
+            window.location.reload();
+        } else {
+            alert("Error al enviar respuesta");
+        }
+    } catch(e) {
+        console.error(e);
+        alert("Error de red");
+    }
+}
+</script>
+{% endblock %}

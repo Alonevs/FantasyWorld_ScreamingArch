@@ -94,7 +94,7 @@ def dashboard(request):
             territorial_filter = my_proposals | minion_proposals
         else:
             # No minions, just my own stuff
-            territorial_filter = author_filter
+            territorial_filter = author_filter | Q(world__author=request.user)
         
         w_qs = CaosVersionORM.objects.filter(territorial_filter).select_related('world', 'author')
         i_qs = CaosImageProposalORM.objects.filter(territorial_filter).select_related('world', 'author')
@@ -108,7 +108,7 @@ def dashboard(request):
             )
             n_territorial = my_narr | minion_narr
         else:
-            n_territorial = Q(author_id=request.user.id)
+            n_territorial = Q(author_id=request.user.id) | Q(narrative__world__author=request.user)
             
         n_qs = CaosNarrativeVersionORM.objects.filter(n_territorial).select_related('narrative__world', 'author')
         
@@ -121,7 +121,7 @@ def dashboard(request):
             )
             p_territorial = my_p | minion_p
         else:
-            p_territorial = Q(author_id=request.user.id)
+            p_territorial = Q(author_id=request.user.id) | Q(period__world__author=request.user)
         
         p_qs = TimelinePeriodVersion.objects.filter(p_territorial).select_related('period__world', 'author')
         

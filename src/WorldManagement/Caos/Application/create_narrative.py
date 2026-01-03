@@ -70,27 +70,38 @@ class CreateNarrativeUseCase:
             from src.Shared.Services.TimelinePeriodService import TimelinePeriodService
             period = TimelinePeriodService.resolve_period(padre.world, period_slug) if period_slug else None
 
-            # Crear el registro maestro de la narrativa
-            narr = CaosNarrativeORM.objects.create(
-                nid=new_nid, 
-                world=padre.world, 
-                titulo=final_title, 
-                contenido=final_content, 
-                tipo=full_type,
-                current_version_number=initial_version,
-                timeline_period=period
-            )
-            
             # Iniciar el historial con la Propuesta V1
-            CaosNarrativeVersionORM.objects.create(
-                narrative=narr,
-                proposed_title=final_title,
-                proposed_content=final_content,
-                version_number=1,
-                status=initial_status,
-                change_log="Creación inicial de sub-narrativa",
-                author=user
-            )
+            from django.db import transaction
+            with transaction.atomic():
+                narr = CaosNarrativeORM.objects.create(
+                    nid=new_nid, 
+                    world=padre.world, 
+                    titulo=final_title, 
+                    contenido=final_content, 
+                    tipo=full_type,
+                    current_version_number=initial_version,
+                    timeline_period=period
+                )
+                
+                CaosNarrativeVersionORM.objects.create(
+                    narrative=narr,
+                    proposed_title=final_title,
+                    proposed_content=final_content,
+                    version_number=1, # Always create V1 as proposal
+                    status=initial_status,
+                    change_log="Creación inicial de sub-narrativa",
+                    author=user
+                )
+            # Create Notification for World Author (if different from proposer)
+            if padre.world.author and padre.world.author != user:
+                from src.Infrastructure.DjangoFramework.persistence.models import CaosNotification
+                CaosNotification.objects.create(
+                    user=padre.world.author,
+                    title="📬 Nueva Propuesta (Capítulo)",
+                    message=f"{user.username if user else 'Alguien'} ha propuesto un nuevo capítulo: '{final_title}'",
+                    url=f"/dashboard/?type=NARRATIVE"
+                )
+
             print(f" 📖 Sub-narrativa '{final_title}' creada con NID: {new_nid}")
             return new_nid
         else:
@@ -108,27 +119,38 @@ class CreateNarrativeUseCase:
             from src.Shared.Services.TimelinePeriodService import TimelinePeriodService
             period = TimelinePeriodService.resolve_period(world, period_slug) if period_slug else None
 
-            # Crear el registro maestro
-            narr = CaosNarrativeORM.objects.create(
-                nid=new_nid, 
-                world=world, 
-                titulo=final_title, 
-                contenido=final_content, 
-                tipo=full_type,
-                current_version_number=initial_version,
-                timeline_period=period
-            )
-            
             # Iniciar el historial con la Propuesta V1
-            CaosNarrativeVersionORM.objects.create(
-                narrative=narr,
-                proposed_title=final_title,
-                proposed_content=final_content,
-                version_number=1,
-                status=initial_status,
-                change_log="Creación inicial de lore",
-                author=user
-            )
+            from django.db import transaction
+            with transaction.atomic():
+                 narr = CaosNarrativeORM.objects.create(
+                     nid=new_nid, 
+                     world=world, 
+                     titulo=final_title, 
+                     contenido=final_content, 
+                     tipo=full_type,
+                     current_version_number=initial_version,
+                     timeline_period=period
+                 )
+                 
+                 CaosNarrativeVersionORM.objects.create(
+                     narrative=narr,
+                     proposed_title=final_title,
+                     proposed_content=final_content,
+                     version_number=1, # Always create V1 as proposal
+                     status=initial_status,
+                     change_log="Creación inicial de lore",
+                     author=user
+                 )
             
+            # Create Notification for World Author (ALWAYS notify owner for control visibility)
+            if world.author:
+                from src.Infrastructure.DjangoFramework.persistence.models import CaosNotification
+                CaosNotification.objects.create(
+                    user=world.author,
+                    title="📬 Nueva Propuesta (Lore)",
+                    message=f"{user.username if user else 'Alguien'} ha propuesto un nuevo lore: '{final_title}'",
+                    url=f"/dashboard/?type=NARRATIVE"
+                )
+
             print(f" 📜 Narrativa raíz '{final_title}' creada con NID: {new_nid}")
             return new_nid
