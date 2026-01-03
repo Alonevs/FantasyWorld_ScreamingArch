@@ -42,4 +42,4 @@ celerybeat-schedule
 # --- Sistema Operativo ---
 Thumbs.db
 .DS_Store
-errores_django.log
+errores_django.logdebug_log.txt
