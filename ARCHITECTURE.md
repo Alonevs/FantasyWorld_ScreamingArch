@@ -39,7 +39,16 @@ FantasyWorld_ScreamingArch/
 │   │   └── persistence/               # 📦 APP PRINCIPAL
 │   │       ├── models.py              # Modelos ORM (CaosWorldORM, etc.)
 │   │       ├── views/                 # Vistas organizadas por dominio
-│   │       │   ├── world_views.py     # CRUD de mundos
+│   │       │   ├── world/             # 🆕 Vistas de mundos (modularizado)
+│   │       │   │   ├── __init__.py    # Exports públicos
+│   │       │   │   ├── listing.py     # Vista de inicio/índice
+│   │       │   │   ├── detail.py      # Vistas de detalle (ver_mundo, etc)
+│   │       │   │   ├── edit.py        # Vistas de edición
+│   │       │   │   ├── actions.py     # Acciones (toggle, borrar, etc)
+│   │       │   │   ├── versions.py    # Gestión de versiones
+│   │       │   │   ├── utils.py       # Utilidades internas
+│   │       │   │   └── legacy.py      # Funciones deprecadas
+│   │       │   ├── world_views.py     # Wrapper de compatibilidad
 │   │       │   ├── review_views.py    # Sistema de propuestas
 │   │       │   ├── media_views.py     # Gestión de imágenes
 │   │       │   └── dashboard/         # Panel de administración
