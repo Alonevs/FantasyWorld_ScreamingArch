@@ -536,14 +536,11 @@
                         const img = imgsData.find(i => i.filename === imgToOpen);
                         if(img) {
                              openLightbox(img.url, img.filename);
-                             toggleComments();
                         } else {
-                             // FALLBACK: If it's a historical image not in current metadata
-                             // We try to open it from the standard gallery path
-                             const fallbackUrl = `/media/gallery/${imgToOpen}`;
-                             console.log("Image not in current gallery, trying historical fallback:", fallbackUrl);
+                             // Fallback using JID from template context
+                             const jid = "{{ jid }}";
+                             const fallbackUrl = `/static/persistence/img/${jid}/${imgToOpen}`;
                              openLightbox(fallbackUrl, imgToOpen);
-                             toggleComments();
                         }
                     } else if (attempts > 10) {
                         clearInterval(interval);

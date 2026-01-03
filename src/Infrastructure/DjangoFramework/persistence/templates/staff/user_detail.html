@@ -202,19 +202,27 @@
                 <!-- Interactive Activity Heatmap Placeholder -->
                 <div class="h-1 bg-white/5 rounded-full mb-8"></div>
                 
-                <div class="flex flex-col sm:flex-row gap-4">
-                    <a href="{% url 'social_hub' %}" class="flex-1 p-6 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-center text-gray-600 hover:border-white/20 transition cursor-pointer hover:bg-white/5 group">
+
+
+                                <div class="flex flex-col gap-4">
+                    <!-- Social Hub Link -->
+                    <a href="{% url 'social_hub' %}" class="w-full p-6 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-center text-gray-600 hover:border-white/20 transition cursor-pointer hover:bg-white/5 group">
                         <div class="text-center group-hover:scale-105 transition-transform">
                             <span class="block text-2xl mb-1 group-hover:text-blue-400 transition-colors">🌍</span>
-                            <span class="text-[10px] uppercase font-black tracking-widest group-hover:text-white transition-colors">{{ received_comments|length|default:0 }} Interacciones Sociales</span>
+                            <span class="text-[10px] uppercase font-black tracking-widest group-hover:text-white transition-colors">{{ comments_received|default:0 }} Interacciones Sociales</span>
                         </div>
                     </a>
-                    <div class="flex-1 p-6 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-center text-gray-600">
-                        <div class="text-center">
-                            <span class="block text-2xl mb-1">⭐</span>
-                            <span class="text-[10px] uppercase font-black tracking-widest">{{ favorite_reviews|default:0 }} Reseñas Favoritas</span>
+
+                                        <!-- RANKING LINK (Replaces embedded reviews) -->
+                    <a href="{% url 'user_ranking' target_user.id %}" class="w-full rounded-2xl bg-black/40 border border-white/5 p-6 flex items-center justify-center text-gray-600 hover:border-yellow-500/30 transition cursor-pointer hover:bg-white/5 group">
+                        <div class="text-center group-hover:scale-105 transition-transform">
+                            <span class="block text-2xl mb-1 group-hover:text-yellow-400 transition-colors">🏆</span>
+                            <span class="text-[10px] uppercase font-black tracking-widest group-hover:text-white transition-colors">Ranking & Likes</span>
+                            <div class="mt-2 text-[9px] text-gray-700 font-bold uppercase tracking-widest group-hover:text-yellow-500/70">
+                                Ver Top Contenido
+                            </div>
                         </div>
-                    </div>
+                    </a>
                 </div>
             </div>
 

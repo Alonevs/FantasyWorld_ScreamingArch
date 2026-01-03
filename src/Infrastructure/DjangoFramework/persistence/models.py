@@ -409,6 +409,7 @@ class CaosComment(models.Model):
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='NEW')
     entity_name = models.CharField(max_length=255, blank=True, help_text="Nombre legible de la entidad (ej: 'Mundo: Caos Prime')")
     entity_type = models.CharField(max_length=50, blank=True, help_text="Tipo de entidad (NARRATIVE, IMAGE, WORLD)")
+    rating = models.IntegerField(null=True, blank=True, help_text="Puntuación (1-5 estrellas)")
 
     class Meta:
         ordering = ['created_at'] # Cronológico
