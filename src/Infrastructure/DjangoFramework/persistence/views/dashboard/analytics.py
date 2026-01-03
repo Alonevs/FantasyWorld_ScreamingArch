@@ -52,7 +52,7 @@ class ContentAnalyticsView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
                         'engagement': likes + comments,
                         'date': meta.get('date', '-'),
                         'thumbnail': f"/static/persistence/img/{world.public_id}/{filename}",
-                        'url': f"/mundo/{world.public_id}",
+                        'url': f"/mundo/{world.public_id}#img-{filename}",  # Open lightbox with image
                     })
         
         # 2. NARRATIVES
@@ -134,7 +134,7 @@ class ContentAnalyticsView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
                 'comments': comments,
                 'engagement': likes + comments,
                 'date': period.created_at.strftime("%d/%m/%Y"),
-                'url': f"/mundo/{period.world.public_id}",
+                'url': f"/mundo/{period.world.public_id}#period-{period.id}",  # Go to timeline section
             })
 
         # Group data for the accordion
