@@ -18,8 +18,15 @@
 -   **Flujo de Aprobación**: Todo cambio requiere validación en Dashboard.
 
 ## 📚 Documentación (Español)
-La documentación ha sido organizada y consolidada en la carpeta `docs/`:
 
+### 📖 Para Desarrolladores y IAs
+Documentación principal en la raíz del proyecto:
+-   [**🏛️ ARCHITECTURE.md**](ARCHITECTURE.md): Mapa mental completo del proyecto, flujos críticos y convenciones.
+-   [**🔧 REFACTORING_BACKLOG.md**](REFACTORING_BACKLOG.md): Lista priorizada de mejoras de código pendientes.
+-   [**🧪 TESTING_GUIDE.md**](TESTING_GUIDE.md): Guía pragmática de testing para proyecto personal.
+
+### 📚 Documentación Adicional
+La documentación complementaria está organizada en la carpeta `docs/`:
 -   [**📘 Guía Técnica**](docs/technical_guide.md): Arquitectura, Instalación y Lógica J-ID.
 -   [**🤖 Arquitectura IA**](docs/ai_architecture.md): Prompts, Auto-Noos y Herencia.
 -   [**🧭 Guía de Usuario**](docs/user_guide.md): Flujo de Propuestas, Dashboard y Edición.
