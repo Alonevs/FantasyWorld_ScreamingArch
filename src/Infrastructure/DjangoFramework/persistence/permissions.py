@@ -1,6 +1,8 @@
+from typing import Any
 from django.core.exceptions import PermissionDenied
+from django.contrib.auth.models import User
 
-def check_ownership(user, obj):
+def check_ownership(user: User, obj: Any) -> bool:
     """
     Verifica si un usuario tiene jurisdicción legal sobre un objeto de contenido.
     Aplica las reglas de soberanía y colaboración definidas en readme_rules.md.

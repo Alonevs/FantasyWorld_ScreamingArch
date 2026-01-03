@@ -1,8 +1,10 @@
 import os
+from typing import List, Dict, Optional, Any
 from django.conf import settings
+from django.contrib.auth.models import User
 from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM
 
-def generate_breadcrumbs(jid, user=None):
+def generate_breadcrumbs(jid: str, user: Optional[User] = None) -> List[Dict[str, Optional[str]]]:
     """
     Genera una lista de 'migas de pan' (breadcrumbs) robusta y procesada.
     Ahora incorpora chequeo de permisos para no 'dar pistas' de mundos restringidos.
@@ -52,7 +54,7 @@ def _fetch_worlds_data(ids: list) -> dict:
     }
 
 
-def _build_breadcrumb_list(ids: list, worlds_data: dict, current_jid: str, user=None) -> list:
+def _build_breadcrumb_list(ids: List[str], worlds_data: Dict[str, CaosWorldORM], current_jid: str, user: Optional[User] = None) -> List[Dict[str, Optional[str]]]:
     """
     Construye lista de breadcrumbs con filtrado de gaps y SEGURIDAD (RBAC).
     """
@@ -110,7 +112,7 @@ def _apply_truncation(breadcrumbs: list) -> list:
     return breadcrumbs
 
 
-def get_world_images(jid, world_instance=None, period_slug=None):
+def get_world_images(jid: str, world_instance: Optional[CaosWorldORM] = None, period_slug: Optional[str] = None) -> List[Dict[str, Any]]:
     """
     Localiza y cataloga las imágenes asociadas a una entidad en el sistema de archivos.
     Cruza los archivos físicos con el 'gallery_log' almacenado en los metadatos de la DB
@@ -243,7 +245,7 @@ def get_world_images(jid, world_instance=None, period_slug=None):
     return imgs
 
 
-def find_cover_image(cover_filename, all_imgs):
+def find_cover_image(cover_filename: Optional[str], all_imgs: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     """
     Encuentra una imagen de portada usando matching case-insensitive y flexible.
     
@@ -296,7 +298,7 @@ def find_cover_image(cover_filename, all_imgs):
     return match
 
 
-def get_thumbnail_url(world_id, cover_filename=None, use_first_if_no_cover=True):
+def get_thumbnail_url(world_id: str, cover_filename: Optional[str] = None, use_first_if_no_cover: bool = True) -> str:
     """
     Obtiene URL de thumbnail para un mundo con fallback inteligente.
     
@@ -353,7 +355,7 @@ def get_thumbnail_url(world_id, cover_filename=None, use_first_if_no_cover=True)
 
 
 
-def get_user_avatar(user, jid=None):
+def get_user_avatar(user: Optional[User], jid: Optional[str] = None) -> str:
     """
     Obtiene la URL del avatar de un usuario de forma centralizada.
     
