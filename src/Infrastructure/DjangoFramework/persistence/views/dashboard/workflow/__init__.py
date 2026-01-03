@@ -33,7 +33,7 @@ from .narrative_actions import (
 )
 
 # Period Actions
-from .period_actions import restaurar_periodo
+from .period_actions import restaurar_periodo, rechazar_periodo
 
 # Bulk Operations
 from .bulk_operations import (
@@ -56,7 +56,7 @@ __all__ = [
     'aprobar_narrativa', 'rechazar_narrativa', 'publicar_narrativa',
     'archivar_narrativa', 'restaurar_narrativa', 'borrar_narrativa_version',
     # Period Actions
-    'restaurar_periodo',
+    'restaurar_periodo', 'rechazar_periodo',
     # Bulk Operations
     'borrar_propuestas_masivo', 'aprobar_propuestas_masivo',
     'archivar_propuestas_masivo', 'publicar_propuestas_masivo',

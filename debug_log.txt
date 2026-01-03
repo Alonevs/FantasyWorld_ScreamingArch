@@ -1112,3 +1112,30 @@ Log start
 [UTILS] World 0104: Looking for cover 'capilla.webp'
 [UTILS] World 0105: Looking for cover 'INFRAMUNDO.WEBP'
 [UTILS] World 01: Looking for cover 'Caos_prime_v1.webp'
+[UTILS] World 01: Looking for cover 'Caos_prime_v1.webp'
+[UTILS] World 0101: Looking for cover 'ABISMOS_PRIME_V1.WEBP'
+[UTILS] World 010101: Looking for cover 'REALIDADES_V1.WEBP'
+[UTILS] World 01010101: Looking for cover 'GALAXIA_PRIME_V2.WEBP'
+[UTILS] World 01010101: Looking for cover 'TestCover.webp'
+[UTILS] World 01010101: Looking for cover 'TestCover.webp'
+[UTILS] World 02020202: Looking for cover 'DifferentCover.webp'
+[UTILS] World 01010101: Looking for cover 'MyCover.webp'
+[UTILS] World 01010101: Looking for cover 'MyCover.webp'
+[UTILS] World 01010101: Looking for cover 'MyCover.webp'
+[UTILS] World 0101: Looking for cover 'ABISMOS_PRIME_V1.WEBP'
+[UTILS] World 0103: Looking for cover 'FINTERO.WEBP'
+[UTILS] World 0104: Looking for cover 'capilla.webp'
+[UTILS] World 0105: Looking for cover 'INFRAMUNDO.WEBP'
+[UTILS] World 01: Looking for cover 'Caos_prime_v1.webp'
+
+[REVIEW_VIEW] ID=332 Cambios={'action': 'SET_COVER', 'cover_image': '01_IA_1764870047.WEBP'}
+[UTILS] World 01: Looking for cover 'Caos_prime_v1.webp'
+
+[REVIEW_VIEW] ID=332 Cambios={'action': 'SET_COVER', 'cover_image': '01_IA_1764870047.WEBP'}
+[UTILS] World 01: Looking for cover 'Caos_prime_v1.webp'
+
+[REVIEW_VIEW] ID=332 Cambios={'action': 'SET_COVER', 'cover_image': '01_IA_1764870047.WEBP'}
+[UTILS] World 01: Looking for cover 'Caos_prime_v1.webp'
+
+[REVIEW_VIEW] ID=332 Cambios={'action': 'SET_COVER', 'cover_image': '01_IA_1764870047.WEBP'}
+[UTILS] World 01: Looking for cover 'Caos_prime_v1.webp'
