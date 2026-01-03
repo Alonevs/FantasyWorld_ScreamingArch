@@ -52,6 +52,16 @@ FantasyWorld_ScreamingArch/
 │   │       │   ├── review_views.py    # Sistema de propuestas
 │   │       │   ├── media_views.py     # Gestión de imágenes
 │   │       │   └── dashboard/         # Panel de administración
+│   │       │       ├── team/          # 🆕 Vistas de equipo (modularizado)
+│   │       │       │   ├── __init__.py       # Exports públicos
+│   │       │       │   ├── management.py     # Gestión de usuarios
+│   │       │       │   ├── permissions.py    # Gestión de permisos/roles
+│   │       │       │   ├── collaboration.py  # Equipos y colaboradores
+│   │       │       │   ├── detail.py         # Detalle de usuario
+│   │       │       │   └── ranking.py        # Ranking de usuarios
+│   │       │       ├── team.py        # Wrapper de compatibilidad
+│   │       │       ├── assets.py      # Gestión de assets
+│   │       │       └── utils.py       # Utilidades del dashboard
 │   │       ├── templates/             # Templates HTML
 │   │       ├── static/                # CSS, JS, imágenes
 │   │       ├── utils.py               # Funciones auxiliares
