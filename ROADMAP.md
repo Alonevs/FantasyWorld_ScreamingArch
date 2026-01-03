@@ -4,6 +4,7 @@
 *   **Core**: Estable. Arquitectura Screaming completa sobre Django.
 *   **UI**: Renovada con Tailwind, Alpine.js y animaciones "Zen".
 *   **Datos**: PostgreSQL + Sistema de Propuestas Estricto.
+*   **Social**: Sistema de Avatares Unificado y Lightbox Interactivo.
 
 ## 🚀 Próximos Pasos (Pendientes)
 

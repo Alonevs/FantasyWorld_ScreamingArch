@@ -79,6 +79,18 @@ La galería de imágenes (Lightbox) integra navegación inteligente:
 
 ---
 
+
+### Sistema de Avatares Unificado
+Centralizamos la lógica de visualización de usuarios para garantizar consistencia:
+*   **`utils.get_user_avatar(user)`**: Función única de verdad.
+    1.  Si tiene foto de perfil -> La usa.
+    2.  Si no tiene -> Busca imagen aleatoria en `assets/avatars/defaults/` (Selección estable basada en User ID para que siempre salga la misma).
+    3.  Fallback final -> `ui-avatars.com` con las iniciales.
+*   **Template Filter**: `{{ user|user_avatar }}` disponible en todos los templates.
+*   **Legacy Support**: Detecta metadatos antiguos ("Anónimo") en Lightbox y fuerza la visualización del Autor del Mundo.
+
+---
+
 ## 5. Instalación y Desarrollo
 
 1. **Entorno**: Python 3.10+ y PostgreSQL.

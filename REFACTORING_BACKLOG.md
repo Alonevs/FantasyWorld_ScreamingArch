@@ -200,6 +200,10 @@ if user.profile.rank == UserRank.ADMIN:
 _(Añade aquí items que ya refactorizaste)_
 
 - [x] Ejemplo: Centralizar lógica de portadas (Fecha: 2026-01-03)
+- [x] **Refactorización del Sistema de Avatares** (Fecha: 2026-01-03)
+    - Centralizada lógica en `utils.py:get_user_avatar`.
+    - Implementado fallback estable a imágenes de Assets globales con seeding.
+    - Sincronización automática de identidad en Lightbox (Fix "Anónimo").
 
 ---
 
