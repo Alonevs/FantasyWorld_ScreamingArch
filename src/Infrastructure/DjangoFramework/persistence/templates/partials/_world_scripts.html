@@ -393,6 +393,19 @@
             const lb = document.getElementById('lightbox');
             lb.classList.add('hidden');
             lb.classList.remove('flex');
+            
+            // If user came from another page (e.g., analytics, comments) via hash link,
+            // go back to that page instead of staying on the world page
+            if (window.location.hash && window.location.hash.startsWith('#img-')) {
+                // Check if there's a previous page in history
+                if (document.referrer && document.referrer !== window.location.href) {
+                    // Go back to previous page
+                    window.history.back();
+                } else {
+                    // Just remove the hash
+                    window.location.hash = '';
+                }
+            }
         }
         
         async function editImageTitle() {
