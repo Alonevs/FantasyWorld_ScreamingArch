@@ -590,4 +590,19 @@
                 document.getElementById('lb-overlay-count').innerText = count;
             }, 500);
         }
+
+        // AUTO-OPEN LIGHTBOX FROM HASH (e.g., #img-filename.jpg)
+        window.addEventListener('DOMContentLoaded', () => {
+            const hash = window.location.hash;
+            if (hash && hash.startsWith('#img-')) {
+                const filename = hash.substring(5); // Remove '#img-' prefix
+                const img = imgsData.find(i => (i.filename || "").trim() === filename);
+                if (img && img.url) {
+                    // Small delay to ensure gallery is loaded
+                    setTimeout(() => {
+                        openLightbox(img.url, filename);
+                    }, 300);
+                }
+            }
+        });
     </script>
