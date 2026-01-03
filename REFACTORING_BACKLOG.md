@@ -132,11 +132,27 @@ def get_thumbnail_url(world_id, cover_filename=None, use_first_if_no_cover=True)
 
 ---
 
-### 6. Limpiar Código Muerto
-**Archivos a revisar:**
-- Buscar funciones no usadas con `grep -r "def nombre_funcion"`
-- Buscar imports no usados
-- Eliminar comentarios obsoletos
+### ~~6. Limpiar Código Muerto~~ ✅ COMPLETADO (2026-01-03)
+**Estado:** ✅ Limpieza exitosa
+
+**Archivos eliminados:**
+- `views/world/legacy.py` - Funciones deprecadas no utilizadas (58 líneas)
+  - `init_hemisferios()` - No referenciada en templates
+  - `escanear_planeta()` - No referenciada en templates
+
+**URLs eliminadas:**
+- `path('init_hemisferios/<str:jid>/', ...)` 
+- `path('escanear/< str:jid>/', ...)`
+
+**Imports limpiados:**
+- Removidos de `config/urls.py`
+- Removidos de `views/world/__init__.py`
+- Removidos de `views/world_views.py`
+
+**Resultado:**
+- ✅ ~100 líneas de código muerto eliminadas (incluyendo imports masivos no usados)
+- ✅ 2 URLs obsoletas removidas
+- ✅ Codebase más limpio y mantenible
 
 ---
 

@@ -12,7 +12,6 @@ Para ver la implementación real, consulta:
 - views/world/actions.py
 - views/world/versions.py
 - views/world/utils.py
-- views/world/legacy.py
 
 Refactorización realizada: 2026-01-03
 """

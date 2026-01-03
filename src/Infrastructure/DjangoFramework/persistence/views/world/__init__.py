@@ -11,7 +11,6 @@ Organización:
 - actions.py: Acciones sobre mundos (toggle_entity_status, borrar_mundo, etc)
 - versions.py: Gestión de versiones (comparar_version, restaurar_version)
 - utils.py: Utilidades internas (log_event, get_current_user)
-- legacy.py: Funciones deprecadas (init_hemisferios, escanear_planeta)
 
 Todos los exports públicos se mantienen para compatibilidad hacia atrás.
 """
@@ -22,7 +21,6 @@ from .detail import ver_mundo, ver_metadatos, mapa_arbol
 from .edit import editar_mundo, update_avatar
 from .actions import toggle_entity_status, borrar_mundo, toggle_visibilidad, toggle_lock
 from .versions import comparar_version, restaurar_version
-from .legacy import init_hemisferios, escanear_planeta
 from .utils import log_event, get_current_user
 
 __all__ = [
@@ -43,9 +41,6 @@ __all__ = [
     # Versions
     'comparar_version',
     'restaurar_version',
-    # Legacy
-    'init_hemisferios',
-    'escanear_planeta',
     # Utils (internos, pero exportados por si acaso)
     'log_event',
     'get_current_user',

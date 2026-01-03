@@ -5,7 +5,7 @@ from django.conf.urls.static import static
 
 from src.Infrastructure.DjangoFramework.persistence.views.world_views import (
     home, ver_mundo, editar_mundo, borrar_mundo, 
-    toggle_lock, toggle_visibilidad, init_hemisferios, escanear_planeta,
+    toggle_lock, toggle_visibilidad,
     mapa_arbol, comparar_version, ver_metadatos,
     toggle_entity_status, update_avatar
 )
@@ -163,12 +163,10 @@ urlpatterns = [
     path('toggle_status/<str:jid>/', toggle_entity_status, name='toggle_status'),
     
     # FOTOS Y MEDIA
-    path('escanear/<str:jid>/', escanear_planeta, name='escanear_planeta'),
     path('foto_extra/<str:jid>/', generar_foto_extra, name='generar_foto_extra'),
     path('cover/<str:jid>/<str:filename>/', set_cover_image, name='set_cover_image'),
     path('borrar_foto/<str:jid>/<str:filename>/', borrar_foto, name='borrar_foto'),
     path('borrar_fotos_batch/<str:jid>/', borrar_fotos_batch, name='borrar_fotos_batch'),
-    path('init_hemisferios/<str:jid>/', init_hemisferios, name='init_hemisferios'),
     path('subir_foto/<str:jid>/', subir_imagen_manual, name='subir_imagen_manual'),
 
     # ==========================================
