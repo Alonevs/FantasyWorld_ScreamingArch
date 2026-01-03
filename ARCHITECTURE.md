@@ -237,11 +237,43 @@ templates/
 
 ### `utils.py`
 ```python
+# === Gestión de Imágenes ===
 get_world_images(jid)           # Lista imágenes de un mundo
+find_cover_image(cover_filename, all_imgs)  # 🆕 Encuentra portada (case-insensitive, sin extensión)
+get_thumbnail_url(world_id, cover_filename, use_first_if_no_cover)  # 🆕 URL de thumbnail con fallback
+
+# === Otras Utilidades ===
 resolve_jid_orm(jid)            # Convierte JID → CaosWorldORM
 get_user_avatar(user, jid)      # Avatar de usuario
 get_metadata_diff(live, proposed) # Diff de metadata
 ```
+
+**🆕 Funciones Nuevas (2026-01-03):**
+
+#### `find_cover_image(cover_filename, all_imgs)`
+Centraliza la lógica de búsqueda de portadas que antes estaba duplicada en 4 archivos.
+
+**Estrategia:**
+1. Coincidencia exacta (case-insensitive)
+2. Coincidencia sin extensión (para casos donde metadata tiene "Image" pero archivo es "Image.webp")
+
+**Usado en:**
+- `utils.py::get_world_images()` - Marca `is_cover=True`
+- `world_views.py::comparar_version()` - Vista de comparación
+- `review_views.py::review_proposal()` - Vista de revisión
+- Indirectamente en `team.py` vía `get_thumbnail_url()`
+
+#### `get_thumbnail_url(world_id, cover_filename=None, use_first_if_no_cover=True)`
+Simplifica obtención de thumbnails con fallback inteligente.
+
+**Prioridad de fallback:**
+1. Cover image definida (si `cover_filename` proporcionado)
+2. Primera imagen disponible (si `use_first_if_no_cover=True`)
+3. Placeholder genérico (`/static/img/placeholder.png`)
+
+**Usado en:**
+- `team.py::UserRankingView` - Thumbnails de mundos y narrativas
+
 
 ### `view_utils.py`
 ```python

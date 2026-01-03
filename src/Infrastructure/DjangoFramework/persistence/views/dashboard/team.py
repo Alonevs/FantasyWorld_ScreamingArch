@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from src.Infrastructure.DjangoFramework.persistence.utils import (
-    generate_breadcrumbs, get_world_images
+    generate_breadcrumbs, get_world_images, get_thumbnail_url
 )
 from src.Infrastructure.DjangoFramework.persistence.models import (
     CaosWorldORM, CaosNarrativeORM, CaosEpochORM, CaosComment, CaosLike
@@ -588,28 +588,9 @@ class UserRankingView(LoginRequiredMixin, TemplateView):
             key = f"WORLD_{w.public_id}"
             stats = SocialService.get_interactions_count(key)
             
-            # Cover - Use robust resolution via get_world_images
+            # Cover - Use centralized thumbnail helper
             cover_filename = w.metadata.get('cover_image') if w.metadata else None
-            thumb = "/static/img/placeholder.png"  # Default fallback
-            
-            # Get all images for this world
-            all_imgs = get_world_images(w.id)
-            
-            if cover_filename:
-                # Find the cover using case-insensitive matching
-                cover_lower = cover_filename.lower()
-                cover_img = next((img for img in all_imgs if img['filename'].lower() == cover_lower), None)
-                
-                # Fallback: try without extension
-                if not cover_img:
-                    c_clean = cover_filename.rsplit('.', 1)[0].lower()
-                    cover_img = next((img for img in all_imgs if img['filename'].rsplit('.', 1)[0].lower() == c_clean), None)
-                
-                if cover_img:
-                    thumb = f"/static/persistence/img/{cover_img['url']}"
-            elif all_imgs:
-                # No cover defined, but has images: use first one
-                thumb = f"/static/persistence/img/{all_imgs[0]['url']}"
+            thumb = get_thumbnail_url(w.id, cover_filename, use_first_if_no_cover=True)
             
             ranked_items.append({
                 'type': 'world',
@@ -629,28 +610,9 @@ class UserRankingView(LoginRequiredMixin, TemplateView):
             stats = SocialService.get_interactions_count(key)
             w = n.world
             
-            # Cover - Use robust resolution via get_world_images
+            # Cover - Use centralized thumbnail helper
             cover_filename = w.metadata.get('cover_image') if w and w.metadata else None
-            thumb = "/static/img/placeholder.png"  # Default fallback
-            
-            # Get all images for this world
-            all_imgs = get_world_images(w.id) if w else []
-            
-            if w and cover_filename:
-                # Find the cover using case-insensitive matching
-                cover_lower = cover_filename.lower()
-                cover_img = next((img for img in all_imgs if img['filename'].lower() == cover_lower), None)
-                
-                # Fallback: try without extension
-                if not cover_img:
-                    c_clean = cover_filename.rsplit('.', 1)[0].lower()
-                    cover_img = next((img for img in all_imgs if img['filename'].rsplit('.', 1)[0].lower() == c_clean), None)
-                
-                if cover_img:
-                    thumb = f"/static/persistence/img/{cover_img['url']}"
-            elif all_imgs:
-                # No cover defined, but has images: use first one
-                thumb = f"/static/persistence/img/{all_imgs[0]['url']}"
+            thumb = get_thumbnail_url(w.id, cover_filename, use_first_if_no_cover=True) if w else "/static/img/placeholder.png"
             
             ranked_items.append({
                 'type': 'narrative',
@@ -663,6 +625,7 @@ class UserRankingView(LoginRequiredMixin, TemplateView):
                 'link': f"/narrativa/{n.public_id}/" if n.public_id else "#",
                 'days_active': (timezone.now() - n.created_at).days
             })
+
 
         # Process Images
         processed_images = set()

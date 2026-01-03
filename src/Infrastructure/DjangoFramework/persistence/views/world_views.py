@@ -682,15 +682,9 @@ def comparar_version(request, version_id):
             # 1. Reset all covers first (Proposed takes precedence)
             for img in imgs: img['is_cover'] = False
 
-            # 2. Find Best Match (case-insensitive)
-            # A. Strict
-            proposed_lower = proposed_cover.lower()
-            match = next((i for i in imgs if i['filename'].lower() == proposed_lower), None)
-            
-            # B. Relaxed (name only, case-insensitive)
-            if not match:
-                target_clean = proposed_cover.split('/')[-1].split('\\')[-1].rsplit('.', 1)[0].lower()
-                match = next((i for i in imgs if i['filename'].rsplit('.', 1)[0].lower() == target_clean), None)
+            # 2. Use centralized cover detection
+            from src.Infrastructure.DjangoFramework.persistence.utils import find_cover_image
+            match = find_cover_image(proposed_cover, imgs)
             
             if match:
                 match['is_cover'] = True

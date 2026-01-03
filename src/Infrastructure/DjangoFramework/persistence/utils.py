@@ -224,20 +224,122 @@ def get_world_images(jid, world_instance=None, period_slug=None):
     
     # --- SINGLE COVER ENFORCEMENT ---
     if cover_image and imgs:
-        # A. Try strict match (case-insensitive)
-        cover_lower = cover_image.lower()
-        match = next((i for i in imgs if i['filename'].lower() == cover_lower), None)
-        
-        # B. Try relax match (if no strict) - without extension, case-insensitive
-        if not match:
-             c_clean = str(cover_image).rsplit('.', 1)[0].lower()
-             # Find first matching clean name
-             match = next((i for i in imgs if i['filename'].rsplit('.', 1)[0].lower() == c_clean), None)
-        
+        # Use centralized cover detection logic
+        match = find_cover_image(cover_image, imgs)
         if match:
-             match['is_cover'] = True
+            match['is_cover'] = True
             
     return imgs
+
+
+def find_cover_image(cover_filename, all_imgs):
+    """
+    Encuentra una imagen de portada usando matching case-insensitive y flexible.
+    
+    Esta función centraliza la lógica de búsqueda de portadas que antes estaba
+    duplicada en múltiples archivos (world_views, review_views, team.py).
+    
+    Estrategia de búsqueda:
+    1. Coincidencia exacta (case-insensitive)
+    2. Coincidencia sin extensión (case-insensitive) - para casos donde
+       metadata tiene "Image" pero archivo es "Image.webp"
+    
+    Args:
+        cover_filename (str): Nombre del archivo de portada a buscar
+        all_imgs (list): Lista de diccionarios con información de imágenes.
+                        Cada dict debe tener al menos: {'filename': str, 'url': str}
+    
+    Returns:
+        dict: Imagen encontrada con estructura {'filename': str, 'url': str, ...}
+        None: Si no se encuentra ninguna coincidencia
+    
+    Examples:
+        >>> imgs = [{'filename': 'Cover.webp', 'url': '01/Cover.webp'}]
+        >>> find_cover_image('COVER.WEBP', imgs)
+        {'filename': 'Cover.webp', 'url': '01/Cover.webp'}
+        
+        >>> find_cover_image('Cover', imgs)  # Sin extensión
+        {'filename': 'Cover.webp', 'url': '01/Cover.webp'}
+        
+        >>> find_cover_image('NotFound.jpg', imgs)
+        None
+    
+    Note:
+        Esta función es case-insensitive para manejar casos donde metadata
+        almacena nombres en mayúsculas (ej: "ABISMOS_PRIME_V1.WEBP") pero
+        el archivo real está en formato mixto (ej: "Abismos_Prime_v1.webp").
+    """
+    if not cover_filename or not all_imgs:
+        return None
+    
+    cover_lower = cover_filename.lower()
+    
+    # 1. Exact match (case-insensitive)
+    match = next((i for i in all_imgs if i['filename'].lower() == cover_lower), None)
+    
+    # 2. Fallback: without extension (case-insensitive)
+    if not match:
+        c_clean = cover_filename.rsplit('.', 1)[0].lower()
+        match = next((i for i in all_imgs if i['filename'].rsplit('.', 1)[0].lower() == c_clean), None)
+    
+    return match
+
+
+def get_thumbnail_url(world_id, cover_filename=None, use_first_if_no_cover=True):
+    """
+    Obtiene URL de thumbnail para un mundo con fallback inteligente.
+    
+    Esta función simplifica la obtención de thumbnails en vistas como
+    UserRankingView, aplicando una estrategia de fallback consistente.
+    
+    Prioridad de fallback:
+    1. Cover image definida (si cover_filename proporcionado)
+    2. Primera imagen disponible (si use_first_if_no_cover=True)
+    3. Placeholder genérico (/static/img/placeholder.png)
+    
+    Args:
+        world_id (str): ID del mundo (ej: "01", "0101")
+        cover_filename (str, optional): Nombre del archivo de portada.
+                                       Si None, salta al fallback.
+        use_first_if_no_cover (bool): Si True, usa primera imagen disponible
+                                      cuando no hay cover definida. Default: True
+    
+    Returns:
+        str: URL completa del thumbnail (ej: "/static/persistence/img/01/Cover.webp")
+    
+    Examples:
+        >>> get_thumbnail_url('01', 'Cover.webp')
+        '/static/persistence/img/01/Cover.webp'
+        
+        >>> get_thumbnail_url('01')  # Sin cover, usa primera imagen
+        '/static/persistence/img/01/FirstImage.webp'
+        
+        >>> get_thumbnail_url('99')  # Mundo sin imágenes
+        '/static/img/placeholder.png'
+        
+        >>> get_thumbnail_url('01', use_first_if_no_cover=False)
+        '/static/img/placeholder.png'  # Salta primera imagen
+    
+    Note:
+        Esta función llama a get_world_images() internamente, lo cual puede
+        ser costoso. Considera cachear resultados si llamas múltiples veces
+        para el mismo mundo.
+    """
+    all_imgs = get_world_images(world_id)
+    
+    # 1. Try cover image
+    if cover_filename:
+        cover_img = find_cover_image(cover_filename, all_imgs)
+        if cover_img:
+            return f"/static/persistence/img/{cover_img['url']}"
+    
+    # 2. Fallback: first image
+    if use_first_if_no_cover and all_imgs:
+        return f"/static/persistence/img/{all_imgs[0]['url']}"
+    
+    # 3. Fallback: placeholder
+    return "/static/img/placeholder.png"
+
 
 
 def get_user_avatar(user, jid=None):

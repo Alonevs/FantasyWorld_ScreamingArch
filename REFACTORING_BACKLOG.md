@@ -7,49 +7,25 @@
 
 ## 🔴 PRIORIDAD ALTA (Hacer Pronto)
 
-### 1. Centralizar Lógica de Resolución de Portadas
-**Problema:** La lógica de búsqueda de cover_image está duplicada en 3 archivos.
-**Archivos afectados:**
-- `src/Infrastructure/DjangoFramework/persistence/utils.py` (líneas 228-242)
-- `src/Infrastructure/DjangoFramework/persistence/views/world_views.py` (líneas 680-697)
-- `src/Infrastructure/DjangoFramework/persistence/views/review_views.py` (líneas 160-172)
-- `src/Infrastructure/DjangoFramework/persistence/views/dashboard/team.py` (líneas 595-608, 636-649)
+### ~~1. Centralizar Lógica de Resolución de Portadas~~ ✅ COMPLETADO (2026-01-03)
+**Estado:** ✅ Refactorizado exitosamente
 
-**Solución:**
-```python
-# Crear en utils.py
-def find_cover_image(cover_filename, all_imgs):
-    """
-    Encuentra imagen de portada con matching case-insensitive y flexible.
-    
-    Args:
-        cover_filename (str): Nombre del archivo de portada
-        all_imgs (list): Lista de diccionarios con info de imágenes
-        
-    Returns:
-        dict: Imagen encontrada o None
-    """
-    if not cover_filename or not all_imgs:
-        return None
-    
-    cover_lower = cover_filename.lower()
-    # Exact match (case-insensitive)
-    match = next((i for i in all_imgs if i['filename'].lower() == cover_lower), None)
-    
-    # Fallback: without extension
-    if not match:
-        c_clean = cover_filename.rsplit('.', 1)[0].lower()
-        match = next((i for i in all_imgs if i['filename'].rsplit('.', 1)[0].lower() == c_clean), None)
-    
-    return match
+**Solución implementada:**
+- Creadas 2 funciones centralizadas en `utils.py`:
+  - `find_cover_image(cover_filename, all_imgs)` - Búsqueda flexible de portadas
+  - `get_thumbnail_url(world_id, cover_filename, use_first_if_no_cover)` - URLs con fallback
 
-# Luego reemplazar en todos los archivos por:
-cover_img = find_cover_image(cover_filename, all_imgs)
-if cover_img:
-    thumb = f"/static/persistence/img/{cover_img['url']}"
-```
+**Archivos refactorizados:**
+- `utils.py` - Añadidas funciones nuevas, refactorizado `get_world_images()`
+- `world_views.py` - Refactorizado `comparar_version()`
+- `review_views.py` - Refactorizado `review_proposal()`
+- `team.py` - Refactorizado `UserRankingView` (mundos y narrativas)
 
-**Beneficio:** Cambios futuros en lógica de portadas solo requieren editar 1 lugar.
+**Resultado:**
+- ✅ Eliminadas ~60 líneas de código duplicado
+- ✅ Lógica centralizada en 1 lugar
+- ✅ Más fácil de mantener y testear
+- ✅ Documentado en `ARCHITECTURE.md`
 
 ---
 

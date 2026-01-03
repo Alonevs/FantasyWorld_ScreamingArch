@@ -159,21 +159,19 @@ def review_proposal(request, type, id):
                 filename = proposal.cambios.get('cover_image') if explicit_cover else new_cover_filename
                 
                 # Resolve robust path using get_world_images
-                from src.Infrastructure.DjangoFramework.persistence.utils import get_world_images
+                from src.Infrastructure.DjangoFramework.persistence.utils import get_world_images, find_cover_image
                 all_imgs = get_world_images(proposal.world.id)
                 
-                # Helper to find url (Relaxed, case-insensitive)
+                # Helper to find url using centralized logic
                 def resolve_img_url(fname, pid):
                     if not fname: return None
-                    fname_lower = fname.lower()
-                    # 1. Exact match (case-insensitive)
-                    found = next((i for i in all_imgs if i['filename'].lower() == fname_lower), None)
-                    # 2. Loose match (no extension, case-insensitive)
-                    if not found:
-                         c_clean = str(fname).rsplit('.', 1)[0].lower()
-                         found = next((i for i in all_imgs if i['filename'].rsplit('.', 1)[0].lower() == c_clean), None)
                     
-                    if found: return f"/static/persistence/img/{found['url']}"
+                    # Use centralized cover detection
+                    found = find_cover_image(fname, all_imgs)
+                    if found:
+                        return f"/static/persistence/img/{found['url']}"
+                    
+                    # Fallback: direct path
                     return f"/static/persistence/img/{pid}/{fname}"
 
                 ctx['image_url'] = resolve_img_url(filename, proposal.world.id)
