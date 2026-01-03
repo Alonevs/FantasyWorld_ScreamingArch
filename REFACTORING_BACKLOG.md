@@ -182,26 +182,6 @@ def get_world_images(jid: str) -> List[Dict[str, str]]:
 
 ---
 
-### 8. Extraer Constantes Mágicas
-```python
-# ANTES
-if user.profile.rank == 'ADMIN':
-    ...
-
-# DESPUÉS
-# En constants.py
-class UserRank:
-    EXPLORER = 'EXPLORER'
-    SUBADMIN = 'SUBADMIN'
-    ADMIN = 'ADMIN'
-
-# Uso
-if user.profile.rank == UserRank.ADMIN:
-    ...
-```
-
----
-
 ## 📝 Cómo Usar Este Documento
 
 1. **Antes de añadir una feature nueva:** Revisa si hay algo en PRIORIDAD ALTA
