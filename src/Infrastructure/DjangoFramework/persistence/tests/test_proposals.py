@@ -61,7 +61,7 @@ class ProposalWorkflowTestCase(TestCase):
         # Verificar que está PENDING
         latest_version = versions.latest('created_at')
         self.assertEqual(latest_version.status, 'PENDING')
-        self.assertEqual(latest_version.created_by, self.contributor)
+        self.assertEqual(latest_version.author, self.contributor)
     
     def test_approve_proposal_changes_status(self):
         """Test: Aprobar una propuesta cambia su status a APPROVED"""
@@ -72,12 +72,14 @@ class ProposalWorkflowTestCase(TestCase):
             proposed_description='New Description',
             cambios={'metadata': {'test': 'value'}},
             status='PENDING',
-            created_by=self.contributor
+            version_number=1,
+            author=self.contributor,
+            change_log='Initial'
         )
         
         self.client.login(username='author', password='testpass123')
         
-        response = self.client.post(f'/dashboard/aprobar/{proposal.id}/')
+        response = self.client.post(f'/propuesta/{proposal.id}/aprobar/')
         
         proposal.refresh_from_db()
         self.assertEqual(proposal.status, 'APPROVED')
@@ -95,11 +97,13 @@ class ProposalWorkflowTestCase(TestCase):
             proposed_description='Completely Different Description',
             cambios={'metadata': {'new_field': 'new_value'}},
             status='PENDING',
-            created_by=self.contributor
+            version_number=1,
+            author=self.contributor,
+            change_log='Initial'
         )
         
         self.client.login(username='author', password='testpass123')
-        self.client.post(f'/dashboard/aprobar/{proposal.id}/')
+        self.client.post(f'/propuesta/{proposal.id}/aprobar/')
         
         # Recargar mundo
         self.world.refresh_from_db()
@@ -116,12 +120,14 @@ class ProposalWorkflowTestCase(TestCase):
             proposed_description='New Description',
             cambios={},
             status='PENDING',
-            created_by=self.contributor
+            version_number=1,
+            author=self.contributor,
+            change_log='Initial'
         )
         
         self.client.login(username='author', password='testpass123')
         
-        response = self.client.post(f'/dashboard/rechazar/{proposal.id}/', {
+        response = self.client.post(f'/propuesta/{proposal.id}/rechazar/', {
             'feedback': 'No cumple los requisitos'
         })
         
@@ -136,12 +142,14 @@ class ProposalWorkflowTestCase(TestCase):
             proposed_description='New Description',
             cambios={},
             status='PENDING',
-            created_by=self.contributor
+            version_number=1,
+            author=self.contributor,
+            change_log='Initial'
         )
         
         self.client.login(username='author', password='testpass123')
         
-        response = self.client.post(f'/dashboard/archivar/{proposal.id}/')
+        response = self.client.post(f'/propuesta/{proposal.id}/archivar/')
         
         proposal.refresh_from_db()
         self.assertEqual(proposal.status, 'ARCHIVED')
@@ -154,15 +162,23 @@ class ProposalWorkflowTestCase(TestCase):
             proposed_description='New Description',
             cambios={},
             status='REJECTED',
-            created_by=self.contributor
+            version_number=1,
+            author=self.contributor,
+            change_log='Initial'
         )
         
         self.client.login(username='contributor', password='testpass123')
         
-        response = self.client.post(f'/dashboard/restaurar/{proposal.id}/')
+        response = self.client.post(f'/version/restaurar/{proposal.id}/')
         
+        # Verify that a NEW version was created (v2)
+        new_version = CaosVersionORM.objects.get(version_number=2, world=self.world)
+        self.assertEqual(new_version.status, 'PENDING')
+        self.assertEqual(new_version.change_log, f"Recuperar versión (v{proposal.version_number})")
+        
+        # Original should remain REJECTED
         proposal.refresh_from_db()
-        self.assertEqual(proposal.status, 'PENDING')
+        self.assertEqual(proposal.status, 'REJECTED')
 
 
 class RetouchModeTestCase(TestCase):
@@ -187,7 +203,8 @@ class RetouchModeTestCase(TestCase):
             name='Test World',
             description='Test Description',
             author=self.author,
-            status='LIVE'
+            status='LIVE',
+            allow_proposals=True
         )
         
         # Crear propuesta rechazada
@@ -197,7 +214,9 @@ class RetouchModeTestCase(TestCase):
             proposed_description='Rejected Description',
             cambios={'metadata': {'test': 'value'}},
             status='REJECTED',
-            created_by=self.contributor
+            version_number=1,
+            author=self.contributor,
+            change_log='Initial'
         )
         
         self.client = Client()
@@ -208,8 +227,13 @@ class RetouchModeTestCase(TestCase):
         
         response = self.client.get(
             f'/editar/{self.world.id}/',
-            {'retouch_version': self.rejected_proposal.id}
+            {'src_version': self.rejected_proposal.id}
         )
+        
+        # DEBUG PRINTS removed
+        
+        # Check snippet
+        content = response.content.decode('utf-8')
         
         self.assertEqual(response.status_code, 200)
         # Verificar que el formulario contiene los datos de la propuesta
@@ -225,14 +249,16 @@ class RetouchModeTestCase(TestCase):
             proposed_description='Approved Description',
             cambios={},
             status='APPROVED',
-            created_by=self.contributor
+            version_number=1,
+            author=self.contributor,
+            change_log='Initial'
         )
         
         self.client.login(username='contributor', password='testpass123')
         
         response = self.client.get(
             f'/editar/{self.world.id}/',
-            {'retouch_version': approved_proposal.id}
+            {'src_version': approved_proposal.id}
         )
         
         # Debe redirigir o mostrar error (no permitir retoque de aprobadas)
@@ -277,7 +303,9 @@ class ProposalMetadataTestCase(TestCase):
                 }
             },
             status='PENDING',
-            created_by=self.author
+            version_number=1,
+            author=self.author,
+            change_log='Initial'
         )
         
         # Verificar que los cambios están en la propuesta
@@ -295,7 +323,9 @@ class ProposalMetadataTestCase(TestCase):
                 'cover_image': 'NewCover.webp'
             },
             status='PENDING',
-            created_by=self.author
+            version_number=1,
+            author=self.author,
+            change_log='Initial'
         )
         
         # Verificar que el cambio de portada está registrado
@@ -336,7 +366,9 @@ class BulkProposalActionsTestCase(TestCase):
                 proposed_description=f'Description {i}',
                 cambios={},
                 status='PENDING',
-                created_by=self.author
+                version_number=1,
+            author=self.author,
+            change_log='Initial'
             )
             self.proposals.append(proposal)
         
@@ -348,8 +380,8 @@ class BulkProposalActionsTestCase(TestCase):
         
         proposal_ids = [p.id for p in self.proposals]
         
-        response = self.client.post('/dashboard/aprobar-masivo/', {
-            'proposal_ids': proposal_ids
+        response = self.client.post('/propuestas/aprobar_masivo/', {
+            'selected_ids': proposal_ids
         })
         
         # Verificar que todas fueron aprobadas
@@ -363,8 +395,8 @@ class BulkProposalActionsTestCase(TestCase):
         
         proposal_ids = [p.id for p in self.proposals]
         
-        response = self.client.post('/dashboard/rechazar-masivo/', {
-            'proposal_ids': proposal_ids,
+        response = self.client.post('/propuestas/borrar_masivo/', {
+            'selected_ids': proposal_ids,
             'feedback': 'Rechazo masivo de prueba'
         })
         

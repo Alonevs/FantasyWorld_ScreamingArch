@@ -42,4 +42,21 @@ celerybeat-schedule
 # --- Sistema Operativo ---
 Thumbs.db
 .DS_Store
-errores_django.logdebug_log.txt
+errores_django.log
+debug_log.txt
+
+# --- Scripts de Debug/Test Temporal (No subir al repo) ---
+debug_test.py
+read_log.py
+read_last_run.py
+read_debug.py
+read_run3.py
+search_log.py
+verify_analytics.py
+server_run.py
+*_output.txt
+final_*.txt
+run_*.txt
+check_output.txt
+last_run.txt
+server_error.log

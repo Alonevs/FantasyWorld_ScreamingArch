@@ -164,15 +164,16 @@ def ver_mundo(request, public_id):
 
     # Si estamos viendo un período que NO es ACTUAL, sobrescribir descripción
     if viewing_period and not viewing_period.is_current:
-        context['description'] = viewing_period.description
+        context['description'] = viewing_period.description or w_orm.description
         context['is_period_view'] = True
         context['viewing_period'] = viewing_period
         
         # Sobrescribir metadatos para mostrar los del periodo
         # Sobrescribir metadatos para mostrar los del periodo
-        from .view_utils import get_metadata_properties_dict
-        # Asegurar que siempre se procesen los metadatos (aunque sea dict vacío)
-        props = get_metadata_properties_dict(viewing_period.metadata if viewing_period.metadata else {})
+        from ..view_utils import get_metadata_properties_dict
+        # Asegurar que siempre se procesen los metadatos (fallback a world si period vacío)
+        target_meta = viewing_period.metadata if viewing_period.metadata else w_orm.metadata
+        props = get_metadata_properties_dict(target_meta)
         context['props'] = props
         
         # FIX: Adaptar formato para _metadata_viewer.html (espera 'metadata_obj.properties')

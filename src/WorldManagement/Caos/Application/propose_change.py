@@ -40,7 +40,7 @@ class ProposeChangeUseCase:
             proposed_description=final_desc,
             version_number=next_num,
             status="PENDING",
-            change_log=reason,
+            change_log=reason or "",
             cambios=changes_json,
             author=user
         )

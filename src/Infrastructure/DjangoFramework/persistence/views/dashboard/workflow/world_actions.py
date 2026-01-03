@@ -29,7 +29,10 @@ from src.WorldManagement.Caos.Application.restore_narrative_version import Resto
 from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
 
 # Modules
-from ..utils import log_event, is_admin_or_staff, has_authority_over_proposal
+from ..utils import (
+    log_event, is_admin_or_staff, has_authority_over_proposal,
+    execute_use_case_action, execute_orm_status_change, execute_orm_delete
+)
 from ..metrics import group_items_by_author, calculate_kpis
 from src.Infrastructure.DjangoFramework.persistence.rbac import restrict_explorer, admin_only, requires_role
 
@@ -77,8 +80,7 @@ def archivar_propuesta(request, id):
     Si la propuesta era de tipo DELETE y la acción es ejecutada por un Admin, se interpreta como un rechazo al borrado (Mantener entidad).
     """
     obj = get_object_or_404(CaosVersionORM, id=id)
-    from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
-    check_ownership(request.user, obj)
+    # check_ownership removed to allow World Owner/Admin actions via has_authority_over_proposal
     
     # If it's a DELETE proposal and coming from Admin ('archivar' is 'Mantener' in UI)
     is_delete = obj.cambios.get('action') == 'DELETE' if obj.cambios else False
@@ -98,8 +100,7 @@ def restaurar_version(request, version_id):
     Permite reiniciar el ciclo de revisión de una propuesta descartada anteriormente.
     """
     obj = get_object_or_404(CaosVersionORM, id=version_id)
-    from src.Infrastructure.DjangoFramework.persistence.permissions import check_ownership
-    check_ownership(request.user, obj)
+    # check_ownership removed to allow World Owner/Admin actions via has_authority_over_proposal
     
     # HANDLE RETOUCH REDIRECT (Pre-creation)
     # Si es 'retouch', NO restauramos automáticamente. 
@@ -124,8 +125,13 @@ def restaurar_version(request, version_id):
         return redirect(f"/editar/{target_id}/?src_version={obj.id}")
     
     # EXECUTE RESTORE (Standard)
+    # Check permissions manually: Author OR Has Authority
+    if not (request.user == obj.author or has_authority_over_proposal(request.user, obj)):
+         messages.error(request, "⛔ No tienes permiso para restaurar esta versión.")
+         return redirect('dashboard')
+
     # Crea una copia exacta en PENDING
-    new_version_or_result = execute_use_case_action(request, RestoreVersionUseCase, version_id, "Restaurado.", "RESTORE_VERSION")
+    new_version_or_result = execute_use_case_action(request, RestoreVersionUseCase, version_id, "Restaurado.", "RESTORE_VERSION", skip_auth=True)
         
     return new_version_or_result
 

@@ -29,7 +29,10 @@ from src.WorldManagement.Caos.Application.restore_narrative_version import Resto
 from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
 
 # Modules
-from ..utils import log_event, is_admin_or_staff, has_authority_over_proposal
+from ..utils import (
+    log_event, is_admin_or_staff, has_authority_over_proposal,
+    execute_use_case_action, execute_orm_status_change, execute_orm_delete
+)
 from ..metrics import group_items_by_author, calculate_kpis
 from src.Infrastructure.DjangoFramework.persistence.rbac import restrict_explorer, admin_only, requires_role
 

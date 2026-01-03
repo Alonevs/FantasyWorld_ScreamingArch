@@ -229,6 +229,19 @@ def get_world_images(jid, world_instance=None, period_slug=None):
         if match:
             match['is_cover'] = True
             
+    # --- FALLBACK LOGIC FOR EMPTY PERIODS ---
+    # If we requested a specific period but found NO images, 
+    # it's better to show 'Actual' images than an empty gallery 
+    # (prevents "Broken World" feeling for new Drafts).
+    if period_slug and period_slug != 'actual' and not imgs:
+        try:
+             # Re-scan for 'Actual' images
+             imgs_fallback = get_world_images(jid, world_instance, period_slug='actual')
+             # Mark them as fallback (optional, for UI)
+             for i in imgs_fallback: i['is_fallback'] = True
+             imgs = imgs_fallback
+        except: pass
+
     return imgs
 
 

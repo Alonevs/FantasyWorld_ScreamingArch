@@ -66,10 +66,13 @@ def can_user_propose_on(user, world):
     if access in ['SUPERUSER', 'OWNER', 'COLLABORATOR']:
         return True
         
-    # Los Administradores (ADMIN) pueden proponer en mundos del SISTEMA (Superuser)
     if hasattr(user, 'profile') and user.profile.rank == 'ADMIN':
         if not world.author or world.author.is_superuser:
             return True
+
+    # Si el mundo permite propuestas públicas y está LIVE
+    if world.allow_proposals and world.status == 'LIVE':
+        return True
             
     return False
 

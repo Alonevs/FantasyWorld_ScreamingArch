@@ -17,27 +17,27 @@ from src.Infrastructure.DjangoFramework.persistence.views.social.social_hub impo
     social_hub_view, archive_comment, delete_comment as hub_delete_comment
 )
 from src.Infrastructure.DjangoFramework.persistence.views.ai_views import analyze_metadata_api, edit_narrative_api, api_generate_title, api_generate_lore
-from src.Infrastructure.DjangoFramework.persistence.views.dashboard.workflow import (
-    dashboard, centro_control, aprobar_propuesta, rechazar_propuesta, publicar_version, archivar_propuesta,
-    restaurar_version, borrar_propuesta, borrar_propuestas_masivo,
-    aprobar_contribucion, rechazar_contribucion,
-    aprobar_narrativa, rechazar_narrativa, publicar_narrativa, archivar_narrativa,
-    restaurar_narrativa, borrar_narrativa_version, 
-    aprobar_periodo, rechazar_periodo, archivar_periodo, publicar_periodo, restaurar_periodo, borrar_periodo,
-    ProposalDetailView, aprobar_propuestas_masivo, archivar_propuestas_masivo, publicar_propuestas_masivo
-)
-from src.Infrastructure.DjangoFramework.persistence.views.dashboard.assets import (
+
+from src.Infrastructure.DjangoFramework.persistence.views.dashboard.assets.image_workflow import (
     aprobar_imagen, rechazar_imagen, archivar_imagen, restaurar_imagen, borrar_imagen_definitivo, 
-    publicar_imagen, ImageProposalDetailView, batch_revisar_imagenes,
+    publicar_imagen, ImageProposalDetailView, restaurar_imagen_papelera
+)
+from src.Infrastructure.DjangoFramework.persistence.views.dashboard.assets.trash_management import (
     ver_papelera, restaurar_entidad_fisica, borrar_mundo_definitivo, borrar_narrativa_definitivo, 
-    restaurar_imagen_papelera, manage_trash_bulk
+    manage_trash_bulk
+)
+from src.Infrastructure.DjangoFramework.persistence.views.dashboard.assets.batch_ops import (
+    batch_revisar_imagenes
 )
 from src.Infrastructure.DjangoFramework.persistence.views.dashboard.team import (
     UserManagementView, toggle_admin_role, MyTeamView, CollaboratorWorkView, UserDetailView, UserRankingView
 )
 from src.Infrastructure.DjangoFramework.persistence.views.dashboard.analytics import ContentAnalyticsView
-from src.Infrastructure.DjangoFramework.persistence.views.dashboard.history import (
-    audit_log_view, version_history_view, version_history_cleanup_view, delete_history_bulk_view
+from src.Infrastructure.DjangoFramework.persistence.views.dashboard.history.audit_log import (
+    audit_log_view
+)
+from src.Infrastructure.DjangoFramework.persistence.views.dashboard.history.version_control import (
+    version_history_view, version_history_cleanup_view, delete_history_bulk_view
 )
 from src.Infrastructure.DjangoFramework.persistence.views.media_views import (
     api_preview_foto, api_save_foto, api_update_image_metadata, 
@@ -71,6 +71,34 @@ from src.Infrastructure.DjangoFramework.persistence.views.period_api import (
     approve_period_version, reject_period_version, delete_period, list_world_periods,
     activate_period_endpoint
 )
+
+# Workflow import moved down to avoid circular dependency
+# from src.Infrastructure.DjangoFramework.persistence.views.dashboard.workflow import (
+# Workflow views - Direct imports to avoid circular dependency in workflow/__init__.py
+from src.Infrastructure.DjangoFramework.persistence.views.dashboard.workflow.world_actions import (
+    aprobar_propuesta, rechazar_propuesta, publicar_version, archivar_propuesta,
+    restaurar_version, borrar_propuesta
+)
+from src.Infrastructure.DjangoFramework.persistence.views.dashboard.workflow.bulk_operations import (
+    borrar_propuestas_masivo, aprobar_propuestas_masivo, archivar_propuestas_masivo, publicar_propuestas_masivo
+)
+from src.Infrastructure.DjangoFramework.persistence.views.dashboard.workflow.dashboard import (
+    dashboard
+)
+from src.Infrastructure.DjangoFramework.persistence.views.dashboard.workflow.utils import (
+    centro_control
+)
+from src.Infrastructure.DjangoFramework.persistence.views.dashboard.workflow.contributions import (
+    aprobar_contribucion, rechazar_contribucion, ProposalDetailView
+)
+from src.Infrastructure.DjangoFramework.persistence.views.dashboard.workflow.narrative_actions import (
+    aprobar_narrativa, rechazar_narrativa, publicar_narrativa, archivar_narrativa,
+    restaurar_narrativa, borrar_narrativa_version
+)
+from src.Infrastructure.DjangoFramework.persistence.views.dashboard.workflow.period_actions import (
+    aprobar_periodo, rechazar_periodo, archivar_periodo, publicar_periodo, restaurar_periodo, borrar_periodo
+)
+
 
 urlpatterns = [
     path('api/ai/generate-lore/', api_generate_lore, name='api_generate_lore'),

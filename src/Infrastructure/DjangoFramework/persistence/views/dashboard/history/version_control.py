@@ -1,97 +1,14 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Q, Max
+from django.db.models import Q
 from django.contrib.auth.models import User
+from django.contrib import messages
 from src.Infrastructure.DjangoFramework.persistence.models import (
-    CaosEventLog, CaosVersionORM, CaosNarrativeVersionORM, CaosImageProposalORM,
+    CaosVersionORM, CaosNarrativeVersionORM, CaosImageProposalORM,
     TimelinePeriodVersion
 )
-from itertools import chain
-from operator import attrgetter
-from .utils import get_visible_user_ids
-
-@login_required
-def audit_log_view(request):
-    """
-    Vista detallada del Registro de Auditoría (Audit Log).
-    Muestra todas las acciones registradas en el sistema (Global para Admins).
-    Permite filtrar por Usuario, Tipo de Acción y Búsqueda de texto libre.
-    """
-    is_global, visible_ids = get_visible_user_ids(request.user)
-    
-    logs = CaosEventLog.objects.all().order_by('-timestamp')
-    if not is_global:
-        logs = logs.filter(user_id__in=visible_ids)
-
-    # Allow filtering only by visible users for non-globals
-    if is_global:
-        users = User.objects.all().order_by('username')
-    else:
-        users = User.objects.filter(id__in=visible_ids).order_by('username')
-
-    # FILTERS
-    f_user = request.GET.get('user')
-    f_type = request.GET.get('type') # Replaces f_action for high-level type filtering
-    f_search = request.GET.get('q')
-    
-    if f_user:
-        logs = logs.filter(user_id=f_user)
-        
-    if f_type:
-        ft = f_type.upper()
-        if ft == 'WORLD':
-             logs = logs.filter(Q(action__icontains='WORLD') | Q(action__icontains='MUNDO'))
-        elif ft == 'NARRATIVE':
-             logs = logs.filter(Q(action__icontains='NARRATIVE') | Q(action__icontains='NARRATIVA'))
-        elif ft == 'IMAGE':
-             logs = logs.filter(Q(action__icontains='IMAGE') | Q(action__icontains='PHOTO') | Q(action__icontains='FOTO'))
-
-    if f_search:
-        logs = logs.filter(details__icontains=f_search)
-        
-    paginator = Paginator(logs, 50) # 50 per page
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    
-    # Enrichment: Infer Type from Action/ID
-    for log in page_obj:
-        act = log.action.upper()
-        tid = str(log.target_id) if log.target_id else ""
-        
-        # Default
-        log.inferred_icon = "📝"
-        log.inferred_label = "Registro"
-        
-        # Heuristics
-        if "WORLD" in act or "MUNDO" in act:
-            log.inferred_icon = "🌍"
-            log.inferred_label = "Mundo"
-        elif "NARRATIVE" in act or "NARRATIVA" in act:
-             log.inferred_icon = "📜"
-             log.inferred_label = "Narrativa"
-        elif "IMAGE" in act or "PHOTO" in act or "FOTO" in act:
-             log.inferred_icon = "🖼️"
-             log.inferred_label = "Imagen"
-        # Fallbacks for generic actions based on ID ID
-        elif tid.isdigit(): # Usually Image ID or Proposal ID
-             log.inferred_icon = "🖼️" 
-             log.inferred_label = "Imagen (Probable)"
-        elif len(tid) == 10 and tid.isalnum(): # JID/NanoID format
-             log.inferred_icon = "🌍"
-             log.inferred_label = "Mundo"
-        elif len(tid) > 10: # Narrative NID usually longer or UUID? Or generic
-             log.inferred_icon = "📜"
-             log.inferred_label = "Narrativa (Probable)"
-
-    context = {
-        'page_obj': page_obj,
-        'users': users,
-        'current_user': int(f_user) if f_user else None,
-        'current_type': f_type,
-        'search_query': f_search
-    }
-    return render(request, 'dashboard/audit_log.html', context)
+from ..utils import get_visible_user_ids, log_event
 
 @login_required
 def version_history_view(request):
@@ -143,9 +60,6 @@ def version_history_view(request):
         w_qs = w_qs.none(); n_qs = n_qs.none(); i_qs = i_qs.none()
 
     # Apply Action Filter (Pre-filtering)
-    # Note: Actions are stored diffently.
-    # World: v.cambios.get('action') or v.change_log
-    # Narrative: v.action
     
     if f_action:
         # Filter Worlds
@@ -187,7 +101,6 @@ def version_history_view(request):
             i_qs = i_qs.none()
 
     # 4. INITIALIZE EMPTY GROUPS (Ensures they appear even if empty)
-    # structure: { 'unique_key': { 'entity_name': Str, 'type': Str, 'latest_date': Date, 'versions': [List] } }
     grouped_data = {}
     
     # Priority Map & Placeholders
@@ -198,11 +111,6 @@ def version_history_view(request):
         'METADATA': 3,
         'PERIOD': 4
     }
-    
-    # Pre-populate with dummy entries if desired? 
-    # Actually, the template uses {% regroup page_obj by type as type_list %}.
-    # For regroup to work, the items MUST be in the list.
-    # So we should add at least one "Empty" marker for each type if not present.
     
     required_types = ['WORLD', 'NARRATIVE', 'METADATA', 'IMAGE', 'PERIOD']
     if f_type:
@@ -446,9 +354,6 @@ def version_history_cleanup_view(request):
     """
     Maintenance tool: Keep only the 5 most recent archived versions for each entity.
     """
-    from django.contrib import messages
-    from .utils import log_event
-    
     if not request.user.is_staff and not request.user.is_superuser:
         messages.error(request, "Acceso denegado.")
         return redirect('version_history')
@@ -496,19 +401,11 @@ def delete_history_bulk_view(request):
     Exclusivo para Superusuarios (Admin Supremo).
     Permite purgar registros históricos o propuestas archivadas seleccionando IDs específicos.
     """
-    from django.contrib import messages
-    from .utils import log_event
-    
     if not request.user.is_superuser:
         messages.error(request, "Acceso denegado. Solo Admin Supremo.")
         return redirect('version_history')
         
     if request.method == 'POST':
-        # Get selected IDs from form
-        # Form inputs: selected_versions[] (value="WORLD_123" or "NARRATIVE_456" ?? No, IDs are unique per table)
-        # We need to distinct between WorldVersion and NarrativeVersion IDs
-        # Strategy: The checkbox value should carry the type: value="WORLD_10" or "NARRATIVE_55"
-        
         selection = request.POST.getlist('selected_versions[]')
         
         w_ids = []

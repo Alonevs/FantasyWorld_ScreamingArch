@@ -44,11 +44,12 @@ def get_diff_html(a, b):
 
     return "".join(output)
 
-from .dashboard.workflow import (
-    rechazar_propuesta, rechazar_narrativa, rechazar_periodo
-)
+# Imports moved inside review_proposal to avoid circular dependency
+# from .dashboard.workflow import (
+#     rechazar_propuesta, rechazar_narrativa, rechazar_periodo
+# )
 
-from .dashboard.assets import rechazar_imagen
+# from .dashboard.assets import rechazar_imagen
 
 @login_required
 def review_proposal(request, type, id):
@@ -279,6 +280,11 @@ def review_proposal(request, type, id):
     # 4. HANDLE POST (APPROVE/REJECT)
     # Import logic views directly to preserve 'reason' in POST request
     if request.method == 'POST':
+        # Local imports to avoid circular dependency with workflow package
+        from .dashboard.workflow import (
+            rechazar_propuesta, rechazar_narrativa, rechazar_periodo
+        )
+        from .dashboard.assets import rechazar_imagen
         action = request.POST.get('action') # 'approve' or 'reject'
         
         if action == 'approve':

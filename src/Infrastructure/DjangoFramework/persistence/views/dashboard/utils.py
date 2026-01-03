@@ -65,7 +65,7 @@ def has_authority_over_proposal(user, obj):
 
 # --- GENERIC ACTION HELPERS ---
 
-def execute_use_case_action(request, use_case_cls, id, success_msg, log_code, extra_args=None):
+def execute_use_case_action(request, use_case_cls, id, success_msg, log_code, extra_args=None, skip_auth=False):
     """
     Executes a standard clean architecture Use Case.
     Assumes use_case_cls() constructor and execute(id) method.
@@ -90,10 +90,12 @@ def execute_use_case_action(request, use_case_cls, id, success_msg, log_code, ex
         target_model = model_map.get(model_key)
         
         obj = get_object_or_404(target_model, id=id)
-        if not has_authority_over_proposal(request.user, obj):
-            messages.error(request, "⛔ No tienes autoridad para realizar esta acción sobre este elemento.")
-            return redirect('dashboard')
 
+        if not skip_auth:
+            if not has_authority_over_proposal(request.user, obj):
+                messages.error(request, "⛔ No tienes autoridad para realizar esta acción sobre este elemento.")
+                return redirect('dashboard')
+ 
         use_case = use_case_cls()
         args = extra_args or {}
         
@@ -104,7 +106,11 @@ def execute_use_case_action(request, use_case_cls, id, success_msg, log_code, ex
         if "RESTORE" in log_code:
             args['user'] = request.user
 
-        use_case.execute(id, **args)
+        res = use_case.execute(id, **args)
+        
+        # If UseCase returns a Proposal object (like Restore), redirect to it?
+        # But standard behavior is redirect to dashboard/next.
+        # We ignore return unless we need it.
              
         # SMART TOAST: If user is the author AND it's an Approval/Rejection (which generates Notification),
         # suppress the generic Toast to avoid double noise.
@@ -119,6 +125,10 @@ def execute_use_case_action(request, use_case_cls, id, success_msg, log_code, ex
             messages.success(request, success_msg)
             
         log_event(request.user, log_code, id)
+        
+        # Return result in case caller needs it (e.g. new proposal ID)
+        if res: return res 
+
     except Exception as e:
         messages.error(request, f"Error: {e}")
     

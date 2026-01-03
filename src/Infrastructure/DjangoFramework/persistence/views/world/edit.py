@@ -100,6 +100,12 @@ def editar_mundo(request, jid):
     
     can_override_lock = request.user.is_superuser or w_orm.author == request.user
     
+    is_admin_bypass = request.user.is_superuser
+    try:
+        if not is_admin_bypass and request.user.profile.rank == 'SUPERADMIN':
+            is_admin_bypass = True
+    except: pass
+    
     if w_orm.status == 'LOCKED' and not can_override_lock:
         messages.error(request, "⛔ Este mundo está BLOQUEADO por el Autor. No se permiten propuestas.")
         return redirect('ver_mundo', public_id=w_orm.public_id if w_orm.public_id else w_orm.id)
