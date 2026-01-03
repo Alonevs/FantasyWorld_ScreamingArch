@@ -59,7 +59,17 @@ FantasyWorld_ScreamingArch/
 │   │       │       │   ├── collaboration.py  # Equipos y colaboradores
 │   │       │       │   ├── detail.py         # Detalle de usuario
 │   │       │       │   └── ranking.py        # Ranking de usuarios
+│   │       │       ├── workflow/      # 🆕 Workflow de propuestas (modularizado)
+│   │       │       │   ├── __init__.py       # Exports públicos
+│   │       │       │   ├── dashboard.py      # Vista principal
+│   │       │       │   ├── world_actions.py  # Acciones de mundos
+│   │       │       │   ├── narrative_actions.py  # Acciones de narrativas
+│   │       │       │   ├── period_actions.py     # Acciones de períodos
+│   │       │       │   ├── bulk_operations.py    # Operaciones masivas
+│   │       │       │   ├── contributions.py      # Contribuciones
+│   │       │       │   └── utils.py          # Utilidades
 │   │       │       ├── team.py        # Wrapper de compatibilidad
+│   │       │       ├── workflow.py    # Wrapper de compatibilidad
 │   │       │       ├── assets.py      # Gestión de assets
 │   │       │       └── utils.py       # Utilidades del dashboard
 │   │       ├── templates/             # Templates HTML
