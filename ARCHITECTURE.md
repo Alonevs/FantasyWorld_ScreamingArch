@@ -94,36 +94,173 @@ CAOS (Nivel 0)
 
 ---
 
-## 🔄 Flujo de Propuestas
+## 🔄 Flujo de Propuestas (Sistema ECLAI)
+
+### Visión General
+
+El sistema de propuestas garantiza la integridad de datos mediante un flujo de revisión antes de aplicar cambios.
+
+```mermaid
+graph TD
+    A[Usuario edita mundo] --> B{¿Tiene permisos?}
+    B -->|No| C[Error: Sin permisos]
+    B -->|Sí| D[Crear CaosVersionORM]
+    D --> E[status = PENDING]
+    E --> F[Notificar a Admin]
+    F --> G[Admin revisa en Dashboard]
+    G --> H{Decisión}
+    H -->|Aprobar| I[aprobar_version]
+    H -->|Rechazar| J[status = REJECTED]
+    H -->|Archivar| K[status = ARCHIVED]
+    I --> L[Aplicar cambios a world.metadata]
+    L --> M[status = APPROVED]
+    M --> N[Notificar al usuario]
+    J --> O[Notificar al usuario]
+    K --> O
+```
 
 ### 1. Creación de Propuesta
+
+**Flujo:**
 ```
-Usuario → editar_mundo() → CaosVersionORM (status=PENDING)
+Usuario → editar_mundo() → Validar permisos → CaosVersionORM (status=PENDING)
 ```
 
-**Modelos:**
+**Modelos de Propuestas:**
 - `CaosVersionORM`: Propuestas de mundos/períodos
+  - `proposed_name`: Nuevo nombre (opcional)
+  - `proposed_description`: Nueva descripción (opcional)
+  - `cambios`: JSON con cambios de metadata
+  - `status`: PENDING | APPROVED | REJECTED | ARCHIVED
+  - `created_by`: Usuario que propone
+  - `world`: Mundo afectado
+
 - `CaosNarrativeVersionORM`: Propuestas de narrativas
 - `CaosImageProposalORM`: Propuestas de imágenes
+  - `action`: UPLOAD | SET_COVER | DELETE
+
+**Ejemplo de `cambios` JSON:**
+```json
+{
+  "cover_image": "NewCover.webp",
+  "metadata": {
+    "population": "1000000",
+    "climate": "Tropical"
+  }
+}
+```
 
 ### 2. Revisión
-```
-Admin → /revisar/{TYPE}/{ID}/ → review_proposal()
-```
 
 **Vista:** `review_views.py::review_proposal()`
-- Muestra diff (live vs propuesto)
-- Botones: Aprobar, Rechazar, Archivar
+
+**Flujo:**
+```
+Admin → /revisar/{TYPE}/{ID}/ → Mostrar diff → Aprobar/Rechazar/Archivar
+```
+
+**Funcionalidades:**
+- **Diff visual:** Muestra cambios lado a lado (live vs propuesto)
+- **Preview:** Permite ver cómo quedará antes de aprobar
+- **Metadata diff:** Resalta cambios en metadata estructurados
+- **Imágenes:** Preview de nuevas imágenes o cambios de portada
+
+**Tipos de propuestas:**
+- `WORLD`: Cambios en mundos
+- `NARRATIVE`: Cambios en narrativas
+- `IMAGE`: Cambios en imágenes
+- `PERIOD`: Cambios en períodos temporales
 
 ### 3. Aprobación
+
+**Función:** `review_views.py::aprobar_version()`
+
+**Flujo:**
 ```
-aprobar_version() → Actualiza metadata → status=APPROVED
+aprobar_version() → Validar permisos → Aplicar cambios → Actualizar status → Notificar
 ```
 
-**Lógica:**
-- Copia `proposed_name` → `world.name`
-- Copia `cambios['metadata']` → `world.metadata`
-- Maneja portadas (`cover_image`)
+**Lógica de aplicación:**
+```python
+# 1. Copiar nombre si cambió
+if version.proposed_name:
+    world.name = version.proposed_name
+
+# 2. Copiar descripción si cambió
+if version.proposed_description:
+    world.description = version.proposed_description
+
+# 3. Aplicar cambios de metadata
+if version.cambios:
+    if 'metadata' in version.cambios:
+        world.metadata.update(version.cambios['metadata'])
+    
+    if 'cover_image' in version.cambios:
+        world.metadata['cover_image'] = version.cambios['cover_image']
+
+# 4. Guardar
+world.save()
+
+# 5. Actualizar status de propuesta
+version.status = 'APPROVED'
+version.save()
+```
+
+### 4. Estados de Propuestas
+
+| Estado | Descripción | Puede editar | Visible en |
+|--------|-------------|--------------|------------|
+| `PENDING` | Esperando revisión | Autor (modo retoque) | Dashboard |
+| `APPROVED` | Aprobada y aplicada | No | Historial |
+| `REJECTED` | Rechazada | Autor (modo retoque) | Historial |
+| `ARCHIVED` | Archivada (no aplicar) | No | Historial |
+
+### 5. Modo Retoque
+
+**Propósito:** Permitir corregir propuestas rechazadas sin crear una nueva.
+
+**Flujo:**
+```
+Propuesta REJECTED → Usuario edita → Modo retoque activado → 
+Pre-rellena formulario → Usuario corrige → Envía → status = PENDING
+```
+
+**Implementación:**
+```python
+# En editar_mundo()
+if request.GET.get('retouch_version'):
+    version_id = request.GET['retouch_version']
+    version = CaosVersionORM.objects.get(id=version_id)
+    
+    # Pre-rellenar formulario con datos de la propuesta
+    initial_data = {
+        'name': version.proposed_name or world.name,
+        'description': version.proposed_description or world.description,
+        # ... metadata ...
+    }
+```
+
+### 6. Notificaciones
+
+**Sistema:** `Message` model + API de mensajes
+
+**Eventos que generan notificaciones:**
+- Propuesta creada → Notificar a admins
+- Propuesta aprobada → Notificar al autor
+- Propuesta rechazada → Notificar al autor (con razón)
+- Propuesta archivada → Notificar al autor
+
+**Ejemplo:**
+```python
+Message.objects.create(
+    recipient=version.created_by,
+    sender=request.user,
+    subject=f"Propuesta aprobada: {world.name}",
+    body=f"Tu propuesta para {world.name} ha sido aprobada.",
+    related_object_type='VERSION',
+    related_object_id=version.id
+)
+```
 
 ---
 

@@ -87,37 +87,48 @@ Dividido en 6 módulos temáticos dentro de `views/dashboard/team/`:
 
 ## 🟡 PRIORIDAD MEDIA (Cuando Tengas Tiempo)
 
-### 4. Extraer Lógica de Thumbnails
-**Problema:** Construcción de URLs de thumbnails repetida.
-**Solución:**
+### ~~4. Extraer Lógica de Thumbnails~~ ✅ COMPLETADO (2026-01-03)
+**Estado:** ✅ Completado en Item #1
+
+**Solución implementada:**
+Función `get_thumbnail_url()` creada en `utils.py` durante la refactorización de lógica de portadas.
+
+**Funcionalidad:**
+- Prioridad: cover_image → primera imagen → placeholder
+- Fallback inteligente en 3 niveles
+- Usado en `team.py::UserRankingView`
+
+**Código:**
 ```python
-# En utils.py
-def get_thumbnail_url(world, cover_filename=None):
-    """
-    Obtiene URL de thumbnail para un mundo.
-    Prioridad: cover_image > primera imagen > placeholder
-    """
-    all_imgs = get_world_images(world.id)
+def get_thumbnail_url(world_id, cover_filename=None, use_first_if_no_cover=True):
+    """Obtiene URL de thumbnail con fallback inteligente."""
+    all_imgs = get_world_images(world_id)
     
-    # 1. Cover definida
     if cover_filename:
         cover_img = find_cover_image(cover_filename, all_imgs)
         if cover_img:
             return f"/static/persistence/img/{cover_img['url']}"
     
-    # 2. Primera imagen disponible
-    if all_imgs:
+    if use_first_if_no_cover and all_imgs:
         return f"/static/persistence/img/{all_imgs[0]['url']}"
     
-    # 3. Placeholder
     return "/static/img/placeholder.png"
 ```
 
 ---
 
-### 5. Documentar Flujo de Propuestas
-**Problema:** No está claro cómo funciona el sistema de propuestas.
-**Solución:** Crear diagrama en `ARCHITECTURE.md` (ver archivo separado).
+### ~~5. Documentar Flujo de Propuestas~~ ✅ COMPLETADO (2026-01-03)
+**Estado:** ✅ Documentado en `ARCHITECTURE.md`
+
+**Contenido añadido:**
+- Diagrama Mermaid del flujo completo
+- Explicación detallada de cada fase
+- Ejemplos de código
+- Tabla de estados
+- Documentación de modo retoque
+- Sistema de notificaciones
+
+**Ubicación:** `ARCHITECTURE.md` - Sección "🔄 Flujo de Propuestas (Sistema ECLAI)"
 
 ---
 
