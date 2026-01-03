@@ -6,6 +6,7 @@ from django.contrib.auth.mixins import UserPassesTestMixin, LoginRequiredMixin
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.urls import reverse
+from django.utils import timezone
 
 from src.Infrastructure.DjangoFramework.persistence.utils import (
     generate_breadcrumbs, get_world_images
@@ -488,6 +489,75 @@ class UserDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
             except Exception as e:
                 print(f"Error processing proposal comments in profile: {e}")
 
+        # 5. Process Reviews (Comments with Ratings)
+        from django.db.models import Avg
+        
+        # Helper to categorize entity_type if missing in DB
+        def guess_type(key):
+            if key.startswith("IMG_"): return 'IMAGE'
+            if key.startswith("narr_") or key.startswith("NARR_"): return 'NARRATIVE'
+            if key.startswith("WORLD_"): return 'WORLD'
+            return 'OTHER'
+
+        # Fetch all comments ON user's content that have a rating
+        # We need the keys again
+        all_user_keys = []
+        for w in content['worlds']: all_user_keys.extend([str(w.id), f"WORLD_{w.public_id}", w.public_id])
+        for n in content['narratives']: all_user_keys.extend([n.nid, n.public_id, f"narr_{n.public_id}"])
+        for img in content['images']: all_user_keys.extend([f"IMG_{img['filename']}", img['filename']])
+        
+        raw_reviews = CaosComment.objects.filter(
+            entity_key__in=all_user_keys,
+            rating__isnull=False
+        ).exclude(status='DELETED').order_by('-created_at')
+        
+        reviews_images = []
+        reviews_narratives = []
+        total_stars = 0
+        review_count = raw_reviews.count()
+        
+        for r in raw_reviews:
+            total_stars += r.rating
+            etype = r.entity_type or guess_type(r.entity_key)
+            
+            # Resolve Context
+            info = SocialService.resolve_content_by_key(r.entity_key)
+            world = info.get('world') if info else None
+            cover = get_cached_cover(world) if world else default_thumb
+            
+            rv_obj = {
+                'id': r.id,
+                'rating': r.rating,
+                'rating_range': range(r.rating),
+                'empty_range': range(5 - r.rating),
+                'content': r.content,
+                'author': r.user.username,
+                'author_avatar': get_user_avatar(r.user),
+                'date': r.created_at,
+                'entity_name': info.get('title') if info else r.entity_key,
+                'thumbnail': cover,
+                'link': info.get('link') if info else '#' # Use SocialService link logic if available or construct it
+            }
+            
+            # Refine Link manually if needed as SocialService default might return dict
+            if info:
+                 if info['type'] == 'image':
+                     rv_obj['link'] = f"/mundo/{world.public_id}?open_image={info['filename']}" if world else "#"
+                 elif info['type'] == 'narrative':
+                     rv_obj['link'] = f"/mundo/{world.public_id}" # Narratives link to world
+            
+            if etype == 'IMAGE':
+                reviews_images.append(rv_obj)
+            else:
+                reviews_narratives.append(rv_obj) # World reviews go here too for now
+                
+        avg_rating = round(total_stars / review_count, 1) if review_count > 0 else 0
+        
+        context['reviews_images'] = reviews_images
+        context['reviews_narratives'] = reviews_narratives
+        context['review_count'] = review_count
+        context['avg_rating'] = avg_rating
+        
         # Sort and limit
         image_stats.sort(key=lambda x: x['likes'] + x['comments'], reverse=True)
         received_comments.sort(key=lambda x: x['comment_date'], reverse=True)
@@ -498,3 +568,147 @@ class UserDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
         context['favorite_reviews'] = favorite_reviews
         
         return context
+
+class UserRankingView(LoginRequiredMixin, TemplateView):
+    template_name = "staff/user_ranking.html"
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        target_id = self.kwargs.get('pk')
+        target_user = get_object_or_404(User, id=target_id)
+        context['target_user'] = target_user
+        
+        # Discover Content
+        content = SocialService.discover_user_content(target_user)
+        
+        ranked_items = []
+        
+        # Process Worlds (Tarjetas)
+        for w in content['worlds']:
+            key = f"WORLD_{w.public_id}"
+            stats = SocialService.get_interactions_count(key)
+            
+            # Cover - Use robust resolution via get_world_images
+            cover_filename = w.metadata.get('cover_image') if w.metadata else None
+            thumb = "/static/img/placeholder.png"  # Default fallback
+            
+            # Get all images for this world
+            all_imgs = get_world_images(w.id)
+            
+            if cover_filename:
+                # Find the cover using case-insensitive matching
+                cover_lower = cover_filename.lower()
+                cover_img = next((img for img in all_imgs if img['filename'].lower() == cover_lower), None)
+                
+                # Fallback: try without extension
+                if not cover_img:
+                    c_clean = cover_filename.rsplit('.', 1)[0].lower()
+                    cover_img = next((img for img in all_imgs if img['filename'].rsplit('.', 1)[0].lower() == c_clean), None)
+                
+                if cover_img:
+                    thumb = f"/static/persistence/img/{cover_img['url']}"
+            elif all_imgs:
+                # No cover defined, but has images: use first one
+                thumb = f"/static/persistence/img/{all_imgs[0]['url']}"
+            
+            ranked_items.append({
+                'type': 'world',
+                'title': w.name,
+                'author': w.author.username if w.author else w.current_author_name,
+                'date': w.created_at,
+                'likes': stats['likes'],
+                'comments': stats['comments'],
+                'thumbnail': thumb,
+                'link': f"/mundo/{w.public_id}",
+                'days_active': (timezone.now() - w.created_at).days
+            })
+            
+        # Process Narratives
+        for n in content['narratives']:
+            key = f"narr_{n.public_id}"
+            stats = SocialService.get_interactions_count(key)
+            w = n.world
+            
+            # Cover - Use robust resolution via get_world_images
+            cover_filename = w.metadata.get('cover_image') if w and w.metadata else None
+            thumb = "/static/img/placeholder.png"  # Default fallback
+            
+            # Get all images for this world
+            all_imgs = get_world_images(w.id) if w else []
+            
+            if w and cover_filename:
+                # Find the cover using case-insensitive matching
+                cover_lower = cover_filename.lower()
+                cover_img = next((img for img in all_imgs if img['filename'].lower() == cover_lower), None)
+                
+                # Fallback: try without extension
+                if not cover_img:
+                    c_clean = cover_filename.rsplit('.', 1)[0].lower()
+                    cover_img = next((img for img in all_imgs if img['filename'].rsplit('.', 1)[0].lower() == c_clean), None)
+                
+                if cover_img:
+                    thumb = f"/static/persistence/img/{cover_img['url']}"
+            elif all_imgs:
+                # No cover defined, but has images: use first one
+                thumb = f"/static/persistence/img/{all_imgs[0]['url']}"
+            
+            ranked_items.append({
+                'type': 'narrative',
+                'title': n.titulo,
+                'author': n.created_by.username,
+                'date': n.created_at,
+                'likes': stats['likes'],
+                'comments': stats['comments'],
+                'thumbnail': thumb,
+                'link': f"/narrativa/{n.public_id}/" if n.public_id else "#",
+                'days_active': (timezone.now() - n.created_at).days
+            })
+
+        # Process Images
+        processed_images = set()
+        for img in content['images']:
+            fname = img['filename']
+            if fname in processed_images: continue
+            processed_images.add(fname)
+            
+            key = f"IMG_{fname}"
+            stats = SocialService.get_interactions_count(key)
+            
+            w = img.get('world')
+            
+            # Robust Image Path Resolution: All Project Images are in Static Gallery
+            if fname.startswith(('http', '/static/')):
+                path = fname
+            elif fname.startswith('/media/'):
+                # Legacy / Exception check
+                path = fname
+            else:
+                # Default: Everything is in persistence/static/persistence/img/{JID}
+                # even "Covers" and "Uploads".
+                jid = w.id if w else "00" # Fallback if world is missing (shouldnt happen for images)
+                path = f"/static/persistence/img/{jid}/{fname}"
+            
+            ranked_items.append({
+                'type': 'image',
+                'title': img.get('title', fname),
+                'author': target_user.username,
+                'date': w.created_at if w else timezone.now(),
+                'likes': stats['likes'],
+                'comments': stats['comments'],
+                'thumbnail': path,
+                'link': f"/mundo/{w.public_id}?open_image={fname}" if w else "#",
+                'days_active': (timezone.now() - w.created_at).days if w else 0
+            })
+
+        # Separate Lists & Sort
+        # Filter logic in template or separate here? Let's separate here for easier sorting
+        worlds_rank = sorted([x for x in ranked_items if x['type'] == 'world'], key=lambda x: x['likes'], reverse=True)
+        narratives_rank = sorted([x for x in ranked_items if x['type'] == 'narrative'], key=lambda x: x['likes'], reverse=True)
+        images_rank = sorted([x for x in ranked_items if x['type'] == 'image'], key=lambda x: x['likes'], reverse=True)
+        
+        context['worlds_rank'] = worlds_rank
+        context['narratives_rank'] = narratives_rank
+        context['images_rank'] = images_rank
+        
+        return context
+

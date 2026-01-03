@@ -1,0 +1,78 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Ranking: {{ target_user.username }}{% endblock %}
+
+{% block content %}
+<div class="mt-8"></div>
+
+<div class="max-w-6xl mx-auto py-8 px-4 sm:px-6" x-data="{ tab: 'worlds' }">
+    <!-- Header -->
+    <div class="mb-8 flex justify-between items-center">
+        <a href="{% url 'user_detail' target_user.id %}" class="inline-flex items-center gap-2 text-gray-400 hover:text-white transition group">
+            <span class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center group-hover:scale-110 transition-transform">⬅️</span>
+            <span class="text-[10px] font-black tracking-widest uppercase">Volver al Perfil</span>
+        </a>
+        <h1 class="text-2xl font-black text-white uppercase tracking-widest flex items-center gap-2">
+            <span>🏆</span> Ranking & Likes
+        </h1>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex flex-wrap gap-4 mb-8 justify-center">
+        <button @click="tab = 'worlds'" 
+            :class="tab === 'worlds' ? 'bg-amber-600 text-white shadow-amber-500/20 shadow-lg scale-105' : 'bg-gray-800 text-gray-400 hover:text-white'"
+            class="px-6 py-3 rounded-2xl text-xs font-black tracking-widest uppercase transition-all duration-300 flex items-center gap-2">
+            <span>🌍</span> Mundos ({{ worlds_rank|length }})
+        </button>
+        <button @click="tab = 'narratives'" 
+            :class="tab === 'narratives' ? 'bg-purple-600 text-white shadow-purple-500/20 shadow-lg scale-105' : 'bg-gray-800 text-gray-400 hover:text-white'"
+            class="px-6 py-3 rounded-2xl text-xs font-black tracking-widest uppercase transition-all duration-300 flex items-center gap-2">
+            <span>📜</span> Narrativas ({{ narratives_rank|length }})
+        </button>
+        <button @click="tab = 'images'" 
+            :class="tab === 'images' ? 'bg-blue-600 text-white shadow-blue-500/20 shadow-lg scale-105' : 'bg-gray-800 text-gray-400 hover:text-white'"
+            class="px-6 py-3 rounded-2xl text-xs font-black tracking-widest uppercase transition-all duration-300 flex items-center gap-2">
+            <span>🖼️</span> Imágenes ({{ images_rank|length }})
+        </button>
+    </div>
+
+
+
+
+<!-- Actual Implementation without macros -->
+<!-- WORLDS -->
+<div x-show="tab === 'worlds'" class="space-y-4">
+    {% for item in worlds_rank %}
+        {% include "staff/partials/ranking_item.html" with type_color="amber" icon="🌍" %}
+    {% empty %}
+    <div class="py-12 text-center text-gray-500 border border-dashed border-white/10 rounded-2xl">
+         Sin Mundos para mostrar.
+    </div>
+    {% endfor %}
+</div>
+
+<!-- NARRATIVES -->
+<div x-show="tab === 'narratives'" class="space-y-4" style="display:none;">
+    {% for item in narratives_rank %}
+         {% include "staff/partials/ranking_item.html" with type_color="purple" icon="📜" %}
+    {% empty %}
+    <div class="py-12 text-center text-gray-500 border border-dashed border-white/10 rounded-2xl">
+         Sin Narrativas para mostrar.
+    </div>
+    {% endfor %}
+</div>
+
+<!-- IMAGES -->
+<div x-show="tab === 'images'" class="space-y-4" style="display:none;">
+    {% for item in images_rank %}
+         {% include "staff/partials/ranking_item.html" with type_color="blue" icon="🖼️" %}
+    {% empty %}
+    <div class="py-12 text-center text-gray-500 border border-dashed border-white/10 rounded-2xl">
+         Sin Imágenes para mostrar.
+    </div>
+    {% endfor %}
+</div>
+
+</div>
+{% endblock %}

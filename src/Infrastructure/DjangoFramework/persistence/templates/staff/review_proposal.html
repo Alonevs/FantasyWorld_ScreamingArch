@@ -23,7 +23,14 @@
                     <h1 class="text-xl md:text-3xl font-black text-white flex items-center gap-4 leading-tight tracking-tight flex-wrap">
                         <span class="text-2xl hidden md:inline">🕵️</span> 
                         {% if is_metadata_only %}
-                            Metadatos de {{ proposal.world.name|default:proposal.period.world.name|default:"Entidad" }}
+                            Metadatos de 
+                            {% if proposal.world %}
+                                {{ proposal.world.name }}
+                            {% elif proposal.period %}
+                                {{ proposal.period.world.name }}
+                            {% else %}
+                                Entidad
+                            {% endif %}
                         {% elif proposal_type == 'WORLD' %}
                             {{ proposal.world.name|default:"Mundo" }}
                         {% elif proposal_type == 'PERIOD' %}
@@ -272,7 +279,14 @@
             <div class="prose prose-invert max-w-none text-gray-400">
                 {% if proposal_type == 'IMAGE' or is_image %}
                      {% if image_url %}
-                        <img src="{{ image_url }}" class="rounded-lg border-2 border-blue-500/50 w-full shadow-[0_0_30px_-5px_rgba(59,130,246,0.2)]">
+                        <div class="relative group inline-block w-full">
+                            {% if is_cover_proposal %}
+                                <div class="absolute top-3 left-3 z-30 px-3 py-1.5 bg-linear-to-r from-purple-600 to-indigo-600 text-xs font-black text-white rounded-md shadow-xl border border-white/20 uppercase tracking-wider backdrop-blur-md flex items-center gap-2 animate-pulse">
+                                    <span>🌟</span> PORTADA
+                                </div>
+                            {% endif %}
+                            <img src="{{ image_url }}" class="rounded-lg border-2 border-blue-500/50 w-full shadow-[0_0_30px_-5px_rgba(59,130,246,0.2)]">
+                        </div>
                     {% else %}
                         <p class="text-red-400">Error: No image found in proposal.</p>
                     {% endif %}

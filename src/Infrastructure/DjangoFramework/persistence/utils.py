@@ -147,6 +147,13 @@ def get_world_images(jid, world_instance=None, period_slug=None):
             cover_image = w.metadata.get('cover_image', None) if w.metadata else None
         except: pass
 
+    # DEBUG LOG Start
+    try:
+        if cover_image:
+            with open("debug_log.txt", "a") as logf:
+                logf.write(f"[UTILS] World {jid}: Looking for cover '{cover_image}'\n")
+    except: pass
+
     imgs = []
     if target.exists() and target.is_dir():
         dname = target.name
@@ -202,7 +209,7 @@ def get_world_images(jid, world_instance=None, period_slug=None):
                             avatar_url = user_obj.profile.avatar.url
                     except Exception:
                         pass
-
+                    
                     imgs.append({
                         'url': f'{dname}/{f}', 
                         'filename': f.strip(),
@@ -210,10 +217,25 @@ def get_world_images(jid, world_instance=None, period_slug=None):
                         'avatar_url': avatar_url,
                         'date': date_str,
                         'title': meta.get('title', ''),
-                        'is_cover': (f == cover_image) # Identifica si es la portada actual
+                        'is_cover': False # Post-process verification
                     })
         except Exception as e:
             print(f"Error procesando galería de {jid}: {e}")
+    
+    # --- SINGLE COVER ENFORCEMENT ---
+    if cover_image and imgs:
+        # A. Try strict match (case-insensitive)
+        cover_lower = cover_image.lower()
+        match = next((i for i in imgs if i['filename'].lower() == cover_lower), None)
+        
+        # B. Try relax match (if no strict) - without extension, case-insensitive
+        if not match:
+             c_clean = str(cover_image).rsplit('.', 1)[0].lower()
+             # Find first matching clean name
+             match = next((i for i in imgs if i['filename'].rsplit('.', 1)[0].lower() == c_clean), None)
+        
+        if match:
+             match['is_cover'] = True
             
     return imgs
 

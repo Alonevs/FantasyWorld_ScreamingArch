@@ -149,7 +149,7 @@
         {% endwith %}
 
         {% if messages %}
-    <div id="toast-container" class="fixed top-24 left-1/2 -translate-x-1/2 z-[110] w-full max-w-md px-4 pointer-events-none" style="z-index: 110;">
+    <div id="toast-container" class="fixed top-24 left-1/2 -translate-x-1/2 w-full max-w-md px-4 pointer-events-none" style="z-index: 110;">
         {% for message in messages %}
         <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)" 
              x-transition:enter="transition ease-out duration-300"

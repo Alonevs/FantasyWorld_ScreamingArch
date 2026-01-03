@@ -675,6 +675,30 @@ def comparar_version(request, version_id):
         
         imgs = get_world_images(jid)
         
+        # --- FIX: VISUALIZAR PROPUESTA DE PORTADA ---
+        proposed_cover = v.cambios.get('cover_image') if v.cambios else None
+        
+        if proposed_cover:
+            # 1. Reset all covers first (Proposed takes precedence)
+            for img in imgs: img['is_cover'] = False
+
+            # 2. Find Best Match (case-insensitive)
+            # A. Strict
+            proposed_lower = proposed_cover.lower()
+            match = next((i for i in imgs if i['filename'].lower() == proposed_lower), None)
+            
+            # B. Relaxed (name only, case-insensitive)
+            if not match:
+                target_clean = proposed_cover.split('/')[-1].split('\\')[-1].rsplit('.', 1)[0].lower()
+                match = next((i for i in imgs if i['filename'].rsplit('.', 1)[0].lower() == target_clean), None)
+            
+            if match:
+                match['is_cover'] = True
+                print(f"[DEBUG] Comparar: Marked {match['filename']} as cover (Proposed: {proposed_cover})")
+            else:
+                print(f"[DEBUG] Comparar: No match found for {proposed_cover}")
+        # --------------------------------------------
+        
         # Metadata Handling for Preview
         proposed_meta = v.cambios.get('metadata', {}) if v.cambios else {}
         live_meta = w.metadata if w.metadata else {}

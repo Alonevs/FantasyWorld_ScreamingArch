@@ -137,32 +137,68 @@ def review_proposal(request, type, id):
             if ctx['live_title'] == ctx['proposed_title'] and ctx['live_content'] == ctx['proposed_content'] and ctx.get('metadata_diff'):
                 ctx['is_metadata_only'] = True
             
-            # 🖼️ IF SET_COVER: Force image preview mode even if technical type is WORLD
-            if proposal.cambios and proposal.cambios.get('action') == 'SET_COVER':
-                filename = proposal.cambios.get('cover_image')
-                ctx['image_url'] = f"/static/persistence/img/{proposal.world.id}/{filename}"
+            # 🖼️ IF SET_COVER OR METADATA COVER CHANGE
+            # Force image preview mode even if technical type is WORLD
+            explicit_cover = proposal.cambios and proposal.cambios.get('action') == 'SET_COVER'
+            meta_cover_change = False
+            new_cover_filename = None
+            
+            print(f"DEBUG REVIEW: ID={id} Cambios={proposal.cambios}") # Keep print for console
+            try:
+                with open("debug_log.txt", "a") as f:
+                    f.write(f"\n[REVIEW_VIEW] ID={id} Cambios={proposal.cambios}\n")
+            except: pass
+            
+            # Check metadata changes for 'cover_image'
+            if not explicit_cover and proposal.cambios and 'metadata' in proposal.cambios:
+                 if 'cover_image' in proposal.cambios['metadata']:
+                     meta_cover_change = True
+                     new_cover_filename = proposal.cambios['metadata']['cover_image']
+
+            if explicit_cover or meta_cover_change:
+                filename = proposal.cambios.get('cover_image') if explicit_cover else new_cover_filename
+                
+                # Resolve robust path using get_world_images
+                from src.Infrastructure.DjangoFramework.persistence.utils import get_world_images
+                all_imgs = get_world_images(proposal.world.id)
+                
+                # Helper to find url (Relaxed, case-insensitive)
+                def resolve_img_url(fname, pid):
+                    if not fname: return None
+                    fname_lower = fname.lower()
+                    # 1. Exact match (case-insensitive)
+                    found = next((i for i in all_imgs if i['filename'].lower() == fname_lower), None)
+                    # 2. Loose match (no extension, case-insensitive)
+                    if not found:
+                         c_clean = str(fname).rsplit('.', 1)[0].lower()
+                         found = next((i for i in all_imgs if i['filename'].rsplit('.', 1)[0].lower() == c_clean), None)
+                    
+                    if found: return f"/static/persistence/img/{found['url']}"
+                    return f"/static/persistence/img/{pid}/{fname}"
+
+                ctx['image_url'] = resolve_img_url(filename, proposal.world.id)
                 
                 # Live image (Original cover)
                 live_filename = live_obj.metadata.get('cover_image') if live_obj and live_obj.metadata else None
                 if live_filename:
-                    ctx['live_image_url'] = f"/static/persistence/img/{proposal.world.id}/{live_filename}"
+                    ctx['live_image_url'] = resolve_img_url(live_filename, proposal.world.id)
                 
                 ctx['diff_content'] = f"📸 Propuesta de Cambio de Portada: {filename}"
                 ctx['is_image'] = True
+                ctx['is_cover_proposal'] = True
             
-        elif type == 'NARRATIVE':
-            proposal = get_object_or_404(CaosNarrativeVersionORM, id=id)
-            if proposal.narrative:
-                live_obj = proposal.narrative
-                ctx['live_title'] = live_obj.titulo
-                ctx['live_content'] = live_obj.contenido
-                
-            # context label
-            ctx['context_label'] = f"NARRATIVA ({proposal.narrative.timeline_period.title})" if proposal.narrative.timeline_period else "NARRATIVA (Actual)"
-            
-            # Calculate Diffs
-            ctx['diff_title'] = get_diff_html(ctx['live_title'], ctx['proposed_title'])
-            ctx['diff_content'] = get_diff_html(ctx['live_content'], ctx['proposed_content'])
+            # NARRATIVE Handling (Only if NOT hijacked by Cover logic, though context merging handles it)
+            if type == 'NARRATIVE' and not ctx.get('is_image'):
+                 # ... existing narrative logic ... (lines 153-166 mapped to correct replacement)
+                 proposal = get_object_or_404(CaosNarrativeVersionORM, id=id)
+                 if proposal.narrative:
+                     live_obj = proposal.narrative
+                     ctx['live_title'] = live_obj.titulo
+                     ctx['live_content'] = live_obj.contenido
+                 
+                 ctx['context_label'] = f"NARRATIVA ({proposal.narrative.timeline_period.title})" if proposal.narrative.timeline_period else "NARRATIVA (Actual)"
+                 ctx['diff_title'] = get_diff_html(ctx['live_title'], ctx['proposed_title'])
+                 ctx['diff_content'] = get_diff_html(ctx['live_content'], ctx['proposed_content'])
 
         elif type == 'IMAGE':
             proposal = get_object_or_404(CaosImageProposalORM, id=id)
