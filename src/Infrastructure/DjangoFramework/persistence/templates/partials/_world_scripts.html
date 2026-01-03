@@ -272,11 +272,27 @@
             const d = galleryLog[lookupKey] || {};
             document.getElementById('lb-title').innerText = d.title || fn;
             
-            const uploader = d.uploader || "Anónimo";
+            let uploader = d.uploader || "Anónimo";
+            let avatarUrl = d.avatar_url;
+
+            // FIX: Force World Author if uploader is generic "Anónimo"
+            const invalidUploaders = ["Sistema", "Anónimo", "Anonymous", "Unknown"];
+            const worldAuthor = "{{ author_name|escapejs }}" || "Alone";
+            const worldAuthorAvatar = "{{ author_avatar_url|escapejs }}" || "";
+
+            if (!uploader || invalidUploaders.includes(uploader)) {
+                uploader = worldAuthor;
+                if (!avatarUrl && worldAuthorAvatar) {
+                     avatarUrl = worldAuthorAvatar;
+                }
+            }
+
             document.getElementById('lb-uploader').innerText = uploader;
             
             // Use real avatar if available, otherwise fallback to ui-avatars
-            const avatarUrl = d.avatar_url || `https://ui-avatars.com/api/?name=${uploader}&background=random&color=fff&size=64&bold=true`;
+            if (!avatarUrl) {
+                 avatarUrl = `https://ui-avatars.com/api/?name=${uploader}&background=random&color=fff&size=64&bold=true`;
+            }
             document.getElementById('lb-avatar').src = avatarUrl;
             
             document.getElementById('lb-date').innerText = d.date || "-";
@@ -289,8 +305,10 @@
 
             // 🌟 SYNC OPEN COMMENTS 🌟
             // If the comments overlay is open, reload comments for the new image immediately
-            const commentsOverlay = document.getElementById('lb-comments-overlay');
+            const commentsOverlay = document.getElementById('world-comments-overlay'); // Correct ID for Reels Style Modal
             if (commentsOverlay && !commentsOverlay.classList.contains('hidden')) {
+                // Ensure we update the context for the modal
+                commentsOverlay.dataset.currentEntity = `IMG_${fn.trim()}`;
                 loadComments(fn.trim());
             }
         }
@@ -534,14 +552,23 @@
                         clearInterval(interval);
                         // Find the image URL from the current gallery
                         const img = imgsData.find(i => i.filename === imgToOpen);
+                        let finalUrl = "";
+                        
                         if(img) {
-                             openLightbox(img.url, img.filename);
+                             finalUrl = img.url;
                         } else {
                              // Fallback using JID from template context
                              const jid = "{{ jid }}";
-                             const fallbackUrl = `/static/persistence/img/${jid}/${imgToOpen}`;
-                             openLightbox(fallbackUrl, imgToOpen);
+                             finalUrl = `/static/persistence/img/${jid}/${imgToOpen}`;
                         }
+                        
+                        openLightbox(finalUrl, imgToOpen);
+                        
+                        // AUTO-OPEN COMMENTS (User Request)
+                        setTimeout(() => {
+                             toggleComments();
+                        }, 500);
+
                     } else if (attempts > 10) {
                         clearInterval(interval);
                     }

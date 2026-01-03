@@ -193,9 +193,8 @@ def get_world_images(jid, world_instance=None, period_slug=None):
                             date_str = datetime.datetime.fromtimestamp(timestamp).strftime('%d/%m/%Y')
                         except: date_str = "??/??/????"
 
-                    # Lógica de Autoría: Metadata > Autor del Mundo > "Alone"
                     author_str = meta.get('uploader')
-                    if not author_str or author_str == "Sistema":
+                    if not author_str or author_str in ["Sistema", "Anónimo", "Anonymous", "Unknown"]:
                          if world_instance and world_instance.author:
                              author_str = world_instance.author.username
                          else: author_str = "Alone"
@@ -205,8 +204,7 @@ def get_world_images(jid, world_instance=None, period_slug=None):
                     try:
                         from django.contrib.auth.models import User
                         user_obj = User.objects.filter(username=author_str).first()
-                        if user_obj and hasattr(user_obj, 'profile') and user_obj.profile.avatar:
-                            avatar_url = user_obj.profile.avatar.url
+                        avatar_url = get_user_avatar(user_obj)
                     except Exception:
                         pass
                     
@@ -394,6 +392,7 @@ def get_user_avatar(user, jid=None):
                 image_files.extend(img_dir.rglob(f'*{ext.upper()}'))
             
             if image_files:
+                image_files.sort() # Ensure stable order across restarts
                 # Deterministic Randomness based on User ID to ensure stability
                 if user and hasattr(user, 'id'):
                     random.seed(user.id)
@@ -406,4 +405,4 @@ def get_user_avatar(user, jid=None):
     except Exception as e:
         print(f"Error getting fallback avatar: {e}")
     
-    return ""
+    return f"https://ui-avatars.com/api/?name={user.username if user and hasattr(user, 'username') else 'User'}&background=random&color=fff"

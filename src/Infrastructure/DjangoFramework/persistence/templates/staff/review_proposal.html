@@ -64,8 +64,8 @@
                         <span class="h-4 w-px bg-gray-800 mx-2"></span>
                         <span class="text-gray-400 font-sans text-xs flex items-center gap-2">
                             <span class="opacity-50">{% if is_delete %}Borrado solicitado por{% else %}Solicitado por{% endif %}</span>
-                            <span class="flex items-center gap-2 text-white bg-white/10 px-3 py-1 rounded-full border border-white/10 shadow-inner" title="ID: {{ proposal.author.id|default:'?' }}">
-                                <span class="text-yellow-500/70 text-xs">👤</span>
+                            <span class="flex items-center gap-2 text-white bg-white/10 pr-3 pl-1 py-1 rounded-full border border-white/10 shadow-inner" title="ID: {{ proposal.author.id|default:'?' }}">
+                                <img src="{{ proposal.author|user_avatar }}" class="w-5 h-5 rounded-full object-cover">
                                 <span>{{ proposal.author.username|default:"Anónimo" }}</span>
                             </span>
                         </span>
