@@ -44,12 +44,21 @@ class GetWorldNarrativesUseCase:
         docs = docs.filter(current_version_number__gt=0)
         
         # Calculate 'is_new' attribute for UI Badge (Last 3 days)
+        # AND check if user has already seen it
         from django.utils import timezone
         from datetime import timedelta
         threshold = timezone.now() - timedelta(days=3)
         
+        visited_ids = set()
+        if user and user.is_authenticated:
+            # Clean Architecture: Use repository instead of direct ORM access
+            visited_ids = self.repository.get_visited_narrative_ids(user)
+
         for d in docs:
-            d.is_new = d.updated_at >= threshold
+            # is_new only if recent AND NOT visited
+            is_recent = d.updated_at >= threshold
+            has_seen = (d.public_id in visited_ids) or (d.nid in visited_ids)
+            d.is_new = is_recent and not has_seen
 
         # Convertimos a lista y ordenamos por NID (Identificador Jerárquico)
         # El orden natural del NID asegura que los padres aparezcan antes que sus hijos.

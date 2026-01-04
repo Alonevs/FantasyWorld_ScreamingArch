@@ -79,6 +79,7 @@ def review_proposal(request, type, id):
     try:
         # 1. FETCH PROPOSAL & LIVE DATA
         # 1. FETCH PROPOSAL & LIVE DATA
+        # BLOCK A: WORLD & METADATA
         if type in ['WORLD', 'METADATA']:
             # TRY CaosVersionORM first
             try:
@@ -144,11 +145,7 @@ def review_proposal(request, type, id):
             meta_cover_change = False
             new_cover_filename = None
             
-            print(f"DEBUG REVIEW: ID={id} Cambios={proposal.cambios}") # Keep print for console
-            try:
-                with open("debug_log.txt", "a") as f:
-                    f.write(f"\n[REVIEW_VIEW] ID={id} Cambios={proposal.cambios}\n")
-            except: pass
+            # Code block removed
             
             # Check metadata changes for 'cover_image'
             if not explicit_cover and proposal.cambios and 'metadata' in proposal.cambios:
@@ -198,6 +195,30 @@ def review_proposal(request, type, id):
                  ctx['context_label'] = f"NARRATIVA ({proposal.narrative.timeline_period.title})" if proposal.narrative.timeline_period else "NARRATIVA (Actual)"
                  ctx['diff_title'] = get_diff_html(ctx['live_title'], ctx['proposed_title'])
                  ctx['diff_content'] = get_diff_html(ctx['live_content'], ctx['proposed_content'])
+
+        elif type == 'NARRATIVE':
+            proposal = get_object_or_404(CaosNarrativeVersionORM, id=id)
+            
+            # Populate Context
+            # Safe defaults for proposed fields
+            ctx['proposed_title'] = proposal.proposed_title or ""
+            ctx['proposed_content'] = proposal.proposed_content or ""
+            ctx['change_log'] = proposal.change_log
+            
+            if proposal.narrative:
+                live_obj = proposal.narrative
+                ctx['live_title'] = live_obj.titulo
+                ctx['live_content'] = live_obj.contenido
+                
+                # Context Label
+                period_title = proposal.narrative.timeline_period.title if proposal.narrative.timeline_period else "Actual"
+                ctx['context_label'] = f"NARRATIVA ({period_title})"
+            else:
+                 ctx['context_label'] = "NARRATIVA (Nueva)"
+            
+            # Calculate Diffs
+            ctx['diff_title'] = get_diff_html(ctx['live_title'], ctx['proposed_title'])
+            ctx['diff_content'] = get_diff_html(ctx['live_content'], ctx['proposed_content'])
 
         elif type == 'IMAGE':
             proposal = get_object_or_404(CaosImageProposalORM, id=id)
@@ -272,7 +293,19 @@ def review_proposal(request, type, id):
     # 2. DETECT DELETE INTENT
     change_log_str = str(ctx.get('change_log', '') or "")
     action_str = str(getattr(proposal, 'action', '') or "")
-    ctx['is_delete'] = ('DELETE' in action_str) or ('Eliminación' in change_log_str) or ('Borrar' in change_log_str)
+    proposed_title_str = str(ctx.get('proposed_title', '') or "")
+    
+    ctx['is_delete'] = ('DELETE' in action_str) or ('Eliminación' in change_log_str) or ('Borrar' in change_log_str) or ('BORRAR:' in proposed_title_str)
+    
+    # DETECT CREATION INTENT (ADD)
+    # If explicit 'ADD' action OR (Active Narrative logic: No live content but has proposed content)
+    # Special case: Narratives always have a live object wrapper, but if current_version is 0, it's effectively new.
+    is_live_empty = (not ctx['live_title'] and not ctx['live_content']) or (ctx.get('proposal_type') == 'NARRATIVE' and proposal.narrative.current_version_number == 0)
+    
+    ctx['is_creation'] = ('ADD' in action_str) or (is_live_empty and not ctx['is_delete'])
+    # DEBUG PRINT
+    # DEBUG PRINT REMOVED
+    # print(f"🔍 DEBUG REVIEW [{datetime.datetime.now().time()}]: ID={id} Action='{action_str}' Title='{proposed_title_str}' => IsDelete={ctx['is_delete']}")
     
     # 3. DETECT PENDING STATUS
     ctx['is_pending'] = (getattr(proposal, 'status', 'PENDING') == 'PENDING')

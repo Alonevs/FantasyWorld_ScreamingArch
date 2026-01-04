@@ -53,3 +53,8 @@ class CaosRepository(ABC):
     def get_next_narrative_id(self, prefix: str) -> str:
         """Calcula el siguiente NID disponible para una narrativa (Lore/Capítulo)."""
         pass
+
+    @abstractmethod
+    def get_visited_narrative_ids(self, user) -> set:
+        """Recupera los IDs de narrativas visitadas por el usuario."""
+        pass

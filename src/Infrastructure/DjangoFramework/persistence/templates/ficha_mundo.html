@@ -179,11 +179,7 @@
                 <h3 class="text-accent font-bold tracking-wider text-sm uppercase">Visual Database</h3>
                 {% if can_edit %}
                 <div class="flex gap-2">
-                    {% if has_authority %}
-                    <button onclick="toggleSelectionMode()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold rounded transition border border-gray-600 shadow" id="btn-manage-photos" title="Borrar varias fotos">
-                        ⚙️ GESTIONAR
-                    </button>
-                    {% endif %}
+
                     
                     <button onclick="openAiModal()" class="px-3 py-1 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded transition shadow-lg shadow-purple-900/20">🎨 IA GENERATOR</button>
                     
@@ -206,10 +202,7 @@
             <div class="flex gap-4 overflow-x-auto pb-4 mb-8 snap-x min-h-[140px]">
                 {% for img in imagenes %}
                 <div class="snap-start shrink-0 relative group w-40 h-56 img-item transition-all duration-300">
-                    <!-- Checkbox Overlay -->
-                    <div class="absolute top-2 left-2 z-30 hidden selection-checkbox transform scale-125">
-                        <input type="checkbox" class="w-5 h-5 accent-red-600 cursor-pointer shadow-lg" onchange="toggleImageSelection('{{ img.filename|escapejs }}', this)">
-                    </div>
+
 
                     <div class="w-full h-full rounded-lg overflow-hidden border border-gray-700 cursor-pointer hover:border-accent transition shadow-lg bg-black relative" 
                          data-url="{% static "persistence/img/" %}{{ img.url }}" 
@@ -218,7 +211,7 @@
                         
                         {% if img.is_cover %}
                         <!-- Cover Badge -->
-                        <div class="absolute top-2 left-2 z-30 px-2.5 py-1 bg-linear-to-r from-purple-600 to-indigo-600 text-[10px] font-black text-white rounded-md shadow-lg border border-white/20 uppercase tracking-wider backdrop-blur-md flex items-center gap-1">
+                        <div class="absolute top-2 left-2 z-10 px-2.5 py-1 bg-linear-to-r from-purple-600 to-indigo-600 text-[10px] font-black text-white rounded-md shadow-lg border border-white/20 uppercase tracking-wider backdrop-blur-md flex items-center gap-1">
                             <span>🌟</span> PORTADA
                         </div>
                         {% endif %}
@@ -376,8 +369,7 @@
     </script>
     {% endif %}
 
-    <!-- BATCH DELETE UI -->
-    {% include "partials/_modals_batch_delete.html" %}
+
     
     <!-- TIMELINE SNAPSHOT MODAL -->
     {% include "partials/_modals_timeline.html" %}

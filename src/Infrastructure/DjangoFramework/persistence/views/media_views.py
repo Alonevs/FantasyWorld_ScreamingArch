@@ -231,7 +231,7 @@ def borrar_foto(request, jid, filename):
             target_filename=filename,
             action='DELETE',
             status='PENDING',
-            author=request.user if request.user.is_authenticated else None,
+            author=request.user,
             timeline_period=period
         )
         
@@ -288,7 +288,7 @@ def borrar_fotos_batch(request, jid):
                  target_filename=fn,
                  action='DELETE',
                  status='PENDING',
-                 author=request.user if request.user.is_authenticated else None,
+                 author=request.user,
                  timeline_period=period
              )
              count += 1

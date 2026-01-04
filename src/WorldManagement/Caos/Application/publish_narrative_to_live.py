@@ -25,11 +25,19 @@ class PublishNarrativeToLiveUseCase:
             old.save()
 
         # 2. APLICACIÓN AL 'LIVE' (Registro Maestro)
-        # Copiamos los textos de la propuesta al objeto principal que ve el usuario.
         narrative = version.narrative
-        narrative.titulo = version.proposed_title
-        narrative.contenido = version.proposed_content
-        narrative.current_version_number = version.version_number
+        
+        if version.action == 'DELETE':
+            # SOFT DELETE: Hide from public lists
+            narrative.current_version_number = 0
+            # Optional: Clean up dirty title if exists
+            if narrative.titulo.startswith("BORRAR: "):
+                narrative.titulo = narrative.titulo.replace("BORRAR: ", "", 1)
+        else:
+            # NORMAL PUBLISH (ADD/EDIT)
+            narrative.titulo = version.proposed_title
+            narrative.contenido = version.proposed_content
+            narrative.current_version_number = version.version_number
         
         narrative.save()
 

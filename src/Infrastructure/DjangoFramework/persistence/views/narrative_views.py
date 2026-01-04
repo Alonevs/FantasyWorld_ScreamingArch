@@ -12,7 +12,7 @@ from src.WorldManagement.Caos.Application.get_narrative_details import GetNarrat
 from src.WorldManagement.Caos.Application.get_world_narratives import GetWorldNarrativesUseCase
 from src.FantasyWorld.Domain.Services.NarrativeService import NarrativeService
 from src.FantasyWorld.Domain.Services.NarrativeService import NarrativeService
-from .view_utils import resolve_jid_orm, check_world_access, get_admin_status
+from .view_utils import resolve_jid_orm, check_world_access, get_admin_status, log_event
 from src.Infrastructure.DjangoFramework.persistence.policies import can_user_propose_on
 
 @csrf_exempt
@@ -135,6 +135,9 @@ def leer_narrativa(request, nid):
             except Exception as e:
                 print(f"Error loading src_version (Narrative): {e}")
 
+        if request.user.is_authenticated:
+             log_event(request.user, "VIEW_NARRATIVE", nid)
+
         return render(request, 'visor_narrativa.html', context)
     except Exception as e:
         print(f"❌ Error al leer narrativa '{nid}': {e}")
@@ -246,8 +249,9 @@ def borrar_narrativa(request, nid):
             status='PENDING',
             action='DELETE',
             change_log="Solicitud de eliminación",
-            author=request.user if request.user.is_authenticated else None
+            author=request.user
         )
+        print(f"✅ Propuesta de borrado creada por: {request.user.username} (ID: {request.user.id})")
         
         messages.info(request, "🗑️ Solicitud de borrado enviada al Dashboard.")
         return redirect('ver_narrativa_mundo', jid=w_pid)

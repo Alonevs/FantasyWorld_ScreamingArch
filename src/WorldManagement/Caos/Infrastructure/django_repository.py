@@ -255,3 +255,14 @@ class DjangoCaosRepository(CaosRepository):
         next_num = 1
         while next_num in used_nums: next_num += 1
         return f"{prefix}{next_num:02d}"
+
+    def get_visited_narrative_ids(self, user) -> set:
+        """Recupera los IDs de narrativas visitadas por el usuario."""
+        if not user or not user.is_authenticated:
+            return set()
+        
+        from src.Infrastructure.DjangoFramework.persistence.models import CaosEventLog
+        return set(CaosEventLog.objects.filter(
+            user=user, 
+            action='VIEW_NARRATIVE'
+        ).values_list('target_id', flat=True))

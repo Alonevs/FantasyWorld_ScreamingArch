@@ -1,8 +1,19 @@
 from django.shortcuts import render, get_object_or_404
 from django.core.exceptions import PermissionDenied
-from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM
+from src.Infrastructure.DjangoFramework.persistence.models import CaosWorldORM, CaosEventLog
 from src.WorldManagement.Caos.Infrastructure.django_repository import DjangoCaosRepository
 from src.WorldManagement.Caos.Application.common import resolve_world_id
+
+def log_event(user, action, target_id, details=""):
+    """
+    Registra eventos de auditoría en la base de datos (CaosEventLog).
+    Sirve para rastrear quién hizo qué y sobre qué entidad.
+    """
+    try:
+        u = user if user.is_authenticated else None
+        CaosEventLog.objects.create(user=u, action=action, target_id=target_id, details=details)
+    except Exception as e: 
+        print(f"Error al registrar evento: {e}")
 
 def resolve_jid_orm(identifier) -> CaosWorldORM:
     """
