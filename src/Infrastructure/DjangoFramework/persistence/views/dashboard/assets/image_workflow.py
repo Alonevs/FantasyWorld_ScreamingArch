@@ -125,12 +125,23 @@ def publicar_imagen(request, id):
         repo = DjangoCaosRepository()
 
         if prop.action == 'DELETE':
-            # ACTUAL FILE DELETION
+            # SOFT DELETE: Move to .trash folder
             base_dir = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img')
-            file_path = os.path.join(base_dir, str(prop.world.id), prop.target_filename)
+            world_dir = str(prop.world.id)
+            img_filename = prop.target_filename
             
-            if os.path.exists(file_path):
-                os.remove(file_path)
+            src_path = os.path.join(base_dir, world_dir, img_filename)
+            trash_dir = os.path.join(base_dir, world_dir, '.trash')
+            
+            # Ensure trash dir exists
+            if not os.path.exists(trash_dir):
+                os.makedirs(trash_dir)
+                
+            trash_path = os.path.join(trash_dir, img_filename)
+            
+            if os.path.exists(src_path):
+                import shutil
+                shutil.move(src_path, trash_path)
                 
                 # Metadata Cleanup: If this WAS the cover image, clear it
                 if prop.world.metadata and prop.world.metadata.get('cover_image') == prop.target_filename:
@@ -138,10 +149,10 @@ def publicar_imagen(request, id):
                     prop.world.save()
                     messages.info(request, "ℹ️ La portada del mundo ha sido reseteada porque la imagen fue borrada.")
                 
-                messages.success(request, f"🗑️ Imagen '{prop.target_filename}' borrada definitivamente de LIVE.")
-                log_event(request.user, "DELETE_IMAGE_LIVE", prop.world.id, details=f"Archivo: {prop.target_filename}")
+                messages.success(request, f"🗑️ Imagen '{prop.target_filename}' movida a la Papelera.")
+                log_event(request.user, "SOFT_DELETE_IMAGE", prop.world.id, details=f"Archivo movido a .trash: {prop.target_filename}")
             else:
-                messages.warning(request, f"⚠️ El archivo '{prop.target_filename}' no existía en el disco, pero la propuesta se ha archivado.")
+                messages.warning(request, f"⚠️ El archivo '{prop.target_filename}' no existía en LIVE, pero la propuesta se ha archivado.")
         else:
             # NORMAL PUBLISH (ADD)
             user_name = prop.author.username if prop.author else "Anónimo"
@@ -207,9 +218,39 @@ def borrar_imagen_definitivo(request, id):
 def restaurar_imagen_papelera(request, id):
     try:
         prop = get_object_or_404(CaosImageProposalORM, id=id)
+        
+        # LOGIC FOR RESTORING A SOFT-DELETED IMAGE
+        if prop.action == 'DELETE' and prop.status == 'ARCHIVED':
+            # It was a successful delete, so file is in .trash
+            base_dir = os.path.join(settings.BASE_DIR, 'persistence/static/persistence/img')
+            world_dir = str(prop.world.id)
+            img_filename = prop.target_filename
+            
+            trash_path = os.path.join(base_dir, world_dir, '.trash', img_filename)
+            live_path = os.path.join(base_dir, world_dir, img_filename)
+            
+            if os.path.exists(trash_path):
+                import shutil
+                # Create live dir if somehow missing
+                os.makedirs(os.path.dirname(live_path), exist_ok=True)
+                shutil.move(trash_path, live_path)
+                
+                # We mark the DELETION proposal as REJECTED (meaning "Deletion Reversed")
+                prop.status = 'REJECTED' 
+                prop.admin_feedback = "Restaurado desde Papelera (Deshacer Borrado)"
+                prop.save()
+                
+                messages.success(request, f"♻️ Imagen '{img_filename}' restaurada correctamente al mundo.")
+                log_event(request.user, "UNDELETE_IMAGE", prop.world.id, details=f"Archivo recuperado de .trash: {img_filename}")
+                return redirect('ver_papelera')
+            else:
+                messages.warning(request, "⚠️ No se encontró el archivo en la papelera (.trash). No se puede restaurar.")
+                return redirect('ver_papelera')
+
+        # STANDARD RESTORE (For Drafts/Rejected additions)
         prop.status = 'PENDING'
         prop.save()
-        messages.success(request, "Imagen restaurada al Dashboard.")
+        messages.success(request, "Propuesta enviada de nuevo a revisión.")
     except Exception as e: messages.error(request, str(e))
     return redirect('ver_papelera')
 

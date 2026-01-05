@@ -26,7 +26,7 @@ def global_search(request):
                 'id': w.id,
                 'name': w.name,
                 'type': 'Mundo',
-                'url': f"/mundo/{w.id}/", # Adjust if using public_id
+                'url': f"/mundo/{w.public_id}/", # Use public_id
                 'match': 'Metadata' if query.lower() in str(w.metadata).lower() else 'Nombre/Desc'
             })
             

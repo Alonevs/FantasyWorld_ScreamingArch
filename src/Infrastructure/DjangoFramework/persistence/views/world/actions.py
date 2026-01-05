@@ -81,6 +81,10 @@ def borrar_mundo(request, jid):
         last_v = w.versiones.order_by('-version_number').first()
         next_v = (last_v.version_number + 1) if last_v else 1
         
+        # Obtener motivo (opcional)
+        reason = request.GET.get('reason', '').strip()
+        display_log = f"Solicitud de Eliminación: {reason}" if reason else "Solicitud de Eliminación"
+
         # Crear Propuesta de ELIMINACIÓN
         CaosVersionORM.objects.create(
             world=w,
@@ -88,8 +92,8 @@ def borrar_mundo(request, jid):
             proposed_description=w.description,
             version_number=next_v,
             status='PENDING',
-            change_log="Solicitud de Eliminación",
-            cambios={'action': 'DELETE'},
+            change_log=display_log,
+            cambios={'action': 'DELETE', 'reason': reason},
             author=get_current_user(request)
         )
         

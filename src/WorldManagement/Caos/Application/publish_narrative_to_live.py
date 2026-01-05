@@ -28,8 +28,11 @@ class PublishNarrativeToLiveUseCase:
         narrative = version.narrative
         
         if version.action == 'DELETE':
-            # SOFT DELETE: Hide from public lists
+            # SOFT DELETE: Hide from public lists via is_active=False
+            narrative.soft_delete()
+            # Reset version number to 0 to hide from standard queries if they use versioning
             narrative.current_version_number = 0
+            
             # Optional: Clean up dirty title if exists
             if narrative.titulo.startswith("BORRAR: "):
                 narrative.titulo = narrative.titulo.replace("BORRAR: ", "", 1)

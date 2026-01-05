@@ -127,14 +127,11 @@
                                 ✏️ <span class="hidden sm:inline font-bold">EDITAR ACTUAL</span>
                             </button>
                             {% if has_authority %}
-                            <a href="{% url 'borrar_mundo' jid %}" 
-                               data-confirm="¿Estás seguro de solicitar el borrado de este mundo? Se enviará al Dashboard." 
-                               data-title="Solicitar Borrado" 
-                               data-destructive="true"
-                               class="p-1 px-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg transition border border-red-900/50 flex items-center justify-center text-[10px]" 
-                               title="Borrar Mundo de forma Segura">
+                            <button onclick="solicitarBorradoMundo('{{ jid }}', '{{ name|escapejs }}')" 
+                                    class="p-1 px-2 bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg transition border border-red-900/50 flex items-center justify-center text-[10px]" 
+                                    title="Borrar Mundo de forma Segura">
                                 🗑️
-                            </a>
+                            </button>
                             {% endif %}
                         {% endif %}
                     {% endif %}
@@ -327,6 +324,78 @@
     {% include "partials/_world_scripts.html" %}
     
     <script>
+        // Gallery selection mode (used for batch operations)
+        let selectionMode = false;
+        
+        // Modal feedback handler (compatible with dashboard pattern)
+        async function submitWithFeedback(form, title, promptText) {
+            if (!window.CaosModal) {
+                let r = prompt(promptText);
+                if (r !== null) {
+                    if(form.reason) form.reason.value = r;
+                    if(form.admin_feedback) form.admin_feedback.value = r;
+                    form.submit();
+                }
+                return;
+            }
+
+            // Supports both object and positional args (legacy/new modal)
+            // dashboard uses positional: (title, message, placeholder, confirmText)
+            const result = await CaosModal.prompt(title, promptText, 'Escribe el motivo...', 'Enviar');
+
+            if (result !== null) {
+                // Handle named inputs
+                if(form.reason) form.reason.value = result;
+                if(form.admin_feedback) form.admin_feedback.value = result;
+                
+                form.submit();
+            }
+        }
+        
+        // Request individual image deletion
+        async function solicitarBorradoIndividual(jid, filename) {
+            // CaosModal.prompt(title, message, placeholder, confirmText)
+            const result = await CaosModal.prompt(
+                '🗑️ Borrar Imagen', 
+                `¿Estás seguro de querer borrar la imagen "${filename}"?`, 
+                'Motivo del borrado (opcional)', 
+                'Solicitar Borrado'
+            );
+
+            // Result is the input string (or empty string) if confirmed, or null if cancelled
+            if (result !== null) {
+                // Construct URL with encoded filename
+                const encodedFilename = encodeURIComponent(filename);
+                
+                // Get period from current URL if present
+                const urlParams = new URLSearchParams(window.location.search);
+                const period = urlParams.get('period');
+                
+                let deleteUrl = `/borrar_foto/${jid}/${encodedFilename}/?reason=${encodeURIComponent(result || '')}`;
+                if (period) {
+                    deleteUrl += `&period=${period}`;
+                }
+                
+                window.location.href = deleteUrl;
+            }
+        }
+
+        // Request world deletion (Unified Workflow)
+        async function solicitarBorradoMundo(jid, name) {
+            const result = await CaosModal.prompt(
+                '🗑️ Borrar Mundo', 
+                `¿Estás seguro de solicitar el borrado del mundo "${name}"?\nEsta acción creará una propuesta de borrado.`, 
+                'Motivo del borrado (Ej: Obsoleto, Duplicado...)', 
+                'Solicitar Borrado'
+            );
+
+            if (result !== null) {
+                // Redirect to deletion URL with reason
+                const encodedReason = encodeURIComponent(result || 'Solicitud de Usuario');
+                window.location.href = `/borrar/${jid}/?reason=${encodedReason}`;
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             // Auto Open Period Edit Modal (URL param check)
             const urlParams = new URLSearchParams(window.location.search);
