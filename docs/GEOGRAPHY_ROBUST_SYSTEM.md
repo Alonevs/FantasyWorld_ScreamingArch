@@ -8,14 +8,17 @@ Utilizaremos un sistema de **Unidades de Caos (UAC)** en una rejilla bidimension
 - **Ámbito (Scope):** Las coordenadas son relativas a una **Entidad de Nivel 6 (Planeta)**. Cada planeta tiene su propio "lienzo" y su propia "semilla" (seed) de generación.
 - **Escalabilidad:** Cada unidad de 1x1 puede dividirse en sub-rejillas de 1,000x1,000 en el futuro si se requiere un nivel de detalle "microscópico" (ej: planos de edificios) sin romper las coordenadas globales.
 
-## 2. División en 4 Cuadrantes (Jerarquía Nivel 7)
-El globo se divide en 4 grandes zonas administrativas para la IA (NW, NE, SW, SE).
+## 2. Dimensiones Especiales (Inframundo y Bendecidos)
+Para dimensiones que no son planetas esféricos tradicionales:
+- **Inframundo:** Estructura por **Capas (Layers)**. Cada capa tiene su propia semilla de generación y su propio mapa de 10K.
+- **Los Bendecidos:** Estructura por **Plataformas (Platforms)** suspendidas. Cada plataforma es una entidad independiente con su propia semilla.
+- **Representación Visual:** Aunque el espacio de datos es plano/cuadrado (0-10,000), el Atlas permitirá una **Visualización Circular (Proyección Polar)** para representar estas dimensiones de forma concéntrica.
 
 ## 3. Capas Temporales (Mapas por Época)
 Cada **Época (CaosEpochORM)** mantiene su propio estado del mapa para permitir la evolución histórica:
 - **Herencia Progresiva:** Al crear una nueva Época, el sistema puede "heredar" el mapa de la era anterior como base.
 - **Evolución Visual:** Un usuario puede pintar cambios en la Era 2 (ej: un volcán que nace) sin alterar el mapa de la Era 1.
-- **Validación de Ocupación:** El servicio de colisiones solo chequeará entidades que coexistan en la **misma Época** y el mismo **Planeta**.
+- **Validación de Ocupación:** El servicio de colisiones solo chequeará entidades que coexistan en la **misma Época** y el mismo **Planeta/Dimensión**.
 
 ## 4. Lógica de Ocupación (Bounding Boxes)
 Para evitar el "caos geográfico", cada entidad de nivel superior (Continentes, Regiones) debe declarar su **Caja de Influencia**:
