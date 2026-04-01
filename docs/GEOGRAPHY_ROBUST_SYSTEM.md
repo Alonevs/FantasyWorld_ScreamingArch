@@ -2,33 +2,34 @@
 
 Este documento define la arquitectura conceptual para la gestión de espacio y tiempo en FantasyWorld, diseñada para ser escalable, evitar colisiones y permitir un crecimiento modular desde un mundo vacío.
 
-## 1. El Sistema de Coordenadas Maestro
+## 1. El Sistema de Coordenadas Maestro (Aislado por Planeta)
 Utilizaremos un sistema de **Unidades de Caos (UAC)** en una rejilla bidimensional:
 - **Escala:** 0 a 10,000 para X e Y.
-- **Centro (Ecuador/Meridiano):** (5,000, 5,000).
+- **Ámbito (Scope):** Las coordenadas son relativas a una **Entidad de Nivel 6 (Planeta)**. Cada planeta tiene su propio "lienzo" y su propia "semilla" (seed) de generación.
 - **Escalabilidad:** Cada unidad de 1x1 puede dividirse en sub-rejillas de 1,000x1,000 en el futuro si se requiere un nivel de detalle "microscópico" (ej: planos de edificios) sin romper las coordenadas globales.
 
 ## 2. División en 4 Cuadrantes (Jerarquía Nivel 7)
-El globo se divide en 4 grandes zonas administrativas para la IA:
-1. **Boreal Oeste (NW):** [0-5000, 0-5000]
-2. **Boreal Este (NE):** [5001-10000, 0-5000]
-3. **Austral Oeste (SW):** [0-5000, 5001-10000]
-4. **Austral Este (SE):** [5001-10000, 5001-10000]
+El globo se divide en 4 grandes zonas administrativas para la IA (NW, NE, SW, SE).
 
-## 3. Lógica de Ocupación (Bounding Boxes)
+## 3. Capas Temporales (Mapas por Época)
+Cada **Época (CaosEpochORM)** mantiene su propio estado del mapa para permitir la evolución histórica:
+- **Herencia Progresiva:** Al crear una nueva Época, el sistema puede "heredar" el mapa de la era anterior como base.
+- **Evolución Visual:** Un usuario puede pintar cambios en la Era 2 (ej: un volcán que nace) sin alterar el mapa de la Era 1.
+- **Validación de Ocupación:** El servicio de colisiones solo chequeará entidades que coexistan en la **misma Época** y el mismo **Planeta**.
+
+## 4. Lógica de Ocupación (Bounding Boxes)
 Para evitar el "caos geográfico", cada entidad de nivel superior (Continentes, Regiones) debe declarar su **Caja de Influencia**:
 - **Metadata:** `{ "geo_bounds": { "minX": 4000, "minY": 7000, "maxX": 6000, "maxY": 9000 } }`
-- **Tolerancia:** El sistema bloqueará la creación de entidades que solapen sustancialmente con estas cajas en la misma Época.
-- **Excepción Temporal:** El bloqueo es relativo al `CaosEpochORM`. La ocupación puede cambiar entre eras (un continente que se hunde libera su espacio).
+- **Bloqueo Histórico:** El bloqueo es relativo a la Época activa. Si una ciudad es destruida en el Año 100, la zona queda libre para el Año 150.
 
-## 4. Clasificación de Sustrato (Tierra vs Agua)
+## 5. Clasificación de Sustrato y Orografía
 Se añade un flag visual y lógico para determinar la naturaleza del terreno:
 - **Tierra Firme:** Permite asentamientos, biomas terrestres y orografía.
-- **Masa de Agua (Océanos/Mares):** Permite rutas navales, biomas marinos y abismos.
-- **Vacío/Desconocido:** El estado por defecto (ahorro de recursos).
+- **Masa de Agua:** Permite rutas navales, biomas marinos y abismos.
+- **Accidentes:** Capa de iconos (Montañas, Ríos, Lagos) que definen las "limitaciones del terreno".
 
-## 5. Visualización (El Atlas de Control)
-Se implementará una vista de **Atlas Estratégico** que renderizará estas cajas y puntos sobre un lienzo SVG, permitiendo al administrador (tú) ver los "huecos libres" del mundo de forma intuitiva.
+## 6. Visualización (El Atlas de Control)
+Se implementará una vista de **Atlas Estratégico** que renderizará estas capas temporales sobre un lienzo SVG, permitiendo ver la evolución del mundo al cambiar de época.
 
 ---
 *Este documento sirve como base para la implementación técnica en la versión v0.2.*
