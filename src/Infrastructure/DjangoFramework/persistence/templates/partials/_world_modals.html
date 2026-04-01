@@ -181,33 +181,32 @@
     </div>
 
     <!-- LIGHTBOX (Refined Style) -->
-    <div id="lightbox" class="hidden fixed inset-0 bg-black/95 z-[100] flex flex-col items-center justify-center p-4 gap-4 transition-opacity duration-300" onclick="closeLightbox()">
+    <div id="lightbox" class="hidden fixed inset-0 bg-black/95 z-[100] transition-opacity duration-300" onclick="closeLightbox()">
         
-        <!-- Close Button (Small & Centered/Top) -->
-        <button onclick="closeLightbox()" class="absolute top-4 right-6 text-gray-500 hover:text-white transition-colors z-[110] p-1 rounded-full border border-transparent hover:border-gray-700 bg-black/30 hover:bg-black/60">
+        <!-- Close Button (Fixed to Viewport) -->
+        <button onclick="closeLightbox()" class="fixed top-4 right-6 text-gray-500 hover:text-white transition-colors z-[110] p-1 rounded-full border border-transparent hover:border-gray-700 bg-black/30 hover:bg-black/60">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
 
-        <!-- Main Container (Fixed Height, Flex Row for Arrows + Img) -->
-        <div class="flex items-center justify-center gap-4 w-full h-[85vh] relative pointer-events-none">
-            
-            <!-- Prev Button -->
-            <button onclick="event.stopPropagation(); prevImage()" class="pointer-events-auto text-white/30 hover:text-white text-3xl p-2 transition hover:scale-110 shrink-0 select-none rounded-full hover:bg-white/5">❮</button>
+        <!-- Strict Centering Container (No scroll on background, guaranteed margins) -->
+        <div class="fixed inset-0 w-full h-[100dvh] flex flex-col items-center justify-center p-4 md:p-8 pointer-events-none">
 
-            <!-- Image Area -->
-            <div class="relative flex items-center justify-center h-full min-w-0 pointer-events-auto group/image">
-                 <img id="lb-img" onload="syncInfoWidth()" class="max-h-full max-w-full rounded-lg shadow-2xl border border-gray-800 object-contain bg-black/50" onclick="event.stopPropagation()">
-            </div>
-            
-            <!-- Next Button -->
-            <button onclick="event.stopPropagation(); nextImage()" class="pointer-events-auto text-white/30 hover:text-white text-3xl p-2 transition hover:scale-110 shrink-0 select-none rounded-full hover:bg-white/5">❯</button>
-            
-        </div>
-        
-        <!-- Info Card -->
-        <!-- Info Card -->
-        <!-- Info Card -->
-        <div id="lb-info-card" class="bg-[#0a0f0a] p-6 rounded-2xl border border-gray-800 text-center shadow-2xl z-50 shrink-0 relative flex flex-col items-center pointer-events-auto transition-all duration-300 w-[600px]" onclick="event.stopPropagation()">
+            <!-- THE UNIFIED BOX (Fixed 512px) -->
+            <div id="lb-master-box" class="relative w-[512px] max-w-full flex flex-col rounded-2xl bg-[#0a0f0a] border border-gray-800 shadow-2xl pointer-events-auto overflow-hidden transition-all mx-auto" onclick="event.stopPropagation()" style="max-height: 100%;">
+                
+                <!-- IMAGE AREA -->
+                <div class="relative flex-1 min-h-[30vh] md:min-h-0 flex items-center justify-center w-full bg-[#050805] border-b border-gray-800">
+                    <button onclick="event.stopPropagation(); prevImage()" class="absolute left-2 z-10 text-white/50 hover:text-white text-3xl p-2 transition hover:scale-110 drop-shadow-xl select-none">❮</button>
+                    
+                    <div class="flex items-center justify-center h-full w-full p-2 py-6">
+                         <img id="lb-img" class="h-full w-auto max-w-full object-contain drop-shadow-2xl">
+                    </div>
+                    
+                    <button onclick="event.stopPropagation(); nextImage()" class="absolute right-2 z-10 text-white/50 hover:text-white text-3xl p-2 transition hover:scale-110 drop-shadow-xl select-none">❯</button>
+                </div>
+                
+                <!-- INFO CARD DATA (Fixed Width 100% of 512px, nice margins) -->
+                <div id="lb-info-card" class="px-6 py-8 md:px-12 shrink-0 flex flex-col items-center mx-auto" style="width: 100% !important;">
             
             <!-- 1. Top Row: User - Media - Date -->
             <div class="flex items-center justify-between w-full mb-6 relative">
@@ -254,7 +253,7 @@
             </div>
 
             <!-- 2. Title & Filename -->
-            <div class="mb-6 mt-2 w-full px-4">
+            <div class="mb-6 mt-2 w-full px-4 text-center">
                 {% if can_edit %}
                 <h3 id="lb-title" class="text-2xl font-bold text-white mb-2 cursor-pointer hover:text-blue-400 transition-colors break-words" onclick="editImageTitle()" title="Clic para editar título">
                     Título...
@@ -278,7 +277,11 @@
                     Cerrar
                 </button>
             </div>
-        </div>
+            </div>
+        </div> <!-- Close lb-info-card -->
+        
+        </div></div> <!-- Close Unified Box and Strict Container -->
+
         <!-- COMMENTS OVERLAY (Reels Style) -->
         <div id="lb-comments-overlay" class="hidden absolute top-[40%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-[400px] h-[55vh] max-h-[500px] bg-[#0f0f0f] rounded-2xl border border-gray-800 shadow-2xl flex flex-col z-[60] overflow-hidden" onclick="event.stopPropagation()">
             
