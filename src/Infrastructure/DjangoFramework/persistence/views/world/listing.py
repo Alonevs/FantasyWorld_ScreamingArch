@@ -44,11 +44,49 @@ from ..view_utils import resolve_jid_orm, check_world_access, get_admin_status, 
 from .utils import log_event, get_current_user
 
 
+def landing(request):
+    """
+    Portal de Entrada: Vista de Bienvenida con Selección de Destino.
+    Recupera un pool de imágenes de mundos para usarlas como fondos dinámicos.
+    """
+    mundos = CaosWorldORM.objects.filter(is_active=True).exclude(status='DELETED')
+    
+    background_pool = []
+    for m in mundos:
+        imgs = get_world_images(m.id, world_instance=m)
+        cover = None
+        if m.metadata and 'cover_image' in m.metadata:
+            target = m.metadata['cover_image']
+            found = next((i for i in imgs if i['filename'] == target), None)
+            if found: cover = found['url']
+        
+        if not cover and imgs:
+            imgs.sort(key=lambda x: x.get('is_cover', False), reverse=True)
+            cover = imgs[0]['url']
+            
+        if cover:
+            background_pool.append(cover)
+
+    import random
+    random.shuffle(background_pool)
+    
+    # Seleccionar 2 imágenes aleatorias para las puertas
+    img_nexo = background_pool[0] if len(background_pool) > 0 else None
+    img_codice = background_pool[1] if len(background_pool) > 1 else (img_nexo or None)
+    
+    context = {
+        'img_nexo': img_nexo,
+        'img_codice': img_codice,
+        'background_images': background_pool[:10] 
+    }
+    
+    return render(request, 'index.html', context)
+
+
 def home(request):
     """
-    Vista de Inicio: El Portal Central del Universo.
+    Vista de Inicio: El Portal Central del Universo (ahora en /nexo/).
     Muestra el índice de mundos habitables aplicando la 'Indexación Agresiva'.
-    Filtra entidades fantasma, borradores ocultos y aplica visibilidad por roles (Soberanía).
     """
     if request.method == 'POST':
         if not request.user.is_authenticated:
@@ -172,4 +210,4 @@ def home(request):
     import random
     random.shuffle(background_images)
     
-    return render(request, 'index.html', {'mundos': l, 'background_images': background_images[:10]})
+    return render(request, 'nexo_list.html', {'mundos': l, 'background_images': background_images[:10]})

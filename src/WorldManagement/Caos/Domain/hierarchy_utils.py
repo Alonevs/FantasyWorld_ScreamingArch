@@ -31,6 +31,17 @@ HIERARCHY_LABELS = {
         9: "ASENTAMIENTO",
         13: "ESPECIE DEMONIACA",
         16: "ENTIDAD"
+    },
+    
+    # Rama del Códice de Lore (Eclai Core / Wiki)
+    "CORE": {
+        3: "VOLUMEN DEL CÓDICE",
+        4: "CATEGORÍA LORE",
+        5: "CAPÍTULO",
+        6: "ENTRADA DE LORE",
+        7: "DETALLE / RELATO",
+        13: "CRIATURA / ENTIDAD HISTÓRICA",
+        16: "FICHA TÉCNICA"
     }
 }
 
@@ -65,6 +76,15 @@ PLURAL_HIERARCHY_LABELS = {
         9: "ASENTAMIENTOS",
         13: "ESPECIES DEMONIACAS",
         16: "ENTIDADES"
+    },
+    "CORE": {
+        3: "VOLÚMENES DEL CÓDICE",
+        4: "CATEGORÍAS DE LORE",
+        5: "CAPÍTULOS",
+        6: "ENTRADAS DE LORE",
+        7: "DETALLES / RELATOS",
+        13: "CRIATURAS / ENTIDADES",
+        16: "FICHAS TÉCNICAS"
     }
 }
 
@@ -72,7 +92,11 @@ def get_plural_label(level, jid="0101"):
     """
     Retorna la etiqueta en plural correspondiente al nivel y la rama del J-ID proporcionado.
     """
-    branch = "DIMENSIONAL" if (jid.startswith("0102") or jid.startswith("0105")) else "PHYSICS"
+    if jid.startswith("0104"):
+        branch = "CORE"
+    else:
+        branch = "DIMENSIONAL" if (jid.startswith("0102") or jid.startswith("0105")) else "PHYSICS"
+    
     labels = PLURAL_HIERARCHY_LABELS.get(branch, PLURAL_HIERARCHY_LABELS["PHYSICS"])
     return labels.get(level, f"CATEGORÍA NIVEL {level}")
 
@@ -98,7 +122,10 @@ def get_readable_hierarchy(jid):
     level = len(jid) // 2
     
     # Determinar la rama según el prefijo del J-ID
-    branch = "DIMENSIONAL" if (jid.startswith("0102") or jid.startswith("0105")) else "PHYSICS"
+    if jid.startswith("0104"):
+        branch = "CORE"
+    else:
+        branch = "DIMENSIONAL" if (jid.startswith("0102") or jid.startswith("0105")) else "PHYSICS"
     
     # Lógica especial para diferenciar Objetos de Biología en niveles profundos (L13+)
     if level >= 13:
@@ -121,7 +148,11 @@ def get_available_levels(current_jid):
     Soporta la lógica de "Saltos de Jerarquía" permitiendo crear hijos en cualquier nivel inferior.
     """
     current_level = len(current_jid) // 2
-    branch_key = "DIMENSIONAL" if (current_jid.startswith("0102") or current_jid.startswith("0105")) else "PHYSICS"
+    if current_jid.startswith("0104"):
+        branch_key = "CORE"
+    else:
+        branch_key = "DIMENSIONAL" if (current_jid.startswith("0102") or current_jid.startswith("0105")) else "PHYSICS"
+    
     labels_map = HIERARCHY_LABELS.get(branch_key, HIERARCHY_LABELS["PHYSICS"])
     
     options = []

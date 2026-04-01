@@ -4,7 +4,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 from src.Infrastructure.DjangoFramework.persistence.views.world_views import (
-    home, ver_mundo, editar_mundo, borrar_mundo, 
+    home, landing, ver_mundo, editar_mundo, borrar_mundo, 
     toggle_lock, toggle_visibilidad,
     mapa_arbol, comparar_version, ver_metadatos,
     toggle_entity_status, update_avatar
@@ -145,7 +145,8 @@ urlpatterns = [
     # ==========================================
     # CORE (Mundos)
     # ==========================================
-    path('', home, name='home'),
+    path('', landing, name='home'),
+    path('nexo/', home, name='nexo_list'),
     path('mundo/<str:public_id>/', ver_mundo, name='ver_mundo'),
     path('mapa/<str:public_id>/', mapa_arbol, name='mapa_arbol'),
     

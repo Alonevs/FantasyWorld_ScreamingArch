@@ -1,40 +1,171 @@
 {% extends "layouts/base.html" %}
 {% load static %}
 
+{% block extra_head %}
+<style>
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in-up { animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both; }
+    .delay-100 { animation-delay: 0.1s; }
+    .delay-200 { animation-delay: 0.2s; }
+    
+    @keyframes scanline {
+        0% { transform: translateY(-10%); opacity: 0; }
+        5% { opacity: 1; }
+        95% { opacity: 1; }
+        100% { transform: translateY(60vh); opacity: 0; }
+    }
+    .animate-scan { 
+        animation: scanline 3s linear infinite; 
+    }
+    
+    @keyframes dash {
+        to { stroke-dashoffset: 0; }
+    }
+    svg path {
+        stroke-dasharray: 1000;
+        stroke-dashoffset: 1000;
+        animation: dash 5s linear forwards;
+    }
+    
+    .portal-card {
+        transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .portal-card:hover {
+        transform: scale(1.02);
+        box-shadow: 0 0 80px rgba(168, 85, 247, 0.15);
+    }
+    .portal-img {
+        transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .portal-card:hover .portal-img {
+        transform: scale(1.1);
+    }
+</style>
+<div class="hidden">
+    <!-- Prerender variables to avoid lint/parsing ambiguity in some environments -->
+    <span id="nexo-bg">{{ img_nexo|default:'/static/img/defaults/nexo_default.webp' }}</span>
+    <span id="codice-bg">{{ img_codice|default:'/static/img/defaults/codex_default.webp' }}</span>
+</div>
+{% endblock %}
+
 {% block content %}
     <!-- BACKGROUND SLIDESHOW -->
-    <!-- BACKGROUND SLIDESHOW (Alpine.js) -->
     {% include "components/_global_background.html" %}
 
-    <!-- HERO SECTION -->
-    <div class="relative p-10 text-center mb-8">
-        <!-- User Status / Logout (Top Right) -->
-
-
-        <h1 class="text-6xl font-bold mb-2 drop-shadow-[0_0_25px_rgba(214,51,255,0.6)] animate-pulse" 
-            style="background: linear-gradient(to right, #a855f7, #ffffff, #c084fc); -webkit-background-clip: text; background-clip: text; color: transparent;">
-            ECLAI UNIVERSE
-        </h1>
-        <p class="text-gray-300 text-lg tracking-[0.5em] font-light uppercase opacity-80">Sistema de Gestión de Realidades</p>
+    <div class="fixed inset-0 flex flex-col items-center justify-center p-6 overflow-hidden">
         
-        <div class="flex justify-center gap-4 mt-8">
-            <div class="px-8 py-3 bg-white/5 text-gray-400 font-mono text-sm rounded-full border border-white/10 backdrop-blur-sm animate-pulse">
-                ✨ Explora la infinidad del Caos
-            </div>
+        <!-- HEADER -->
+        <div class="text-center mb-16 animate-fade-in-up">
+            <h1 class="text-8xl font-black tracking-tighter drop-shadow-[0_0_50px_rgba(214,51,255,0.4)]" 
+                style="background: linear-gradient(to right, #a855f7, #ffffff, #c084fc); -webkit-background-clip: text; background-clip: text; color: transparent;">
+                ECLAI UNIVERSE
+            </h1>
+            <p class="text-gray-500 text-[10px] tracking-[1.5em] font-black uppercase opacity-60 mt-4 h-4 overflow-hidden" x-data="{ texts: ['Portal de Realidades', 'Nexo de Información', 'Códice Infinito'], current: 0 }" x-init="setInterval(() => current = (current + 1) % texts.length, 3000)">
+                <template x-for="(text, index) in texts">
+                    <span x-show="current === index" x-transition:enter="transition ease-out duration-500" x-transition:enter-start="opacity-0 transform translate-y-4" x-transition:enter-end="opacity-100 transform translate-y-0" x-transition:leave="transition ease-in duration-500 absolute" x-transition:leave-start="opacity-100 transform translate-y-0" x-transition:leave-end="opacity-0 transform -translate-y-4" x-text="text"></span>
+                </template>
+            </p>
         </div>
-    </div>
 
+        <!-- DUAL PORTAL -->
+        <div class="w-full max-w-7xl grid md:grid-cols-2 gap-12 h-[55vh]">
+            
+            <!-- GATE 1: NEXO FÍSICO -->
+            <a href="{% url 'nexo_list' %}" 
+               class="portal-card animate-fade-in-up delay-100 group relative overflow-hidden rounded-[3rem] bg-[#02020a] border border-white/5 p-1">
+                
+                <!-- Random Background Image (Enhanced Visibility) -->
+                <div class="absolute inset-0 bg-cover bg-center portal-img opacity-20 group-hover:opacity-50 transition-all duration-1000 grayscale group-hover:grayscale-0 blur-[2px] group-hover:blur-0" 
+                     style="background-image: url({{ img_nexo|default:'/static/img/defaults/nexo_default.webp' }});">
+                </div>
+                
+                <!-- Overlay Gradient -->
+                <div class="absolute inset-0 bg-gradient-to-t from-[#02020a] via-[#02020a]/80 to-transparent opacity-100"></div>
+                <div class="absolute inset-0 bg-blue-600/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
+                <!-- Content -->
+                <div class="relative z-10 h-full p-12 flex flex-col items-center justify-end text-center space-y-8">
+                    
+                    <!-- GEOMETRIC ICON: THE NEXUS (Turtle/Fractal Style) -->
+                    <div class="relative w-28 h-28 flex items-center justify-center group-hover:scale-110 transition-transform duration-700">
+                        <!-- Orbit Rings -->
+                        <div class="absolute inset-0 border border-blue-500/20 rounded-full animate-[spin_10s_linear_infinite]"></div>
+                        <div class="absolute inset-2 border border-blue-400/30 rounded-full animate-[spin_6s_linear_infinite_reverse]"></div>
+                        <!-- Core SVG Fractal -->
+                        <svg class="w-16 h-16 text-blue-400 drop-shadow-[0_0_15px_rgba(59,130,246,0.8)]" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M50 10 L90 50 L50 90 L10 50 Z" stroke-dasharray="200" stroke-dashoffset="0" class="animate-[dash_4s_ease-in-out_infinite]"></path>
+                            <circle cx="50" cy="50" r="10" class="animate-pulse"></circle>
+                            <path d="M30 30 L70 70 M70 30 L30 70" opacity="0.5"></path>
+                        </svg>
+                    </div>
 
-    <div class="max-w-[1600px] mx-auto px-6">
-        {% if mundos %}
-            {% include "components/children_tabs.html" with children=mundos %}
-        {% else %}
-            <div class="py-20 text-center text-gray-500">
-                <h2 class="text-2xl font-bold mb-2">El vacío es absoluto.</h2>
-                <p>No existen mundos en este sector. Crea el primero.</p>
-            </div>
-        {% endif %}
+                    <div>
+                        <h2 class="text-4xl font-black text-white tracking-tighter uppercase group-hover:text-blue-400 transition-colors">Dar forma al Mundo</h2>
+                        <p class="text-sm text-gray-400 mt-4 max-w-sm mx-auto font-medium leading-relaxed opacity-60 group-hover:opacity-100 transition-opacity">Modelado de mundos, climas, orografía y redes estructurales.</p>
+                    </div>
+                    
+                    <div class="pt-6">
+                        <div class="px-10 py-3 rounded-full bg-blue-500/10 border border-blue-500/30 text-[10px] font-black tracking-[0.4em] uppercase text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-all shadow-[0_0_20px_rgba(59,130,246,0)] group-hover:shadow-[0_4_30px_rgba(59,130,246,0.4)]">Entrar al Sistema</div>
+                    </div>
+                </div>
+
+                <!-- Animated Scan Line -->
+                <div class="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-blue-400 to-transparent opacity-0 group-hover:animate-scan"></div>
+            </a>
+
+            <!-- GATE 2: EL CÓDICE -->
+            <a href="/narrativa/indice/0104/" 
+               class="portal-card animate-fade-in-up delay-200 group relative overflow-hidden rounded-[3rem] bg-[#0a020a] border border-white/5 p-1">
+                
+                <!-- Random Background Image -->
+                <div class="absolute inset-0 bg-cover bg-center portal-img opacity-20 group-hover:opacity-50 transition-all duration-1000 sepia group-hover:sepia-0 blur-[2px] group-hover:blur-0" 
+                     style="background-image: url({{ img_codice|default:'/static/img/defaults/codex_default.webp' }});">
+                </div>
+
+                <!-- Overlay Gradient -->
+                <div class="absolute inset-0 bg-gradient-to-t from-[#0a020a] via-[#0a020a]/80 to-transparent opacity-100"></div>
+                <div class="absolute inset-0 bg-purple-600/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+
+                <!-- Content -->
+                <div class="relative z-10 h-full p-12 flex flex-col items-center justify-end text-center space-y-8">
+                    
+                    <!-- GEOMETRIC ICON: THE CODEX (Mandala Style) -->
+                    <div class="relative w-28 h-28 flex items-center justify-center group-hover:scale-110 transition-transform duration-700">
+                        <!-- Mandala Layers -->
+                        <div class="absolute inset-0 border-2 border-purple-500/10 animate-[bounce_4s_infinite]"></div>
+                        <div class="absolute inset-4 border border-purple-400/20 rotate-45 animate-pulse"></div>
+                        <!-- Core SVG Fractal -->
+                        <svg class="w-16 h-16 text-purple-400 drop-shadow-[0_0_15px_rgba(168,85,247,0.8)]" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1">
+                            <path d="M50 20 C60 10 90 20 50 80 C10 20 40 10 50 20" class="animate-[dash_6s_linear_infinite]"></path>
+                            <path d="M20 50 Q50 100 80 50" opacity="0.3"></path>
+                            <rect x="35" y="35" width="30" height="30" transform="rotate(45 50 50)" class="animate-pulse"></rect>
+                        </svg>
+                    </div>
+
+                    <div>
+                        <h2 class="text-4xl font-black text-white tracking-tighter uppercase group-hover:text-purple-400 transition-colors">Códice de Lore</h2>
+                        <p class="text-sm text-gray-400 mt-4 max-w-sm mx-auto font-medium leading-relaxed opacity-60 group-hover:opacity-100 transition-opacity">Crónicas, leyes trascendentales y fragmentos de la realidad.</p>
+                    </div>
+
+                    <div class="pt-6">
+                        <div class="px-10 py-3 rounded-full bg-purple-500/10 border border-purple-500/30 text-[10px] font-black tracking-[0.4em] uppercase text-purple-400 group-hover:bg-purple-500 group-hover:text-white transition-all shadow-[0_0_20px_rgba(168,85,247,0)] group-hover:shadow-[0_4_30px_rgba(168,85,247,0.4)]">Versar la Biblia</div>
+                    </div>
+                </div>
+
+                <!-- Animated Glow Pulse -->
+                <div class="absolute inset-0 bg-purple-500/5 group-hover:animate-pulse"></div>
+            </a>
+
+        </div>
+
+        <!-- FOOTER INFO -->
+        <div class="mt-12 text-[10px] font-bold tracking-[0.5em] text-gray-700 uppercase animate-fade-in-up delay-200">
+            © 2026 Eclai Universe Management System
+        </div>
+
     </div>
 {% endblock %}
 

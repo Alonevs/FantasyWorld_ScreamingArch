@@ -16,7 +16,7 @@ Todos los exports públicos se mantienen para compatibilidad hacia atrás.
 """
 
 # Exports públicos para mantener compatibilidad con código existente
-from .listing import home
+from .listing import home, landing
 from .detail import ver_mundo, ver_metadatos, mapa_arbol
 from .edit import editar_mundo, update_avatar
 from .actions import toggle_entity_status, borrar_mundo, toggle_visibilidad, toggle_lock
@@ -26,6 +26,7 @@ from .utils import log_event, get_current_user
 __all__ = [
     # Listing
     'home',
+    'landing',
     # Detail
     'ver_mundo',
     'ver_metadatos',

@@ -2,7 +2,7 @@
     <!-- EDIT MODAL (Industrial Style) -->
     <div id="editModal" class="hidden fixed inset-0 bg-black/95 z-50 items-center justify-center">
         <div class="caos-card caos-glow-blue w-full max-w-md relative p-0 overflow-hidden shadow-2xl">
-            
+
             <div class="px-8 pb-8 pt-6">
                 <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
                     <span>✏️</span> Editar: <span class="text-blue-400 font-mono">{{ name }}</span>
@@ -35,7 +35,7 @@
                         <label class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1.5 ml-1">Razón del cambio</label>
                         <input type="text" name="reason" placeholder="Ej: Corrección de fechas..." class="w-full bg-[#13151f] border border-gray-800 rounded-lg p-3 text-sm text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 outline-none transition-all placeholder:text-gray-700 font-medium">
                     </div>
-                    
+
                     <div class="mb-6">
                          <label class="flex items-center gap-3 cursor-pointer group p-2 hover:bg-white/5 rounded-lg transition-colors border border-transparent hover:border-white/5">
                             <input type="checkbox" name="use_ai_edit" class="accent-blue-500 w-4 h-4 rounded border-gray-600 bg-gray-800">
@@ -63,7 +63,7 @@
                 <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
                     <span>✨</span> Generar Entorno
                 </h2>
-                
+
                 <form method="POST" action="{% if public_id %}{% url 'ver_mundo' public_id %}{% else %}#{% endif %}">
                     {% csrf_token %}
                     <div class="mb-5">
@@ -85,7 +85,7 @@
                         <label class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1.5 ml-1">Descripción</label>
                         <textarea name="child_desc" rows="3" placeholder="Contexto inicial..." class="w-full bg-[#13151f] border border-gray-800 rounded-lg p-3 text-sm text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 outline-none transition-all placeholder:text-gray-700 font-medium"></textarea>
                     </div>
-                    
+
                     <div class="flex gap-3 pt-2">
                         <button type="button" onclick="closeCreateModal()" class="px-6 py-3 rounded-lg text-gray-400 hover:text-white font-bold text-[10px] uppercase tracking-widest transition-colors border border-transparent hover:border-gray-700">Cancelar</button>
                         <button type="submit" class="flex-1 py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg shadow-lg shadow-purple-900/50 transition-all hover:scale-[1.02] active:scale-95 text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
@@ -106,11 +106,11 @@
                 <h2 class="text-xl font-bold text-white mb-2 flex items-center justify-center gap-2">
                     <span>📁</span> Confirmar Subida
                 </h2>
-                
+
                 <div id="file-info" class="text-[10px] font-bold uppercase tracking-widest text-green-400 mb-4 bg-green-900/10 py-1 rounded border border-green-500/20 inline-block px-3"></div>
-                
+
                 <div id="upload-previews" class="grid grid-cols-3 gap-2 mb-4 max-h-48 overflow-y-auto custom-scrollbar p-2 bg-black/20 rounded-lg"></div>
-                
+
                 <div class="bg-[#13151f] p-4 rounded-lg border border-gray-800 text-left mb-5 shadow-inner">
                     <label class="flex items-center gap-3 mb-3 cursor-pointer group">
                         <input type="checkbox" id="chk-original-name" onchange="toggleCustomName()" class="accent-green-500 w-4 h-4 rounded border-gray-600 bg-gray-800">
@@ -143,7 +143,7 @@
                 <div class="text-center mb-6">
                     <p class="text-[10px] uppercase tracking-widest text-purple-400 font-bold bg-purple-900/10 inline-block px-3 py-1 rounded border border-purple-500/20">Stable Diffusion XL</p>
                 </div>
-                
+
                 <div id="ai-step-1">
                     <div class="mb-6 bg-[#13151f] p-4 rounded-lg border border-gray-800">
                         <label class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-2">Cantidad de Variaciones</label>
@@ -153,7 +153,7 @@
                         </div>
                         <script>document.getElementById('batch-size').oninput = function() { document.getElementById('batch-size-val').textContent = this.value; }</script>
                     </div>
-                    
+
                     <div class="flex gap-3">
                         <button type="button" onclick="closeAiModal()" class="flex-1 py-3 rounded-lg text-gray-500 hover:text-white font-bold text-[10px] uppercase tracking-widest transition-colors border border-gray-800 hover:bg-gray-800">Cancelar</button>
                         <button type="button" onclick="generateBatch()" class="flex-1 py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg shadow-lg shadow-purple-900/50 transition-all hover:scale-[1.02] active:scale-95 text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
@@ -182,7 +182,7 @@
 
     <!-- LIGHTBOX (Refined Style) -->
     <div id="lightbox" class="hidden fixed inset-0 bg-black/95 z-[100] transition-opacity duration-300" onclick="closeLightbox()">
-        
+
         <!-- Close Button (Fixed to Viewport) -->
         <button onclick="closeLightbox()" class="fixed top-4 right-6 text-gray-500 hover:text-white transition-colors z-[110] p-1 rounded-full border border-transparent hover:border-gray-700 bg-black/30 hover:bg-black/60">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -193,24 +193,24 @@
 
             <!-- THE UNIFIED BOX (Fixed 512px) -->
             <div id="lb-master-box" class="relative w-[512px] max-w-full flex flex-col rounded-2xl bg-[#0a0f0a] border border-gray-800 shadow-2xl pointer-events-auto overflow-hidden transition-all mx-auto" onclick="event.stopPropagation()" style="max-height: 100%;">
-                
+
                 <!-- IMAGE AREA -->
                 <div class="relative flex-1 min-h-[30vh] md:min-h-0 flex items-center justify-center w-full bg-[#050805] border-b border-gray-800">
                     <button onclick="event.stopPropagation(); prevImage()" class="absolute left-2 z-10 text-white/50 hover:text-white text-3xl p-2 transition hover:scale-110 drop-shadow-xl select-none">❮</button>
-                    
+
                     <div class="flex items-center justify-center h-full w-full p-2 py-6">
                          <img id="lb-img" class="h-full w-auto max-w-full object-contain drop-shadow-2xl">
                     </div>
-                    
+
                     <button onclick="event.stopPropagation(); nextImage()" class="absolute right-2 z-10 text-white/50 hover:text-white text-3xl p-2 transition hover:scale-110 drop-shadow-xl select-none">❯</button>
                 </div>
-                
+
                 <!-- INFO CARD DATA (Fixed Width 100% of 512px, nice margins) -->
                 <div id="lb-info-card" class="px-6 py-8 md:px-12 shrink-0 flex flex-col items-center mx-auto" style="width: 100% !important;">
-            
+
             <!-- 1. Top Row: User - Media - Date -->
             <div class="flex items-center justify-between w-full mb-6 relative">
-                
+
                 <!-- Left: User -->
                 <div class="flex flex-col items-center gap-2 w-1/3">
                     <span class="text-[9px] text-gray-500 font-bold uppercase tracking-widest leading-none">Subido por</span>
@@ -272,19 +272,19 @@
                     <span>Portada</span>
                 </button>
                 {% endif %}
-                
+
                 <button onclick="closeLightbox()" class="flex-1 py-2 bg-[#1a1a20] hover:bg-gray-800 text-gray-300 hover:text-white rounded-md text-[10px] font-bold uppercase tracking-widest transition border border-gray-800 hover:border-gray-600 shadow-lg hover:scale-105">
                     Cerrar
                 </button>
             </div>
             </div>
         </div> <!-- Close lb-info-card -->
-        
+
         </div></div> <!-- Close Unified Box and Strict Container -->
 
         <!-- COMMENTS OVERLAY (Reels Style) -->
         <div id="lb-comments-overlay" class="hidden absolute top-[40%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-[400px] h-[55vh] max-h-[500px] bg-[#0f0f0f] rounded-2xl border border-gray-800 shadow-2xl flex flex-col z-[60] overflow-hidden" onclick="event.stopPropagation()">
-            
+
             <!-- Header -->
             <div class="px-4 py-3 border-b border-gray-800 flex justify-between items-center bg-[#0f0f0f]/95 backdrop-blur z-10">
                 <h3 class="font-bold text-white text-sm">Comentarios <span id="lb-overlay-count" class="text-gray-500 font-normal ml-1">0</span></h3>
@@ -306,17 +306,17 @@
                     <img id="lb-my-avatar" src="https://ui-avatars.com/api/?name={{ user.username }}&background=random&color=fff" class="w-8 h-8 rounded-full bg-gray-800 object-cover shrink-0 border border-gray-700">
                 {% endif %}
                 <div class="flex-grow bg-[#272727] rounded-full flex items-center px-4 py-2">
-                    <input type="text" id="lb-comment-input" placeholder="Añade un comentario..." 
+                    <input type="text" id="lb-comment-input" placeholder="Añade un comentario..."
                         class="bg-transparent border-none text-white text-sm w-full focus:outline-none placeholder-gray-500"
                         oninput="document.getElementById('lb-btn-send').disabled = this.value.trim() === ''"
                         onkeypress="if(event.key === 'Enter') postComment()">
                 </div>
                 <button onclick="postComment()" class="p-2 text-white hover:bg-white/10 rounded-full transition shrink-0" disabled id="lb-btn-send">
-                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" class="text-blue-500"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg> 
+                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" class="text-blue-500"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
                 </button>
             </div>
         </div>
     </div>
-    
+
     <!-- METADATA MODAL -->
     {% include 'partials/_modal_metadata.html' %}

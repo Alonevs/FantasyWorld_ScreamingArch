@@ -1,0 +1,27 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Nexo de Mundos | ECLAI{% endblock %}
+
+{% block content %}
+    <!-- BACKGROUND SLIDESHOW (Alpine.js) -->
+    {% include "components/_global_background.html" %}
+
+    <div class="relative pt-12 pb-8 text-center">
+        <h1 class="text-5xl font-black mb-2 drop-shadow-[0_0_25px_rgba(59,130,246,0.3)] tracking-tighter uppercase text-white">
+            Nexo de Mundos
+        </h1>
+        <p class="text-blue-500 text-[10px] tracking-[0.8em] font-bold uppercase opacity-80 mb-12">Gestión de Realidades Físicas</p>
+    </div>
+
+    <div class="max-w-[1600px] mx-auto px-6 pb-24">
+        {% if mundos %}
+            {% include "components/children_tabs.html" with children=mundos %}
+        {% else %}
+            <div class="py-20 text-center text-gray-500 bg-[#0a0a16] border border-white/5 rounded-3xl">
+                <h2 class="text-2xl font-bold mb-2">El vacío es absoluto.</h2>
+                <p>No existen mundos en este sector. Crea el primero.</p>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

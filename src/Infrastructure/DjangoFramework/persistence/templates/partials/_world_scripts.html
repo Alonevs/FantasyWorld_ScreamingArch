@@ -243,6 +243,9 @@
             lb.classList.remove('hidden');
             lb.classList.add('flex');
             
+            // Update hash without entry in history
+            window.history.replaceState(null, null, `#img-${fn}`);
+            
             // Find index
             const lookupFn = (fn || "").trim();
             const idx = imgsData.findIndex(img => (img.filename || "").trim() === lookupFn);
@@ -268,6 +271,10 @@
         function updateLightboxContent(url, fn) {
             document.getElementById('lb-img').src = url;
             document.getElementById('lb-name').innerText = fn;
+            
+            // Sync hash
+            window.history.replaceState(null, null, `#img-${fn}`);
+
             const lookupKey = (fn || "").trim();
             const d = galleryLog[lookupKey] || {};
             document.getElementById('lb-title').innerText = d.title || fn;
@@ -388,34 +395,17 @@
             }
         });
         
-        // UNIVERSAL SMART BACK NAVIGATION
-        // Detects if user came from another page and returns them there when closing any modal/view
-        function shouldNavigateBack() {
-            // Check if user came from a different page (not just a hash change on same page)
-            if (document.referrer) {
-                const referrerUrl = new URL(document.referrer);
-                const currentUrl = new URL(window.location.href);
-                
-                // Different page (not just hash change)
-                if (referrerUrl.pathname !== currentUrl.pathname) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
         function closeLightbox() { 
             document.body.style.overflow = '';
             const lb = document.getElementById('lightbox');
             lb.classList.add('hidden');
             lb.classList.remove('flex');
             
-            // Smart back navigation: return to previous page if user came from elsewhere
-            if (shouldNavigateBack()) {
-                window.history.back();
-            } else if (window.location.hash) {
-                // Just remove hash if navigating within same page
-                window.location.hash = '';
+            // Clear hash from URL without navigating back or adding history entry
+            if (window.location.hash) {
+                const url = new URL(window.location.href);
+                url.hash = '';
+                window.history.replaceState({}, '', url.toString());
             }
         }
         
