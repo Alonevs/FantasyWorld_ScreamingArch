@@ -155,10 +155,10 @@
                                                     Mantener
                                                 </button>
                                             </form>
-                                            <form method="post" action="{% if item.type == 'WORLD' or item.type == 'METADATA' %}{% url 'borrar_propuesta' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'borrar_narrativa_version' item.id %}{% elif item.type == 'IMAGE' %}{% url 'borrar_imagen_definitivo' item.id %}{% elif item.type == 'PERIOD' %}{% url 'archivar_periodo' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
+                                            <form method="post" action="{% if item.type == 'WORLD' or item.type == 'METADATA' %}{% url 'aprobar_version' item.id %}{% elif item.type == 'NARRATIVE' %}{% url 'aprobar_narrativa' item.id %}{% elif item.type == 'IMAGE' %}{% url 'aprobar_imagen' item.id %}{% elif item.type == 'PERIOD' %}{% url 'aprobar_periodo' item.id %}{% endif %}?next={{ request.get_full_path|urlencode }}">
                                                 {% csrf_token %}
-                                                <button type="submit" class="text-red-500 hover:text-white hover:bg-red-600 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border border-red-900/30" data-confirm="⚠️ ¿BORRAR DEFINITIVAMENTE?">
-                                                    Borrar
+                                                <button type="submit" class="text-red-500 hover:text-white hover:bg-red-600 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border border-red-900/30" data-confirm="¿APROBAR solicitud de borrado? (Pasará a estado Aprobado para su ejecución)">
+                                                    Aprobar Borrado
                                                 </button>
                                             </form>
                                         {% else %}

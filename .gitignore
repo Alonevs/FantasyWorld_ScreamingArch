@@ -54,9 +54,12 @@ read_run3.py
 search_log.py
 verify_analytics.py
 server_run.py
+clean_logs.ps1
 *_output.txt
 final_*.txt
 run_*.txt
+debug_*.txt
 check_output.txt
 last_run.txt
+error_log.txt
 server_error.log

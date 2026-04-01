@@ -58,6 +58,13 @@ def ver_mundo(request, public_id):
     if not can_access:
         return render(request, 'private_access.html', status=403)
     
+    # BLINDADO: Si está Soft Deleted, solo el autor o admin pueden verlo (modo papelera)
+    if not w_orm.is_active:
+        if not (is_author_or_team or request.user.is_staff):
+             return render(request, '404.html', {"jid": public_id}, status=404)
+        else:
+             messages.warning(request, "⚠️ Estás viendo un mundo eliminado (Papelera).")
+    
     repo = DjangoCaosRepository()
     
     # 1. Manejar POST (Creación)

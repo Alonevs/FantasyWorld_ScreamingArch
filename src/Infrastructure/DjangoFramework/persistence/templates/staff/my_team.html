@@ -193,9 +193,9 @@
             <span class="text-blue-400">🤝</span> Colaboradores Activos
         </h3>
         
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div class="flex flex-wrap gap-4">
             <!-- 0. SELF CARD (Always Visible) -->
-            <div class="group bg-[#161616] rounded-lg p-3 border border-blue-500/40 shadow-[0_0_20px_-5px_rgba(59,130,246,0.2)] flex items-center justify-between gap-3 relative">
+            <div class="group bg-[#161616] rounded-lg p-3 border border-blue-500/40 shadow-[0_0_20px_-5px_rgba(59,130,246,0.2)] flex items-center justify-between gap-3 relative w-fit max-w-full">
                 <!-- Highlight Indicator -->
                 <div class="absolute left-0 top-0 bottom-0 w-1 bg-linear-to-b from-blue-400 to-purple-500 rounded-l-lg"></div>
 
@@ -217,7 +217,7 @@
 
                         <!-- Self Team Chips (My Minions) - Expanded & Interactive -->
                         {% if team_list %}
-                        <div class="mt-4 flex items-center gap-2">
+                        <div class="mt-4 flex flex-wrap items-center gap-y-2 gap-x-2">
                             <span class="text-blue-500 font-bold text-xs self-center mr-1">↳</span>
                             
                             <!-- Visible Chips (Limit 5) -->
