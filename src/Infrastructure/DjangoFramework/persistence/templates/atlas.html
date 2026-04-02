@@ -1,0 +1,415 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Cartografía Vectorial | {{ name }}{% endblock %}
+
+{% block content %}
+<div class="mt-8 container mx-auto text-white px-4 pb-12">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
+        <div>
+            <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400 uppercase tracking-widest flex items-center gap-3">
+                <span>🧭</span> Cartografía: <span class="text-white">{{ viewing_period.title|default:"ACTUAL" }}</span>
+            </h1>
+            <p class="text-xs text-gray-400 font-mono tracking-widest mt-2">Dibuja áreas uniendo puntos para establecer fronteras, regiones o masas de agua.</p>
+        </div>
+        
+        <div class="flex gap-4">
+            <button id="btn-save" class="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition border border-blue-700 shadow-xl shadow-blue-900/20 text-sm uppercase tracking-widest flex items-center gap-2">
+                <span>💾</span> Guardar Vectores
+            </button>
+            <a href="{% url 'ver_mundo' public_id %}" class="px-6 py-3 bg-[#13151f] hover:bg-gray-800 text-gray-300 hover:text-white font-bold rounded-lg transition border border-gray-800 shadow-lg text-sm uppercase tracking-widest hidden sm:flex items-center">
+                Volver
+            </a>
+        </div>
+    </div>
+    
+    <div class="flex flex-col lg:flex-row gap-6 items-start">
+        
+        <!-- Sidebar -> Tools -->
+        <div class="w-full lg:w-64 bg-[#0a0f0a]/90 backdrop-blur rounded-2xl border border-gray-800 p-5 shadow-2xl flex-shrink-0 sticky top-20 z-10">
+            <h3 class="text-[10px] uppercase tracking-[0.2em] font-bold text-gray-500 mb-4 border-b border-gray-800 pb-2">Herramientas</h3>
+            
+            <button id="tool-draw" class="w-full mb-3 px-4 py-3 bg-blue-600/20 border-2 border-blue-500 hover:bg-blue-600/40 rounded-xl text-left flex items-center justify-between transition-all group shadow-md" onclick="setDrawingMode(true)">
+                <span class="font-bold text-sm text-blue-400 group-hover:text-blue-300">Dibujar Área</span> 
+                <span class="text-lg group-hover:scale-125 transition-transform">🖋️</span>
+            </button>
+            
+            <button id="tool-delete" class="w-full mb-6 px-4 py-3 bg-transparent border-2 border-gray-800 hover:border-red-500/50 hover:bg-red-900/20 rounded-xl text-left flex items-center justify-between transition-all group" onclick="setDrawingMode(false)">
+                <span class="font-bold text-sm text-gray-400 group-hover:text-red-400">Eliminar Área</span> 
+                <span class="text-lg group-hover:scale-125 transition-transform grayscale group-hover:grayscale-0">💥</span>
+            </button>
+
+            <!-- Status Info -->
+            <div class="bg-black/40 p-4 rounded-xl border border-gray-800/80 mb-6">
+                <p id="system-status" class="text-xs text-yellow-500 font-mono tracking-wide leading-relaxed">
+                    Modo Dibujo activo.<br>Haz clic en el lienzo para colocar puntos.
+                </p>
+                <div class="mt-4 flex flex-col gap-2">
+                    <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Zonas Registradas</p>
+                    <p class="text-2xl font-mono text-white font-bold" id="feature-count">0</p>
+                </div>
+            </div>
+            
+            <div class="p-3 bg-blue-900/10 border border-blue-500/20 rounded-xl">
+                 <p class="text-[9px] text-gray-400 font-mono tracking-widest uppercase leading-loose">
+                    <span class="text-blue-400 font-bold">Tip:</span> Para cerrar un área, haz clic sobre el primer punto que colocaste. El polígono se conformará automáticamente.
+                </p>
+            </div>
+        </div>
+
+        <!-- Canvas Táctico SVG -->
+        <div class="flex-1 w-full bg-[#050805] rounded-2xl border border-gray-800 shadow-2xl overflow-hidden relative min-h-[60vh] flex flex-col cursor-crosshair" id="canvas-wrapper">
+            
+            <!-- Grid Background (Visual Only) -->
+            <div class="absolute inset-0 pointer-events-none opacity-[0.03]" style="background-image: linear-gradient(to right, #4f4f4f 1px, transparent 1px), linear-gradient(to bottom, #4f4f4f 1px, transparent 1px); background-size: 40px 40px;"></div>
+            
+            <!-- Regiones Térmicas (Background visual lines) -->
+            <div class="absolute inset-x-0 top-[15%] border-b border-cyan-500/20 border-dashed pointer-events-none flex items-start px-2 py-1"><span class="text-[9px] text-cyan-600/50 uppercase tracking-widest font-bold">Círculo Polar Ártico</span></div>
+            <div class="absolute inset-x-0 top-[35%] border-b border-orange-500/20 border-dashed pointer-events-none flex items-start px-2 py-1"><span class="text-[9px] text-orange-600/50 uppercase tracking-widest font-bold">Trópico Cáncer</span></div>
+            <div class="absolute inset-x-0 top-[50%] border-t border-red-500/30 border-solid pointer-events-none flex items-center justify-center"><span class="text-[10px] text-red-500/30 uppercase tracking-widest font-bold bg-[#050805] px-2 -mt-3">Ecuador (Cálido)</span></div>
+            <div class="absolute inset-x-0 top-[65%] border-t border-orange-500/20 border-dashed pointer-events-none flex items-end px-2 py-1"><span class="text-[9px] text-orange-600/50 uppercase tracking-widest font-bold">Trópico Capricornio</span></div>
+            <div class="absolute inset-x-0 top-[85%] border-t border-cyan-500/20 border-dashed pointer-events-none flex items-end px-2 py-1"><span class="text-[9px] text-cyan-600/50 uppercase tracking-widest font-bold">Círculo Polar Antártico</span></div>
+            
+            <!-- The SVG Canvas -->
+            <svg id="carto-svg" width="100%" height="100%" class="w-full h-full absolute inset-0 z-0" style="min-height: 600px;">
+                <defs>
+                    <!-- Patterns for biomes -->
+                    <pattern id="pattern-forest" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+                        <text x="0" y="15" font-size="12" opacity="0.3">🌲</text>
+                    </pattern>
+                    <pattern id="pattern-mountain" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+                        <text x="0" y="15" font-size="12" opacity="0.4">⛰️</text>
+                    </pattern>
+                </defs>
+                
+                <!-- Layer for completed polygons -->
+                <g id="layer-features"></g>
+                
+                <!-- Layer for currently drawing geometry -->
+                <g id="layer-draw">
+                    <polyline id="ghost-line" fill="none" stroke="#3b82f6" stroke-width="2" stroke-dasharray="4" opacity="0.5" />
+                    <polyline id="active-line" fill="none" stroke="#60a5fa" stroke-width="3" />
+                    <g id="active-points"></g>
+                </g>
+            </svg>
+
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Seleccionar Tipo de Terreno una vez se cierra el polígono -->
+<div id="typeModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="caos-card w-full max-w-lg bg-[#0a0f0a] border border-gray-700 shadow-2xl rounded-2xl overflow-hidden animate-fade-in-down">
+        <div class="px-6 py-4 border-b border-gray-800 bg-[#13151f]">
+            <h3 class="text-white font-bold tracking-widest uppercase text-sm">Designar Área</h3>
+        </div>
+        <div class="p-6">
+            <p class="text-xs text-gray-400 mb-6 font-mono">Clasifica el perímetro que acabas de trazar. Esto asignará los metadatos visuales correspondientes.</p>
+            
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3" id="type-selector-grid">
+                <!-- Buttons injected by JS -->
+            </div>
+            
+            <div class="mt-8 flex justify-end gap-3">
+                <button onclick="cancelCurrentShape()" class="px-5 py-2 text-xs font-bold text-gray-400 hover:text-white uppercase tracking-widest transition border border-transparent hover:border-gray-700 rounded-lg">Descartar Trazado</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Data Dictionary ---
+    const biomes = {
+        'continente': { label: 'Tierra/Continente', color: '#854d0e', stroke: '#a16207', icon: '🌍' },
+        'llanura': { label: 'Llanura', color: '#22c55e', stroke: '#16a34a', icon: '🟩' },
+        'bosque': { label: 'Bosque', color: '#166534', stroke: '#14532d', icon: '🌲', fillUrl: 'url(#pattern-forest)' },
+        'montana': { label: 'Montaña', color: '#52525b', stroke: '#3f3f46', icon: '⛰️', fillUrl: 'url(#pattern-mountain)' },
+        'lago': { label: 'Lago / Dulce', color: '#3b82f6', stroke: '#2563eb', icon: '💧' },
+        'mar': { label: 'Mar / Océano', color: '#1e3a8a', stroke: '#1e40af', icon: '🌊' },
+        'desierto': { label: 'Desierto', color: '#ca8a04', stroke: '#a16207', icon: '🏜️' },
+        'ciudad': { label: 'Asentamiento', color: '#dc2626', stroke: '#b91c1c', icon: '🏰' },
+    };
+
+    // --- State ---
+    let features = {{ geojson|safe|default:"[]" }};
+    const periodSlug = "{{ viewing_period.slug|default:'actual' }}";
+    const publicId = "{{ public_id }}";
+    
+    let isDrawingMode = true;
+    let currentPoints = [];
+    
+    // --- DOM Elements ---
+    const svg = document.getElementById('carto-svg');
+    const layerFeatures = document.getElementById('layer-features');
+    const activeLine = document.getElementById('active-line');
+    const ghostLine = document.getElementById('ghost-line');
+    const activePointsG = document.getElementById('active-points');
+    const systemStatus = document.getElementById('system-status');
+    const featureCountLabel = document.getElementById('feature-count');
+    
+    // --- Initialization ---
+    renderFeatures();
+    buildTypeSelector();
+
+    function setDrawingMode(isDrawing) {
+        isDrawingMode = isDrawing;
+        if (isDrawing) {
+            document.getElementById('tool-draw').className = "w-full mb-3 px-4 py-3 bg-blue-600/20 border-2 border-blue-500 hover:bg-blue-600/40 rounded-xl text-left flex items-center justify-between transition-all group shadow-md";
+            document.getElementById('tool-delete').className = "w-full mb-6 px-4 py-3 bg-transparent border-2 border-gray-800 hover:border-red-500/50 hover:bg-red-900/20 rounded-xl text-left flex items-center justify-between transition-all group";
+            svg.classList.add('cursor-crosshair');
+            systemStatus.innerHTML = "Coloca puntos secuenciales.<br>Cierra la forma en el 1er punto.";
+        } else {
+            document.getElementById('tool-draw').className = "w-full mb-3 px-4 py-3 bg-transparent border-2 border-gray-800 hover:border-blue-500/50 hover:bg-blue-900/20 rounded-xl text-left flex items-center justify-between transition-all group";
+            document.getElementById('tool-delete').className = "w-full mb-6 px-4 py-3 bg-red-600/20 border-2 border-red-500 hover:bg-red-600/40 rounded-xl text-left flex items-center justify-between transition-all group shadow-md";
+            svg.classList.remove('cursor-crosshair');
+            systemStatus.innerHTML = "Pulsa sobre un área existente para borrarla de los registros.";
+            cancelCurrentShape();
+        }
+    }
+
+    // --- Helpers ---
+    function getMousePos(evt) {
+        const CTM = svg.getScreenCTM();
+        return {
+            x: (evt.clientX - CTM.e) / CTM.a,
+            y: (evt.clientY - CTM.f) / CTM.d
+        };
+    }
+
+    function pointsToString(pts) {
+        return pts.map(p => `${p.x},${p.y}`).join(' ');
+    }
+
+    // --- Drawing Logic ---
+    svg.addEventListener('mousedown', function(evt) {
+        if (!isDrawingMode) return;
+        
+        const pt = getMousePos(evt);
+        
+        // Comprobar si cerramos polígono (Click cerca del primer punto)
+        if (currentPoints.length > 2) {
+            const firstPt = currentPoints[0];
+            const dist = Math.hypot(pt.x - firstPt.x, pt.y - firstPt.y);
+            if (dist < 15) { // Radius de imantación
+                promptAreaType();
+                return;
+            }
+        }
+
+        // Añadir punto
+        currentPoints.push(pt);
+        updateActiveDraw();
+    });
+
+    svg.addEventListener('mousemove', function(evt) {
+        if (!isDrawingMode || currentPoints.length === 0) {
+            ghostLine.setAttribute('points', '');
+            return;
+        }
+        
+        const pt = getMousePos(evt);
+        const lastPt = currentPoints[currentPoints.length - 1];
+        ghostLine.setAttribute('points', `${lastPt.x},${lastPt.y} ${pt.x},${pt.y}`);
+        
+        // Visual cue de cierre (si está cerca del primero)
+        if (currentPoints.length > 2) {
+            const firstPt = currentPoints[0];
+            const dist = Math.hypot(pt.x - firstPt.x, pt.y - firstPt.y);
+            if (dist < 15) {
+                ghostLine.setAttribute('stroke', '#10b981'); // Green alert
+            } else {
+                ghostLine.setAttribute('stroke', '#3b82f6');
+            }
+        }
+    });
+
+    function updateActiveDraw() {
+        activeLine.setAttribute('points', pointsToString(currentPoints));
+        
+        activePointsG.innerHTML = '';
+        currentPoints.forEach((p, idx) => {
+            const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            circle.setAttribute('cx', p.x);
+            circle.setAttribute('cy', p.y);
+            circle.setAttribute('r', idx === 0 ? '6' : '3');
+            circle.setAttribute('fill', idx === 0 ? '#10b981' : '#ffffff');
+            if (idx === 0) circle.setAttribute('stroke', '#047857');
+            activePointsG.appendChild(circle);
+        });
+    }
+
+    function cancelCurrentShape() {
+        currentPoints = [];
+        updateActiveDraw();
+        ghostLine.setAttribute('points', '');
+        document.getElementById('typeModal').classList.add('hidden');
+    }
+
+    // --- Modal Logic ---
+    function buildTypeSelector() {
+        const grid = document.getElementById('type-selector-grid');
+        for (const [key, bData] of Object.entries(biomes)) {
+            const btn = document.createElement('button');
+            btn.className = "p-3 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-700 hover:border-gray-500 transition-all flex flex-col items-center justify-center gap-2 group";
+            btn.innerHTML = `
+                <span class="text-3xl group-hover:scale-110 transition-transform">${bData.icon}</span>
+                <span class="text-[10px] font-bold uppercase tracking-widest text-gray-300 group-hover:text-white">${bData.label}</span>
+            `;
+            btn.onclick = () => confirmShape(key);
+            grid.appendChild(btn);
+        }
+    }
+
+    function promptAreaType() {
+        document.getElementById('typeModal').classList.remove('hidden');
+    }
+
+    function calculateClimate(pointsArray) {
+        if (!pointsArray || pointsArray.length === 0) return { temp: "Desconocida", range: "NaN" };
+        let minY = Infinity;
+        let maxY = -Infinity;
+        pointsArray.forEach(p => {
+            if (p.y < minY) minY = p.y;
+            if (p.y > maxY) maxY = p.y;
+        });
+        
+        let cy = (minY + maxY) / 2;
+        let svgHeight = svg.clientHeight || 600;
+        let pct = (cy / svgHeight) * 100;
+        
+        let topPct = (minY / svgHeight) * 100;
+        let bottomPct = (maxY / svgHeight) * 100;
+        let spread = bottomPct - topPct;
+        
+        if (spread > 60) return { temp: "Multiclima Continental", range: "Polar-Ecuador" };
+        if (pct <= 15 || pct >= 85) return { temp: "Helado / Polar", range: "Extremo" };
+        if ((pct > 15 && pct <= 35) || (pct >= 65 && pct < 85)) return { temp: "Templado / Frío", range: "Medio" };
+        return { temp: "Cálido / Tropical", range: "Ecuador" };
+    }
+
+    function confirmShape(biomeKey) {
+        const autoClimate = calculateClimate(currentPoints);
+        features.push({
+            type: biomeKey,
+            points: [...currentPoints], // Clone array
+            metadata: { 
+                auto_climate: autoClimate,
+                created_at: new Date().toISOString()
+            }
+        });
+        
+        cancelCurrentShape();
+        renderFeatures();
+    }
+
+    // --- Rendering Map ---
+    function renderFeatures() {
+        layerFeatures.innerHTML = '';
+        featureCountLabel.innerText = features.length;
+        
+        features.forEach((feat, index) => {
+            const bData = biomes[feat.type] || biomes['llanura'];
+            
+            const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            
+            const poly = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+            poly.setAttribute('points', pointsToString(feat.points));
+            poly.setAttribute('fill', bData.fillUrl || bData.color);
+            poly.setAttribute('fill-opacity', bData.fillUrl ? '1' : '0.4');
+            poly.setAttribute('stroke', bData.stroke);
+            poly.setAttribute('stroke-width', '2');
+            poly.setAttribute('stroke-linejoin', 'round');
+            poly.setAttribute('class', 'transition-all duration-300 hover:fill-opacity-70 cursor-pointer');
+            
+            // Delete Logic
+            poly.addEventListener('click', (e) => {
+                if (!isDrawingMode) {
+                    e.stopPropagation();
+                    features.splice(index, 1);
+                    renderFeatures();
+                }
+            });
+            
+            group.appendChild(poly);
+            
+            // Add Label (Center of bounds)
+            if (feat.points.length > 0) {
+                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+                feat.points.forEach(p => {
+                    if (p.x < minX) minX = p.x;
+                    if (p.x > maxX) maxX = p.x;
+                    if (p.y < minY) minY = p.y;
+                    if (p.y > maxY) maxY = p.y;
+                });
+                const cx = (minX + maxX) / 2;
+                const cy = (minY + maxY) / 2;
+                
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute('x', cx);
+                text.setAttribute('y', cy);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('dominant-baseline', 'middle');
+                text.setAttribute('fill', 'white');
+                text.setAttribute('font-size', '20px');
+                text.setAttribute('class', 'pointer-events-none drop-shadow-md');
+                text.textContent = bData.icon;
+                group.appendChild(text);
+            }
+
+            layerFeatures.appendChild(group);
+        });
+    }
+
+    // --- Save API ---
+    document.getElementById('btn-save').addEventListener('click', async () => {
+        const btn = document.getElementById('btn-save');
+        const oldHtml = btn.innerHTML;
+        btn.innerHTML = '⏳ Procesando Vectores...';
+        btn.disabled = true;
+
+        try {
+            const response = await fetch(`/atlas/${publicId}/save-geojson/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    period_slug: periodSlug,
+                    geojson: features
+                })
+            });
+            
+            let data = {};
+            try { data = await response.json(); } catch(e) {}
+
+            if (response.ok && data.success) {
+                btn.innerHTML = '✅ OK';
+                btn.classList.add('bg-emerald-600', 'border-emerald-700');
+                
+                let notif = document.createElement('div');
+                notif.className = "fixed top-20 right-8 bg-emerald-500 text-white px-6 py-3 rounded shadow-2xl z-50 animate-bounce font-bold text-sm uppercase tracking-wide border-2 border-white";
+                notif.innerHTML = "🗺️ Geometría Grabada";
+                document.body.appendChild(notif);
+                
+                setTimeout(() => {
+                    notif.remove();
+                    btn.innerHTML = oldHtml;
+                    btn.classList.remove('bg-emerald-600', 'border-emerald-700');
+                    btn.disabled = false;
+                }, 3000);
+            } else {
+                alert("Error al guardar geometría: " + (data.error || response.statusText));
+                btn.innerHTML = oldHtml;
+                btn.disabled = false;
+            }
+        } catch (error) {
+            console.error("Error saving vectors:", error);
+            alert("Excepción de red al guardar el mapa.");
+            btn.innerHTML = oldHtml;
+            btn.disabled = false;
+        }
+    });
+
+</script>
+{% endblock %}

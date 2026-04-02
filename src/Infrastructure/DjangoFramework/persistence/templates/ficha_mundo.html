@@ -429,14 +429,30 @@
         });
     </script>
 
-    {% if edit_mode %}
+    <!-- DATA FOR MODALS -->
+    {{ level|default:1|json_script:"entity-level" }}
+    {{ metadata_raw.planet_laws|default:None|json_script:"planet-laws-data" }}
+
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Auto Open Edit Modal (World)
-            setTimeout(() => { if(typeof openEditModal === 'function') openEditModal(); }, 300);
-        });
+        (function() {
+            const levelEl = document.getElementById('entity-level');
+            const lawsEl = document.getElementById('planet-laws-data');
+            
+            window.CURRENT_ENTITY_LEVEL = levelEl ? JSON.parse(levelEl.textContent) : 1;
+            window.CURRENT_PLANET_LAWS = (lawsEl && lawsEl.textContent.trim() !== 'null') ? JSON.parse(lawsEl.textContent) : null;
+
+            document.addEventListener('DOMContentLoaded', () => {
+                // Auto Open Edit Modal (World)
+                {% if edit_mode %}
+                setTimeout(() => { 
+                    if(typeof openEditModal === 'function') {
+                        openEditModal();
+                    } 
+                }, 300);
+                {% endif %}
+            });
+        })();
     </script>
-    {% endif %}
 
 
     

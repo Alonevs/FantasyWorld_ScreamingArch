@@ -119,35 +119,49 @@ def editar_mundo(request, jid):
             metadata_prop = None
             reason = request.POST.get('reason', 'Actualización de Metadatos')
  
-            # Manejar Propuesta de Metadatos
+            # Manejar Propuesta de Metadatos (Campos Dinámicos de la Tabla)
             if action_type == 'METADATA_PROPOSAL':
-                # NUEVA LÓGICA DINÁMICA (Arrays)
                 prop_keys = request.POST.getlist('prop_keys[]')
                 prop_values = request.POST.getlist('prop_values[]')
-                
                 metadata_prop = {'properties': []}
-                
-                # Unirlos (zip)
                 if prop_keys and prop_values:
                     for k, v in zip(prop_keys, prop_values):
-                        if k.strip(): # Ignorar claves vacías
+                        if k.strip():
                             metadata_prop['properties'].append({'key': k.strip(), 'value': v.strip()})
                 
-                print(f"📝 [Edición Manual] Enviando Propuesta de Metadatos: {len(metadata_prop['properties'])} elementos.")
-                print(f"   Contenido: {metadata_prop}")
-                
-                # Al editar metadatos, podríamos mantener nombre/desc como están (o usar campos ocultos)
-                # Por seguridad, simplemente pasamos None para mantener los valores existentes en el Caso de Uso
                 ProposeChangeUseCase().execute(real_jid, None, None, reason, get_current_user(request), metadata_proposal=metadata_prop)
-                messages.success(request, f"🔮 Propuesta de METADATOS enviada (v{CaosVersionORM.objects.filter(world_id=real_jid).count() + 1}).")
+                messages.success(request, f"🔮 Propuesta de METADATOS enviada.")
                 log_event(request.user, "PROPOSE_METADATA", real_jid, f"Razón: {reason}")
+            
+            # Manejar Edición Estándar (Modal de Mundo + Leyes Geofísicas)
             else:
-                # Edición Regular
+                # Capturar Leyes Geofísicas (Si existen en el POST)
+                if request.POST.get('world_temp'):
+                    metadata_prop = {
+                        'planet_laws': {
+                            'global_temp': request.POST.get('world_temp'),
+                            'sun_type': request.POST.get('world_sun'),
+                            'base_element': request.POST.get('world_velo'), # Nombre unificado
+                            'moons': [m.strip() for m in request.POST.get('world_moons', '').split(',') if m.strip()],
+                            'axial_tilt': request.POST.get('world_tilt', 'Moderada'),
+                            'velo_element': request.POST.get('world_velo', 'Agua'), # Retrocompatibilidad
+                        }
+                    }
+                
                 if request.POST.get('use_ai_edit') == 'on':
                     try: desc = Llama3Service().generate_description(f"Nombre: {request.POST.get('name')}. Concepto: {desc}") or desc
                     except: pass
-                ProposeChangeUseCase().execute(real_jid, request.POST.get('name'), desc, request.POST.get('reason'), get_current_user(request))
-                log_event(request.user, "PROPOSE_CHANGE", real_jid, f"Reason: {request.POST.get('reason')}")
+
+                ProposeChangeUseCase().execute(
+                    real_jid, 
+                    request.POST.get('name'), 
+                    desc, 
+                    reason, 
+                    get_current_user(request),
+                    metadata_proposal=metadata_prop
+                )
+                messages.success(request, f"🚀 Propuesta de cambio enviada para revisión.")
+                log_event(request.user, "PROPOSE_CHANGE", real_jid, f"Reason: {reason}")
             
             return redirect('ver_mundo', public_id=w.public_id if w.public_id else w.id)
         except Exception as e: 

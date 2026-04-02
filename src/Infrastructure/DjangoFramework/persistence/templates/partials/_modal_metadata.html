@@ -37,19 +37,22 @@
                         <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Variables Identificadas</span>
                         <div class="flex gap-2">
                             <button type="button" onclick="addMetadataRow()" class="text-xs text-purple-400 hover:text-purple-300 border border-purple-500/30 px-2 py-1 rounded hover:bg-purple-900/20 transition">+ VARIABLE</button>
+                            <!-- Auto-Noos Desactivado por petición de usuario para evitar ruido de datos antiguos -->
+                            {% comment %}
                             <button type="button" onclick="runAutoNoos()" class="text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 px-3 py-1 rounded shadow-lg shadow-purple-900/20 flex items-center gap-2 transition group">
                                 <span id="noos-icon" class="group-hover:animate-pulse">🧠</span> 
                                 <span id="noos-text">AUTO-NOOS</span>
                             </button>
+                            {% endcomment %}
                         </div>
                     </div>
 
-                    <div id="metadata-rows-container" class="space-y-2 max-h-[400px] overflow-y-auto pr-2">
-                        <!-- JS injected rows -->
-                        <div id="empty-msg" class="text-center py-12 text-gray-600 italic text-xs">
-                            Sin variables definidas. Usa "AUTO-NOOS" para escanear.
+                        <div id="metadata-rows-container" class="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+                            <!-- JS injected rows -->
+                            <div id="empty-msg" class="text-center py-12 text-gray-600 italic text-xs">
+                                Sin variables personalizadas definidas.
+                            </div>
                         </div>
-                    </div>
                 </div>
 
                 <!-- Reason Field -->

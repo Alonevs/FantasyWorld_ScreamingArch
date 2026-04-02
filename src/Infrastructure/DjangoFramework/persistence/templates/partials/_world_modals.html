@@ -1,54 +1,134 @@
     <!-- EDIT MODAL -->
     <!-- EDIT MODAL (Industrial Style) -->
-    <div id="editModal" class="hidden fixed inset-0 bg-black/95 z-50 items-center justify-center">
-        <div class="caos-card caos-glow-blue w-full max-w-md relative p-0 overflow-hidden shadow-2xl">
+    <div id="editModal" class="hidden fixed inset-0 bg-black/95 z-50 items-center justify-center backdrop-blur-sm transition-all duration-300">
+        <div class="caos-card caos-glow-blue w-[95%] md:w-full max-w-md md:max-w-4xl relative p-0 overflow-hidden shadow-2xl scale-95 opacity-0 transition-all duration-300 transform" id="editModal-content">
 
-            <div class="px-8 pb-8 pt-6">
-                <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                    <span>✏️</span> Editar: <span class="text-blue-400 font-mono">{{ name }}</span>
-                </h2>
-
-                <!-- Info Tip Box -->
-                <div class="bg-blue-900/10 border border-blue-500/20 rounded-lg p-3 mb-5 flex gap-3 items-start">
-                    <span class="text-lg">💡</span>
-                    <p class="text-[10px] text-blue-200/80 leading-relaxed font-medium uppercase tracking-wide">
-                        Los cambios se enviarán como propuesta para revisión.
-                    </p>
+            <div class="px-6 pb-6 pt-5">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                        <span>✏️</span> Editar: <span class="text-blue-400 font-mono">{{ name }}</span>
+                    </h2>
+                    <button type="button" onclick="closeEditModal()" class="text-gray-500 hover:text-white transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L12 12m0 0l6 6M12 12l6-6m-6 6l-6-6"/></svg>
+                    </button>
                 </div>
 
-                <form method="POST" action="{% if jid %}{% url 'editar_mundo' jid %}{% else %}#{% endif %}">
+                <form method="POST" action="{% if jid %}{% url 'editar_mundo' jid %}{% else %}#{% endif %}" class="flex flex-col h-full">
                     {% csrf_token %}
-                    <div class="mb-5">
-                        <label class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1.5 ml-1">Nuevo Título</label>
-                        <input type="text" name="name" value="{{ name }}" class="w-full bg-[#13151f] border border-gray-800 rounded-lg p-3 text-sm text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 outline-none transition-all placeholder:text-gray-700 font-medium">
-                    </div>
-                    <div class="mb-5">
-                        <div class="flex justify-between items-center mb-1.5 ml-1">
-                            <label class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest">Descripción</label>
-                            <button type="button" onclick="generateAILore()" id="btn-gen-lore" class="text-[9px] bg-blue-900/20 hover:bg-blue-600 text-blue-400 hover:text-white px-2 py-1 rounded transition flex items-center gap-1 border border-blue-500/30 uppercase tracking-widest font-bold">
-                                <span id="lore-gen-icon">✨</span> IA Gen
-                            </button>
+                    
+                    <div class="max-h-[60vh] md:max-h-[70vh] overflow-y-auto pr-3 custom-scrollbar mb-6">
+                        <div class="flex flex-col md:flex-row gap-8">
+                            <!-- COLUMNA 1: IDENTIDAD BÁSICA -->
+                            <div class="flex-1 space-y-4">
+                                <!-- Info Tip Box -->
+                                <div class="bg-blue-900/10 border border-blue-500/20 rounded-lg p-3 mb-4 flex gap-3 items-start">
+                                    <span class="text-lg">💡</span>
+                                    <p class="text-[9px] text-blue-200/80 leading-relaxed font-medium uppercase tracking-wide">
+                                        Cualquier cambio se guardará como propuesta (v{{ version_live|default:"1.0" }}+) en el sistema ECLAI.
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1.5 ml-1">Nuevo Título</label>
+                                    <input type="text" name="name" value="{{ name }}" class="w-full bg-[#13151f] border border-gray-800 rounded-lg p-2.5 text-sm text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 outline-none transition-all placeholder:text-gray-700 font-medium">
+                                </div>
+
+                                <div>
+                                    <div class="flex justify-between items-center mb-1.5 ml-1">
+                                        <label class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest">Descripción / Lore</label>
+                                        <button type="button" onclick="generateAILore()" id="btn-gen-lore" class="text-[9px] bg-blue-900/20 hover:bg-blue-600 text-blue-400 hover:text-white px-2 py-1 rounded transition flex items-center gap-1 border border-blue-500/30 uppercase tracking-widest font-bold">
+                                            <span id="lore-gen-icon">✨</span> IA Gen
+                                        </button>
+                                    </div>
+                                    <textarea id="edit-description" name="description" rows="4" class="w-full bg-[#13151f] border border-gray-800 rounded-lg p-2.5 text-sm text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 outline-none transition-all placeholder:text-gray-700 leading-relaxed font-medium">{{ description }}</textarea>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1.5 ml-1">Motivo del Cambio</label>
+                                    <input type="text" name="reason" placeholder="Ej: Ajuste de leyes físicas..." class="w-full bg-[#13151f] border border-gray-800 rounded-lg p-2.5 text-sm text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 outline-none transition-all placeholder:text-gray-700 font-medium">
+                                </div>
+                            </div>
+
+                            <!-- COLUMNA 2: LEYES GEOFÍSICAS (Ocultable) -->
+                            <div id="edit-planet-laws" class="hidden w-full md:w-[320px] lg:w-[380px] bg-blue-900/5 border border-blue-500/10 rounded-xl p-5 space-y-4 animate-in fade-in slide-in-from-right-4 duration-500">
+                                <h3 class="text-[10px] text-blue-400 uppercase font-bold tracking-[0.2em] mb-4 flex items-center gap-2">
+                                    <span>🌍</span> Físicas del Mundo
+                                </h3>
+                                
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-1.5 ml-1">🌡️ Clima</label>
+                                        <select name="world_temp" id="edit-world-temp" class="w-full bg-[#0d0f16] border border-gray-800 rounded-lg p-2 text-xs text-white focus:border-blue-500 outline-none">
+                                            <option value="Helado">❄️ Todo Hielo</option>
+                                            <option value="Templado" selected>🌳 Templado</option>
+                                            <option value="Volcánico">🔥 Muy Caliente</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-1.5 ml-1">☀️ Color del Sol</label>
+                                        <select name="world_sun" id="edit-world-sun" class="w-full bg-[#0d0f16] border border-gray-800 rounded-lg p-2 text-xs text-white focus:border-blue-500 outline-none">
+                                            <option value="Gigante Amarilla">🟡 Sol Amarillo</option>
+                                            <option value="Enana Blanca">⚪ Sol Blanco</option>
+                                            <option value="Gigante Roja">🔴 Sol Rojo</option>
+                                            <option value="Antigravitatorio">🌀 Singularidad</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-1 ml-1">🌊 ¿Qué cubre la Superficie?</label>
+                                    <p class="text-[8px] text-gray-600 uppercase tracking-tighter mb-2 ml-1">El fondo global antes de crear continentes</p>
+                                    <div class="grid grid-cols-3 gap-2">
+                                        <label class="cursor-pointer">
+                                            <input type="radio" name="world_velo" value="Agua" class="hidden peer" id="velo-agua">
+                                            <div class="p-2 text-center border border-gray-800 rounded-lg bg-[#0d0f16] peer-checked:border-blue-500 peer-checked:bg-blue-600/10 transition-all">
+                                                <span class="text-sm block">💧</span>
+                                                <span class="text-[8px] uppercase font-bold text-gray-600 peer-checked:text-blue-400">Agua</span>
+                                            </div>
+                                        </label>
+                                        <label class="cursor-pointer">
+                                            <input type="radio" name="world_velo" value="Tierra" class="hidden peer" id="velo-tierra">
+                                            <div class="p-2 text-center border border-gray-800 rounded-lg bg-[#0d0f16] peer-checked:border-amber-700 peer-checked:bg-amber-900/10 transition-all">
+                                                <span class="text-sm block">⛰️</span>
+                                                <span class="text-[8px] uppercase font-bold text-gray-600 peer-checked:text-amber-500">Tierra</span>
+                                            </div>
+                                        </label>
+                                        <label class="cursor-pointer">
+                                            <input type="radio" name="world_velo" value="Lava" class="hidden peer" id="velo-lava">
+                                            <div class="p-2 text-center border border-gray-800 rounded-lg bg-[#0d0f16] peer-checked:border-red-500 peer-checked:bg-red-600/10 transition-all">
+                                                <span class="text-sm block">🔥</span>
+                                                <span class="text-[8px] uppercase font-bold text-gray-600 peer-checked:text-red-400">Lava</span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-1.5 ml-1">🌙 Lunas</label>
+                                        <input type="text" name="world_moons" id="edit-world-moons" placeholder="Nombres..." class="w-full bg-[#0d0f16] border border-gray-800 rounded-lg p-2 text-xs text-white focus:border-blue-500 outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-1.5 ml-1">🍂 Estaciones</label>
+                                        <select name="world_tilt" id="edit-world-tilt" class="w-full bg-[#0d0f16] border border-gray-800 rounded-lg p-2 text-xs text-white focus:border-blue-500 outline-none">
+                                            <option value="Nula">❌ Sin estaciones</option>
+                                            <option value="Moderada">🍂 Normales</option>
+                                            <option value="Extrema">❄️ Extremas</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <textarea id="edit-description" name="description" rows="5" class="w-full bg-[#13151f] border border-gray-800 rounded-lg p-3 text-sm text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 outline-none transition-all placeholder:text-gray-700 leading-relaxed font-medium">{{ description }}</textarea>
-                    </div>
-                    <div class="mb-5">
-                        <label class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1.5 ml-1">Razón del cambio</label>
-                        <input type="text" name="reason" placeholder="Ej: Corrección de fechas..." class="w-full bg-[#13151f] border border-gray-800 rounded-lg p-3 text-sm text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 outline-none transition-all placeholder:text-gray-700 font-medium">
                     </div>
 
-                    <div class="mb-6">
-                         <label class="flex items-center gap-3 cursor-pointer group p-2 hover:bg-white/5 rounded-lg transition-colors border border-transparent hover:border-white/5">
-                            <input type="checkbox" name="use_ai_edit" class="accent-blue-500 w-4 h-4 rounded border-gray-600 bg-gray-800">
-                            <span class="text-xs text-gray-400 group-hover:text-blue-300 transition-colors uppercase tracking-wider font-bold">✨ Refinar con IA</span>
-                        </label>
-                    </div>
-
-                    <div class="flex gap-3 pt-2">
-                        <button type="button" onclick="closeEditModal()" class="px-6 py-3 rounded-lg text-gray-400 hover:text-white font-bold text-[10px] uppercase tracking-widest transition-colors border border-transparent hover:border-gray-700">Cancelar</button>
-                        <button type="submit" class="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg shadow-lg shadow-blue-900/50 transition-all hover:scale-[1.02] active:scale-95 text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
-                            <span>🚀</span> Guardar
+                    <div class="flex gap-4 pt-4 border-t border-gray-800/50">
+                        <button type="button" onclick="closeEditModal()" class="px-6 py-3 rounded-xl text-gray-500 hover:text-gray-300 font-bold text-[10px] uppercase tracking-widest transition-colors">Abortar</button>
+                        <button type="submit" class="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-lg shadow-blue-600/20 transition-all hover:scale-[1.01] active:scale-95 text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
+                            <span>🚀</span> Enviar Propuesta de Cambio
                         </button>
                     </div>
+                </form>
+            </div>
                 </form>
             </div>
         </div>
@@ -56,46 +136,140 @@
 
     <!-- CREATE MODAL -->
     <!-- CREATE MODAL (Industrial Style) -->
-    <div id="createModal" class="hidden fixed inset-0 bg-black/95 z-[100] items-center justify-center">
-        <div class="caos-card caos-glow-purple w-full max-w-md relative p-0 overflow-hidden shadow-2xl">
+    <!-- CREATE MODAL (Planet Wizard 2-Steps) -->
+    <div id="createModal" class="hidden fixed inset-0 bg-black/95 z-[100] items-center justify-center backdrop-blur-sm">
+        <div class="caos-card caos-glow-purple w-full max-w-lg relative p-0 overflow-hidden shadow-2xl transition-all duration-500">
+            
+            <!-- Progress Bar -->
+            <div class="absolute top-0 left-0 w-full h-1 bg-gray-900">
+                <div id="wizard-progress" class="h-full bg-purple-500 transition-all duration-500 shadow-[0_0_15px_rgba(168,85,247,0.8)]" style="width: 50%;"></div>
+            </div>
 
-            <div class="px-8 pb-8 pt-6">
-                <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                    <span>✨</span> Generar Entorno
-                </h2>
+            <div class="px-8 pb-8 pt-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 id="wizard-title" class="text-xl font-bold text-white flex items-center gap-2">
+                        <span>✨</span> <span id="step-title-text">Identidad Primigenia</span>
+                    </h2>
+                    <span id="wizard-step-indicator" class="text-[10px] font-mono text-purple-400 bg-purple-900/20 px-2 py-1 rounded border border-purple-500/30 uppercase tracking-widest">Paso 1 / 2</span>
+                </div>
 
-                <form method="POST" action="{% if public_id %}{% url 'ver_mundo' public_id %}{% else %}#{% endif %}">
+                <form id="planet-wizard-form" method="POST" action="/nexo/">
                     {% csrf_token %}
-                    <div class="mb-5">
-                        <label class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1.5 ml-1">Tipo de Entidad</label>
-                        <select name="target_level" class="w-full bg-[#13151f] border border-gray-800 rounded-lg p-3 text-sm text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 outline-none mb-3 font-medium">
-                            {% for lvl in available_levels %}
-                            <option value="{{ lvl.level }}" {% if lvl.is_next %}selected{% endif %}>
-                                {% if lvl.is_next %}📍 Siguiente: {{ lvl.label }} (Nivel {{ lvl.level }}){% else %}🕳️ Salto a: {{ lvl.label }} (Nivel {{ lvl.level }}){% endif %}
-                            </option>
-                            {% endfor %}
-                        </select>
-                        <input type="text" name="entity_type_desc" placeholder="Especificar Tipo (ej: Ruinas, Personaje...)" class="w-full bg-[#13151f] border border-gray-800 rounded-lg p-3 text-sm text-white placeholder:text-gray-700 font-medium focus:border-purple-500 focus:outline-none">
-                    </div>
-                    <div class="mb-5">
-                        <label class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1.5 ml-1">Nombre</label>
-                        <input type="text" name="child_name" placeholder="Nombre de la nueva entidad..." class="w-full bg-[#13151f] border border-gray-800 rounded-lg p-3 text-sm text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 outline-none transition-all placeholder:text-gray-700 font-medium" required>
-                    </div>
-                    <div class="mb-5">
-                        <label class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1.5 ml-1">Descripción</label>
-                        <textarea name="child_desc" rows="3" placeholder="Contexto inicial..." class="w-full bg-[#13151f] border border-gray-800 rounded-lg p-3 text-sm text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 outline-none transition-all placeholder:text-gray-700 font-medium"></textarea>
+                    
+                    <!-- STEP 1: NARRATIVE IDENTITY -->
+                    <div id="step-1" class="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
+                        <div>
+                            <label class="block text-[10px] text-gray-500 uppercase font-bold tracking-[0.2em] mb-1.5 ml-1">Nombre del Planeta</label>
+                            <input type="text" name="world_name" placeholder="Ej: Aethelgard, Kepler-186f..." class="w-full bg-[#13151f] border border-gray-800 rounded-lg p-3 text-sm text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 outline-none transition-all placeholder:text-gray-700 font-medium" required>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-gray-500 uppercase font-bold tracking-[0.2em] mb-1.5 ml-1">Mito Fundacional / Descripción</label>
+                            <textarea name="world_desc" rows="4" placeholder="¿Cómo nació este mundo? ¿Qué lo hace único en el Caos?" class="w-full bg-[#13151f] border border-gray-800 rounded-lg p-3 text-sm text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 outline-none transition-all placeholder:text-gray-700 font-medium"></textarea>
+                        </div>
                     </div>
 
-                    <div class="flex gap-3 pt-2">
-                        <button type="button" onclick="closeCreateModal()" class="px-6 py-3 rounded-lg text-gray-400 hover:text-white font-bold text-[10px] uppercase tracking-widest transition-colors border border-transparent hover:border-gray-700">Cancelar</button>
-                        <button type="submit" class="flex-1 py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg shadow-lg shadow-purple-900/50 transition-all hover:scale-[1.02] active:scale-95 text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
-                            <span>🚀</span> Generar
+                    <!-- STEP 2: PHYSICAL LAWS -->
+                    <div id="step-2" class="hidden space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1.5 ml-1">🌡️ Temperatura Base</label>
+                                <select name="world_temp" class="w-full bg-[#13151f] border border-gray-800 rounded-lg p-3 text-sm text-white focus:border-purple-500 outline-none">
+                                    <option value="Helado">❄️ Helado</option>
+                                    <option value="Templado" selected>🌳 Templado</option>
+                                    <option value="Volcánico">🔥 Volcánico</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1.5 ml-1">☀️ Tipo de Astro</label>
+                                <select name="world_sun" class="w-full bg-[#13151f] border border-gray-800 rounded-lg p-3 text-sm text-white focus:border-purple-500 outline-none">
+                                    <option value="Gigante Amarilla">🌞 Gigante Amarilla</option>
+                                    <option value="Enana Blanca">⚪ Enana Blanca</option>
+                                    <option value="Gigante Roja">🔴 Gigante Roja</option>
+                                    <option value="Antigravitatorio">🌀 Singularidad</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1.5 ml-1">🌊 El Velo (Fondo Atlas)</label>
+                            <div class="grid grid-cols-3 gap-2">
+                                <label class="cursor-pointer group">
+                                    <input type="radio" name="world_element" value="Agua" class="hidden peer" checked>
+                                    <div class="p-3 text-center border border-gray-800 rounded-lg bg-[#13151f] peer-checked:border-blue-500 peer-checked:bg-blue-900/20 transition-all group-hover:border-gray-600">
+                                        <span class="text-lg block">💧</span>
+                                        <span class="text-[9px] uppercase font-bold text-gray-500 peer-checked:text-blue-400">Agua</span>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer group">
+                                    <input type="radio" name="world_element" value="Lava" class="hidden peer">
+                                    <div class="p-3 text-center border border-gray-800 rounded-lg bg-[#13151f] peer-checked:border-red-500 peer-checked:bg-red-900/20 transition-all group-hover:border-gray-600">
+                                        <span class="text-lg block">🔥</span>
+                                        <span class="text-[9px] uppercase font-bold text-gray-500 peer-checked:text-red-400">Lava</span>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer group">
+                                    <input type="radio" name="world_element" value="Vacío" class="hidden peer">
+                                    <div class="p-3 text-center border border-gray-800 rounded-lg bg-[#13151f] peer-checked:border-purple-500 peer-checked:bg-purple-900/20 transition-all group-hover:border-gray-600">
+                                        <span class="text-lg block">🌌</span>
+                                        <span class="text-[9px] uppercase font-bold text-gray-500 peer-checked:text-purple-400">Vacío</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1.5 ml-1">🌙 Satélites (Nombres sep. por comas)</label>
+                            <input type="text" name="world_moons" placeholder="Luna, Selene, Io..." class="w-full bg-[#13151f] border border-gray-800 rounded-lg p-3 text-sm text-white focus:border-purple-500 outline-none placeholder:text-gray-700">
+                        </div>
+                    </div>
+
+                    <!-- FOOTER ACTIONS -->
+                    <div class="flex gap-3 pt-6">
+                        <button type="button" id="btn-back" onclick="wizardBack()" class="hidden px-6 py-3 rounded-lg text-gray-400 hover:text-white font-bold text-[10px] uppercase tracking-widest transition-colors border border-transparent hover:border-gray-700">Atrás</button>
+                        <button type="button" id="btn-cancel" onclick="closeCreateModal()" class="px-6 py-3 rounded-lg text-gray-400 hover:text-white font-bold text-[10px] uppercase tracking-widest transition-colors border border-transparent hover:border-gray-700">Cancelar</button>
+                        
+                        <button type="button" id="btn-next" onclick="wizardNext()" class="flex-1 py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg shadow-lg shadow-purple-900/50 transition-all hover:scale-[1.02] text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
+                            Avanzar <span>➔</span>
+                        </button>
+                        
+                        <button type="submit" id="btn-submit-wizard" class="hidden flex-1 py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg shadow-lg shadow-purple-900/50 transition-all hover:scale-[1.02] text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
+                            <span>🚀</span> Crear Planeta
                         </button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
+
+    <!-- WIZARD JS LOGIC -->
+    <script>
+        function wizardNext() {
+            document.getElementById('step-1').classList.add('hidden');
+            document.getElementById('step-2').classList.remove('hidden');
+            document.getElementById('btn-next').classList.add('hidden');
+            document.getElementById('btn-cancel').classList.add('hidden');
+            document.getElementById('btn-back').classList.remove('hidden');
+            document.getElementById('btn-submit-wizard').classList.remove('hidden');
+            
+            document.getElementById('wizard-progress').style.width = '100%';
+            document.getElementById('step-title-text').innerText = 'Leyes Físicas';
+            document.getElementById('wizard-step-indicator').innerText = 'Paso 2 / 2';
+        }
+
+        function wizardBack() {
+            document.getElementById('step-2').classList.add('hidden');
+            document.getElementById('step-1').classList.remove('hidden');
+            document.getElementById('btn-next').classList.remove('hidden');
+            document.getElementById('btn-cancel').classList.remove('remember'); // Incorrect class logic, fix below
+            document.getElementById('btn-cancel').classList.remove('hidden');
+            document.getElementById('btn-back').classList.add('hidden');
+            document.getElementById('btn-submit-wizard').classList.add('hidden');
+            
+            document.getElementById('wizard-progress').style.width = '50%';
+            document.getElementById('step-title-text').innerText = 'Identidad Primigenia';
+            document.getElementById('wizard-step-indicator').innerText = 'Paso 1 / 2';
+        }
+    </script>
 
     <!-- UPLOAD MODAL -->
     <!-- UPLOAD MODAL (Industrial Style) -->

@@ -77,8 +77,14 @@ class PublishToLiveVersionUseCase:
         if version.cambios and 'metadata' in version.cambios:
              new_meta = version.cambios['metadata']
              if not world.metadata: world.metadata = {}
+             
+             # Unir propiedades (si existen)
              if 'properties' in new_meta:
                  world.metadata['properties'] = new_meta['properties']
+             
+             # Unir leyes planetarias (NUEVO)
+             if 'planet_laws' in new_meta:
+                 world.metadata['planet_laws'] = new_meta['planet_laws']
 
         if world.status not in ['OFFLINE', 'LOCKED']:
             world.status = "LIVE" 

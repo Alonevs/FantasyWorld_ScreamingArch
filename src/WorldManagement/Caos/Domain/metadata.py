@@ -24,13 +24,7 @@ METADATA_SCHEMAS = {
     
     # Nivel 6: EL PADRE FÍSICO (Fuente principal de herencia para seres vivos)
     "PLANETA_SCHEMA": { 
-        "campos_fijos": { 
-            "gravedad": "Valor g (ej: 1.0g)", 
-            "atmosfera": "Respirable/Toxica", 
-            "clima_global": "Base (ej: Glacial)", 
-            "lunas": "Cantidad", 
-            "agua": "%" 
-        } 
+        "campos_fijos": {} 
     },
 
     # --- 2. DIMENSIONES (Rama Alternativa) ---
@@ -92,10 +86,9 @@ METADATA_SCHEMAS = {
 # Define qué datos técnicos 'fluyen' desde los ancestros hacia los descendientes.
 # Esto evita que la IA tenga que inventar datos globales en niveles locales.
 INHERITANCE_RULES = {
-    # Herencia FÍSICA: Todo lo que esté dentro de un planeta comparte su física básica.
-    "gravedad": {"source": "PLANETA_SCHEMA", "targets": ["ALL"]},
-    "atmosfera": {"source": "PLANETA_SCHEMA", "targets": ["ALL"]},
-    "ciclo_dia": {"source": "PLANETA_SCHEMA", "targets": ["ALL"]},
+    # Herencia FÍSICA: Las entidades heredan el contexto del planeta base.
+    # (Reglas de gravedad/atmosfera eliminadas por obsolescencia)
+    "clima_global": {"source": "PLANETA_SCHEMA", "targets": ["ALL"]},
     
     # Herencia de ENTORNO: Las criaturas heredan el bioma de la región donde viven.
     "bioma_dominante": {"source": "GEOGRAFIA_SCHEMA", "targets": ["CIUDAD", "LUGAR", "CRIATURA"]},

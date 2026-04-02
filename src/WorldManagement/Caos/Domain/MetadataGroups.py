@@ -7,8 +7,8 @@ class MetadataGroup:
     FOUNDATIONS = "FOUNDATIONS"         # Niveles 01-02 (Caos, Abismo)
     COSMOLOGY = "COSMOLOGY"             # Niveles 03-05 (Universo, Galaxia, Sistema)
     PLANETARY = "PLANETARY"             # Niveles 06-07 (Planeta y su Geografía Global)
-    SOCIO_POLITICAL = "SOCIO_POLITICAL" # Niveles 08-10 (Imperios, Reinos, Organizaciones)
-    LOCALIZATION = "LOCALIZATION"       # Niveles 11-12 (Lugares físicos, Ciudades, Dungeons)
+    SOCIO_POLITICAL = "SOCIO_POLITICAL" # Nivel 08 (Imperios, Reinos, Organizaciones)
+    LOCALIZATION = "LOCALIZATION"       # Niveles 09-12 (Lugares físicos, Ciudades, Dungeons)
     BIOLOGICAL = "BIOLOGICAL"           # Niveles 13-15 (Taxonomía, Especies, Familias)
     INDIVIDUAL = "INDIVIDUAL"           # Nivel 16 (Personajes únicos, Objetos únicos)
 
@@ -17,8 +17,8 @@ class MetadataGroup:
         if 1 <= level <= 2: return cls.FOUNDATIONS
         if 3 <= level <= 5: return cls.COSMOLOGY
         if 6 <= level <= 7: return cls.PLANETARY
-        if 8 <= level <= 10: return cls.SOCIO_POLITICAL
-        if 11 <= level <= 12: return cls.LOCALIZATION
+        if level == 8: return cls.SOCIO_POLITICAL
+        if 9 <= level <= 12: return cls.LOCALIZATION
         if 13 <= level <= 15: return cls.BIOLOGICAL
         if level == 16: return cls.INDIVIDUAL
         return None

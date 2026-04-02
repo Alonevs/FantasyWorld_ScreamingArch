@@ -13,7 +13,7 @@ class CreateWorldUseCase:
     def __init__(self, repository: CaosRepository):
         self.repository = repository
 
-    def execute(self, name: str, description: str, author=None) -> str:
+    def execute(self, name: str, description: str, author=None, metadata: dict = None) -> str:
         """
         Ejecuta la lógica de creación del mundo raíz.
 
@@ -43,7 +43,8 @@ class CreateWorldUseCase:
         new_world = CaosWorld(
             id=WorldID(jid_entidad), 
             name=name, 
-            lore_description=description
+            lore_description=description,
+            metadata=metadata or {}
         )
         # Note: Domain entity currently doesn't track author explicitly in constructor, 
         # but we handle persistence via ORM below or in Repo.
@@ -79,6 +80,20 @@ class CreateWorldUseCase:
             print(f"Error al generar propuesta inicial: {e}")
         
         print(f" ✅ Entidad Raíz '{name}' (Nivel 1) creada.")
-        print(f"    └── J-ID Asignado: {jid_entidad}")
-        
+        # --- PASO 4: INICIALIZACIÓN DE ERA 0 (Génesis) ---
+        from src.Infrastructure.DjangoFramework.persistence.models import TimelinePeriod
+        try:
+            TimelinePeriod.objects.create(
+                world=w_orm,
+                title="Génesis",
+                slug="genesis",
+                description=f"El amanecer de {name}. Era de formación geofísica.",
+                order=0,
+                is_current=True,
+                metadata=metadata or {}
+            )
+            print(f"    └── 🕰️ Era 0 (Génesis) inicializada.")
+        except Exception as e:
+            print(f"Error al inicializar Era 0: {e}")
+            
         return jid_entidad

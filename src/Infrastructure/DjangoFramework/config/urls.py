@@ -6,7 +6,7 @@ from django.conf.urls.static import static
 from src.Infrastructure.DjangoFramework.persistence.views.world_views import (
     home, landing, ver_mundo, editar_mundo, borrar_mundo, 
     toggle_lock, toggle_visibilidad,
-    mapa_arbol, comparar_version, ver_metadatos,
+    mapa_arbol, comparar_version, ver_metadatos, ver_atlas, save_atlas_geojson,
     toggle_entity_status, update_avatar
 )
 from src.Infrastructure.DjangoFramework.persistence.views.social_views import (
@@ -149,6 +149,8 @@ urlpatterns = [
     path('nexo/', home, name='nexo_list'),
     path('mundo/<str:public_id>/', ver_mundo, name='ver_mundo'),
     path('mapa/<str:public_id>/', mapa_arbol, name='mapa_arbol'),
+    path('atlas/<str:public_id>/', ver_atlas, name='ver_atlas'),
+    path('atlas/<str:public_id>/save-geojson/', save_atlas_geojson, name='save_atlas_geojson'),
     
     # ==========================================
     # GESTIÓN (Acciones sobre mundos)

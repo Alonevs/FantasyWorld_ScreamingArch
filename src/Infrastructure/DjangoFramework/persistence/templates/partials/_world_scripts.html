@@ -20,14 +20,60 @@
         });
 
         function openEditModal() {
+            const modal = document.getElementById('editModal');
+            const content = document.getElementById('editModal-content');
+            if (!modal) return;
+
             document.body.style.overflow = 'hidden';
-            document.getElementById('editModal').classList.remove('hidden');
-            document.getElementById('editModal').classList.add('flex');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            // Disparar animación
+            setTimeout(() => {
+                content.classList.remove('opacity-0', 'scale-95');
+                content.classList.add('opacity-100', 'scale-100');
+            }, 10);
+            
+            // Lógica para Leyes Geofísicas (Solo Nivel 6 - Planeta)
+            // Usamos las variables globales definidas en ficha_mundo.html
+            const level = typeof CURRENT_ENTITY_LEVEL !== 'undefined' ? CURRENT_ENTITY_LEVEL : 1;
+            const planetLaws = typeof CURRENT_PLANET_LAWS !== 'undefined' ? CURRENT_PLANET_LAWS : null;
+
+            const planetPanel = document.getElementById('edit-planet-laws');
+            try {
+                if (level === 6 && planetPanel) {
+                    planetPanel.classList.remove('hidden');
+                    if (planetLaws) {
+                        if (planetLaws.global_temp) document.getElementById('edit-world-temp').value = planetLaws.global_temp;
+                        if (planetLaws.sun_type) document.getElementById('edit-world-sun').value = planetLaws.sun_type;
+                        if (planetLaws.moons) document.getElementById('edit-world-moons').value = planetLaws.moons.join(', ');
+                        if (planetLaws.axial_tilt) document.getElementById('edit-world-tilt').value = planetLaws.axial_tilt;
+                        
+                        // Radio button for Velo
+                        const veloValue = planetLaws.velo_element || planetLaws.base_element || 'Agua';
+                        const targetRadio = document.querySelector(`input[name="world_velo"][value="${veloValue}"]`);
+                        if (targetRadio) targetRadio.checked = true;
+                    }
+                } else if (planetPanel) {
+                    planetPanel.classList.add('hidden');
+                }
+            } catch(e) {
+                console.error("Error pre-filling edit modal:", e);
+            }
         }
+
         function closeEditModal() {
-            document.body.style.overflow = '';
-            document.getElementById('editModal').classList.add('hidden');
-            document.getElementById('editModal').classList.remove('flex');
+            const modal = document.getElementById('editModal');
+            const content = document.getElementById('editModal-content');
+            
+            content.classList.remove('opacity-100', 'scale-100');
+            content.classList.add('opacity-0', 'scale-95');
+            
+            setTimeout(() => {
+                document.body.style.overflow = '';
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300);
         }
 
         function openCreateModal() {
@@ -102,7 +148,7 @@
             }
 
             document.getElementById('ai-step-loading').classList.add('hidden');
-            document.getElementById('ai-step-result').classList.remove('hidden');
+            document.getElementById('ai-step-result').classList.add('hidden');
             
             // Show errors if any
             if (errors.length > 0 && generatedImages.length === 0) {

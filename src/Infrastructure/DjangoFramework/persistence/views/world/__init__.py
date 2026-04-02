@@ -17,7 +17,7 @@ Todos los exports públicos se mantienen para compatibilidad hacia atrás.
 
 # Exports públicos para mantener compatibilidad con código existente
 from .listing import home, landing
-from .detail import ver_mundo, ver_metadatos, mapa_arbol
+from .detail import ver_mundo, ver_metadatos, mapa_arbol, ver_atlas, save_atlas_geojson
 from .edit import editar_mundo, update_avatar
 from .actions import toggle_entity_status, borrar_mundo, toggle_visibilidad, toggle_lock
 from .versions import comparar_version, restaurar_version
@@ -31,6 +31,8 @@ __all__ = [
     'ver_mundo',
     'ver_metadatos',
     'mapa_arbol',
+    'ver_atlas',
+    'save_atlas_geojson',
     # Edit
     'editar_mundo',
     'update_avatar',

@@ -330,3 +330,81 @@ def mapa_arbol(request, public_id):
         return render(request, 'mapa_arbol.html', result)
     except Http404: raise
     except: return redirect('ver_mundo', public_id=public_id)
+
+def ver_atlas(request, public_id):
+    try:
+        from src.Infrastructure.DjangoFramework.persistence.models import TimelinePeriod
+        from src.Shared.Services.TimelinePeriodService import TimelinePeriodService
+        
+        repo = DjangoCaosRepository()
+        w_orm = resolve_jid_orm(public_id)
+        if not w_orm: return redirect('home')
+        
+        can_access, _ = check_world_access(request, w_orm)
+        if not can_access: 
+             return render(request, 'private_access.html', status=403)
+             
+        # Resolve Period
+        period_slug = request.GET.get('period', 'actual')
+        current_period = TimelinePeriodService.get_current_period(w_orm)
+        if period_slug == 'actual' or not period_slug:
+            viewing_period = current_period
+        else:
+            viewing_period = TimelinePeriod.objects.filter(world=w_orm, slug=period_slug).first()
+            if not viewing_period:
+                viewing_period = current_period
+                
+        context = GetWorldDetailsUseCase(repo).execute(public_id, request.user, period_slug=viewing_period.slug)
+        if not context: return redirect('home')
+        
+        # --- NEW: GeoJSON Data ---
+        geojson_data = viewing_period.metadata.get('geojson', [])
+        context['geojson'] = json.dumps(geojson_data)
+        context['viewing_period'] = viewing_period
+        
+        return render(request, 'atlas.html', context)
+    except Http404: raise
+    except Exception as e: 
+        print(f"Error en ver_atlas: {e}")
+        return redirect('ver_mundo', public_id=public_id)
+
+@require_POST
+def save_atlas_geojson(request, public_id):
+    """
+    Guarda los vectores (geojson features) de la cartografía interactiva.
+    """
+    try:
+        from src.Infrastructure.DjangoFramework.persistence.models import TimelinePeriod
+        
+        w_orm = resolve_jid_orm(public_id)
+        if not w_orm: return JsonResponse({"success": False, "error": "Mundo no encontrado."}, status=404)
+        
+        # Simple auth check: only authors or admins
+        can_access, is_author_or_team = check_world_access(request, w_orm)
+        if not can_access or not (is_author_or_team or request.user.is_superuser):
+             return JsonResponse({"success": False, "error": "No tienes permisos para editar cartografía."}, status=403)
+             
+        data = json.loads(request.body)
+        geojson = data.get('geojson', [])
+        period_slug = data.get('period_slug', 'actual')
+        
+        from src.Shared.Services.TimelinePeriodService import TimelinePeriodService
+        if period_slug == 'actual':
+            viewing_period = TimelinePeriodService.get_current_period(w_orm)
+        else:
+            viewing_period = TimelinePeriod.objects.filter(world=w_orm, slug=period_slug).first()
+            if not viewing_period:
+                viewing_period = TimelinePeriodService.get_current_period(w_orm)
+                
+        # Guardar en metadata
+        if not isinstance(viewing_period.metadata, dict):
+            viewing_period.metadata = {}
+            
+        viewing_period.metadata['geojson'] = geojson
+        viewing_period.save(update_fields=['metadata', 'updated_at'])
+        
+        log_event(request.user, "EDIT_MAP", public_id, f"Vectores editados en {viewing_period.slug}")
+        
+        return JsonResponse({"success": True, "message": "Geometría guardada correctamente."})
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)

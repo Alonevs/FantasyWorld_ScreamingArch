@@ -280,6 +280,7 @@ class GetWorldDetailsUseCase:
             'name': w.name, 
             'description': w.description, 
             'jid': jid, 
+            'level': len(jid) // 2, # NIVEL DE LA ENTIDAD (Fundamental para el editor)
             'id_codificado': jid,  # Referencia para compatibilidad JS
             'public_id': safe_pid,
             'status': w.status, 
@@ -291,6 +292,7 @@ class GetWorldDetailsUseCase:
             'is_locked': w.is_locked, 
             'nid_lore': w.id_lore, 
             'metadata': meta_str, 
+            'metadata_raw': w.metadata, # METADATOS PUROS (Para acceso directo en templates)
             'metadata_obj': metadata_wrapper, 
             'metadata_schema': schema,
             'imagenes': imgs, 
